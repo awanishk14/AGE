@@ -1,0 +1,19 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "integrations",
+  "projectType": "library",
+  "sourceRoot": "packages/integrations/src",
+  "tags": ["scope:shared", "type:integrations"],
+  "targets": {
+    "build": { "command": "tsc -p tsconfig.json", "options": { "cwd": "packages/integrations" } },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json --noEmit",
+      "options": { "cwd": "packages/integrations" }
+    },
+    "lint": { "command": "eslint .", "options": { "cwd": "packages/integrations" } },
+    "test": {
+      "command": "vitest run --passWithNoTests",
+      "options": { "cwd": "packages/integrations" }
+    }
+  }
+}

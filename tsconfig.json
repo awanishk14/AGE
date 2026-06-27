@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    { "path": "./apps/web" },
+    { "path": "./apps/api" },
+    { "path": "./packages/ui" },
+    { "path": "./packages/config" },
+    { "path": "./packages/shared" },
+    { "path": "./packages/business-knowledge-graph" },
+    { "path": "./packages/types" },
+    { "path": "./packages/sdk" },
+    { "path": "./packages/integrations" },
+    { "path": "./packages/knowledge" }
+  ]
+}

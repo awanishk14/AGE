@@ -1,0 +1,16 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "types",
+  "projectType": "library",
+  "sourceRoot": "packages/types/src",
+  "tags": ["scope:shared", "type:types"],
+  "targets": {
+    "build": { "command": "tsc -p tsconfig.json", "options": { "cwd": "packages/types" } },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json --noEmit",
+      "options": { "cwd": "packages/types" }
+    },
+    "lint": { "command": "eslint .", "options": { "cwd": "packages/types" } },
+    "test": { "command": "vitest run --passWithNoTests", "options": { "cwd": "packages/types" } }
+  }
+}

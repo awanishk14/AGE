@@ -1,0 +1,17 @@
+// AGE (Adaptive Growth Engine) — Prisma schema
+// Scaffold only. Domain models are intentionally not defined yet.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Example placeholder model — remove when real models are introduced.
+model HealthCheck {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+}

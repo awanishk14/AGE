@@ -1,0 +1,2 @@
+/** UpdateStrategyDto — placeholder input contract. Fields added later. */
+export class UpdateStrategyDto {}

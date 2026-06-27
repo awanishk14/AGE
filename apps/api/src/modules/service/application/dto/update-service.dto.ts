@@ -1,0 +1,2 @@
+/** UpdateServiceDto — placeholder input contract. Fields added later. */
+export class UpdateServiceDto {}

@@ -1,0 +1,16 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "shared",
+  "projectType": "library",
+  "sourceRoot": "packages/shared/src",
+  "tags": ["scope:shared", "type:shared"],
+  "targets": {
+    "build": { "command": "tsc -p tsconfig.json", "options": { "cwd": "packages/shared" } },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json --noEmit",
+      "options": { "cwd": "packages/shared" }
+    },
+    "lint": { "command": "eslint .", "options": { "cwd": "packages/shared" } },
+    "test": { "command": "vitest run --passWithNoTests", "options": { "cwd": "packages/shared" } }
+  }
+}

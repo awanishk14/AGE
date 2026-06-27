@@ -1,0 +1,16 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "ui",
+  "projectType": "library",
+  "sourceRoot": "packages/ui/src",
+  "tags": ["scope:shared", "type:ui"],
+  "targets": {
+    "build": { "command": "tsc -p tsconfig.json", "options": { "cwd": "packages/ui" } },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json --noEmit",
+      "options": { "cwd": "packages/ui" }
+    },
+    "lint": { "command": "eslint .", "options": { "cwd": "packages/ui" } },
+    "test": { "command": "vitest run --passWithNoTests", "options": { "cwd": "packages/ui" } }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "knowledge",
+  "projectType": "library",
+  "sourceRoot": "packages/knowledge/src",
+  "tags": ["scope:shared", "type:knowledge"],
+  "targets": {
+    "build": { "command": "tsc -p tsconfig.json", "options": { "cwd": "packages/knowledge" } },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json --noEmit",
+      "options": { "cwd": "packages/knowledge" }
+    },
+    "lint": { "command": "eslint .", "options": { "cwd": "packages/knowledge" } },
+    "test": {
+      "command": "vitest run --passWithNoTests",
+      "options": { "cwd": "packages/knowledge" }
+    }
+  }
+}
