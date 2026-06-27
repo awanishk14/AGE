@@ -1,6 +1,7 @@
 export * from './enums';
 export * from './section-type';
 export * from './field';
+export * from './field-ref';
 export * from './field-dependency';
 export * from './field-conflict';
 export * from './section';

@@ -49,3 +49,20 @@ export enum ConflictSeverity {
   MEDIUM = 'MEDIUM',
   HIGH = 'HIGH',
 }
+
+/**
+ * EvidenceState — the lifecycle of a piece of evidence (Gap 2 hardening).
+ *
+ * Contract rules (enforced by future engines, not by this package):
+ *  - Transitions follow the primary order NEW → PROCESSED → MAPPED → APPLIED_TO_BIF.
+ *  - States cannot be skipped (no direct jump to APPLIED_TO_BIF without MAPPED).
+ *  - REJECTED and CONFLICTED are terminal off-ramps and can never reach APPLIED_TO_BIF.
+ */
+export enum EvidenceState {
+  NEW = 'NEW',
+  PROCESSED = 'PROCESSED',
+  MAPPED = 'MAPPED',
+  APPLIED_TO_BIF = 'APPLIED_TO_BIF',
+  REJECTED = 'REJECTED',
+  CONFLICTED = 'CONFLICTED',
+}

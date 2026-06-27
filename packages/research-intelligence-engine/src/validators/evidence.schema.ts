@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EvidenceSource, SignalType } from '../types/enums';
+import { EvidenceSource, EvidenceState, SignalType } from '../types/enums';
 import { extractedSignalSchema } from './extracted-signal.schema';
 
 export const evidenceEntityLinkSchema = z.object({
@@ -19,5 +19,6 @@ export const evidenceSchema = z.object({
   rawContent: z.string(),
   extractedSignals: z.array(extractedSignalSchema),
   confidence: z.number().min(0).max(100),
+  state: z.nativeEnum(EvidenceState),
   metadata: z.record(z.unknown()),
 });
