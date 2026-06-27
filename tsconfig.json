@@ -9,6 +9,7 @@
     { "path": "./packages/shared" },
     { "path": "./packages/business-knowledge-graph" },
     { "path": "./packages/persistence" },
+    { "path": "./packages/bif" },
     { "path": "./packages/types" },
     { "path": "./packages/sdk" },
     { "path": "./packages/integrations" },
