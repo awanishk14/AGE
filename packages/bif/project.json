@@ -1,0 +1,16 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "bif",
+  "projectType": "library",
+  "sourceRoot": "packages/bif/src",
+  "tags": ["scope:shared", "type:bif"],
+  "targets": {
+    "build": { "command": "tsc -p tsconfig.json", "options": { "cwd": "packages/bif" } },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json --noEmit",
+      "options": { "cwd": "packages/bif" }
+    },
+    "lint": { "command": "eslint .", "options": { "cwd": "packages/bif" } },
+    "test": { "command": "vitest run --passWithNoTests", "options": { "cwd": "packages/bif" } }
+  }
+}
