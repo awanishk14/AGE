@@ -1,0 +1,23 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "persistence",
+  "projectType": "library",
+  "sourceRoot": "packages/persistence/src",
+  "tags": ["scope:shared", "type:persistence"],
+  "targets": {
+    "build": { "command": "tsc -p tsconfig.json", "options": { "cwd": "packages/persistence" } },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json --noEmit",
+      "options": { "cwd": "packages/persistence" }
+    },
+    "lint": { "command": "eslint .", "options": { "cwd": "packages/persistence" } },
+    "test": {
+      "command": "vitest run --passWithNoTests",
+      "options": { "cwd": "packages/persistence" }
+    },
+    "prisma:validate": {
+      "command": "prisma validate --schema src/prisma/schema.prisma",
+      "options": { "cwd": "packages/persistence" }
+    }
+  }
+}

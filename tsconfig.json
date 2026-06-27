@@ -8,6 +8,7 @@
     { "path": "./packages/config" },
     { "path": "./packages/shared" },
     { "path": "./packages/business-knowledge-graph" },
+    { "path": "./packages/persistence" },
     { "path": "./packages/types" },
     { "path": "./packages/sdk" },
     { "path": "./packages/integrations" },
