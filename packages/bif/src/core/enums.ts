@@ -28,6 +28,12 @@ export enum FieldSource {
   DOCUMENT = 'DOCUMENT',
   RESEARCH = 'RESEARCH',
   AI_INFERRED = 'AI_INFERRED',
+  /**
+   * Computed from other fields. A DERIVED field must always be traceable to its
+   * input fields and must never override a source-of-truth field. (Contract-level
+   * rule — no resolution logic lives in this package.)
+   */
+  DERIVED = 'DERIVED',
 }
 
 /** How trustworthy a field value is. */

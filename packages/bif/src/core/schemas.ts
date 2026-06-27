@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { BIFStatus, FieldConfidence, FieldSource, FieldType } from './enums';
 import { SectionType } from './section-type';
+import { fieldDependencySchema } from './field-dependency';
+import { fieldConflictSchema } from './field-conflict';
 
 /** Zod schemas mirroring the BIF core interfaces. Validation only; no logic. */
 export const score = z.number().min(0).max(100);
@@ -46,4 +48,6 @@ export const businessIntelligenceFrameworkSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   lastSyncedAt: z.date(),
+  dependencies: z.array(fieldDependencySchema).optional(),
+  conflicts: z.array(fieldConflictSchema).optional(),
 });
