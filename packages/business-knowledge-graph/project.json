@@ -1,0 +1,22 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "business-knowledge-graph",
+  "projectType": "library",
+  "sourceRoot": "packages/business-knowledge-graph/src",
+  "tags": ["scope:shared", "type:bkg"],
+  "targets": {
+    "build": {
+      "command": "tsc -p tsconfig.json",
+      "options": { "cwd": "packages/business-knowledge-graph" }
+    },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json --noEmit",
+      "options": { "cwd": "packages/business-knowledge-graph" }
+    },
+    "lint": { "command": "eslint .", "options": { "cwd": "packages/business-knowledge-graph" } },
+    "test": {
+      "command": "vitest run --passWithNoTests",
+      "options": { "cwd": "packages/business-knowledge-graph" }
+    }
+  }
+}
