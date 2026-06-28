@@ -12,7 +12,9 @@ reporting, navigation, and execution all **reference** this model; none of them 
 It is a **business-domain model only**. It documents business truth, not the persistence model. It
 does not define database schema, APIs, permissions, UX, or automations.
 
-> **Status:** 🟡 In Progress — Product Owner review decisions incorporated; pending final approval.
+> **Status:** Final — approved by the Product Owner. This document is the authoritative reference for
+> all subsequent Product Bible documents. Any future contradiction is treated as a design issue and
+> resolved **against** this document, not by altering it casually.
 
 ## Scope
 
@@ -23,7 +25,7 @@ does not define database schema, APIs, permissions, UX, or automations.
 
 ## Status
 
-🟡 In Progress.
+Final.
 
 ## Related Documents
 
