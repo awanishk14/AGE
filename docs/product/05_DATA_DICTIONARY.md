@@ -4,28 +4,28 @@
 
 ## Purpose
 
-This document is the canonical glossary of **product-level data terms** in AGE and **how they map to
-the frozen architecture** — the Business Knowledge Graph (BKG), the Business Intelligence Framework
-(BIF), the Research and Strategy engines, the shared kernel, and the Workspace Model (Doc 02).
+This document is the canonical glossary of **product-level business vocabulary** in AGE and **how it
+maps to the frozen architecture** — the Business Knowledge Graph (BKG), the Business Intelligence
+Framework (BIF), the Research and Strategy engines, the shared kernel, and the Workspace Model
+(Doc 02).
 
 It exists so every other Product Bible document and every implementation uses **one set of terms with
-one meaning**. It is a **terminology map only** — it does not define database schema, APIs, field
-formats, or implementation.
+one meaning**. It defines **business meaning, relationships, ownership, lifecycle, and terminology** —
+**not** database schema, APIs, or field-level definitions.
 
-> **Status:** In Progress — derived from the frozen architecture and Final Docs 02–04. Terms whose
-> canonical fields are not yet defined are referenced (not invented); genuine decisions are surfaced
-> in [§7 Open Decisions](#7-open-decisions).
+> **Status:** Final — approved by the Product Owner. Conforms to the authoritative Workspace Model
+> (Doc 02) and Final Docs 03–04.
 
 ## Scope
 
-- **In scope:** the canonical names, meanings, and source mappings of business entities, standard
-  fields, enumerations, and relationships.
-- **Out of scope:** database schema, APIs, field-level formats/validation, permissions, UX,
-  implementation. Detailed field sets that the architecture has not defined are **not invented here**.
+- **In scope:** canonical names, meanings, ownership, lifecycle, and source mappings of business
+  entities, enumerations, and relationships.
+- **Out of scope:** database schema, APIs, **field-level definitions** (deferred to implementation),
+  permissions, UX, implementation. Field sets are **never** defined here.
 
 ## Status
 
-In Progress.
+Final.
 
 ## Related Documents
 
@@ -44,35 +44,43 @@ In Progress.
 - [4. Intelligence Entities (BIF)](#4-intelligence-entities-bif)
 - [5. Evidence & Decision Entities (RIE / SIE)](#5-evidence--decision-entities-rie--sie)
 - [6. Standard Fields, Enumerations & Relationships](#6-standard-fields-enumerations--relationships)
-- [7. Open Decisions](#7-open-decisions)
+- [7. Resolved Decisions](#7-resolved-decisions)
 
 ---
 
 ## 1. How to Read This Dictionary
 
-- Each term has a **canonical name**, a **meaning**, and a **source** (the frozen artifact that
-  defines it).
-- Where the architecture defines a term's fields, this dictionary points to that source rather than
-  restating it. Where it does **not**, the term is listed with its meaning and its fields are marked
-  deferred — never invented.
-- "Source" abbreviations: **BKG** (`@age/business-knowledge-graph`), **BIF** (`@age/bif`), **RIE**
-  (`@age/research-intelligence-engine`), **SIE** (`@age/strategy-intelligence-engine`), **Kernel**
-  (`@age/shared`), **Persistence** (`@age/persistence`), **Doc 02/03/04** (Product Bible, Final).
+- Each term has a **canonical name**, a **business meaning**, and a **source** (the frozen artifact
+  it maps to).
+- **Field-level definitions are deferred to implementation** and are never stated here.
+- A single business entity may have **multiple representations** (e.g., a Workspace context, a BKG
+  node, an Execution context). These are **views of one entity**, not separate concepts.
+
+**Terminology precedence (canonical).** When terminology conflicts arise, resolve in this order —
+**business terminology always wins**:
+
+1. **Business meaning** → 2. **Product meaning** → 3. **Architectural meaning** → 4. **Implementation
+   naming.**
+
+Where implementation uses historical or technical names that differ from the business language, the
+Product Bible **retains the business terminology** and treats implementation names as internal
+details. (Source abbreviations below: BKG, BIF, RIE, SIE, Kernel, Persistence, Doc 02/03/04.)
 
 ## 2. Business Containers (Workspace Model)
 
 The containers that own all other data (Doc 02, Final).
 
-| Term                        | Meaning                                                                                              | Source                                  |
-| --------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| **Organization**            | The platform **tenant** (the agency operating AGE); owns Clients and Shared Agency Resources.        | Doc 02 §4; `organization` domain module |
-| **Client**                  | A first-class **business concept** — a business the agency grows; the primary owner of intelligence. | Doc 02 §5                               |
-| **Project**                 | A unit of **execution** within a Client; owns execution artifacts.                                   | Doc 02 §7; `project` domain module      |
-| **Workspace**               | A **product lens** (navigation/context), not a business entity; carries no ownership.                | Doc 02 §6                               |
-| **Shared Agency Resources** | Agency-owned reusable frameworks, templates, playbooks, methodologies.                               | Doc 02 §4, §11                          |
+| Term                        | Meaning                                                                                                                                                                                    | Source             |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| **Organization**            | The platform **tenant** — the **agency** operating AGE; owns Clients and Shared Agency Resources.                                                                                          | Doc 02 §4          |
+| **Client**                  | A first-class business concept — the **engagement/relationship** with a business the agency grows; the primary owner of intelligence.                                                      | Doc 02 §5          |
+| **Business**                | The **client's company** itself — the subject being researched, analyzed, and optimized. A Client's intelligence is _about_ its Business.                                                  | Doc 02; Decision 1 |
+| **Project**                 | A unit of **execution** within a Client; owns execution artifacts. **One** business Project may appear as a Workspace context, a BKG node, and an Execution context — all the same entity. | Doc 02 §7          |
+| **Workspace**               | A **product lens** (navigation/context), not a business entity; carries no ownership.                                                                                                      | Doc 02 §6          |
+| **Shared Agency Resources** | Agency-owned reusable frameworks, templates, playbooks, methodologies.                                                                                                                     | Doc 02 §4, §11     |
 
-> Detailed field sets for Organization / Client / Project are **not** defined by the frozen
-> architecture and are **not invented here** (see [§7](#7-open-decisions)).
+> Field sets for these containers are **not** defined in the Product Bible (deferred to
+> implementation — see [§7.2](#7-resolved-decisions)).
 
 ## 3. Knowledge Entities (BKG)
 
@@ -84,48 +92,56 @@ instanced **per Client** (Doc 02 §9). Every node shares the `BusinessNode` shap
 Strategy, Goal, Initiative, Campaign, Content, Research, Evidence, Decision, Project, Workflow,
 Asset, Integration, Problem, Opportunity, Metric, Document, Meeting, Technology.
 
-> **Terminology note (surfaced in §7):** within a Client's graph, the BKG **`Organization`** node
-> represents **that client's business**, while the Workspace **Organization** is the agency tenant.
-> Same word, two referents — reconciliation is an Open Decision.
+> **Canonical terminology (resolved).** The client's company is, canonically, the **Business**. The
+> BKG `Organization` **node** is the implementation representation of that Business; the Product Bible
+> uses **Business** for the client's company and reserves **Organization** for the agency tenant.
+> Treat the legacy node name as an internal detail (terminology-precedence rule, §1).
 
 ## 4. Intelligence Entities (BIF)
 
-The BIF is the client business's living, versioned truth model (Doc 02 §8). Canonical terms:
+The BIF is the client Business's living, versioned truth model (Doc 02 §8). Canonical terms:
 
-| Term                                   | Meaning                                                                                                                                                 | Source |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| **BusinessIntelligenceFramework**      | The root truth model for one Client (`id`, `organizationId`, `version`, `status`, `sections`, scores, timestamps, optional `dependencies`/`conflicts`). | BIF    |
-| **BIFSection**                         | A coherent group of fields (one of 12 canonical sections).                                                                                              | BIF    |
-| **BIFField**                           | The atomic, provenance-aware unit: `value` + `source` + `confidence` + `lastVerifiedAt` + `history`.                                                    | BIF    |
-| **FieldVersion**                       | A historical version of a field value.                                                                                                                  | BIF    |
-| **FieldDependency**                    | Declares a field derived from others (`sourceField`, `derivedField`, `transformationType`, `confidencePropagationRule`).                                | BIF    |
-| **FieldConflict**                      | Tracks contradictory values for one field (never silently overwritten).                                                                                 | BIF    |
-| **ProductItem / ICP / Persona / KPIs** | BIF sub-models. **Note:** BIF **`Persona`** = a _buyer persona_, distinct from Doc 01 user/agent "personas".                                            | BIF    |
+| Term                              | Meaning                                                                                                                                           | Source |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| **BusinessIntelligenceFramework** | The root truth model for one Client's Business (`version`, `status`, `sections`, scores, timestamps, optional `dependencies`/`conflicts`).        | BIF    |
+| **BIFSection**                    | A coherent group of fields (one of 12 canonical sections).                                                                                        | BIF    |
+| **BIFField**                      | The atomic, provenance-aware unit: `value` + `source` + `confidence` + `lastVerifiedAt` + `history`.                                              | BIF    |
+| **FieldVersion**                  | A historical version of a field value.                                                                                                            | BIF    |
+| **FieldDependency**               | Declares a field derived from others.                                                                                                             | BIF    |
+| **FieldConflict**                 | Tracks contradictory values for one field (never silently overwritten).                                                                           | BIF    |
+| **Buyer Persona**                 | A representation of the client's **market** — used for strategy, positioning, messaging, growth. Lives inside BIF. (The BIF `Persona` sub-model.) | BIF    |
+| **ProductItem / ICP / KPIs**      | BIF sub-models.                                                                                                                                   | BIF    |
 
 **The 12 canonical BIF sections:** Organization Identity · Vision & Strategy · Products & Services ·
 ICP & Personas · Market & Competition · Brand System · GTM System · Marketing Intelligence ·
 Technology Stack · Assets · KPIs · Constraints.
 
+> **Persona disambiguation (canonical).** **Buyer Persona** (above) ≠ **Platform Persona** (a
+> participant inside AGE: Human Personas + AI Workforce Personas, Doc 01). **Never use "Persona"
+> unqualified** where ambiguity is possible — always say **Buyer Persona** or **Platform Persona**.
+
 ## 5. Evidence & Decision Entities (RIE / SIE)
 
-| Term                                                   | Meaning                                                                                            | Source         |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------- | -------------- |
-| **Evidence**                                           | The core RIE output; provenance-aware sensed reality, with a lifecycle `state`.                    | RIE            |
-| **ExtractedSignal**                                    | A signal extracted from a normalized document (targets a BIF field).                               | RIE            |
-| **IntentCluster**                                      | A cluster of evidence pointing at one market/buyer intent.                                         | RIE            |
-| **BIFMapping**                                         | A _proposal_ to change BIF (targets a `BIFFieldRef`); RIE never writes BIF directly.               | RIE            |
-| **EvidenceConflict**                                   | A detected contradiction across evidence.                                                          | RIE            |
-| **StrategyOpportunity**                                | An evidence-backed opportunity (`capability`, `executionDomains[]`, priority, impact, confidence). | SIE / ADR-0007 |
-| **Recommendation**                                     | A concrete recommendation tied to an opportunity.                                                  | SIE            |
-| **PriorityScore**                                      | Multi-dimensional opportunity score.                                                               | SIE            |
-| **RoadmapItem / SimulationScenario / DecisionPackage** | Roadmap entry · what-if scenario · the bundled SIE output.                                         | SIE            |
+| Term                                                   | Meaning                                                                                                                   | Source |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- | ------ |
+| **Evidence**                                           | The core RIE output; provenance-aware sensed reality, with a lifecycle `state`.                                           | RIE    |
+| **ExtractedSignal**                                    | A signal extracted from a normalized document (targets a BIF field).                                                      | RIE    |
+| **IntentCluster**                                      | A cluster of evidence pointing at one market/buyer intent.                                                                | RIE    |
+| **BIFMapping**                                         | A _proposal_ to change BIF (targets a `BIFFieldRef`); RIE never writes BIF directly.                                      | RIE    |
+| **EvidenceConflict**                                   | A detected contradiction across evidence.                                                                                 | RIE    |
+| **StrategyOpportunity**                                | An evidence-backed opportunity (`capability`, `executionDomains[]`, `opportunityCategory`, priority, impact, confidence). | SIE    |
+| **Recommendation**                                     | A concrete recommendation tied to an opportunity.                                                                         | SIE    |
+| **PriorityScore**                                      | Multi-dimensional opportunity score.                                                                                      | SIE    |
+| **RoadmapItem / SimulationScenario / DecisionPackage** | Roadmap entry · what-if scenario · the bundled SIE output.                                                                | SIE    |
 
 ## 6. Standard Fields, Enumerations & Relationships
 
-### 6.1 Standard persisted fields (`PersistedBase`)
+### 6.1 Standard persisted fields
 
-Every persisted record carries: `id`, `organizationId`, `createdAt`, `updatedAt`, `createdBy`,
-`updatedBy`, `deletedAt`, `version`, `metadata`. (Source: Persistence.)
+The platform's standard record fields (id, tenant ownership, timestamps, audit attribution, soft
+delete, version, metadata) are an **implementation** concern (`PersistedBase`). Their **business
+meaning** — every record is owned, versioned, audited, and soft-deleted — is canonical; their
+field-level definition is deferred.
 
 ### 6.2 Canonical enumerations
 
@@ -145,29 +161,37 @@ Every persisted record carries: `id`, `organizationId`, `createdAt`, `updatedAt`
 | **ExecutionDomain**                                | SEO · AEO · GEO · LocalSEO · GoogleAds · MetaAds · LinkedInAds · CRO · Content · Email · PR · CRM · Reporting · Automation · SSH · Publishing       | ADR-0007 |
 | **Client Lifecycle States**                        | Created · Onboarding · Active · Paused · Offboarding · Archived                                                                                     | Doc 03   |
 
-### 6.3 Canonical relationships (BKG)
+> **OpportunityCategory, Capability, ExecutionDomain are three distinct concepts** (no mapping or
+> replacement): **OpportunityCategory** = a strategic business classification produced by Business
+> Intelligence; **Capability** = _what_ AGE can do; **ExecutionDomain** = _where_ work happens.
 
-The 22 canonical BKG relationships (e.g., `Organization OWNS Brand`, `Brand OFFERS Product`,
-`Evidence SUPPORTS Decision`, `Project EXECUTES Strategy`). Full set: see
-[BUSINESS_KNOWLEDGE_GRAPH](../architecture/BUSINESS_KNOWLEDGE_GRAPH.md). **Ownership relationships**
-(Workspace Model, Doc 02): `Organization → Client`, `Client → Project`, both one-to-many.
+### 6.3 Canonical relationships
 
-## 7. Open Decisions
+- **BKG (22):** e.g., `Business OWNS Brand` (legacy node: `Organization`), `Brand OFFERS Product`,
+  `Evidence SUPPORTS Decision`, `Project EXECUTES Strategy`. Full set:
+  [BUSINESS_KNOWLEDGE_GRAPH](../architecture/BUSINESS_KNOWLEDGE_GRAPH.md).
+- **Ownership (Doc 02):** `Organization → Client`, `Client → Project` — both one-to-many.
 
-> Genuine decisions not derivable from the frozen architecture. Surfaced, not assumed.
+## 7. Resolved Decisions
 
-1. **BKG `Organization` node vs Workspace `Organization`.** The same word names two things: the BKG
-   node (the _client's business_, since BKG is per-Client) and the Workspace tenant (the _agency_).
-   A naming reconciliation is needed (e.g., rename the per-client business node, or formally scope the
-   word by layer). This is the §3 terminology note.
-2. **Detailed fields for Organization / Client / Project.** The architecture defines these as business
-   containers but not their field sets. Their canonical fields require a decision (or are deferred to
-   persistence/implementation).
-3. **`Persona` overload.** BIF `Persona` (buyer persona) vs Doc 01 "personas" (users/AI agents) share
-   a word. Confirm whether to rename one for clarity in the Product Bible.
-4. **`OpportunityCategory` vs `Capability`/`ExecutionDomain`.** Per ADR-0007 the latter two are the
-   go-forward axes; whether `OpportunityCategory` is retained, mapped, or retired is an open product
-   decision (noted in ADR-0007).
-5. **`Project` as BKG node vs Workspace container.** "Project" exists both as a BKG node type and as a
-   Workspace container (Doc 02). Confirm these are the same concept viewed from two layers, or
-   distinct.
+The following were resolved by the Product Owner and are now canonical:
+
+1. **Organization ≠ Business.** **Organization** = the agency tenant. **Business** = the client's
+   company (the subject of research/analysis/optimization), represented inside the Client's BKG. The
+   Product Bible uses **Business** for the client's company; the BKG `Organization` node is an
+   implementation detail.
+2. **No field definitions.** The Data Dictionary defines business meaning, relationships, ownership,
+   lifecycle, and terminology — **not fields**. Field-level definitions remain deferred to
+   implementation.
+3. **Two distinct Persona concepts, both retained.** **Buyer Persona** (client's market, in BIF) and
+   **Platform Persona** (participants in AGE: Human + AI Workforce, Doc 01). Always qualify "Persona".
+4. **OpportunityCategory retained.** It is a strategic business classification from Business
+   Intelligence — a different concept from Capability (_what_) and ExecutionDomain (_where_). No
+   mapping or replacement.
+5. **One Project, multiple representations.** A single business Project appears as a Workspace
+   context, a BKG node, and an Execution context — different views of the same entity. No separate
+   Project concepts are introduced.
+
+**Canonical principle:** terminology precedence is **Business → Product → Architectural →
+Implementation**; business terminology always wins (§1). This guides all remaining Product Bible
+documents.
