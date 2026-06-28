@@ -5,27 +5,26 @@
 ## Purpose
 
 This document defines, at the **business level**, how AGE automates work — the anatomy of an
-automation (**trigger → condition → action**, plus **schedules**), the **escalation workflows**
+automation (**trigger → condition → action**, plus **schedules**), the **escalation** principle
 (deferred here from Doc 08), and the governance that keeps automation within the platform's
 guardrails. Derived from the personas (Doc 01), the Workspace Model (Doc 02), the AI Agent
 Architecture (Doc 04), the Permission Model (Doc 06), and the frozen `Workflow` concept.
 
 It defines the automation **model**, not its implementation. It does not define an automation engine,
-a rule/condition language, specific automations, or schedule cadences — those are implementation.
+a rule/condition language, an action catalog, or schedule cadences — those are implementation.
 
-> **Status:** In Progress — derived from Final Docs 01–08. Genuine decisions not derivable from
-> existing material are surfaced in [§7 Open Decisions](#7-open-decisions).
+> **Status:** Final — approved by the Product Owner. Conforms to Final Docs 01–08.
 
 ## Scope
 
-- **In scope:** automation anatomy, automation opportunities (by reference), escalation workflows,
-  the execution/approval boundary for automation, scope, and audit.
-- **Out of scope:** automation engine, rule/condition language, specific automation definitions,
-  schedule cadences, retry/queueing, and UX.
+- **In scope:** automation principles and anatomy, automation opportunities (by reference), the
+  escalation principle, the human-approved execution boundary, scope, client configuration, and audit.
+- **Out of scope:** automation engine, condition syntax/rules, action catalog, schedule cadences,
+  escalation timing/paths, retry/queueing, and UX. **Autonomous Execution is out of scope** (§5).
 
 ## Status
 
-In Progress.
+Final.
 
 ## Related Documents
 
@@ -38,85 +37,95 @@ In Progress.
 - [1. Principles](#1-principles)
 - [2. Automation Anatomy](#2-automation-anatomy)
 - [3. Automation Opportunities](#3-automation-opportunities)
-- [4. Escalation Workflows](#4-escalation-workflows)
-- [5. Execution Boundary & Approval](#5-execution-boundary--approval)
-- [6. Scope & Audit](#6-scope--audit)
-- [7. Open Decisions](#7-open-decisions)
+- [4. Escalation](#4-escalation)
+- [5. Human-Approved Automation & the Execution Boundary](#5-human-approved-automation--the-execution-boundary)
+- [6. Scope, Client Configuration & Audit](#6-scope-client-configuration--audit)
+- [7. Resolved Decisions](#7-resolved-decisions)
 
 ---
 
 ## 1. Principles
 
-1. **Automation serves business outcomes.** Automations exist to reduce toil and surface/act on
-   business signals — not to automate for its own sake.
-2. **Automation never bypasses the guardrails.** It respects the execution boundary (only the
-   Execution Layer side-effects), human approval for impactful actions, scope isolation, and audit
-   (Doc 04, Doc 06).
-3. **AI agents within automations remain pure producers.** Automations may orchestrate agents, but
-   agents only produce proposals/artifacts; they never act or approve (Doc 04).
-4. An automation is, conceptually, a **Workflow** (the frozen `Workflow` concept; BKG relationships
-   `Decision CREATES Workflow`, `Workflow EXECUTES Project`, `Technology ENABLES Workflow`).
+1. **Automation reduces operational effort — not decision-making responsibility.** AGE automates
+   coordination, preparation, routing, and execution-readiness; **humans remain accountable for
+   business decisions and approvals.** (Reinforces Docs 04, 06, 08.)
+2. **Automation serves business outcomes**, not automation for its own sake.
+3. **Automation never bypasses the guardrails** — execution boundary, human approval for impactful
+   actions, scope isolation, and audit (Doc 04, Doc 06).
+4. **AI agents within automations remain pure producers** — they produce proposals/artifacts; they
+   never act or approve (Doc 04).
+5. An automation is, conceptually, a **Workflow** (the frozen `Workflow` concept).
 
 ## 2. Automation Anatomy
 
-Every automation is composed of four business elements:
+Every automation is composed of four business elements, defined as **principles** (not syntax):
 
-| Element       | Meaning                                                                                                                                                                                         |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Trigger**   | The business event that starts the automation — a persona-relevant event, an AI agent alert, an approval outcome, or a **Schedule**. (Same business-event sources as notifications, Doc 08 §3.) |
-| **Condition** | A business rule that determines whether the action proceeds. (The rule _language_ is implementation.)                                                                                           |
-| **Action**    | What the automation does — either **produce** (a proposal, artifact, or notification) or **execute** (a side effect, only via the Execution Layer and subject to approval — §5).                |
-| **Schedule**  | A time-based trigger. The Product Bible establishes that schedules exist; **cadences are not defined** (implementation).                                                                        |
+| Element       | Principle                                                                                                                                                                                                                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Trigger**   | A business event starts the automation — a persona-relevant event, an AI agent alert, an approval outcome, or a **Schedule**. (Same business-event sources as notifications, Doc 08 §3.)                                                                                                         |
+| **Condition** | Automation responds to **business conditions** derived from platform context, business state, and user responsibilities. Condition syntax/authoring is implementation.                                                                                                                           |
+| **Action**    | **Automation coordinates business work.** It may prepare, orchestrate, schedule, recommend, and coordinate; it produces proposals/artifacts/notifications, or routes work toward the Execution Layer (§5). The concrete action catalog is implementation and will evolve as capabilities expand. |
+| **Schedule**  | Scheduling exists as a business capability. The Product Bible does **not** define intervals, recurrence models, cron-like expressions, or timing — those are implementation.                                                                                                                     |
 
 ## 3. Automation Opportunities
 
 The canonical automation opportunities are those each persona declares in Doc 01 (_Automation
-Opportunities_) — e.g., Executive/Growth briefs, risk detection, opportunity detection, budget and
-client-risk monitoring, competitive monitoring, forecasting, and reporting. These describe **what
-should be automated**; this document defines the **model** they fit into and does not enumerate them.
+Opportunities_) — e.g., Executive/Growth briefs, risk and opportunity detection, monitoring,
+forecasting, and reporting. They describe **what should be automated**; this document defines the
+**model** they fit into and does not enumerate them.
 
-## 4. Escalation Workflows
+## 4. Escalation
 
-Doc 08 establishes that an **Escalation** notification exists; **this document owns how and why
-escalation occurs.** As an automation:
+Doc 08 establishes that an **Escalation** notification exists; this document owns the **principle** of
+how escalation occurs:
 
-- **Trigger** — a notification (typically Critical) is **not acknowledged or acted upon** within an
-  expected window.
-- **Condition** — the item remains unaddressed and still warrants attention.
-- **Action** — raise an **Escalation** notification and route it **up the responsibility chain**
-  (Doc 06), scoped and audited.
+> **When required business attention is not received within the appropriate business context,
+> responsibility may escalate to the next responsible party** (up the responsibility chain, Doc 06).
 
-Concrete acknowledgement windows, escalation paths, and conditions are open (§7).
+The Product Bible intentionally does **not** define escalation timing, windows, paths, or notification
+frequency — those are implementation concerns.
 
-## 5. Execution Boundary & Approval
+## 5. Human-Approved Automation & the Execution Boundary
 
-- **Producing vs executing.** Automations that **produce** (proposals, artifacts, notifications,
-  reports) are pure and may run freely within scope. Automations that **execute** external side
-  effects (publish, deploy, send, push) do so **only via the Execution Layer**.
-- **Approval gates execution.** Side-effecting automated actions are subject to the appropriate
-  **Approve** authority (Doc 06 §6); automation **cannot bypass** approval or audit.
-- **Autonomy is a future phase.** Fully autonomous execution (acting without human approval) is the
-  platform's later "Autonomous Execution" phase; until then, impactful automated actions remain gated.
-  The autonomy policy is an open decision (§7).
+AGE adopts a **Human-Approved Automation** model:
 
-## 6. Scope & Audit
+- **Automation may** prepare, orchestrate, schedule, recommend, and coordinate work.
+- **Automation does not** independently perform business actions that create external effects.
+- **Every external side effect remains subject to the Execution Layer and its approval model**
+  (Doc 04, Doc 06). Producing automations (proposals, artifacts, notifications, reports) are pure and
+  may run within scope; executing automations route through the Execution Layer and are
+  **approval-gated**.
+- **Autonomous Execution is out of scope.** Future versions of AGE may introduce Autonomous Execution
+  as a distinct product capability, but **no current automation should assume autonomous execution.**
+
+## 6. Scope, Client Configuration & Audit
 
 - **Scoped.** Every automation runs within a single Organization / Client / Project scope and never
   crosses Client or tenant boundaries (Doc 02 §15).
-- **Audited.** Every automation run — its trigger, conditions evaluated, actions taken, approvals,
-  and outcomes — is **auditable** (persistence AuditLog). No automation action is untraceable.
+- **Client configuration.** Clients may **configure** automations **within the capabilities made
+  available to them**. They do **not** define new automation types or alter platform governance;
+  configuration exists within the boundaries the platform establishes.
+- **Audited.** Every automation run — trigger, conditions evaluated, actions taken, approvals, and
+  outcomes — is **auditable** (persistence AuditLog). No automation action is untraceable.
 
-## 7. Open Decisions
+## 7. Resolved Decisions
 
-> Genuine decisions not derivable from the frozen architecture or Final Docs.
+The following were resolved by the Product Owner and are now canonical:
 
-1. **Autonomous-execution policy.** Which side-effecting automated actions (if any) may run without
-   human approval, and under what confidence/risk thresholds — the boundary toward the future
-   Autonomous Execution phase.
-2. **Action catalog.** The authoritative set of automated action types (produce vs execute) the
-   platform supports.
-3. **Condition model.** How business conditions/rules are expressed (a design/implementation choice).
-4. **Schedule cadences.** What scheduling options exist (implementation).
-5. **Escalation policy.** Acknowledgement windows, escalation paths, and conditions (§4).
-6. **Client-configurable automation.** Whether Client members may define/enable automations, and
-   within what limits.
+1. **Human-Approved Automation.** Automation prepares/orchestrates/schedules/recommends/coordinates;
+   it never independently performs external business actions. Every side effect flows through the
+   Execution Layer + approval. **Autonomous Execution is explicitly out of scope** (a future,
+   distinct capability).
+2. **No action catalog.** Principle only — _automation coordinates business work_; the concrete
+   executable-action catalog is implementation.
+3. **No condition syntax.** Automation responds to business conditions from platform context,
+   business state, and user responsibilities; condition authoring is implementation.
+4. **Scheduling is a capability**, not a defined cadence — intervals/recurrence/cron/timing are
+   implementation.
+5. **Escalation follows the business responsibility chain** (principle); timing/windows/paths/frequency
+   are implementation.
+6. **Client configuration within bounds** — clients configure available automations; they do not add
+   types or change governance.
+
+**Canonical principle:** automation exists to reduce **operational effort**, not decision-making
+responsibility; humans remain accountable for business decisions and approvals.
