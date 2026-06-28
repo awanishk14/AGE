@@ -4,139 +4,143 @@
 
 ## Purpose
 
-This document defines the **navigation model and information architecture** of AGE at the product
-level — how users move through the platform and how information is organized — derived from the
-Workspace Model (Doc 02) and the personas (Doc 01).
+This document defines the **information architecture and navigation model** of AGE at the product
+level — how users orient themselves, what business context they operate in, and how they move between
+contexts. Derived from the Workspace Model (Doc 02) and the personas (Doc 01).
 
-It deliberately does **not** design the visual interface: no layouts, components, visual system,
-interaction patterns, or screen mockups. Those are genuine product-design decisions and are surfaced
-in [§7 Open Decisions](#7-open-decisions) rather than invented here.
+It is **not** interface design. Visual design, layouts, wireframes, components, interaction patterns,
+responsive behavior, and styling are **future UX/UI design work**, outside the Product Bible (see
+[§8](#8-out-of-scope--future-uxui-design-work)).
 
-> **Status:** In Progress — navigation/IA derived from Final Docs 01–06; visual/UX design surfaced as
-> Open Decisions, not assumed.
+> **Status:** Final — approved by the Product Owner. Conforms to Final Docs 01–06.
 
 ## Scope
 
-- **In scope:** navigation principles, the navigation structure (Workspace lenses), information
-  architecture, the canonical screen/dashboard anchors that already exist in Doc 01, and the
-  conceptual UI states.
-- **Out of scope:** visual design, layout, components, interaction/visual patterns, responsive
-  behavior, copy, and any screen mockups (all product-design decisions).
+- **In scope (defines):** Information Architecture · Navigation Model · Workspace Context · Business
+  Navigation Principles · Context Switching · User Orientation.
+- **Out of scope (does not define):** screen layouts · wireframes · visual hierarchy · component
+  library · design system · interaction patterns · responsive behavior · styling. These are future
+  UX/UI design work, not unresolved product questions.
 
 ## Status
 
-In Progress.
+Final.
 
 ## Related Documents
 
 - [User Journeys](./01_USER_JOURNEYS.md) — personas, their dashboards, and journeys.
 - [Workspace Model](./02_WORKSPACE_MODEL.md) — **Final**; Workspace is a navigation/context lens (§6).
-- [Notification Model](./08_NOTIFICATION_MODEL.md) · [Reporting Model](./10_REPORTING_MODEL.md).
+- [Client Lifecycle](./03_CLIENT_LIFECYCLE.md) · [Notification Model](./08_NOTIFICATION_MODEL.md) · [Reporting Model](./10_REPORTING_MODEL.md).
 - [Permission Model](./06_PERMISSION_MODEL.md) — **Final**; scopes determine what is navigable.
 
 ## Table of Contents
 
 - [1. Navigation Principles](#1-navigation-principles)
-- [2. Navigation Structure (Workspace Lenses)](#2-navigation-structure-workspace-lenses)
+- [2. Navigation Structure (Business Context)](#2-navigation-structure-business-context)
 - [3. Information Architecture](#3-information-architecture)
-- [4. Screen & Dashboard Anchors](#4-screen--dashboard-anchors)
-- [5. Navigation & Access](#5-navigation--access)
-- [6. UI States (Conceptual)](#6-ui-states-conceptual)
-- [7. Open Decisions](#7-open-decisions)
+- [4. Context Persistence](#4-context-persistence)
+- [5. Dashboards as Entry Points](#5-dashboards-as-entry-points)
+- [6. Navigation, Access & AI Visibility](#6-navigation-access--ai-visibility)
+- [7. UI States (Conceptual)](#7-ui-states-conceptual)
+- [8. Out of Scope — Future UX/UI Design Work](#8-out-of-scope--future-uxui-design-work)
 
 ---
 
 ## 1. Navigation Principles
 
-Derived from Doc 01 (Core Design Principles):
+1. **Navigation exposes business relationships, not system architecture.** Users should naturally
+   understand _where they are_, _what business context they are in_, _what work is available_, and
+   _how that work relates to the surrounding business hierarchy_. Internal architectural boundaries
+   (BIF, BKG, RIE, SIE, repositories, orchestration, …) **never** define the navigation model.
+2. **Business context, not feature modules.** Users work within business contexts rather than
+   navigating disconnected feature modules.
+3. **Proactive, not search-first** (Doc 01). AGE surfaces opportunities, risks, recommendations,
+   evidence, and next actions; users should not have to hunt for information.
+4. **Permission-aware visibility.** Users only **discover** the contexts, Clients, Projects, and
+   business areas they have access to (derived from Doc 06, stated here as a navigation principle).
+5. **AI is embedded, not a destination** (see §6).
 
-1. **Proactive, not search-first.** AGE surfaces opportunities, risks, recommendations, evidence,
-   and next actions — users should not have to hunt for information.
-2. **Every primary view answers three questions immediately:** _What needs my attention? Why does it
-   matter? What should I do next?_
-3. **Context-first.** Navigation is organized around the business context a user is operating in
-   (Organization / Client / Project), not around features or channels.
+## 2. Navigation Structure (Business Context)
 
-## 2. Navigation Structure (Workspace Lenses)
+Navigation follows **business context** (Doc 02 §6: a Workspace is a navigation/context lens). The
+primary navigation hierarchy is:
 
-Per Doc 02 §6, a **Workspace is a product lens** — it describes **navigation and context**, not
-ownership. The canonical navigation contexts are the three Workspace lenses:
+```
+Organization → Client → Project
+```
 
-| Lens                       | Navigation context                                                             |
-| -------------------------- | ------------------------------------------------------------------------------ |
-| **Organization Workspace** | The agency: its Clients, Shared Agency Resources, and portfolio-level views.   |
-| **Client Workspace**       | One Client's Business: intelligence, research, strategy, assets, and projects. |
-| **Project Workspace**      | One Project's execution within a Client.                                       |
+| Context          | What the user is operating within                                                             |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| **Organization** | The agency: its Clients, Shared Agency Resources, portfolio-level orientation.                |
+| **Client**       | One Client's Business: its intelligence, research, strategy, knowledge, assets, and projects. |
+| **Project**      | One Project's execution within a Client.                                                      |
 
-**Context switching** (moving between Organization → Client → Project) is the primary navigation
-movement. What is navigable in each lens is bounded by the user's access (Doc 06, §5 below).
+**Capabilities become available within the current context** — a user does not navigate to
+"capabilities"; capabilities surface as the work available where the user is.
 
 ## 3. Information Architecture
 
-Information is organized by the business hierarchy (Doc 02) and the canonical vocabulary (Doc 05):
+Within each context, information is organized by **business meaning** (Doc 05 vocabulary), not by
+internal systems:
 
-- **Organization Workspace** → Clients · Shared Agency Resources · portfolio/aggregate views.
-- **Client Workspace** → the Business's **BIF** (12 sections) · **Research/Evidence** · **Strategy** ·
-  **Knowledge (BKG)** · **Assets** · the Client's **Projects** · client lifecycle state (Doc 03).
-- **Project Workspace** → the Project's execution artifacts and capability work.
+- **Organization** → Clients · Shared Agency Resources · portfolio orientation.
+- **Client** → the Business's **intelligence**, **research**, **strategy**, **knowledge**, **assets**,
+  **projects**, and current **lifecycle state** (Doc 03).
+- **Project** → the Project's work and execution.
 
-This IA is a **map of where information lives**, derived from the frozen model. The visual
-organization (menus, grouping, hierarchy depth, labels) is a design decision (§7).
+The underlying engines (BIF/BKG/RIE/SIE) power these business areas but are **never** surfaced as the
+navigation structure. The visual organization (grouping, labels, depth) is future UX/UI work (§8).
 
-## 4. Screen & Dashboard Anchors
+## 4. Context Persistence
 
-The personas in Doc 01 already define **canonical dashboard anchors** (their _Dashboards_ sections).
-These are the named primary views the product must provide; their **contents** are owned by Doc 01,
-their **visual design** is deferred (§7). Examples (non-exhaustive, from Doc 01):
+**Context is persistent.** Once a user enters a Workspace context, navigation **preserves that
+context** until the user intentionally changes it. A user working within a Client continues operating
+within that Client until they explicitly switch to another context. This is a business principle, not
+an implementation requirement.
 
-- **Executive Command Center** (Founder/CEO) · **Growth Command Center** (Growth Director) ·
-  **Operations Command Center** (COO).
-- **Organic Growth / SEO Intelligence Command Center** (SEO Strategist) · **Paid Media Command
-  Center** (Paid Media Strategist) · **Content Intelligence Command Center** (Content Strategist) ·
-  **Brand Intelligence Command Center** (Brand Strategist).
-- AI agent operational dashboards (e.g., **Strategy/Research/SEO/Content/Reporting** command centers).
+## 5. Dashboards as Entry Points
 
-> The full, authoritative list of dashboards is whatever Doc 01 defines per persona. This document
-> does not invent dashboards beyond Doc 01.
+**Dashboards are entry points, not destinations.** A dashboard exists to **orient users toward
+work**, not to be the place where work is performed. Every dashboard answers three questions
+(Doc 01):
 
-## 5. Navigation & Access
+- **What requires attention?**
+- **Why does it matter?**
+- **What should happen next?**
 
-Navigation is bounded by permissions (Doc 06):
+The personas in Doc 01 define the canonical, named dashboards (their _Dashboards_ sections — e.g.,
+Executive / Growth / Operations Command Centers and the per-strategist command centers). Their
+**contents** are owned by Doc 01; their **visual design** is future UX/UI work (§8).
 
-- A user navigates only the **Organizations / Clients / Projects** their responsibilities grant
-  (Doc 06 §2, §5). Out-of-scope contexts are not navigable.
-- The same lens shows different content to different subjects according to scope and access.
-- AI agents are not navigators/subjects (Doc 06 §7); navigation is a human concern.
+## 6. Navigation, Access & AI Visibility
 
-## 6. UI States (Conceptual)
+- **Permission-aware.** A user navigates only the Organizations / Clients / Projects their
+  responsibilities grant (Doc 06); out-of-scope contexts are not discoverable.
+- **AI is not a top-level navigation area.** Users interact with the AI Workforce through **business
+  workflows, capabilities, and work contexts** — never by navigating to an "AI" section. AI is a
+  platform capability **embedded throughout** the experience, keeping the mental model centered on
+  business outcomes rather than technology. (AI agents are not navigators/subjects — Doc 06 §7.)
+
+## 7. UI States (Conceptual)
 
 States a primary view can represent — described conceptually, not visually:
 
-- **Empty / early** — a Client in `Created`/`Onboarding` (Doc 03) whose intelligence is not yet
-  populated.
+- **Empty / early** — a Client in `Created`/`Onboarding` (Doc 03), intelligence not yet populated.
 - **Populated** — an `Active` Client with intelligence, evidence, and recommendations to surface.
-- **Restricted** — content the current user has no access to is not shown (Doc 06).
-- **Historical / read-only** — an `Archived` Client (Doc 03), shown as historical record.
+- **Restricted** — content the user has no access to is not shown (Doc 06).
+- **Historical / read-only** — an `Archived` Client (Doc 03), shown as a historical record.
 
-The visual representation of these states (loading, empty, error, skeletons, etc.) is a design
-decision (§7).
+The visual representation of these states is future UX/UI work (§8).
 
-## 7. Open Decisions
+## 8. Out of Scope — Future UX/UI Design Work
 
-> UI/UX is largely a **product-design** concern that is **not derivable** from the frozen
-> architecture. These are surfaced, not invented.
+The following are **outside the scope of the Product Bible** and belong to future UX/UI design
+documentation. They are **not** unresolved product questions, and **no decisions are required at this
+stage**:
 
-1. **Visual design system.** Layout, components, typography, color, spacing, theming — the entire
-   visual language. (Implementation note: a `@age/ui` package and shadcn/ui exist, but the design
-   system itself is undecided.)
-2. **Concrete screen designs & inventory.** The full set of screens beyond the Doc 01 dashboard
-   anchors, and each screen's composition.
-3. **Navigation pattern.** Sidebar vs top-nav vs command palette; how context switching
-   (Org/Client/Project) is presented; breadcrumbs; global search.
-4. **Information density & grouping.** How BIF sections, capabilities, research, and projects are
-   grouped and labeled within the Client Workspace.
-5. **Interaction & state visuals.** Empty/loading/error states, real-time updates, approvals UX,
-   notification surfacing (coordinate with Doc 08).
-6. **Responsive / multi-device.** Whether and how the product adapts across devices.
-7. **Dashboard composition standard.** A consistent pattern for "answer the three questions" across
-   every command center (Doc 01 principle) — a design decision.
+- Visual design language / design system
+- Navigation components (sidebar, top navigation, command palette, etc.)
+- Screen composition and screen inventory
+- Responsive / multi-device layouts
+- Interaction patterns
+- Widget placement and dashboard layouts
