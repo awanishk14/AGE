@@ -11,10 +11,8 @@ and not prompts, models, or implementation.
 
 It is a **business-domain / governance model only**.
 
-> **Status:** In Progress — derived from the frozen architecture, the AI Workforce personas (Doc 01),
-> the Workspace Model (Doc 02, Final), the Persona Schema Registry, and ADR-0005. Genuine decisions
-> not derivable from existing material are surfaced in [§9 Open Decisions](#9-open-decisions) rather
-> than invented.
+> **Status:** Final — approved by the Product Owner. Conforms to the authoritative Workspace Model
+> (Doc 02) and the AI Workforce definitions (Doc 01).
 
 ## Scope
 
@@ -25,7 +23,7 @@ It is a **business-domain / governance model only**.
 
 ## Status
 
-In Progress.
+Final.
 
 ## Related Documents
 
@@ -50,25 +48,37 @@ In Progress.
 - [6. Agent ↔ Capability Mapping](#6-agent--capability-mapping)
 - [7. Guardrails](#7-guardrails)
 - [8. Human-in-the-Loop](#8-human-in-the-loop)
-- [9. Open Decisions](#9-open-decisions)
+- [9. Resolved Decisions](#9-resolved-decisions)
 
 ---
 
 ## 1. Purpose
 
 AGE operates an **AI Workforce** — a set of AI agents that work alongside the human personas (Doc 01)
-to sense, reason about, and act on each client's business. This document defines how that workforce
-is organized and governed, so every agent is consistent, scoped, and accountable.
+to sense and reason about each client's business. This document defines how that workforce is
+organized and governed, so every agent is consistent, scoped, and accountable.
+
+**Defining principle — the AI Workforce is a shared reasoning layer for the entire platform.** This
+separation is one of AGE's defining architectural characteristics:
+
+- **Capabilities orchestrate reasoning.**
+- **Projects provide context.**
+- **Clients own knowledge.**
+- **Execution performs actions.**
 
 ## 2. Position in the Platform
 
 Agents operate **within** the frozen platform layers; they do not redefine them. From the System Map
 and Workspace Model:
 
-- **Ownership & scope (Doc 02).** The AI Workforce is **owned by the Organization**. Agents
-  **execute within a Project / Client scope**, read and write only within the Client they are invoked
-  for, and **never cross client boundaries** in a single operation. Knowledge produced through agent
-  work **accumulates at the Client** (Doc 02 §7, §13).
+- **A platform reasoning layer, not a per-client asset.** The AI Workforce is a **platform
+  capability** operated at the Organization level (Doc 02 §13). **Clients do not own agents and are
+  never assigned agents** — they consume platform capabilities, and agents are enabled **implicitly
+  through the capabilities available to a client** (licensing/packaging is a future concern, not an
+  agent assignment).
+- **Scope (Doc 02).** Agents **execute within a Project / Client scope**, read and write only within
+  the Client they are invoked for, and **never cross client boundaries** in a single operation.
+  Knowledge produced through agent work **accumulates at the Client** (Doc 02 §7, §13).
 - **Capabilities belong to the platform** (Doc 02 §13); agents operate inside capabilities, they do
   not own them.
 - **The reasoning pipeline** the agents serve is the frozen flow:
@@ -117,17 +127,15 @@ This document defines the orchestration **approach**, not the concrete graphs (i
 
 ## 6. Agent ↔ Capability Mapping
 
-Capabilities belong to the platform (Doc 02 §13); agents operate inside them. A precise,
-authoritative mapping of **which agents serve which capabilities** is **not yet defined** in the
-frozen material and is a genuine business/architecture decision — see [§9.1](#9-open-decisions).
+The relationship between AI Agents and Capabilities is **many-to-many** — deliberately **not** a
+rigid one-to-one mapping. The architecture separates two concerns:
 
-Anchors that _are_ derivable (stated as orientation, not as a final mapping):
+- **AI Workforce** — _who_ performs the reasoning.
+- **Capabilities** — _what_ business capability is delivered.
 
-- Research / Intelligence agents serve the **Intelligence** capability (truth quality, RIE → BIF).
-- Strategy / Executive agents serve the **platform decision layer** (SIE), not a single capability.
-- Reporting / Project Coordinator / QA agents align with **Operations**.
-
-The complete mapping (including Market Discovery, Growth, Authority, Revenue) is deferred to §9.
+An AI Agent may contribute to **multiple** capabilities; a Capability may orchestrate **multiple**
+AI Agents. The **authoritative mapping belongs to implementation and orchestration, not the Product
+Bible.** This document states the principle; it does not enumerate agent-to-capability assignments.
 
 ## 7. Guardrails
 
@@ -136,9 +144,11 @@ Guardrails are governed by each agent's contract (§4) plus the frozen execution
 1. **Decision Authority + Constraints.** An agent may only do what its contract's _Decision
    Authority_ permits, and never what its _Constraints_ forbid (e.g., per Doc 01: agents must never
    modify BIF/RIE directly, override human approvals, or trigger external systems).
-2. **Execution boundary (frozen).** Only the **Execution Layer** performs external side effects
-   (publish, deploy, send, push). Reasoning/agent layers are **pure** — they produce artifacts and
-   proposals, not side effects.
+2. **All AI Agents are pure producers (absolute).** Every agent — including agents whose purpose
+   appears execution-oriented (Content, SEO, Campaign, etc.) — only **produces outputs**:
+   recommendations, plans, drafts, or structured artifacts. **Only the Execution Layer performs side
+   effects** — publishing, API calls, integrations, or external system updates. This is a core,
+   non-negotiable platform guardrail.
 3. **Scope isolation.** Agents never cross client boundaries (Doc 02).
 4. **Auditability.** Every agent action records its contract's _Audit Requirements_ (inputs used,
    confidence, timestamp, outputs) — no agent action is untraceable.
@@ -153,30 +163,30 @@ contracts (Doc 01) and the platform's data-trust principles:
 - Agents **propose**; humans (the Doc 01 human personas) **approve** decisions that have business
   impact. Each agent's _Decision Authority_ states exactly what it may decide independently versus
   what requires human approval.
-- Agents reporting lines in Doc 01 pair a **human owner** with **AI oversight** (e.g., a capability
-  agent reports to its human strategist plus the Strategy Agent).
+- **No hierarchical AI management exists.** No AI Agent supervises another; there is no "Chief AI"
+  or "Manager Agent." **Human users are the only supervisory authority.** Where Doc 01 mentions "AI
+  oversight," it means coordination through orchestration, workflows, and shared context — **not**
+  authority. The orchestration engine determines sequencing and information flow, not an
+  organizational hierarchy.
 - Approvals, escalations, and the resulting audit trail are recorded per each agent's _Audit
   Requirements_.
 
 The concrete mechanics of approval/escalation (gates, routing, notifications) are **out of scope**
 here and belong to the Automation/Permission/Notification documents.
 
-## 9. Open Decisions
+## 9. Resolved Decisions
 
-> Genuine decisions not derivable from the frozen architecture. Surfaced, not assumed.
+The following were resolved by the Product Owner and are now canonical:
 
-1. **Authoritative Agent ↔ Capability mapping.** The complete mapping of each agent to a capability
-   (Intelligence, Market Discovery, Growth, Authority, Operations, Revenue) — and whether an agent
-   may serve more than one capability — needs an explicit decision (see §6).
-2. **"Execution Layer" agents vs the side-effect boundary.** Doc 01 labels some agents as "AI
-   Execution Layer" (e.g., Content, SEO). Confirm that such agents remain **pure producers**
-   (drafts/optimizations) while the actual side effect (publishing/deploying) is performed by the
-   Execution Layer — i.e., agents never directly publish.
-3. **AI supervision hierarchy.** Doc 01 implies "AI oversight" by the Strategy Agent over others. Is
-   there a canonical agent-supervision relationship (e.g., Strategy/Executive Agent supervising
-   capability agents), or is supervision purely human?
-4. **Agent lifecycle & enablement.** Whether agents can be enabled/disabled per Client, and whether
-   all agents exist for every Client by default.
-5. **Completion of the eight skeleton agents.** Executive, Intelligence, Market Discovery, AEO/GEO,
-   Paid Media, Proposal, Project Coordinator, QA still need full Doc 01 contracts before their
-   governance here is complete (owned by Doc 01).
+1. **Agent ↔ Capability mapping is many-to-many** (§6). No rigid one-to-one mapping; the
+   authoritative mapping belongs to implementation/orchestration, not the Product Bible.
+2. **All AI Agents are pure producers** (§7.2) — absolute. Only the Execution Layer performs side
+   effects.
+3. **No AI supervision hierarchy** (§8) — no agent supervises another; humans are the only
+   supervisory authority; coordination is via orchestration, workflows, and shared context.
+4. **Clients are not assigned agents** (§2). The AI Workforce is a platform reasoning layer; agents
+   are enabled implicitly through the capabilities available to a client (future
+   licensing/packaging), never owned or assigned per client.
+5. **Single authoritative definition per AI persona.** The individual AI Workforce contracts —
+   including the eight still-skeleton agents — are governed **exclusively by Doc 01**. This document
+   references the registry and must not duplicate or redefine any agent contract.
