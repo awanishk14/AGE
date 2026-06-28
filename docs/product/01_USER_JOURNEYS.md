@@ -1468,247 +1468,927 @@ Nothing in this section may be editable after approval.
 
 #### 1. Persona Overview
 
-TODO: To be completed during Product Design.
+**Role**
+
+Paid Media Strategist (Performance Growth Capability Owner)
+
+**Department**
+
+Strategy Team
+
+**Reports To**
+
+Growth Director
+
+**Primary Objective**
+
+Design, optimize, and scale paid acquisition systems that generate predictable, high-ROI growth across advertising platforms.
+
+**Secondary Objectives**
+
+- Improve ROAS across channels
+- Reduce CAC
+- Scale high-performing campaigns
+- Identify new acquisition opportunities
+- Improve conversion efficiency
+- Align paid media with business outcomes
+
+**Business Value**
+
+Owns all paid acquisition systems and ensures advertising spend is directly tied to measurable business results.
 
 #### 2. Responsibilities
 
-TODO: To be completed during Product Design.
+##### Daily
+
+- Review Paid Media Command Center
+- Monitor campaign performance
+- Analyze spend efficiency
+- Identify underperforming ads
+- Optimize bidding and targeting strategies
+
+##### Weekly
+
+- Campaign performance review
+- Budget allocation planning
+- Audience strategy refinement
+- Creative performance analysis
+- Competitor ad analysis
+
+##### Monthly
+
+- Channel performance evaluation
+- Budget reallocation strategy
+- Funnel optimization review
+- ROI analysis across campaigns
+- Market expansion opportunities
+
+##### Quarterly
+
+- Paid media strategy redesign
+- Channel diversification planning
+- Budget forecasting
+- Performance benchmarking
+- Acquisition strategy alignment
 
 #### 3. Decision Authority
 
-TODO: To be completed during Product Design.
+Can independently approve:
+
+- Campaign optimizations
+- Budget reallocations (within limits)
+- Audience targeting strategies
+- Creative testing strategies
+- Bid adjustments
+
+Escalates:
+
+- Large budget increases
+- New channel launches
+- Strategic spend allocation changes
 
 #### 4. Daily Workflow
 
-TODO: To be completed during Product Design.
+##### Morning
+
+- Paid Media Performance Brief
+- Spend vs ROI summary
+- Campaign anomalies
+- Conversion tracking status
+- Opportunity alerts
+
+##### Mid-Day
+
+- Campaign optimization
+- A/B testing reviews
+- Audience refinement
+- Creative adjustments
+
+##### Afternoon
+
+- Performance analysis
+- Budget adjustments
+- Strategic coordination
+
+##### Evening
+
+- Daily campaign summary
+- Optimization backlog
+- Next-day plan
 
 #### 5. Weekly Workflow
 
-TODO: To be completed during Product Design.
+Review:
+
+- Campaign performance
+- ROAS trends
+- CAC trends
+- Funnel performance
+- Audience effectiveness
+- Creative performance
+
+Approve:
+
+- Budget shifts
+- New tests
+- Scaling decisions
 
 #### 6. Monthly Workflow
 
-TODO: To be completed during Product Design.
+Review:
+
+- Channel profitability
+- Acquisition cost trends
+- Funnel efficiency
+- Market competitiveness
+- Creative effectiveness
+- Budget utilization
 
 #### 7. Inputs Required
 
-TODO: To be completed during Product Design.
+- Business Intelligence Framework
+- Strategy Intelligence Engine
+- Research Intelligence Engine
+- Conversion data
+- Campaign performance data
+- Audience insights
+- Competitor ad intelligence
+- Revenue data
 
 #### 8. Outputs Produced
 
-TODO: To be completed during Product Design.
+- Paid media strategies
+- Campaign structures
+- Budget allocation plans
+- Audience targeting strategies
+- Creative testing frameworks
+- Optimization recommendations
+- Scaling plans
 
 #### 9. Dashboards
 
-TODO: To be completed during Product Design.
+**Primary Dashboard:** Paid Media Command Center
+
+Contains:
+
+- Spend Overview
+- ROAS by Channel
+- CAC Trends
+- Campaign Performance
+- Creative Performance
+- Funnel Conversion Rates
+- Audience Segments
+- Competitor Ad Activity
+- AI Optimization Recommendations
 
 #### 10. Reports
 
-TODO: To be completed during Product Design.
+Receives:
+
+- Daily Paid Media Brief
+- Weekly Campaign Performance Report
+- Monthly ROI Report
+- Quarterly Paid Strategy Review
+- Creative Performance Report
 
 #### 11. Notifications
 
-TODO: To be completed during Product Design.
+Only performance-critical alerts.
+
+Examples:
+
+- ROAS drop
+- Budget overspend
+- Conversion tracking issues
+- Campaign fatigue
+- Audience saturation
+- Competitor spikes
 
 #### 12. AI Agents
 
-TODO: To be completed during Product Design.
+Primary Agents:
+
+- Paid Media Agent
+- Strategy Agent
+- Research Agent
+- Conversion Optimization Agent
+- Reporting Agent
+
+Each recommendation must include:
+
+- Evidence
+- Confidence Score
+- Expected ROI
+- Recommended Action
+- Priority Level
+- Impact on CAC/ROAS
 
 #### 13. Permissions
 
-TODO: To be completed during Product Design.
+Can manage campaign-level decisions.
+
+Cannot bypass:
+
+- Budget approval limits
+- Audit logs
+- Executive approvals for large spend
 
 #### 14. Integrations Used
 
-TODO: To be completed during Product Design.
+- Google Ads
+- Meta Ads
+- LinkedIn Ads
+- Google Analytics
+- CRM
+- Conversion Tracking Systems
+- Attribution Platforms
+- Competitor Intelligence Tools
 
 #### 15. KPIs
 
-TODO: To be completed during Product Design.
+- ROAS
+- CAC
+- Cost per Conversion
+- Conversion Rate
+- CTR
+- Impression Share
+- Revenue per Campaign
+- Funnel Efficiency
+- Customer Acquisition Volume
+- Budget Efficiency
 
 #### 16. Pain Points
 
-TODO: To be completed during Product Design.
+- Rising acquisition costs
+- Poor attribution clarity
+- Creative fatigue
+- Audience saturation
+- Tracking inconsistencies
+- Fragmented performance data
 
 #### 17. Success Criteria
 
-TODO: To be completed during Product Design.
+The Paid Media Strategist should be able to identify:
+
+- Where money is being wasted
+- Where scaling is possible
+- What will improve ROAS
+
+within 5 minutes of opening AGE.
 
 #### 18. Automation Opportunities
 
-TODO: To be completed during Product Design.
+- Budget optimization
+- Campaign anomaly detection
+- Creative fatigue alerts
+- ROAS monitoring
+- Audience insights generation
+- Automated reporting
+- Bid optimization suggestions
 
 #### 19. Collaboration Matrix
 
-TODO: To be completed during Product Design.
+Works Closely With:
+
+- Growth Director
+- SEO Strategist
+- Content Strategist
+
+AI Agents:
+
+- Paid Media Agent
+- Strategy Agent
+- Reporting Agent
+- Conversion Optimization Agent
 
 #### 20. Audit Requirements
 
-TODO: To be completed during Product Design.
+Every paid media decision must record:
+
+- Decision
+- Decision Maker
+- Timestamp
+- Supporting Evidence
+- AI Recommendation
+- Confidence Score
+- Expected ROI
+- Budget Impact
+- Business Outcome
+- Approval History
+
+Nothing in this section may be editable after approval.
 
 ### Content Strategist
 
 #### 1. Persona Overview
 
-TODO: To be completed during Product Design.
+**Role**
+
+Content Strategist (Narrative & Demand Generation Capability Owner)
+
+**Department**
+
+Strategy Team
+
+**Reports To**
+
+Growth Director
+
+**Primary Objective**
+
+Design content systems that attract, educate, and convert high-intent audiences by aligning messaging with business goals and market demand.
+
+**Secondary Objectives**
+
+- Increase content-driven acquisition
+- Improve engagement quality
+- Build topical authority
+- Support SEO and paid media strategies
+- Align messaging across all channels
+- Identify content gaps and opportunities
+
+**Business Value**
+
+Owns narrative-driven growth by converting intelligence into scalable content systems that drive awareness, trust, and conversions.
 
 #### 2. Responsibilities
 
-TODO: To be completed during Product Design.
+##### Daily
+
+- Review Content Opportunity Dashboard
+- Analyze trending topics and signals
+- Review competitor content strategies
+- Identify content gaps
+- Prioritize content production tasks
+
+##### Weekly
+
+- Content performance review
+- Editorial planning
+- Content experimentation review
+- SEO alignment coordination
+- Campaign content alignment
+
+##### Monthly
+
+- Content strategy evaluation
+- Performance by content type
+- Messaging refinement
+- Content ROI analysis
+- Audience engagement review
+
+##### Quarterly
+
+- Content ecosystem redesign
+- Narrative strategy updates
+- Authority building roadmap
+- Cross-channel content alignment
+- Market positioning refinement
 
 #### 3. Decision Authority
 
-TODO: To be completed during Product Design.
+Can independently approve:
+
+- Content topics
+- Messaging direction
+- Editorial calendar
+- Content formats
+- Content optimization strategies
+
+Escalates:
+
+- Brand positioning changes
+- Large-scale content investments
+- Cross-channel messaging shifts
 
 #### 4. Daily Workflow
 
-TODO: To be completed during Product Design.
+##### Morning
+
+- Content Intelligence Brief
+- Trending topics summary
+- Competitor content review
+- Engagement performance alerts
+- Opportunity insights
+
+##### Mid-Day
+
+- Content planning
+- Messaging refinement
+- SEO alignment coordination
+- AI content suggestions review
+
+##### Afternoon
+
+- Content strategy reviews
+- Editorial coordination
+- Performance analysis
+
+##### Evening
+
+- Content summary
+- Publishing priorities
+- Next-day planning
 
 #### 5. Weekly Workflow
 
-TODO: To be completed during Product Design.
+Review:
+
+- Content performance
+- Engagement metrics
+- SEO impact
+- Conversion contribution
+- Content pipeline health
+- Competitor content movements
+
+Approve:
+
+- Editorial calendar updates
+- Content experiments
+- Messaging adjustments
 
 #### 6. Monthly Workflow
 
-TODO: To be completed during Product Design.
+Review:
+
+- Content ROI
+- Audience growth
+- Engagement quality
+- Conversion impact
+- Content authority growth
+- Channel performance
 
 #### 7. Inputs Required
 
-TODO: To be completed during Product Design.
+- Research Intelligence Engine
+- Strategy Intelligence Engine
+- BIF Framework
+- Competitor content data
+- SEO insights
+- Campaign performance data
+- Audience insights
+- Market trends
 
 #### 8. Outputs Produced
 
-TODO: To be completed during Product Design.
+- Content strategies
+- Editorial calendars
+- Messaging frameworks
+- Content briefs
+- Narrative systems
+- Content optimization plans
+- Distribution strategies
 
 #### 9. Dashboards
 
-TODO: To be completed during Product Design.
+**Primary Dashboard:** Content Intelligence Command Center
+
+Contains:
+
+- Content Performance
+- Engagement Metrics
+- Topic Trends
+- Competitor Content Analysis
+- SEO Content Impact
+- Conversion Contribution
+- Content Pipeline
+- AI Content Recommendations
 
 #### 10. Reports
 
-TODO: To be completed during Product Design.
+Receives:
+
+- Daily Content Brief
+- Weekly Editorial Report
+- Monthly Content Performance Report
+- Quarterly Content Strategy Review
+- Content ROI Report
 
 #### 11. Notifications
 
-TODO: To be completed during Product Design.
+Only content-critical alerts.
+
+Examples:
+
+- Content performance drop
+- Viral opportunity detected
+- Competitor content spike
+- SEO content decay
+- Engagement anomaly
+- Content backlog risk
 
 #### 12. AI Agents
 
-TODO: To be completed during Product Design.
+Primary Agents:
+
+- Content Agent
+- Research Agent
+- SEO Agent
+- Strategy Agent
+- Reporting Agent
+
+Each recommendation must include:
+
+- Evidence
+- Confidence Score
+- Expected Impact
+- Recommended Action
+- Priority Level
+- Engagement/Conversion Impact
 
 #### 13. Permissions
 
-TODO: To be completed during Product Design.
+Can manage content strategy and editorial direction.
+
+Cannot bypass:
+
+- Brand guidelines
+- Audit logs
+- Executive approvals for major shifts
 
 #### 14. Integrations Used
 
-TODO: To be completed during Product Design.
+- CMS
+- Google Analytics
+- Search Console
+- Social Platforms
+- SEO Tools
+- Competitor Intelligence Tools
+- CRM
 
 #### 15. KPIs
 
-TODO: To be completed during Product Design.
+- Content Engagement Rate
+- Organic Traffic Contribution
+- Content Conversion Rate
+- Audience Growth
+- Content ROI
+- Time on Page
+- Scroll Depth
+- Content Share Rate
+- Lead Generation from Content
 
 #### 16. Pain Points
 
-TODO: To be completed during Product Design.
+- Low engagement content
+- Poor content ROI
+- Disconnected messaging
+- Slow content production cycles
+- Weak SEO alignment
+- Lack of audience insights
 
 #### 17. Success Criteria
 
-TODO: To be completed during Product Design.
+The Content Strategist should be able to identify:
+
+- What content to create
+- Why it matters
+- How it contributes to growth
+
+within 5 minutes of opening AGE.
 
 #### 18. Automation Opportunities
 
-TODO: To be completed during Product Design.
+- Content idea generation
+- Trend detection
+- Content performance alerts
+- SEO-content alignment suggestions
+- Editorial planning automation
+- Engagement tracking automation
 
 #### 19. Collaboration Matrix
 
-TODO: To be completed during Product Design.
+Works Closely With:
+
+- Growth Director
+- SEO Strategist
+- Paid Media Strategist
+
+AI Agents:
+
+- Content Agent
+- Research Agent
+- Strategy Agent
+- Reporting Agent
 
 #### 20. Audit Requirements
 
-TODO: To be completed during Product Design.
+Every content decision must record:
+
+- Decision
+- Decision Maker
+- Timestamp
+- Supporting Evidence
+- AI Recommendation
+- Confidence Score
+- Expected Impact
+- Business Outcome
+- Content Performance Impact
+- Approval History
+
+Nothing in this section may be editable after approval.
 
 ### Brand Strategist
 
 #### 1. Persona Overview
 
-TODO: To be completed during Product Design.
+**Role**
+
+Brand Strategist (Positioning & Perception Capability Owner)
+
+**Department**
+
+Strategy Team
+
+**Reports To**
+
+Growth Director
+
+**Primary Objective**
+
+Define, maintain, and evolve brand positioning across all channels to ensure consistent perception, trust, and authority in the market.
+
+**Secondary Objectives**
+
+- Improve brand recognition
+- Strengthen market positioning
+- Align messaging across all capabilities
+- Increase trust and authority signals
+- Differentiate from competitors
+- Ensure brand consistency across touchpoints
+
+**Business Value**
+
+Owns how the company is perceived in the market and ensures every output reinforces a consistent and differentiated brand identity.
 
 #### 2. Responsibilities
 
-TODO: To be completed during Product Design.
+##### Daily
+
+- Review brand perception signals
+- Monitor competitor branding changes
+- Analyze audience sentiment
+- Review messaging consistency
+- Flag brand alignment issues
+
+##### Weekly
+
+- Brand performance review
+- Messaging alignment audits
+- Competitor positioning analysis
+- Campaign brand consistency checks
+- Content-brand alignment review
+
+##### Monthly
+
+- Brand health assessment
+- Positioning refinement
+- Market perception analysis
+- Brand asset evaluation
+- Narrative consistency review
+
+##### Quarterly
+
+- Brand strategy review
+- Market repositioning decisions
+- Brand architecture updates
+- Messaging framework refinement
+- Competitive differentiation strategy
 
 #### 3. Decision Authority
 
-TODO: To be completed during Product Design.
+Can independently approve:
+
+- Messaging guidelines
+- Brand tone adjustments
+- Visual language direction (conceptual)
+- Narrative frameworks
+- Brand positioning refinements
+
+Escalates:
+
+- Full rebranding decisions
+- Market repositioning shifts
+- Major identity changes
 
 #### 4. Daily Workflow
 
-TODO: To be completed during Product Design.
+##### Morning
+
+- Brand Intelligence Brief
+- Competitor brand movement summary
+- Audience sentiment signals
+- Messaging alignment alerts
+- Trust signal updates
+
+##### Mid-Day
+
+- Brand consistency review
+- Messaging refinement
+- Cross-channel alignment checks
+- AI brand recommendations review
+
+##### Afternoon
+
+- Brand strategy coordination
+- Campaign alignment review
+- Content branding validation
+
+##### Evening
+
+- Brand summary
+- Risk alerts
+- Next-day priorities
 
 #### 5. Weekly Workflow
 
-TODO: To be completed during Product Design.
+Review:
+
+- Brand perception trends
+- Messaging consistency
+- Competitor positioning shifts
+- Content alignment with brand
+- Campaign branding effectiveness
+
+Approve:
+
+- Messaging refinements
+- Brand tone adjustments
+- Narrative updates
 
 #### 6. Monthly Workflow
 
-TODO: To be completed during Product Design.
+Review:
+
+- Brand equity signals
+- Market positioning strength
+- Audience perception data
+- Content-brand alignment
+- Competitive differentiation
 
 #### 7. Inputs Required
 
-TODO: To be completed during Product Design.
+- Research Intelligence Engine
+- Business Intelligence Framework
+- Competitor Intelligence
+- Content outputs
+- Campaign performance data
+- Audience sentiment signals
+- Market trend analysis
 
 #### 8. Outputs Produced
 
-TODO: To be completed during Product Design.
+- Brand positioning frameworks
+- Messaging guidelines
+- Narrative systems
+- Tone of voice standards
+- Brand consistency recommendations
+- Differentiation strategies
 
 #### 9. Dashboards
 
-TODO: To be completed during Product Design.
+**Primary Dashboard:** Brand Intelligence Command Center
+
+Contains:
+
+- Brand Sentiment Score
+- Messaging Consistency Index
+- Competitor Positioning Map
+- Audience Perception Trends
+- Content Alignment Score
+- Trust Signal Metrics
+- Brand Risk Alerts
 
 #### 10. Reports
 
-TODO: To be completed during Product Design.
+Receives:
+
+- Daily Brand Brief
+- Weekly Brand Health Report
+- Monthly Brand Strategy Report
+- Quarterly Brand Positioning Review
+- Competitive Brand Analysis
 
 #### 11. Notifications
 
-TODO: To be completed during Product Design.
+Only brand-critical alerts.
+
+Examples:
+
+- Negative sentiment spike
+- Competitor repositioning
+- Messaging inconsistency detected
+- Trust signal degradation
+- Campaign-brand mismatch
 
 #### 12. AI Agents
 
-TODO: To be completed during Product Design.
+Primary Agents:
+
+- Brand Agent
+- Research Agent
+- Strategy Agent
+- Content Agent
+- Reporting Agent
+
+Each recommendation must include:
+
+- Evidence
+- Confidence Score
+- Expected Brand Impact
+- Recommended Action
+- Priority Level
+- Perception Outcome
 
 #### 13. Permissions
 
-TODO: To be completed during Product Design.
+Can control brand guidelines and messaging frameworks.
+
+Cannot bypass:
+
+- Executive approval for repositioning
+- Audit logs
+- Brand governance rules
 
 #### 14. Integrations Used
 
-TODO: To be completed during Product Design.
+- Social Listening Tools
+- Analytics Platforms
+- CRM
+- Content Systems
+- Competitor Intelligence Tools
+- Survey/Feedback Systems
 
 #### 15. KPIs
 
-TODO: To be completed during Product Design.
+- Brand Awareness
+- Brand Sentiment Score
+- Share of Voice
+- Message Consistency Score
+- Engagement Quality
+- Trust Signals
+- Audience Perception Index
 
 #### 16. Pain Points
 
-TODO: To be completed during Product Design.
+- Inconsistent messaging
+- Weak differentiation
+- Brand dilution across channels
+- Poor sentiment tracking
+- Misaligned campaigns
+- Slow brand feedback loops
 
 #### 17. Success Criteria
 
-TODO: To be completed during Product Design.
+The Brand Strategist should be able to clearly identify:
+
+- How the brand is perceived
+- Where perception is breaking
+- How to improve positioning
+
+within 5 minutes of opening AGE.
 
 #### 18. Automation Opportunities
 
-TODO: To be completed during Product Design.
+- Sentiment tracking
+- Brand inconsistency detection
+- Competitor positioning alerts
+- Messaging alignment automation
+- Trust signal monitoring
+- Brand health reporting
 
 #### 19. Collaboration Matrix
 
-TODO: To be completed during Product Design.
+Works Closely With:
+
+- Growth Director
+- Content Strategist
+- SEO Strategist
+- Paid Media Strategist
+
+AI Agents:
+
+- Brand Agent
+- Research Agent
+- Strategy Agent
+- Reporting Agent
 
 #### 20. Audit Requirements
 
-TODO: To be completed during Product Design.
+Every brand decision must record:
+
+- Decision
+- Decision Maker
+- Timestamp
+- Supporting Evidence
+- AI Recommendation
+- Confidence Score
+- Expected Brand Impact
+- Business Outcome
+- Messaging Impact
+- Approval History
+
+Nothing in this section may be editable after approval.
 
 ## Delivery Team
 
