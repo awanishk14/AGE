@@ -165,6 +165,8 @@ Every persona follows the exact structure below.
 
 ### Founder / CEO
 
+> **Persona Status:** 🔵 In Progress — selected for completion. Content to be provided during Product Design. All other personas remain skeleton (🟡 TODO).
+
 #### 1. Persona Overview
 
 TODO: To be completed during Product Design.
