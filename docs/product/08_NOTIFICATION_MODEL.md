@@ -10,52 +10,52 @@ principles. Derived from the personas (Doc 01), the Workspace Model (Doc 02), an
 Model (Doc 06).
 
 It defines the notification **model**, not its implementation. It does not define delivery mechanics,
-templates, copy, message formatting, or channel integrations — those are implementation, and delivery
-itself is an **Execution Layer** concern (§8).
+message templates/copy, preference matrices, schedules, or channel integrations — those are
+implementation, and delivery itself is an **Execution Layer** concern (§8).
 
-> **Status:** In Progress — derived from Final Docs 01–07. Genuine decisions not derivable from
-> existing material are surfaced in [§9 Open Decisions](#9-open-decisions).
+> **Status:** Final — approved by the Product Owner. Conforms to Final Docs 01–07.
 
 ## Scope
 
-- **In scope:** notification categories, trigger principles, routing/scoping, channel concepts,
-  preference & quiet-hours principles, escalation, and audit.
-- **Out of scope:** delivery mechanics, message templates/copy/formatting, channel integration
-  details, retry/queueing, and UX (surfacing visuals are Doc 07 / future UX work).
+- **In scope:** notification categories, trigger principles, destinations, routing/scoping,
+  preference & quiet-hours **principles**, escalation existence, and audit.
+- **Out of scope:** delivery mechanics, templates/copy, preference toggles/matrices, scheduling,
+  channel integrations, digest cadence, and escalation workflow (Doc 09).
 
 ## Status
 
-In Progress.
+Final.
 
 ## Related Documents
 
 - [User Journeys](./01_USER_JOURNEYS.md) — per-persona _Notifications_ tiers and examples.
 - [Workspace Model](./02_WORKSPACE_MODEL.md) · [Permission Model](./06_PERMISSION_MODEL.md) — **Final**; scope & access.
-- [Automation Model](./09_AUTOMATION_MODEL.md) · [UI & Navigation](./07_UI_NAVIGATION.md) — **Final**.
+- [Automation Model](./09_AUTOMATION_MODEL.md) — escalation **workflows** live here.
 
 ## Table of Contents
 
 - [1. Principles](#1-principles)
 - [2. Notification Categories](#2-notification-categories)
 - [3. Triggers](#3-triggers)
-- [4. Channels](#4-channels)
+- [4. Destinations](#4-destinations)
 - [5. Routing & Scope](#5-routing--scope)
 - [6. Preferences & Quiet Hours](#6-preferences--quiet-hours)
 - [7. Escalation](#7-escalation)
 - [8. Delivery, Execution Boundary & Audit](#8-delivery-execution-boundary--audit)
-- [9. Open Decisions](#9-open-decisions)
+- [9. Resolved Decisions](#9-resolved-decisions)
 
 ---
 
 ## 1. Principles
 
-1. **High-signal only.** AGE notifies people about what matters — opportunities, risks, and required
-   actions — not noise. Doc 01 personas consistently specify "only high-value / -critical / -strategic
-   notifications."
-2. **Proactive orientation.** A notification exists to direct a user toward work, echoing the
-   navigation principle (Doc 07): it should convey _what needs attention, why it matters, and what to
-   do next._
-3. **Scoped & permission-aware.** A user is only notified about contexts (Organization / Client /
+1. **Notifications support business attention, not system activity.** A user is notified because
+   something requires **awareness, review, approval, or action** — never simply because an internal
+   event occurred. This reinforces AGE's proactive philosophy and prevents notification fatigue.
+2. **High-signal only.** AGE notifies about what matters — opportunities, risks, and required actions.
+   Doc 01 personas consistently specify "only high-value / -critical / -strategic notifications."
+3. **Proactive orientation.** A notification directs a user toward work (Doc 07): _what needs
+   attention, why it matters, what to do next._
+4. **Scoped & permission-aware.** A user is only notified about contexts (Organization / Client /
    Project) and data they have access to (Doc 06).
 
 ## 2. Notification Categories
@@ -67,14 +67,14 @@ The canonical categories are those defined in every human persona's _Notificatio
 | **Critical**      | Demands immediate attention; a material risk or failure.              |
 | **Important**     | Significant and time-sensitive, but not an emergency.                 |
 | **Informational** | Awareness; no action necessarily required.                            |
-| **Digest**        | Periodic roll-up of lower-priority items.                             |
+| **Digest**        | Aggregates lower-priority information into periodic summaries.        |
 | **Escalation**    | A notification raised because a prior one was not addressed (see §7). |
 
 These five are the canonical set; new categories require explicit review.
 
 ## 3. Triggers
 
-Notifications are triggered by **business events**, not system events. The canonical trigger sources:
+Notifications are triggered by **business events**, not system events. Canonical trigger sources:
 
 - **Persona-relevant events** — each Doc 01 persona's _Notifications_ examples (e.g., revenue
   anomaly, critical client risk, SLA breach, ranking drop, budget overspend, security incident,
@@ -84,64 +84,75 @@ Notifications are triggered by **business events**, not system events. The canon
   or act on them (Doc 04).
 - **Approval requests** — items awaiting a human's _Approve_ authority (Doc 06 §6).
 
-The authoritative trigger-to-persona mapping lives in Doc 01 (per-persona examples). This document
-does not enumerate every trigger.
+The authoritative trigger-to-persona mapping lives in Doc 01. This document does not enumerate triggers.
 
-## 4. Channels
+## 4. Destinations
 
-- **In-app** is the canonical primary channel (notifications surface within the user's current
-  context — Doc 07).
-- **External channels** referenced by Doc 01 personas/integrations include **Email** and
-  **Slack / Teams**.
+The Product Bible defines notification **destinations** (not integrations or specific products):
 
-The concrete channel set, per-channel behavior, and integration details are implementation; **sending
-to an external channel is an Execution Layer side effect** (§8).
+| Destination                         | Meaning                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------ |
+| **In-Platform Notification Center** | The canonical in-product destination, surfaced within the user's current context (Doc 07). |
+| **Email**                           | Delivery to the user's email.                                                              |
+| **External Collaboration Platform** | The user's team collaboration tool.                                                        |
+
+> **Delivery appropriateness (principle).** Notification delivery should be **appropriate to the
+> urgency and business importance** of the event. The Product Bible does **not** prescribe which
+> categories use which destinations — implementation decides how this principle is realized.
+
+Specific products and integrations are implementation choices; **sending to any external destination
+is an Execution Layer side effect** (§8).
 
 ## 5. Routing & Scope
 
-- Notifications route to subjects **by responsibility and access** (Doc 06): a person is notified only
-  about the Organizations / Clients / Projects they are responsible for.
-- Notifications are **scoped** to a context; they never leak data across Clients or tenants
-  (Doc 02 §15 isolation).
-- The same event may notify different subjects differently according to their persona and scope.
+- Notifications route to subjects **by business responsibility, permission scope, and current
+  context** (Doc 06): a person is notified only about the Organizations / Clients / Projects they are
+  responsible for.
+- Notifications are **scoped**; they never leak data across Clients or tenants (Doc 02 §15).
+- **Client members follow the same notification principles as Agency members.** There is **no special
+  notification model** for Client members — governance is identical (responsibility, scope, context).
 
 ## 6. Preferences & Quiet Hours
 
-- **User-controlled.** Users can tune which categories and channels they receive, consistent with
-  each persona's intent (e.g., executives receive "only high-value" notifications — Doc 01).
-- **Quiet hours.** Users may define periods during which non-Critical notifications are suppressed or
-  deferred to a Digest.
-- **Critical overrides.** Critical notifications are not suppressed by preferences/quiet hours.
-
-The exact preference granularity and quiet-hours behavior are open (§9).
+- **Preferences (principle).** User notification preferences exist as a product capability:
+  **users may control notification preferences where doing so does not compromise required business
+  communication.** The Product Bible does **not** define toggles, matrices, per-channel settings, or
+  scheduling — those are implementation.
+- **Quiet Hours** are a **user preference**, not a notification category. **Critical notifications may
+  override Quiet Hours when delaying them would create unacceptable business risk.** All other
+  quiet-hours behavior belongs to implementation.
 
 ## 7. Escalation
 
-- An **Escalation** is raised when a notification (typically Critical) is **not acknowledged or
-  acted upon** within an expected window.
-- Escalation follows **responsibility** (Doc 06) — e.g., toward the persona's reporting line — and is
-  itself scoped and audited.
-- The concrete escalation timings, paths, and conditions are open (§9) and coordinate with the
-  Automation Model (Doc 09).
+This document establishes that an **Escalation** notification **exists** (a notification raised
+because a prior one was not addressed). **How and why escalation occurs — the escalation workflow,
+timings, and paths — is defined by the Automation Model (Doc 09), not here.** The two responsibilities
+are kept separate.
 
 ## 8. Delivery, Execution Boundary & Audit
 
 - **Delivery is an Execution Layer concern.** Composing the notification model (categories, triggers,
-  routing) is product; **sending** a notification externally (email/Slack/push) is a side effect and
-  occurs only in the Execution Layer (Doc 04 / frozen execution boundary).
+  routing) is product; **sending** a notification externally is a side effect and occurs only in the
+  Execution Layer (frozen execution boundary, Doc 04).
 - **Audit.** Notifications — especially approval requests and escalations — are **auditable**
-  (persistence AuditLog); the audit trail records what was raised, to whom, and its outcome.
+  (persistence AuditLog); the trail records what was raised, to whom, and its outcome.
 
-## 9. Open Decisions
+## 9. Resolved Decisions
 
-> Genuine decisions not derivable from the frozen architecture or Final Docs.
+The following were resolved by the Product Owner and are now canonical:
 
-1. **Authoritative channel set & per-channel rules.** Which channels are supported (in-app, email,
-   Slack/Teams, push, SMS?), and how each category maps to channels.
-2. **Preference granularity.** Per-category, per-channel, per-context controls and their defaults.
-3. **Quiet-hours behavior.** Suppress vs. defer-to-Digest; Critical override specifics.
-4. **Digest cadence & composition.** Frequency, grouping, and what qualifies for Digest vs. immediate.
-5. **Escalation policy.** Acknowledgement windows, escalation paths, and conditions (coordinate with
-   Doc 09 Automation).
-6. **Client-member notifications.** Whether and how external Client members are notified (which
-   categories/triggers apply to them).
+1. **Destinations, not integrations.** Canonical destinations are the **In-Platform Notification
+   Center**, **Email**, and an **External Collaboration Platform**. Specific products (Slack, Teams,
+   etc.) are implementation choices, not canonical channels.
+2. **No category→destination mapping.** The principle is that delivery is **appropriate to the urgency
+   and business importance** of the event; implementation realizes it.
+3. **Preferences as principle.** Users may control preferences where it does not compromise required
+   business communication; specific toggles/matrices/schedules are implementation.
+4. **Quiet Hours** is a user preference (not a category); Critical may override it when delay creates
+   unacceptable business risk.
+5. **Digest** aggregates lower-priority information into periodic summaries; **cadence is not defined**
+   (implementation).
+6. **Escalation existence here; escalation workflow in Doc 09.**
+7. **Client members = Agency members** for notification governance; no special model.
+
+**Canonical principle:** notifications exist to support **business attention**, not system activity.
