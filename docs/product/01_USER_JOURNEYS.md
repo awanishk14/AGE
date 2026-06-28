@@ -3279,47 +3279,47 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 4. Daily Workflow
+#### 4. Processing Workflow
 
 TODO: To be completed during Product Design.
 
-#### 5. Weekly Workflow
+#### 5. Input Layer
 
 TODO: To be completed during Product Design.
 
-#### 6. Monthly Workflow
+#### 6. Processing Layer
 
 TODO: To be completed during Product Design.
 
-#### 7. Inputs Required
+#### 7. Output Layer
 
 TODO: To be completed during Product Design.
 
-#### 8. Outputs Produced
+#### 8. Quality Dimensions
 
 TODO: To be completed during Product Design.
 
-#### 9. Dashboards
+#### 9. Operational Modes
 
 TODO: To be completed during Product Design.
 
-#### 10. Reports
+#### 10. Inputs Required
 
 TODO: To be completed during Product Design.
 
-#### 11. Notifications
+#### 11. Outputs Produced
 
 TODO: To be completed during Product Design.
 
-#### 12. AI Agents
+#### 12. Dashboards
 
 TODO: To be completed during Product Design.
 
-#### 13. Permissions
+#### 13. Collaboration Matrix
 
 TODO: To be completed during Product Design.
 
-#### 14. Integrations Used
+#### 14. Constraints
 
 TODO: To be completed during Product Design.
 
@@ -3339,11 +3339,7 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 19. Collaboration Matrix
-
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
+#### 19. Audit Requirements
 
 TODO: To be completed during Product Design.
 
@@ -3351,83 +3347,255 @@ TODO: To be completed during Product Design.
 
 #### 1. Persona Overview
 
-TODO: To be completed during Product Design.
+**Role**
+
+Research Agent (Evidence Collection & Signal Extraction AI Agent)
+
+**Department**
+
+AI Workforce
+
+**Reports To**
+
+Strategy Agent (AI oversight) + Research Intelligence Engine (system layer)
+
+**Primary Objective**
+
+Collect, normalize, and structure external and internal information into actionable evidence signals for downstream intelligence systems.
+
+**Secondary Objectives**
+
+- Gather market intelligence
+- Extract structured insights from raw data
+- Identify trends and signals
+- Provide evidence for strategic decisions
+- Reduce ambiguity in decision-making
+- Maintain factual grounding across systems
+
+**Business Value**
+
+Acts as the foundation of truth for the entire AGE system by converting raw data into structured evidence.
 
 #### 2. Responsibilities
 
-TODO: To be completed during Product Design.
+**Continuous**
+
+- Monitor configured data sources
+- Collect relevant market signals
+- Extract structured insights
+- Normalize incoming data formats
+- Tag evidence with metadata
+
+**On-Demand**
+
+- Research specific queries
+- Extract competitor insights
+- Analyze market trends
+- Generate evidence reports
+- Summarize large datasets
 
 #### 3. Decision Authority
 
-TODO: To be completed during Product Design.
+**Can independently:**
 
-#### 4. Daily Workflow
+- Collect data from approved sources
+- Structure and normalize information
+- Generate evidence objects
+- Tag and classify signals
 
-TODO: To be completed during Product Design.
+**Cannot:**
 
-#### 5. Weekly Workflow
+- Interpret strategy
+- Make decisions
+- Generate recommendations
+- Modify BIF or RIE logic
 
-TODO: To be completed during Product Design.
+#### 4. Processing Workflow
 
-#### 6. Monthly Workflow
+Pipeline: Input Layer → Processing Layer → Output Layer.
 
-TODO: To be completed during Product Design.
+#### 5. Input Layer
 
-#### 7. Inputs Required
+Receives:
 
-TODO: To be completed during Product Design.
+- Source adapters (web, CRM, analytics, etc.)
+- RIE pipeline triggers
+- Strategy Agent queries
+- Content/SEO research requests
 
-#### 8. Outputs Produced
+#### 6. Processing Layer
 
-TODO: To be completed during Product Design.
+- Data extraction
+- Signal normalization
+- Entity recognition
+- Noise filtering
+- Evidence structuring
+- Confidence scoring
 
-#### 9. Dashboards
+#### 7. Output Layer
 
-TODO: To be completed during Product Design.
+Produces:
 
-#### 10. Reports
+- Evidence objects
+- Structured signals
+- Normalized datasets
+- Source-linked insights
+- Trend summaries
 
-TODO: To be completed during Product Design.
+#### 8. Quality Dimensions
 
-#### 11. Notifications
+Every output must evaluate:
 
-TODO: To be completed during Product Design.
+- Source credibility
+- Data freshness
+- Signal relevance
+- Extraction accuracy
+- Confidence score
+- Noise ratio
 
-#### 12. AI Agents
+#### 9. Operational Modes
 
-TODO: To be completed during Product Design.
+##### Daily
 
-#### 13. Permissions
+**Always-On**
 
-TODO: To be completed during Product Design.
+- Monitor data sources
+- Collect relevant signals
+- Update evidence store
 
-#### 14. Integrations Used
+**Execution Mode**
 
-TODO: To be completed during Product Design.
+- Respond to research requests
+- Extract structured insights
+- Normalize datasets
+- Provide evidence packets
+
+##### Weekly
+
+- Review signal quality
+- Update source reliability scoring
+- Refine extraction patterns
+- Identify missing data sources
+
+##### Monthly
+
+- Evaluate research coverage completeness
+- Improve extraction accuracy
+- Reduce noise and duplication
+- Expand source ecosystem
+
+##### Alerts
+
+Only research-critical alerts:
+
+- Source failure
+- Data anomaly detected
+- Low confidence signals
+- Missing coverage areas
+- Conflicting evidence detected
+
+#### 10. Inputs Required
+
+- Approved data sources
+- RIE pipeline triggers
+- Strategy Agent requests
+- SEO/Content research requests
+- Market intelligence feeds
+
+#### 11. Outputs Produced
+
+- Evidence objects
+- Structured signals
+- Research summaries
+- Trend reports
+- Normalized datasets
+
+#### 12. Dashboards
+
+**Primary Dashboard:** Research Intelligence Command Center
+
+Contains:
+
+- Source Activity Feed
+- Evidence Pipeline Status
+- Signal Quality Metrics
+- Trend Detection View
+- Confidence Scoring Map
+- Data Coverage Overview
+
+#### 13. Collaboration Matrix
+
+**AI Agents:**
+
+- Strategy Agent
+- SEO Agent
+- Content Agent
+- Paid Media Agent
+- RIE System Layer
+
+**Works Closely With:**
+
+- Strategy Agent
+- SEO Agent
+- Content Agent
+- RIE System
+- Growth Director
+
+#### 14. Constraints
+
+Must never:
+
+- Generate strategy
+- Make decisions
+- Modify system logic
+- Create recommendations without evidence tagging
 
 #### 15. KPIs
 
-TODO: To be completed during Product Design.
+- Signal Accuracy
+- Source Reliability Score
+- Data Coverage %
+- Extraction Precision
+- Noise Ratio
+- Evidence Generation Speed
 
 #### 16. Pain Points
 
-TODO: To be completed during Product Design.
+- Noisy data sources
+- Conflicting signals
+- Incomplete coverage
+- Low-quality inputs
+- Ambiguous data formats
 
 #### 17. Success Criteria
 
-TODO: To be completed during Product Design.
+The Research Agent should be able to:
+
+- Convert raw data into structured evidence reliably
+- Maintain high-confidence signal pipelines
+- Reduce uncertainty across all downstream systems
 
 #### 18. Automation Opportunities
 
-TODO: To be completed during Product Design.
+- Automated scraping
+- Signal extraction
+- Entity detection
+- Trend identification
+- Evidence structuring
+- Source health monitoring
 
-#### 19. Collaboration Matrix
+#### 19. Audit Requirements
 
-TODO: To be completed during Product Design.
+Every research output must record:
 
-#### 20. Audit Requirements
+- Source used
+- Extraction method
+- Confidence score
+- Timestamp
+- Signal classification
+- Data freshness
 
-TODO: To be completed during Product Design.
+No evidence may be untraceable.
 
 ### Intelligence Agent
 
@@ -3443,47 +3611,47 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 4. Daily Workflow
+#### 4. Processing Workflow
 
 TODO: To be completed during Product Design.
 
-#### 5. Weekly Workflow
+#### 5. Input Layer
 
 TODO: To be completed during Product Design.
 
-#### 6. Monthly Workflow
+#### 6. Processing Layer
 
 TODO: To be completed during Product Design.
 
-#### 7. Inputs Required
+#### 7. Output Layer
 
 TODO: To be completed during Product Design.
 
-#### 8. Outputs Produced
+#### 8. Quality Dimensions
 
 TODO: To be completed during Product Design.
 
-#### 9. Dashboards
+#### 9. Operational Modes
 
 TODO: To be completed during Product Design.
 
-#### 10. Reports
+#### 10. Inputs Required
 
 TODO: To be completed during Product Design.
 
-#### 11. Notifications
+#### 11. Outputs Produced
 
 TODO: To be completed during Product Design.
 
-#### 12. AI Agents
+#### 12. Dashboards
 
 TODO: To be completed during Product Design.
 
-#### 13. Permissions
+#### 13. Collaboration Matrix
 
 TODO: To be completed during Product Design.
 
-#### 14. Integrations Used
+#### 14. Constraints
 
 TODO: To be completed during Product Design.
 
@@ -3503,11 +3671,7 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 19. Collaboration Matrix
-
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
+#### 19. Audit Requirements
 
 TODO: To be completed during Product Design.
 
@@ -3515,83 +3679,268 @@ TODO: To be completed during Product Design.
 
 #### 1. Persona Overview
 
-TODO: To be completed during Product Design.
+**Role**
+
+Strategy Agent (Cross-System Reasoning & Decision Support AI Agent)
+
+**Department**
+
+AI Workforce
+
+**Reports To**
+
+Growth Director (via system orchestration layer)
+
+**Primary Objective**
+
+Generate strategic recommendations by synthesizing insights from BIF, RIE, SIE, and all capability outputs into actionable decision intelligence.
+
+**Secondary Objectives**
+
+- Identify growth opportunities
+- Detect strategic risks
+- Align cross-channel decisions
+- Improve decision speed and accuracy
+- Support all strategy personas with AI reasoning
+- Reduce uncertainty in business decisions
+
+**Business Value**
+
+Acts as the central reasoning engine that converts fragmented intelligence into coherent strategic direction.
 
 #### 2. Responsibilities
 
-TODO: To be completed during Product Design.
+**Continuous (System-Level)**
+
+- Ingest outputs from all intelligence layers
+- Continuously evaluate business signals
+- Detect contradictions across datasets
+- Generate opportunity and risk signals
+- Maintain strategic context awareness
+
+**On-Demand**
+
+- Answer strategic decision queries
+- Generate scenario comparisons
+- Provide recommendation sets
+- Simulate outcomes (non-executing)
+- Validate cross-team alignment
 
 #### 3. Decision Authority
 
-TODO: To be completed during Product Design.
+**Can independently:**
 
-#### 4. Daily Workflow
+- Generate recommendations
+- Rank opportunities
+- Suggest prioritization models
+- Propose strategic adjustments
 
-TODO: To be completed during Product Design.
+**Cannot:**
 
-#### 5. Weekly Workflow
+- Execute actions
+- Modify BIF or RIE
+- Override human approvals
+- Trigger external systems
 
-TODO: To be completed during Product Design.
+#### 4. Processing Workflow
 
-#### 6. Monthly Workflow
+Pipeline: Input Layer → Processing Layer → Output Layer.
 
-TODO: To be completed during Product Design.
+#### 5. Input Layer
 
-#### 7. Inputs Required
+Receives:
 
-TODO: To be completed during Product Design.
+- Business Intelligence Framework (BIF)
+- Research Intelligence Engine (RIE)
+- Strategy Intelligence Engine (SIE)
+- Capability outputs
+- Market signals
+- Performance data
 
-#### 8. Outputs Produced
+#### 6. Processing Layer
 
-TODO: To be completed during Product Design.
+- Signal normalization
+- Cross-domain correlation
+- Conflict detection
+- Opportunity clustering
+- Priority scoring (non-executive)
 
-#### 9. Dashboards
+#### 7. Output Layer
 
-TODO: To be completed during Product Design.
+Produces:
 
-#### 10. Reports
+- Strategic Recommendations
+- Opportunity Rankings
+- Risk Alerts
+- Scenario Comparisons
+- Decision Packages
 
-TODO: To be completed during Product Design.
+#### 8. Quality Dimensions
 
-#### 11. Notifications
+Every recommendation must evaluate:
 
-TODO: To be completed during Product Design.
+- Business Impact
+- Revenue Potential
+- Execution Complexity
+- Confidence Score
+- Risk Level
+- Time Sensitivity
+- Cross-channel impact
 
-#### 12. AI Agents
+#### 9. Operational Modes
 
-TODO: To be completed during Product Design.
+##### Daily
 
-#### 13. Permissions
+**Always-On**
 
-TODO: To be completed during Product Design.
+- Monitor system signals
+- Update opportunity graph
+- Detect anomalies
+- Refresh strategic context
 
-#### 14. Integrations Used
+**Response Mode (when queried)**
 
-TODO: To be completed during Product Design.
+- Analyze relevant datasets
+- Generate structured decision output
+- Provide ranked options
+- Highlight trade-offs
+
+##### Weekly
+
+- Re-evaluate strategic priorities
+- Detect emerging opportunities
+- Identify underperforming strategies
+- Suggest reallocation patterns
+- Update strategic models
+
+##### Monthly
+
+- Long-term trend synthesis
+- Strategy effectiveness review
+- Opportunity backlog refinement
+- System-level optimization suggestions
+
+##### Alerts
+
+Only strategic-level alerts:
+
+- High-impact opportunity detected
+- Cross-channel conflict identified
+- Revenue-risk anomaly detected
+- Opportunity decay detected
+- Strategic misalignment detected
+
+#### 10. Inputs Required
+
+- Business Intelligence Framework
+- Research Intelligence Engine
+- Strategy Intelligence Engine
+- Capability outputs:
+  - Market Discovery
+  - Intelligence
+  - Growth
+  - Brand
+  - SEO
+  - Paid Media
+  - Content
+- Historical decision logs
+- Performance dashboards
+
+#### 11. Outputs Produced
+
+- Strategic recommendation sets
+- Opportunity rankings
+- Risk assessments
+- Scenario simulations
+- Decision packages
+- Priority matrices
+
+#### 12. Dashboards
+
+**Primary Dashboard:** Strategy Intelligence Command Center
+
+Contains:
+
+- Opportunity Graph
+- Risk Heatmap
+- Priority Matrix
+- Scenario Comparison View
+- Cross-channel Performance Overlay
+- Decision History
+
+#### 13. Collaboration Matrix
+
+**AI Agents:**
+
+- Research Agent
+- SEO Agent
+- Content Agent
+- Paid Media Agent
+- Growth Agent
+
+**Works Closely With:**
+
+- Strategy Intelligence Engine
+- Growth Director
+- All Capability Layers
+- Other AI Agents
+
+#### 14. Constraints
+
+Must never:
+
+- Execute actions
+- Modify system state
+- Override human approval flows
+- Write directly to BIF or RIE
 
 #### 15. KPIs
 
-TODO: To be completed during Product Design.
+- Decision Quality Score
+- Recommendation Adoption Rate
+- Opportunity Detection Accuracy
+- Risk Detection Accuracy
+- Time-to-Insight
+- Strategic Alignment Score
 
 #### 16. Pain Points
 
-TODO: To be completed during Product Design.
+- Fragmented intelligence
+- Slow decision cycles
+- Conflicting signals
+- Unprioritized opportunities
+- Incomplete datasets
 
 #### 17. Success Criteria
 
-TODO: To be completed during Product Design.
+The Strategy Agent should be able to:
+
+- Identify best possible actions from messy data
+- Surface risks before humans notice them
+- Reduce decision time significantly
 
 #### 18. Automation Opportunities
 
-TODO: To be completed during Product Design.
+- Opportunity detection
+- Risk scoring
+- Decision ranking
+- Scenario simulation
+- Cross-channel correlation
+- Strategic alerts
 
-#### 19. Collaboration Matrix
+#### 19. Audit Requirements
 
-TODO: To be completed during Product Design.
+Every recommendation must record:
 
-#### 20. Audit Requirements
+- Input signals used
+- Decision logic path
+- Confidence score
+- Alternative options considered
+- Expected impact
+- Risk assessment
+- Timestamp
 
-TODO: To be completed during Product Design.
+No recommendation may be untraceable or unexplainable.
 
 ### Market Discovery Agent
 
@@ -3607,47 +3956,47 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 4. Daily Workflow
+#### 4. Processing Workflow
 
 TODO: To be completed during Product Design.
 
-#### 5. Weekly Workflow
+#### 5. Input Layer
 
 TODO: To be completed during Product Design.
 
-#### 6. Monthly Workflow
+#### 6. Processing Layer
 
 TODO: To be completed during Product Design.
 
-#### 7. Inputs Required
+#### 7. Output Layer
 
 TODO: To be completed during Product Design.
 
-#### 8. Outputs Produced
+#### 8. Quality Dimensions
 
 TODO: To be completed during Product Design.
 
-#### 9. Dashboards
+#### 9. Operational Modes
 
 TODO: To be completed during Product Design.
 
-#### 10. Reports
+#### 10. Inputs Required
 
 TODO: To be completed during Product Design.
 
-#### 11. Notifications
+#### 11. Outputs Produced
 
 TODO: To be completed during Product Design.
 
-#### 12. AI Agents
+#### 12. Dashboards
 
 TODO: To be completed during Product Design.
 
-#### 13. Permissions
+#### 13. Collaboration Matrix
 
 TODO: To be completed during Product Design.
 
-#### 14. Integrations Used
+#### 14. Constraints
 
 TODO: To be completed during Product Design.
 
@@ -3667,11 +4016,7 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 19. Collaboration Matrix
-
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
+#### 19. Audit Requirements
 
 TODO: To be completed during Product Design.
 
@@ -3679,83 +4024,253 @@ TODO: To be completed during Product Design.
 
 #### 1. Persona Overview
 
-TODO: To be completed during Product Design.
+**Role**
+
+SEO Agent (Search Optimization Execution AI Agent)
+
+**Department**
+
+AI Workforce
+
+**Reports To**
+
+SEO Strategist (Human) + Strategy Agent (AI oversight)
+
+**Primary Objective**
+
+Execute SEO optimizations across content and system outputs to improve search visibility, ranking performance, and intent alignment.
+
+**Secondary Objectives**
+
+- Optimize content for search intent
+- Improve keyword alignment
+- Enhance on-page SEO performance
+- Support technical SEO signals
+- Maintain SEO consistency across assets
+- Reduce manual SEO effort
+
+**Business Value**
+
+Acts as the execution layer that applies SEO strategy into real, measurable search improvements.
 
 #### 2. Responsibilities
 
-TODO: To be completed during Product Design.
+**Continuous**
+
+- Apply keyword mapping to content
+- Optimize metadata (titles, descriptions)
+- Ensure internal linking alignment
+- Detect SEO gaps in content
+- Maintain search intent consistency
+
+**On-Demand**
+
+- Optimize blog content for SEO
+- Generate keyword suggestions
+- Improve meta tags
+- Suggest internal linking improvements
+- Fix SEO structure issues in content drafts
 
 #### 3. Decision Authority
 
-TODO: To be completed during Product Design.
+**Can independently:**
 
-#### 4. Daily Workflow
+- Apply keyword optimization
+- Modify metadata for SEO alignment
+- Suggest internal links
+- Adjust content structure for SEO readability
 
-TODO: To be completed during Product Design.
+**Cannot:**
 
-#### 5. Weekly Workflow
+- Decide keyword strategy
+- Change SEO priorities
+- Override SEO Strategist decisions
+- Modify brand positioning
 
-TODO: To be completed during Product Design.
+#### 4. Processing Workflow
 
-#### 6. Monthly Workflow
+Pipeline: Input Layer → Processing Layer → Output Layer.
 
-TODO: To be completed during Product Design.
+#### 5. Input Layer
 
-#### 7. Inputs Required
+Receives:
 
-TODO: To be completed during Product Design.
+- SEO Strategist keyword strategy
+- Content drafts from Content Agent
+- Research Intelligence Engine outputs
+- Strategy Agent recommendations
 
-#### 8. Outputs Produced
+#### 6. Processing Layer
 
-TODO: To be completed during Product Design.
+- Keyword mapping
+- Intent alignment
+- SERP structure optimization
+- Metadata generation
+- Internal linking logic
+- Content structure refinement
 
-#### 9. Dashboards
+#### 7. Output Layer
 
-TODO: To be completed during Product Design.
+Produces:
 
-#### 10. Reports
+- SEO-optimized content
+- Meta titles and descriptions
+- Keyword-mapped content versions
+- Internal linking recommendations
+- On-page SEO improvements
 
-TODO: To be completed during Product Design.
+#### 8. Quality Dimensions
 
-#### 11. Notifications
+Every output must evaluate:
 
-TODO: To be completed during Product Design.
+- Keyword relevance
+- Search intent alignment
+- Content readability
+- CTR optimization potential
+- Ranking potential
+- Structural SEO quality
 
-#### 12. AI Agents
+#### 9. Operational Modes
 
-TODO: To be completed during Product Design.
+##### Daily
 
-#### 13. Permissions
+**Always-On**
 
-TODO: To be completed during Product Design.
+- Monitor SEO tasks queue
+- Maintain keyword mappings
+- Track optimization feedback
 
-#### 14. Integrations Used
+**Execution Mode**
 
-TODO: To be completed during Product Design.
+- Optimize content assets
+- Generate metadata
+- Fix SEO inconsistencies
+- Improve internal linking
+
+##### Weekly
+
+- Review SEO performance feedback
+- Update keyword mappings
+- Improve optimization rules
+- Refine linking strategies
+
+##### Monthly
+
+- Evaluate SEO impact trends
+- Improve optimization accuracy
+- Reduce keyword cannibalization issues
+- Enhance system-wide SEO consistency
+
+##### Alerts
+
+Only execution-level alerts:
+
+- Missing keyword mapping
+- SEO mismatch detected
+- Metadata missing
+- Internal linking gaps
+- Ranking impact risk
+
+#### 10. Inputs Required
+
+- SEO Strategist outputs
+- Content drafts
+- Research Intelligence Engine
+- Strategy Agent recommendations
+- Search Console data
+
+#### 11. Outputs Produced
+
+- SEO-optimized content
+- Meta tags
+- Keyword mappings
+- Internal linking suggestions
+- On-page SEO improvements
+
+#### 12. Dashboards
+
+**Primary Dashboard:** SEO Execution Command Center
+
+Contains:
+
+- Optimization Queue
+- Keyword Mapping View
+- Content SEO Score
+- Internal Linking Map
+- SERP Impact Tracking
+- Metadata Coverage Status
+
+#### 13. Collaboration Matrix
+
+**AI Agents:**
+
+- SEO Strategist
+- Content Agent
+- Strategy Agent
+- Research Agent
+
+**Works Closely With:**
+
+- SEO Strategist
+- Content Agent
+- Brand Strategist
+- Strategy Agent
+
+#### 14. Constraints
+
+Must never:
+
+- Decide keyword strategy
+- Override SEO direction
+- Change brand messaging
+- Modify strategic priorities
 
 #### 15. KPIs
 
-TODO: To be completed during Product Design.
+- SEO Accuracy Score
+- Keyword Coverage
+- Ranking Improvement Rate
+- CTR Improvement
+- Content Optimization Speed
+- Internal Linking Coverage
 
 #### 16. Pain Points
 
-TODO: To be completed during Product Design.
+- Poor keyword mapping
+- Incomplete briefs
+- Conflicting SEO signals
+- Content inconsistency
+- SERP volatility
 
 #### 17. Success Criteria
 
-TODO: To be completed during Product Design.
+The SEO Agent should be able to:
+
+- Fully optimize content for search without human intervention
+- Maintain consistent keyword alignment
+- Improve ranking potential of all processed content
 
 #### 18. Automation Opportunities
 
-TODO: To be completed during Product Design.
+- Keyword insertion
+- Meta generation
+- Internal linking automation
+- Content structure optimization
+- SEO gap detection
+- SERP alignment fixes
 
-#### 19. Collaboration Matrix
+#### 19. Audit Requirements
 
-TODO: To be completed during Product Design.
+Every SEO action must record:
 
-#### 20. Audit Requirements
+- Input content used
+- Keyword strategy applied
+- Optimization changes made
+- Timestamp
+- Confidence score
+- Expected ranking impact
 
-TODO: To be completed during Product Design.
+No optimization may be untraceable.
 
 ### AEO/GEO Agent
 
@@ -3771,47 +4286,47 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 4. Daily Workflow
+#### 4. Processing Workflow
 
 TODO: To be completed during Product Design.
 
-#### 5. Weekly Workflow
+#### 5. Input Layer
 
 TODO: To be completed during Product Design.
 
-#### 6. Monthly Workflow
+#### 6. Processing Layer
 
 TODO: To be completed during Product Design.
 
-#### 7. Inputs Required
+#### 7. Output Layer
 
 TODO: To be completed during Product Design.
 
-#### 8. Outputs Produced
+#### 8. Quality Dimensions
 
 TODO: To be completed during Product Design.
 
-#### 9. Dashboards
+#### 9. Operational Modes
 
 TODO: To be completed during Product Design.
 
-#### 10. Reports
+#### 10. Inputs Required
 
 TODO: To be completed during Product Design.
 
-#### 11. Notifications
+#### 11. Outputs Produced
 
 TODO: To be completed during Product Design.
 
-#### 12. AI Agents
+#### 12. Dashboards
 
 TODO: To be completed during Product Design.
 
-#### 13. Permissions
+#### 13. Collaboration Matrix
 
 TODO: To be completed during Product Design.
 
-#### 14. Integrations Used
+#### 14. Constraints
 
 TODO: To be completed during Product Design.
 
@@ -3831,11 +4346,7 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 19. Collaboration Matrix
-
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
+#### 19. Audit Requirements
 
 TODO: To be completed during Product Design.
 
@@ -3853,47 +4364,47 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 4. Daily Workflow
+#### 4. Processing Workflow
 
 TODO: To be completed during Product Design.
 
-#### 5. Weekly Workflow
+#### 5. Input Layer
 
 TODO: To be completed during Product Design.
 
-#### 6. Monthly Workflow
+#### 6. Processing Layer
 
 TODO: To be completed during Product Design.
 
-#### 7. Inputs Required
+#### 7. Output Layer
 
 TODO: To be completed during Product Design.
 
-#### 8. Outputs Produced
+#### 8. Quality Dimensions
 
 TODO: To be completed during Product Design.
 
-#### 9. Dashboards
+#### 9. Operational Modes
 
 TODO: To be completed during Product Design.
 
-#### 10. Reports
+#### 10. Inputs Required
 
 TODO: To be completed during Product Design.
 
-#### 11. Notifications
+#### 11. Outputs Produced
 
 TODO: To be completed during Product Design.
 
-#### 12. AI Agents
+#### 12. Dashboards
 
 TODO: To be completed during Product Design.
 
-#### 13. Permissions
+#### 13. Collaboration Matrix
 
 TODO: To be completed during Product Design.
 
-#### 14. Integrations Used
+#### 14. Constraints
 
 TODO: To be completed during Product Design.
 
@@ -3913,11 +4424,7 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 19. Collaboration Matrix
-
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
+#### 19. Audit Requirements
 
 TODO: To be completed during Product Design.
 
@@ -3925,165 +4432,518 @@ TODO: To be completed during Product Design.
 
 #### 1. Persona Overview
 
-TODO: To be completed during Product Design.
+**Role**
+
+Content Agent (AI Execution Layer for Content Generation & Optimization)
+
+**Department**
+
+AI Workforce
+
+**Reports To**
+
+Content Strategist (Human) + Strategy Agent (AI oversight)
+
+**Primary Objective**
+
+Generate, structure, and optimize content outputs based on approved strategy, ensuring alignment with SEO, brand, and conversion goals.
+
+**Secondary Objectives**
+
+- Produce high-quality content drafts
+- Optimize content for SEO intent
+- Align messaging with brand guidelines
+- Convert strategy briefs into execution-ready assets
+- Reduce content production time
+- Maintain consistency across channels
+
+**Business Value**
+
+Acts as the execution engine for content production, turning strategic intent into scalable content assets.
 
 #### 2. Responsibilities
 
-TODO: To be completed during Product Design.
+**Continuous**
+
+- Consume content briefs from Content Strategist
+- Align output with SEO and Brand rules
+- Adapt tone based on persona target
+- Ensure structure consistency
+- Optimize for engagement and clarity
+
+**On-Demand**
+
+- Generate blog drafts
+- Create landing page copy
+- Produce social media content
+- Rewrite/optimize existing content
+- Generate SEO meta content
+- Produce content variations for testing
 
 #### 3. Decision Authority
 
-TODO: To be completed during Product Design.
+**Can independently:**
 
-#### 4. Daily Workflow
+- Structure content drafts
+- Optimize readability
+- Suggest headline variations
+- Generate SEO metadata
 
-TODO: To be completed during Product Design.
+**Cannot:**
 
-#### 5. Weekly Workflow
+- Change strategy direction
+- Modify brand positioning
+- Decide topics
+- Override strategic intent
 
-TODO: To be completed during Product Design.
+#### 4. Processing Workflow
 
-#### 6. Monthly Workflow
+Pipeline: Input Layer → Processing Layer → Output Layer.
 
-TODO: To be completed during Product Design.
+#### 5. Input Layer
 
-#### 7. Inputs Required
+Receives:
 
-TODO: To be completed during Product Design.
+- Content Strategist briefs
+- SEO Strategist requirements
+- Brand guidelines
+- Research Intelligence Engine outputs
+- Strategy Agent recommendations
 
-#### 8. Outputs Produced
+#### 6. Processing Layer
 
-TODO: To be completed during Product Design.
+- Intent interpretation
+- Keyword integration
+- Brand tone alignment
+- Structure generation
+- SEO optimization
+- Variant generation
 
-#### 9. Dashboards
+#### 7. Output Layer
 
-TODO: To be completed during Product Design.
+Produces:
 
-#### 10. Reports
+- Blog posts
+- Landing page copy
+- Ad copy variants
+- Social media posts
+- SEO metadata (titles/descriptions)
+- Content repurposing formats
 
-TODO: To be completed during Product Design.
+#### 8. Quality Dimensions
 
-#### 11. Notifications
+Every output must evaluate:
 
-TODO: To be completed during Product Design.
+- SEO alignment
+- Brand consistency
+- Readability score
+- Engagement potential
+- Conversion intent alignment
+- Factual accuracy (based on inputs only)
 
-#### 12. AI Agents
+#### 9. Operational Modes
 
-TODO: To be completed during Product Design.
+##### Daily
 
-#### 13. Permissions
+**Always-On**
 
-TODO: To be completed during Product Design.
+- Await content briefs
+- Maintain tone consistency models
+- Track optimization feedback loops
 
-#### 14. Integrations Used
+**Execution Mode**
 
-TODO: To be completed during Product Design.
+- Generate structured content
+- Produce multiple variants when requested
+- Optimize based on performance signals
+
+##### Weekly
+
+- Analyze content performance feedback
+- Improve content templates
+- Refine prompt structures
+- Optimize output formats
+
+##### Monthly
+
+- Evaluate content effectiveness trends
+- Improve generation consistency
+- Reduce hallucination/error rate
+- Expand content format capabilities
+
+##### Alerts
+
+Only execution-level alerts:
+
+- Content generation failure
+- SEO mismatch detected
+- Brand tone deviation
+- Low engagement prediction
+- Missing input dependencies
+
+#### 10. Inputs Required
+
+- Content Strategist briefs
+- SEO Strategist requirements
+- Brand Strategist guidelines
+- Research Intelligence Engine outputs
+- Strategy Agent recommendations
+
+#### 11. Outputs Produced
+
+- Blog content
+- Landing pages
+- Ad copies
+- SEO metadata
+- Social media content
+- Content variants
+- Repurposed content formats
+
+#### 12. Dashboards
+
+**Primary Dashboard:** Content Execution Command Center
+
+Contains:
+
+- Content Queue
+- Content Performance Feedback
+- SEO Alignment Score
+- Brand Consistency Score
+- Conversion Impact Tracking
+- Variant Testing Results
+
+#### 13. Collaboration Matrix
+
+**AI Agents:**
+
+- Strategy Agent
+- SEO Agent
+- Research Agent
+- Reporting Agent
+
+**Works Closely With:**
+
+- Content Strategist
+- SEO Strategist
+- Brand Strategist
+- Strategy Agent
+
+#### 14. Constraints
+
+Must never:
+
+- Decide strategy
+- Change brand rules
+- Modify SEO targets
+- Invent unsupported facts
 
 #### 15. KPIs
 
-TODO: To be completed during Product Design.
+- Content Quality Score
+- SEO Alignment Score
+- Engagement Rate
+- Conversion Contribution
+- Content Production Speed
+- Revision Rate
 
 #### 16. Pain Points
 
-TODO: To be completed during Product Design.
+- Ambiguous briefs
+- Conflicting SEO signals
+- Tone misalignment
+- Overlapping content requests
+- Incomplete input data
 
 #### 17. Success Criteria
 
-TODO: To be completed during Product Design.
+The Content Agent should be able to:
+
+- Produce publish-ready content from structured briefs
+- Maintain consistency across outputs
+- Reduce human editing effort significantly
 
 #### 18. Automation Opportunities
 
-TODO: To be completed during Product Design.
+- Content generation
+- SEO optimization
+- Variant creation
+- Meta description generation
+- Content repurposing
+- Draft summarization
 
-#### 19. Collaboration Matrix
+#### 19. Audit Requirements
 
-TODO: To be completed during Product Design.
+Every content output must record:
 
-#### 20. Audit Requirements
+- Input brief used
+- SEO constraints applied
+- Brand rules applied
+- Generation timestamp
+- Output variants created
+- Confidence score
 
-TODO: To be completed during Product Design.
+No content may be produced without traceable inputs.
 
 ### Reporting Agent
 
 #### 1. Persona Overview
 
-TODO: To be completed during Product Design.
+**Role**
+
+Reporting Agent (System Accountability & Performance Intelligence AI Agent)
+
+**Department**
+
+AI Workforce
+
+**Reports To**
+
+Growth Director + Strategy Agent (system oversight)
+
+**Primary Objective**
+
+Generate accurate, structured, and traceable reports across all system layers to ensure transparency, accountability, and performance visibility.
+
+**Secondary Objectives**
+
+- Consolidate system-wide metrics
+- Generate decision audit trails
+- Track performance across capabilities
+- Provide real-time business visibility
+- Ensure data consistency across systems
+- Support executive decision-making
+
+**Business Value**
+
+Acts as the system-wide truth reporting layer ensuring every action, decision, and outcome is measurable and traceable.
 
 #### 2. Responsibilities
 
-TODO: To be completed during Product Design.
+**Continuous**
+
+- Aggregate data from all agents and systems
+- Maintain reporting pipelines
+- Track KPI consistency
+- Validate data integrity
+- Ensure audit completeness
+
+**On-Demand**
+
+- Generate performance reports
+- Produce executive summaries
+- Build audit logs
+- Create comparative analysis reports
+- Summarize cross-system performance
 
 #### 3. Decision Authority
 
-TODO: To be completed during Product Design.
+**Can independently:**
 
-#### 4. Daily Workflow
+- Generate reports
+- Aggregate metrics
+- Structure dashboards
+- Compile audit logs
 
-TODO: To be completed during Product Design.
+**Cannot:**
 
-#### 5. Weekly Workflow
+- Modify underlying data
+- Change system decisions
+- Interpret strategic meaning
+- Override system outputs
 
-TODO: To be completed during Product Design.
+#### 4. Processing Workflow
 
-#### 6. Monthly Workflow
+Pipeline: Input Layer → Processing Layer → Output Layer.
 
-TODO: To be completed during Product Design.
+#### 5. Input Layer
 
-#### 7. Inputs Required
+Receives:
 
-TODO: To be completed during Product Design.
+- All AI Agent outputs
+- BIF framework data
+- RIE evidence logs
+- Strategy and execution outputs
+- Capability system metrics
 
-#### 8. Outputs Produced
+#### 6. Processing Layer
 
-TODO: To be completed during Product Design.
+- Data aggregation
+- KPI normalization
+- Cross-system reconciliation
+- Trend calculation
+- Audit log compilation
+- Report structuring
 
-#### 9. Dashboards
+#### 7. Output Layer
 
-TODO: To be completed during Product Design.
+Produces:
 
-#### 10. Reports
+- Executive reports
+- Performance dashboards
+- Audit logs
+- KPI summaries
+- Cross-channel analysis reports
+- System health reports
 
-TODO: To be completed during Product Design.
+#### 8. Quality Dimensions
 
-#### 11. Notifications
+Every report must evaluate:
 
-TODO: To be completed during Product Design.
+- Data accuracy
+- Source consistency
+- Metric alignment
+- Completeness of coverage
+- Temporal correctness
+- Traceability integrity
 
-#### 12. AI Agents
+#### 9. Operational Modes
 
-TODO: To be completed during Product Design.
+##### Daily
 
-#### 13. Permissions
+**Always-On**
 
-TODO: To be completed during Product Design.
+- Collect system outputs
+- Update reporting pipelines
+- Monitor KPI streams
 
-#### 14. Integrations Used
+**Execution Mode**
 
-TODO: To be completed during Product Design.
+- Generate scheduled reports
+- Produce on-demand summaries
+- Validate system consistency
+- Flag anomalies
+
+##### Weekly
+
+- Consolidate performance reports
+- Analyze KPI trends
+- Validate system alignment
+- Generate executive summaries
+
+##### Monthly
+
+- Full system performance audit
+- KPI reconciliation across systems
+- Trend analysis across capabilities
+- Reporting system optimization
+
+##### Alerts
+
+Only system-critical alerts:
+
+- KPI inconsistency detected
+- Missing data pipeline
+- Audit failure
+- Reporting mismatch
+- Data integrity issue
+
+#### 10. Inputs Required
+
+All system outputs:
+
+- Strategy Agent
+- Research Agent
+- SEO Agent
+- Content Agent
+- Paid Media Agent
+- BIF system
+- RIE system
+- Capability layer outputs
+
+#### 11. Outputs Produced
+
+- Executive reports
+- System audit logs
+- KPI dashboards
+- Performance summaries
+- Cross-system reconciliation reports
+
+#### 12. Dashboards
+
+**Primary Dashboard:** System Reporting Command Center
+
+Contains:
+
+- KPI Overview
+- System Health Status
+- Cross-Agent Performance Map
+- Audit Trail Viewer
+- Revenue & Growth Summary
+- Data Integrity Monitor
+
+#### 13. Collaboration Matrix
+
+**AI Agents (All):**
+
+- Strategy Agent
+- Research Agent
+- SEO Agent
+- Content Agent
+- Paid Media Agent
+- Growth Agent
+
+**Works Closely With:**
+
+- Growth Director
+- Strategy Agent
+- All AI Workforce Agents
+- BIF / RIE / Capability systems
+
+#### 14. Constraints
+
+Must never:
+
+- Alter data
+- Modify decisions
+- Generate strategy
+- Override system outputs
 
 #### 15. KPIs
 
-TODO: To be completed during Product Design.
+- Reporting Accuracy
+- Data Completeness
+- Audit Coverage
+- KPI Consistency Score
+- Reporting Latency
+- System Traceability Index
 
 #### 16. Pain Points
 
-TODO: To be completed during Product Design.
+- Data fragmentation
+- Inconsistent metrics
+- Missing inputs
+- Delayed reporting
+- Cross-system mismatches
 
 #### 17. Success Criteria
 
-TODO: To be completed during Product Design.
+The Reporting Agent should be able to:
+
+- Produce a complete, consistent view of system performance
+- Maintain audit-grade traceability
+- Eliminate reporting ambiguity
 
 #### 18. Automation Opportunities
 
-TODO: To be completed during Product Design.
+- Auto-report generation
+- KPI reconciliation
+- Anomaly detection
+- Audit trail creation
+- Dashboard generation
+- System health monitoring
 
-#### 19. Collaboration Matrix
+#### 19. Audit Requirements
 
-TODO: To be completed during Product Design.
+Every report must record:
 
-#### 20. Audit Requirements
+- Data sources used
+- Aggregation logic
+- Timestamp
+- KPI definitions used
+- System coverage completeness
+- Confidence score
 
-TODO: To be completed during Product Design.
+No report may be non-traceable or partially sourced.
 
 ### Proposal Agent
 
@@ -4099,47 +4959,47 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 4. Daily Workflow
+#### 4. Processing Workflow
 
 TODO: To be completed during Product Design.
 
-#### 5. Weekly Workflow
+#### 5. Input Layer
 
 TODO: To be completed during Product Design.
 
-#### 6. Monthly Workflow
+#### 6. Processing Layer
 
 TODO: To be completed during Product Design.
 
-#### 7. Inputs Required
+#### 7. Output Layer
 
 TODO: To be completed during Product Design.
 
-#### 8. Outputs Produced
+#### 8. Quality Dimensions
 
 TODO: To be completed during Product Design.
 
-#### 9. Dashboards
+#### 9. Operational Modes
 
 TODO: To be completed during Product Design.
 
-#### 10. Reports
+#### 10. Inputs Required
 
 TODO: To be completed during Product Design.
 
-#### 11. Notifications
+#### 11. Outputs Produced
 
 TODO: To be completed during Product Design.
 
-#### 12. AI Agents
+#### 12. Dashboards
 
 TODO: To be completed during Product Design.
 
-#### 13. Permissions
+#### 13. Collaboration Matrix
 
 TODO: To be completed during Product Design.
 
-#### 14. Integrations Used
+#### 14. Constraints
 
 TODO: To be completed during Product Design.
 
@@ -4159,11 +5019,7 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 19. Collaboration Matrix
-
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
+#### 19. Audit Requirements
 
 TODO: To be completed during Product Design.
 
@@ -4181,47 +5037,47 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 4. Daily Workflow
+#### 4. Processing Workflow
 
 TODO: To be completed during Product Design.
 
-#### 5. Weekly Workflow
+#### 5. Input Layer
 
 TODO: To be completed during Product Design.
 
-#### 6. Monthly Workflow
+#### 6. Processing Layer
 
 TODO: To be completed during Product Design.
 
-#### 7. Inputs Required
+#### 7. Output Layer
 
 TODO: To be completed during Product Design.
 
-#### 8. Outputs Produced
+#### 8. Quality Dimensions
 
 TODO: To be completed during Product Design.
 
-#### 9. Dashboards
+#### 9. Operational Modes
 
 TODO: To be completed during Product Design.
 
-#### 10. Reports
+#### 10. Inputs Required
 
 TODO: To be completed during Product Design.
 
-#### 11. Notifications
+#### 11. Outputs Produced
 
 TODO: To be completed during Product Design.
 
-#### 12. AI Agents
+#### 12. Dashboards
 
 TODO: To be completed during Product Design.
 
-#### 13. Permissions
+#### 13. Collaboration Matrix
 
 TODO: To be completed during Product Design.
 
-#### 14. Integrations Used
+#### 14. Constraints
 
 TODO: To be completed during Product Design.
 
@@ -4241,11 +5097,7 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 19. Collaboration Matrix
-
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
+#### 19. Audit Requirements
 
 TODO: To be completed during Product Design.
 
@@ -4263,47 +5115,47 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 4. Daily Workflow
+#### 4. Processing Workflow
 
 TODO: To be completed during Product Design.
 
-#### 5. Weekly Workflow
+#### 5. Input Layer
 
 TODO: To be completed during Product Design.
 
-#### 6. Monthly Workflow
+#### 6. Processing Layer
 
 TODO: To be completed during Product Design.
 
-#### 7. Inputs Required
+#### 7. Output Layer
 
 TODO: To be completed during Product Design.
 
-#### 8. Outputs Produced
+#### 8. Quality Dimensions
 
 TODO: To be completed during Product Design.
 
-#### 9. Dashboards
+#### 9. Operational Modes
 
 TODO: To be completed during Product Design.
 
-#### 10. Reports
+#### 10. Inputs Required
 
 TODO: To be completed during Product Design.
 
-#### 11. Notifications
+#### 11. Outputs Produced
 
 TODO: To be completed during Product Design.
 
-#### 12. AI Agents
+#### 12. Dashboards
 
 TODO: To be completed during Product Design.
 
-#### 13. Permissions
+#### 13. Collaboration Matrix
 
 TODO: To be completed during Product Design.
 
-#### 14. Integrations Used
+#### 14. Constraints
 
 TODO: To be completed during Product Design.
 
@@ -4323,11 +5175,7 @@ TODO: To be completed during Product Design.
 
 TODO: To be completed during Product Design.
 
-#### 19. Collaboration Matrix
-
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
+#### 19. Audit Requirements
 
 TODO: To be completed during Product Design.
 
