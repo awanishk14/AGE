@@ -1,6 +1,6 @@
 # ADR 0006: Organize post-SIE engines around business capabilities, not channels
 
-- Status: Proposed
+- Status: Accepted (with modifications — see ADR-0007, ADR-0008)
 - Date: 2026-06-28
 
 ## Context

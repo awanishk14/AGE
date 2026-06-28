@@ -1,7 +1,7 @@
-# AGE — Capability Architecture (Blueprint)
+# AGE — Capability Architecture (APPROVED)
 
-> Status: **Design blueprint** (post-Task-008, pre-Task-009). No code. This document is the
-> stable contract for every engine built from Task 009 onward — the blueprint for the next 50+ tasks.
+> Status: **Approved with modifications** (post-Task-008, pre-Task-009). No code. This is the
+> architectural contract for all future capability development. It supersedes prior discussions.
 
 ## 1. The strategic correction
 
@@ -13,136 +13,184 @@ RIE  → external evidence      SIE  → structured decisions
 ```
 
 The temptation now is to build **channel engines** (SEO Engine, Ads Engine, Content Engine). That
-is how every marketing platform (SEMrush, etc.) is built. **AGE is built differently.**
+is how every marketing platform (SEMrush, etc.) is built. **AGE is built differently** — it is the
+**operating system for a growth agency**, so it models **how agencies create business outcomes**,
+not how marketing software categorizes features. Everything after the platform layer is organized
+around **business capabilities**, not channels.
 
-AGE is the **operating system for a growth agency**. Its architecture must model **how agencies
-create business outcomes**, not how marketing software categorizes features. Therefore everything
-after SIE is organized around **business capabilities**, not marketing channels.
+> A channel (SEO, Google Ads, a blog) is an **execution path**, never a capability.
 
-> A channel (SEO, Google Ads, a blog) is an **execution path _within_ a capability** — never a
-> capability itself.
+## 2. Two axes: Capability vs ExecutionDomain (Decision 1)
 
-## 2. Layered position
+These are **two separate concepts and must never be collapsed into one enum.**
 
-```
-        ┌──────────────────────────────────────────────────────────┐
-        │  BKG (semantic)            BIF (truth)                     │  Knowledge / Memory
-        └──────────────────────────────────────────────────────────┘
-                        │                       ▲ (proposals only, never writes)
-                        ▼                       │
-                       RIE  ── evidence ──▶  Intelligence Capability  (truth quality)
-                                                     │ curated, scored, de-conflicted evidence
-                                                     ▼
-                                                    SIE  ── DecisionPackage ──┐
-                                                                              ▼
-        ┌──────────────────── Capability Layer (Phase 2–4) ──────────────────────┐
-        │  Discovery   Growth   Authority   Operations   Revenue                   │
-        │  (each consumes the DecisionPackage + BIF/BKG/curated evidence,          │
-        │   produces capability-specific PLANS — still decision objects)           │
-        └──────────────────────────────────────────────────────────────────────────┘
-                                                     │ capability plans
-                                                     ▼
-        ┌──────────────────── Execution Layer (Phase 5) ─────────────────────────┐
-        │  SEO exec · Ads exec · Content exec · Reporting exec · Proposal exec ... │
-        └──────────────────────────────────────────────────────────────────────────┘
-```
-
-**Intelligence Capability is special**: it sits _between RIE and SIE_ and governs truth quality.
-The other five capabilities sit _after SIE_ and consume its `DecisionPackage`.
-
-## 3. The Capability Contract (applies to every capability)
-
-Every capability is a package that:
-
-- **Consumes (read-only, by reference):** the SIE `DecisionPackage`, BIF (`BIFFieldRef`), BKG nodes,
-  and curated evidence. It **never writes** to BIF / RIE / BKG / SIE.
-- **Produces:** capability-specific **plan / opportunity objects** — still _decision objects_, not
-  side effects. (e.g. Discovery produces SEO/AEO/GEO opportunities; Growth produces ad plans.)
-- **Orchestrates multiple channels** as execution paths beneath one business outcome.
-- **Never executes.** Execution is Phase 5; execution engines consume capability outputs.
-
-A shared `CapabilityOutput` base (to be defined in Task 009) gives every capability a common
-envelope: `capability`, `organizationId`, `inputs` (referenced ids), `items[]`, `generatedAt`,
-`confidenceScore`. Channels appear as a typed field on each item, not as separate packages.
-
-## 4. The capabilities
-
-### Intelligence Capability (between RIE and SIE) — _truth quality_
-
-**Mission:** keep Strategy focused on decisions while it focuses on the quality of truth.
-**Responsibilities:** evidence quality scoring · source reliability · confidence propagation ·
-contradiction resolution · knowledge freshness · evidence aging · research deduplication.
-**Consumes:** RIE evidence, BIF, BKG. **Produces:** curated, scored, de-conflicted evidence +
-resolved `FieldConflict`s that feed SIE.
-
-### Discovery Capability — _find opportunities_
-
-**Produces:** SEO · AEO · GEO · Local-SEO · competitor · keyword opportunities.
-SEO is one execution path here, not the capability.
-
-### Growth Capability — _paid media, CRO, funnels_
-
-**Produces:** Google Ads · Meta Ads · LinkedIn Ads plans · CRO improvements · funnel optimization ·
-landing-page strategy.
-
-### Authority Capability — _content, PR, reputation_
-
-**Produces:** content strategy · thought leadership · PR strategy · backlink strategy · review
-strategy · video strategy · podcast strategy.
-
-### Operations Capability — _delivery & execution management_
-
-**Produces:** project plans · client reporting · team assignments · SOP execution · QA workflows ·
-delivery tracking.
-
-### Revenue Capability — _pipeline & account growth_
-
-**Produces:** proposal generation · lead qualification · CRM recommendations · pipeline health ·
-upsell opportunities · account growth plans.
-
-## 5. Revised roadmap
-
-| Phase | Name                     | Contents                                             | Status                          |
-| ----- | ------------------------ | ---------------------------------------------------- | ------------------------------- |
-| 1     | **Cognitive Core**       | Domain · BKG · BIF · RIE · SIE                       | ✅ Complete (`foundation-v0.1`) |
-| 2     | **Intelligence**         | Intelligence Capability · Discovery Capability       | Next                            |
-| 3     | **Growth**               | Growth Capability · Authority Capability             | —                               |
-| 4     | **Agency Operations**    | Operations Capability · Revenue Capability           | —                               |
-| 5     | **Autonomous Execution** | SEO · Ads · Content · Reporting · Proposal execution | —                               |
-
-## 6. Relationship to existing engines
-
-- **SIE `OpportunityCategory`** is still channel-shaped (SEO/AEO/GEO/…). Under this model those
-  become **execution-path tags within a capability**, not top-level categories. A new `Capability`
-  enum (Intelligence/Discovery/Growth/Authority/Operations/Revenue) becomes the top-level axis.
-- **SIE may re-source its evidence** from the Intelligence Capability (curated) instead of raw RIE.
-  This is the one upstream rewire implied by the new layer.
-- **No package built so far needs to be deleted** — capabilities sit _on top of_ SIE and _beside_
-  the RIE→SIE path (Intelligence). The Cognitive Core is stable.
-
-## 7. Proposed package layout (to confirm in Task 009)
+- **Capability** answers _"why are we doing this?"_
+- **ExecutionDomain** answers _"where will this be executed?"_
 
 ```
-packages/capabilities/
-  intelligence/      @age/capability-intelligence
-  discovery/         @age/capability-discovery
-  growth/            @age/capability-growth
-  authority/         @age/capability-authority
-  operations/        @age/capability-operations
-  revenue/           @age/capability-revenue
-packages/capability-kit/   @age/capability-kit  (shared CapabilityOutput base + Capability enum)
+Capability                         ExecutionDomain
+----------                         ---------------
+MarketDiscovery                    SEO        AEO        GEO       LocalSEO
+Intelligence                       GoogleAds  MetaAds    LinkedInAds
+Strategy                           CRO        Content    Email     PR
+Growth                             CRM        Reporting  Automation
+Authority                          SSH        Publishing
+Operations
+Revenue
 ```
 
-## 8. Open design decisions (for sign-off before Task 009)
+`StrategyOpportunity` will eventually carry both axes:
 
-1. **Capability enum vs `OpportunityCategory`** — replace, wrap, or keep alongside? (Recommendation:
-   add `Capability` as the top-level axis; demote channels to execution-path tags.)
-2. **SIE input rewire** — does SIE consume curated evidence from the Intelligence Capability instead
-   of raw RIE? (Recommendation: yes, in Phase 2.)
-3. **Shared `CapabilityOutput` contract** — one envelope + per-capability item types, in a
-   `@age/capability-kit` package? (Recommendation: yes.)
-4. **Package layout** — `packages/capabilities/*` (recommended) vs `packages/*-capability`.
-5. **Execution boundary** — confirm Phase 5 execution engines are the _only_ components with side
-   effects; capabilities remain pure planners.
+```
+StrategyOpportunity {
+  capability         // why
+  executionDomains[] // where
+  priority
+  impact
+  confidence
+}
+```
 
-See ADR-0006 for the decision record.
+> **`OpportunityCategory` is NOT replaced.** `Capability` and `ExecutionDomain` are introduced as
+> new, separate enums. (Reconciling/retiring `OpportunityCategory` is deferred to implementation.)
+
+## 3. Layered position & the Intelligence Capability (Decision 2)
+
+The Intelligence Capability sits **between RIE and BIF** — it validates evidence _before_ it
+becomes business truth. The corrected canonical flow:
+
+```
+External Sources
+      │
+      ▼
+Research Intelligence Engine (RIE)        — collects evidence
+      │
+      ▼
+Intelligence Capability                   — validates · deduplicates · scores quality ·
+      │                                     resolves contradictions · confidence propagation ·
+      ▼                                     evidence freshness
+Business Intelligence Framework (BIF)      — stores business truth
+      │
+      ▼
+Strategy Intelligence Engine (SIE)        — produces business decisions
+      │
+      ▼
+Capability Layer (MarketDiscovery, Growth, Authority, Operations, Revenue)
+      │
+      ▼
+Execution Layer (side effects only)
+```
+
+| Component                   | Responsibility                                                                                                                    |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| RIE                         | Collects evidence                                                                                                                 |
+| **Intelligence Capability** | Validates, deduplicates, scores quality, resolves contradictions, calculates confidence propagation, maintains evidence freshness |
+| BIF                         | Stores business truth                                                                                                             |
+| SIE                         | Produces business decisions                                                                                                       |
+
+## 4. The Capability Contract
+
+Every capability:
+
+- **Consumes (read-only, by reference):** SIE `DecisionPackage`, BIF (`BIFFieldRef`), BKG nodes,
+  curated evidence. It **never writes** to platform engines.
+- **Produces:** capability-specific **plan / opportunity objects** — decision objects, not side effects.
+- **Orchestrates multiple ExecutionDomains** beneath one business outcome.
+- **Never executes.** Execution is the Execution Layer; engines there consume capability outputs.
+
+## 5. Capability Kit (Decision 3)
+
+A shared package every capability inherits from, guaranteeing consistent contracts and output
+envelopes:
+
+```
+packages/capability-kit/src/
+  contracts/    capability contract interfaces (Capability, CapabilityRegistry entry)
+  base/         base capability abstractions
+  events/       capability lifecycle events
+  errors/       capability error types
+  metrics/      capability metric contracts
+  outputs/      CapabilityOutput envelope + item base
+  validators/   Zod schemas
+```
+
+## 6. Package layout (Decision 4)
+
+```
+packages/
+  capabilities/
+    market-discovery/    @age/capability-market-discovery
+    intelligence/        @age/capability-intelligence
+    growth/              @age/capability-growth
+    authority/           @age/capability-authority
+    operations/          @age/capability-operations
+    revenue/             @age/capability-revenue
+  capability-kit/        @age/capability-kit
+```
+
+Capabilities live **only** under `packages/capabilities/`. No scattered capability packages.
+
+> Note on the `Capability` enum vs packages: the enum has 7 values. **Strategy** is realized by the
+> platform-layer **SIE** (not a `capabilities/` package); the other six map 1:1 to the packages above.
+
+## 7. The capabilities
+
+- **Market Discovery** (renamed from "Discovery", Decision 7) — find opportunities: SEO, AEO, GEO,
+  Local SEO, competitor, keyword. (Renamed because Product/User/Internal Discovery may follow;
+  "Discovery" alone is ambiguous.)
+- **Intelligence** — truth quality (see §3); sits between RIE and BIF.
+- **Growth** — Google/Meta/LinkedIn Ads plans, CRO, funnel optimization, landing-page strategy.
+- **Authority** — content strategy, thought leadership, PR, backlink, review, video, podcast.
+- **Operations** — project plans, client reporting, team assignments, SOP execution, QA, delivery tracking.
+- **Revenue** — proposal generation, lead qualification, CRM recommendations, pipeline health, upsell, account growth.
+
+## 8. Execution boundary (Decision 5)
+
+**Execution engines are the ONLY components allowed to perform side effects.** Everything before
+the Execution Layer must remain pure.
+
+| Pure layers may                                                   | Execution layer may                                                          |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| read · validate · analyze · score · reason · prioritize · propose | publish · deploy · update · create · delete · modify · send · execute · push |
+
+This boundary must never be violated.
+
+## 9. Capability Registry (Decision 6)
+
+Capabilities must never be hardcoded across the platform. A **CapabilityRegistry** is the canonical
+source of capability metadata. Each capability declares:
+
+```
+CapabilityRegistryEntry {
+  name
+  consumes
+  produces
+  outputs
+  executionDomains[]
+  dependencies[]
+}
+```
+
+Future capabilities (Sales, Customer Success, Finance, HR, …) must be **registerable without
+architectural changes**.
+
+## 10. Revised roadmap
+
+| Phase | Name                     | Contents                                                                              | Status                          |
+| ----- | ------------------------ | ------------------------------------------------------------------------------------- | ------------------------------- |
+| 1     | **Cognitive Core**       | Domain · BKG · BIF · RIE · SIE                                                        | ✅ Complete (`foundation-v0.1`) |
+| 2     | **Intelligence**         | Capability Kit · Intelligence Capability · Market Discovery Capability                | Next                            |
+| 3     | **Growth**               | Growth Capability · Authority Capability                                              | —                               |
+| 4     | **Agency Operations**    | Operations Capability · Revenue Capability                                            | —                               |
+| 5     | **Autonomous Execution** | SEO · Ads · Content · Reporting · Proposal · CRM · Automation · PM · SSH · Publishing | —                               |
+
+> From Task 009, implementation is organized into **epics** (e.g. Epic 01: Intelligence Platform,
+> Epic 02: Market Discovery, …) with tasks inside each (e.g. `EPIC-02 / TASK-003`).
+
+## 11. Decision records
+
+- ADR-0006 — Capability-based architecture (Accepted).
+- ADR-0007 — Separate `Capability` from `ExecutionDomain` (two axes).
+- ADR-0008 — Capability Registry.
+
+The full platform blueprint lives in [AGE_SYSTEM_MAP.md](./AGE_SYSTEM_MAP.md).
