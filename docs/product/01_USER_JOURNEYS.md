@@ -2359,989 +2359,1110 @@ Nothing in this section may be editable after approval.
 
 ### Account Manager
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+Account Manager is the primary relationship owner between AGE and a Client organization, responsible for ensuring alignment between Client expectations and delivered outcomes.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+Human Persona (Delivery Team)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Client-level relationship oversight across all Projects within assigned Clients.
 
-#### 4. Daily Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Ensure sustained Client success through alignment, expectation management, and structured delivery coordination.
 
-#### 5. Weekly Workflow
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Reads Client-level data and project-level summaries
+- Coordinates across Delivery Team personas
+- Interfaces with Execution outcomes via reports and dashboards
+- Cannot directly execute system actions
 
-#### 6. Monthly Workflow
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can recommend prioritization changes across Projects
+- Can escalate risks and delivery concerns
+- Cannot approve or modify execution actions directly
 
-#### 7. Inputs Required
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- No access outside assigned Clients
+- Cannot bypass Permission or Security layers
+- Cannot trigger Execution Layer actions
 
-#### 8. Outputs Produced
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Client Reports (Doc 10)
+- Project progress summaries
+- Notification signals (Doc 08)
+- Risk and escalation signals (Doc 09)
 
-#### 9. Dashboards
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Client alignment recommendations
+- Escalation signals
+- Delivery health assessments
 
-#### 10. Reports
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Client retention stability
+- Delivery satisfaction consistency
+- Reduced escalation frequency over time
 
-#### 11. Notifications
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works closely with Project Manager and Customer Success Manager (Revenue Team)
 
-#### 12. AI Agents
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+May be assisted by AI Intelligence Agents for summarization and insight generation
 
-#### 13. Permissions
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active only when assigned to Clients (Doc 03 lifecycle governs context validity)
 
-#### 14. Integrations Used
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Operates strictly within Client-scoped permissions (Doc 06 + Doc 13)
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Client-level configuration defines reporting visibility and communication preferences
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Misalignment between Client expectations and delivery execution flow
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All recommendations and escalations are traceable via reporting and execution chains
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+No direct external system interaction
 
-#### 19. Collaboration Matrix
+#### 19. Notes
 
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
-
-TODO: To be completed during Product Design.
+Serves as the primary business continuity persona for Client relationships
 
 ### Project Manager
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+Project Manager is responsible for coordinating execution of Client Projects within AGE, ensuring structured delivery across capabilities and Execution Layer outputs.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+Human Persona (Delivery Team)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Project-level execution coordination within assigned Client contexts.
 
-#### 4. Daily Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Ensure Projects are executed in alignment with approved plans, capability outputs, and Client expectations.
 
-#### 5. Weekly Workflow
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Reads Project-level data (Workspace Model Doc 02)
+- Coordinates Execution Layer outputs via approved workflows
+- Interfaces with AI-generated capability plans
+- Does not directly perform execution actions
 
-#### 6. Monthly Workflow
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can prioritize tasks within Project scope
+- Can request re-evaluation of execution plans
+- Cannot approve or bypass Execution Layer
 
-#### 7. Inputs Required
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- Restricted to assigned Projects
+- Cannot override Client-level governance
+- Cannot execute side effects directly (Doc 12 enforcement)
 
-#### 8. Outputs Produced
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Capability outputs (Doc 04)
+- Execution plans (Doc 12)
+- Automation signals (Doc 09)
+- Integration signals (Doc 11)
 
-#### 9. Dashboards
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Project coordination decisions
+- Execution prioritization requests
+- Delivery alignment feedback
 
-#### 10. Reports
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- On-time project execution alignment
+- Reduced execution rework cycles
+- Stable throughput of capability delivery
 
-#### 11. Notifications
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works closely with Account Manager, QA Lead, Developer personas
 
-#### 12. AI Agents
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+AI Agents assist in planning, summarization, and dependency tracking
 
-#### 13. Permissions
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active only during Project lifecycle (Doc 03)
 
-#### 14. Integrations Used
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Scoped to Project-level permissions only
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Project-level configuration defines workflow enablement and capability exposure
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Execution misalignment or coordination breakdown between capabilities and delivery teams
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All coordination decisions are traceable through execution chain logs
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+No direct external system interaction
 
-#### 19. Collaboration Matrix
+#### 19. Notes
 
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
-
-TODO: To be completed during Product Design.
+Acts as the operational bridge between AI Capability output and Execution Layer
 
 ### QA Lead
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+QA Lead is responsible for ensuring delivery correctness, validation of outputs, and quality alignment across Projects within Client contexts.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+Human Persona (Delivery Team)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Quality assurance across Project-level deliverables and capability outputs.
 
-#### 4. Daily Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Ensure that all delivered outputs meet defined business expectations, are consistent with Client requirements, and align with Execution Layer results.
 
-#### 5. Weekly Workflow
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Reviews Project outputs and Execution results
+- Validates AI-generated and human-executed outputs
+- Coordinates with Project Manager for corrective actions
+- Does not execute system changes directly
 
-#### 6. Monthly Workflow
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can flag issues in delivered outputs
+- Can request re-validation or re-execution via proper workflows
+- Cannot approve Execution Layer actions independently
 
-#### 7. Inputs Required
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- No direct execution privileges
+- Cannot bypass approval or security layers
+- Restricted to assigned Client and Project scope
 
-#### 8. Outputs Produced
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Execution outputs (Doc 12)
+- Reports (Doc 10)
+- Automation signals (Doc 09)
+- Integration data (Doc 11)
 
-#### 9. Dashboards
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Quality validation reports
+- Defect/issue identification
+- Improvement recommendations
 
-#### 10. Reports
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Defect reduction rate
+- First-pass quality success rate
+- Stability of delivered outputs across cycles
 
-#### 11. Notifications
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works closely with Project Manager, Developer, and AI QA Agents
 
-#### 12. AI Agents
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+May leverage AI QA Agents for automated validation and anomaly detection
 
-#### 13. Permissions
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active during Project execution lifecycle (Doc 03)
 
-#### 14. Integrations Used
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Scoped strictly to Project-level access controls (Doc 06 + Doc 13)
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Project-level quality thresholds and validation rules (conceptual, not system-defined)
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Undetected defects or misalignment between expected and delivered outputs
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All validation actions and flags are traceable through system audit chain
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+No direct external system interaction
 
-#### 19. Collaboration Matrix
+#### 19. Notes
 
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
-
-TODO: To be completed during Product Design.
+Acts as the final quality gate before business acceptance of outputs
 
 ### Developer
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+Developer is responsible for implementing execution-ready outputs based on approved capability plans and structured delivery requirements.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+Human Persona (Delivery Team)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Execution of technical implementation within Project scope.
 
-#### 4. Daily Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Translate approved capability outputs and project requirements into working system behavior through the Execution Layer.
 
-#### 5. Weekly Workflow
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Works with Execution Layer outputs
+- Implements approved changes via controlled execution workflows
+- Does not define business logic independently
+- Does not bypass Execution Layer
 
-#### 6. Monthly Workflow
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can choose implementation approach within constraints
+- Can suggest improvements to execution plans
+- Cannot approve or trigger execution independently
 
-#### 7. Inputs Required
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- Must operate within Execution Model boundaries (Doc 12)
+- Cannot modify system behavior outside approved workflows
+- No cross-client access
 
-#### 8. Outputs Produced
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Capability outputs (Doc 04)
+- Execution plans (Doc 12)
+- Project specifications (Doc 02 workspace context)
+- Integration definitions (Doc 11)
 
-#### 9. Dashboards
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Implemented system changes (via Execution Layer)
+- Technical implementation feedback
+- Optimization suggestions
 
-#### 10. Reports
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Execution correctness
+- Deployment stability
+- Reduction in rework cycles
 
-#### 11. Notifications
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works closely with Project Manager and QA Lead
 
-#### 12. AI Agents
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+May be assisted by AI coding/implementation agents within approved workflows
 
-#### 13. Permissions
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active during Project execution lifecycle
 
-#### 14. Integrations Used
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Strictly scoped to Project-level permissions
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Depends on capability enablement and project configuration constraints
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Incorrect or incomplete implementation of approved execution plans
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All implementation actions are traceable through Execution Layer logs
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+No direct external system interaction
 
-#### 19. Collaboration Matrix
+#### 19. Notes
 
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
-
-TODO: To be completed during Product Design.
+Acts as execution implementer of approved business intent
 
 ### Designer
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+Designer is responsible for shaping the user-facing and experience layer representation of AGE outputs within defined business and product constraints.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+Human Persona (Delivery Team)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Design of experience representations across Client and Project outputs.
 
-#### 4. Daily Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Ensure that outputs are presented in a clear, usable, and consistent manner aligned with business intent and system constraints.
 
-#### 5. Weekly Workflow
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Works with structured outputs from Execution Layer
+- Translates outputs into presentation-ready formats
+- Does not define system behavior or logic
+- Does not influence execution decisions
 
-#### 6. Monthly Workflow
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can define presentation structure within constraints
+- Can recommend UX improvements
+- Cannot alter underlying system logic or data behavior
 
-#### 7. Inputs Required
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- Must operate within UI & Navigation rules (Doc 07)
+- Cannot bypass Permissions or Execution constraints
+- No influence over backend logic
 
-#### 8. Outputs Produced
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Execution outputs (Doc 12)
+- Reports (Doc 10)
+- System context (Doc 02 workspace model)
 
-#### 9. Dashboards
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Design representations of system outputs
+- Experience structuring recommendations
+- Presentation consistency guidelines
 
-#### 10. Reports
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Clarity of output representation
+- User comprehension effectiveness
+- Consistency across surfaces
 
-#### 11. Notifications
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works closely with Account Manager and Project Manager
 
-#### 12. AI Agents
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+May use AI design assistance tools for layout and structuring support
 
-#### 13. Permissions
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active during Project delivery lifecycle
 
-#### 14. Integrations Used
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Scoped to Project-level access boundaries
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Client and Project configuration defines presentation constraints
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Misrepresentation of system outputs or misaligned user experience
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+Design decisions tied to output traceability chain
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+No direct external system interaction
 
-#### 19. Collaboration Matrix
+#### 19. Notes
 
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
-
-TODO: To be completed during Product Design.
+Acts as the experience translation layer between system output and user perception
 
 ## Revenue Team
 
 ### Sales Executive
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+Sales Executive is responsible for acquiring new Clients and initiating structured engagement within the AGE platform.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+Human Persona (Revenue Team)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+New Client acquisition and transition into Client Lifecycle (Doc 03).
 
-#### 4. Daily Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Convert qualified business opportunities into onboarded Clients within AGE.
 
-#### 5. Weekly Workflow
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Works with Client creation workflows
+- Uses system insights and reports for positioning
+- Interfaces with capability outputs for value demonstration
+- Does not modify system behavior or execution logic
 
-#### 6. Monthly Workflow
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can initiate Client onboarding workflows
+- Can position capability offerings
+- Cannot alter pricing, system rules, or execution flows
 
-#### 7. Inputs Required
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- Must operate within approved business boundaries
+- Cannot bypass Permissions (Doc 06) or Security (Doc 13)
+- No direct Execution Layer access
 
-#### 8. Outputs Produced
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Market insights (Doc 11 integrations)
+- Capability catalog (Doc 15 roadmap context)
+- Reporting outputs (Doc 10)
+- Intelligence outputs (Doc 04 ecosystem)
 
-#### 9. Dashboards
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Client acquisition proposals
+- Engagement summaries
+- Onboarding initiation signals
 
-#### 10. Reports
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Client conversion rate
+- Qualified pipeline quality
+- Onboarding success rate
 
-#### 11. Notifications
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works closely with Proposal Specialist and Account Manager
 
-#### 12. AI Agents
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+May use AI Intelligence Agents for lead analysis and proposal framing
 
-#### 13. Permissions
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active only in pre-Client to Client transition phase (Doc 03 boundary respected)
 
-#### 14. Integrations Used
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Scoped to Organization-level access only
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Organization-level configuration defines sales constraints and capability positioning
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Misalignment between Client expectations and platform capability value
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All acquisition actions are traceable through onboarding and Client creation logs
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+Primary persona interacting with external systems and prospects
 
-#### 19. Collaboration Matrix
+#### 19. Notes
 
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
-
-TODO: To be completed during Product Design.
+Represents the formal entry point of Clients into the AGE ecosystem
 
 ### Proposal Specialist
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+Proposal Specialist is responsible for creating structured business proposals based on AGE capabilities and Client requirements.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+Human Persona (Revenue Team)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Proposal creation and alignment with Client needs and platform capabilities.
 
-#### 4. Daily Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Translate capability value into structured proposals that support Client acquisition and engagement.
 
-#### 5. Weekly Workflow
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Uses capability catalog (Doc 15)
+- Uses intelligence outputs (Doc 04)
+- Uses reporting insights (Doc 10)
+- Does not execute system changes or workflows
 
-#### 6. Monthly Workflow
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can structure proposal content
+- Can recommend capability combinations
+- Cannot commit system resources or execution actions
 
-#### 7. Inputs Required
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- Must align with frozen architecture
+- Cannot override capability definitions
+- No access to Execution Layer
 
-#### 8. Outputs Produced
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Capability outputs (Doc 04)
+- Market insights (Doc 11)
+- Client context from Sales Executive
+- Business intelligence signals
 
-#### 9. Dashboards
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Structured proposals
+- Capability mappings for Client needs
+- Value articulation documents
 
-#### 10. Reports
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Proposal acceptance rate
+- Conversion support effectiveness
+- Alignment accuracy with Client needs
 
-#### 11. Notifications
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works closely with Sales Executive and Customer Success Manager
 
-#### 12. AI Agents
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+May use AI for proposal drafting and structuring support
 
-#### 13. Permissions
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active during pre-onboarding phase
 
-#### 14. Integrations Used
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Scoped to Organization-level access only
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Organization-level constraints define proposal boundaries and capability exposure
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Misalignment between proposal and actual platform capability
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All proposal generation actions are traceable through system logs
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+Interfaces with external prospects and Client stakeholders
 
-#### 19. Collaboration Matrix
+#### 19. Notes
 
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
-
-TODO: To be completed during Product Design.
+Acts as the structured translation layer between capability value and commercial articulation
 
 ### Customer Success Manager
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+Customer Success Manager is responsible for ensuring long-term Client satisfaction and sustained value realization from the AGE platform.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+Human Persona (Revenue Team)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Post-onboarding Client success and retention across lifecycle.
 
-#### 4. Daily Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Ensure Clients continuously realize value from AGE capabilities and remain aligned with platform outcomes.
 
-#### 5. Weekly Workflow
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Monitors Client reports and system outputs
+- Coordinates with Account Manager for relationship continuity
+- Uses insights from AI and reporting layers
+- Does not modify execution or system behavior
 
-#### 6. Monthly Workflow
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can recommend retention strategies
+- Can escalate Client risks
+- Cannot modify system operations or execution flows
 
-#### 7. Inputs Required
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- No execution privileges
+- Restricted to Client-scoped access
+- Cannot override security or permission rules
 
-#### 8. Outputs Produced
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Reports (Doc 10)
+- Notifications (Doc 08)
+- Client lifecycle state (Doc 03)
+- Capability performance data
 
-#### 9. Dashboards
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Retention strategies
+- Client health assessments
+- Expansion recommendations
 
-#### 10. Reports
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Client retention rate
+- Expansion revenue influence
+- Client satisfaction stability
 
-#### 11. Notifications
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works closely with Account Manager and Project Manager
 
-#### 12. AI Agents
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+Uses AI insights for churn prediction and value tracking
 
-#### 13. Permissions
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active during Active and Paused Client states
 
-#### 14. Integrations Used
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Scoped strictly to assigned Clients
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Client-level configuration defines communication and reporting access
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Failure to detect declining Client value or satisfaction
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All recommendations and Client interactions are traceable
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+May interact with Client stakeholders for success alignment
 
-#### 19. Collaboration Matrix
+#### 19. Notes
 
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
-
-TODO: To be completed during Product Design.
+Acts as the long-term value assurance layer for Client relationships
 
 ## Client Team
 
 ### Business Owner
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+Business Owner represents the primary decision-making authority within a Client organization using AGE.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+Human Persona (Client Team)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Client-level strategic decisions and approval authority across Projects and outcomes.
 
-#### 4. Daily Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Ensure that AGE outputs align with business goals, strategic direction, and expected value realization.
 
-#### 5. Weekly Workflow
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Reviews reports and high-level outputs (Doc 10)
+- Approves or rejects strategic recommendations
+- Engages with Account Manager for alignment
+- Does not interact directly with Execution Layer
 
-#### 6. Monthly Workflow
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Final approval authority for Client-side strategic decisions
+- Can accept or reject proposed directions
+- Cannot modify system architecture or execution behavior
 
-#### 7. Inputs Required
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- Bound to Client-scoped access (Doc 06)
+- Cannot access other Clients or Organization-wide data
+- Cannot bypass Security or Execution constraints
 
-#### 8. Outputs Produced
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Reports (Doc 10)
+- Strategic insights (Doc 04 + BIF outputs)
+- Account Manager summaries
+- Client lifecycle context (Doc 03)
 
-#### 9. Dashboards
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Strategic approvals or rejections
+- Business direction feedback
+- Priority alignment decisions
 
-#### 10. Reports
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Business outcome alignment
+- ROI realization from platform usage
+- Strategic satisfaction stability
 
-#### 11. Notifications
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works closely with Account Manager and Customer Success Manager
 
-#### 12. AI Agents
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+Receives AI-generated insights and summaries but does not interact with AI systems directly
 
-#### 13. Permissions
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active during Active Client state (Doc 03)
 
-#### 14. Integrations Used
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Strict Client-level scoped access only
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Client-level configuration defines reporting depth and visibility
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Misalignment between platform outputs and business expectations
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All decisions and approvals are recorded in traceable system logs
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+Primary executive stakeholder interacting with AGE outputs
 
-#### 19. Collaboration Matrix
+#### 19. Notes
 
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
-
-TODO: To be completed during Product Design.
+Represents final authority on Client-side strategic acceptance
 
 ### Marketing Head
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+Marketing Head is responsible for leveraging AGE outputs to drive marketing strategy, campaigns, and growth initiatives within the Client organization.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+Human Persona (Client Team)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Marketing strategy execution using insights and outputs generated by AGE.
 
-#### 4. Daily Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Translate AGE intelligence and reports into actionable marketing strategies and campaigns.
 
-#### 5. Weekly Workflow
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Uses Reports (Doc 10) and insights from Intelligence Layer
+- Interacts with capability outputs for growth strategies
+- Coordinates with Project Manager for execution alignment
+- Does not modify system logic or Execution Layer
 
-#### 6. Monthly Workflow
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can define marketing priorities
+- Can request insights and reporting adjustments
+- Cannot approve Execution Layer actions
 
-#### 7. Inputs Required
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- Limited to Client-scoped data access
+- Cannot override platform-level capabilities
+- Must operate within configured constraints
 
-#### 8. Outputs Produced
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Intelligence outputs (Doc 04)
+- Reports (Doc 10)
+- Integration data (Doc 11)
+- Campaign performance signals
 
-#### 9. Dashboards
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Marketing strategies
+- Campaign direction inputs
+- Growth recommendations
 
-#### 10. Reports
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Campaign performance improvement
+- Lead generation quality
+- Marketing ROI improvement
 
-#### 11. Notifications
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works closely with Sales Executive (Revenue Team) and Project Manager
 
-#### 12. AI Agents
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+Uses AI insights for market analysis, segmentation, and performance optimization
 
-#### 13. Permissions
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active during Active Client state
 
-#### 14. Integrations Used
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Strict Client-level scoped access
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Client-level configuration defines reporting granularity and insight access
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Misalignment between marketing execution and platform insights
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All decisions and insights usage are traceable
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+May interact with external marketing channels indirectly via Execution Layer outputs
 
-#### 19. Collaboration Matrix
+#### 19. Notes
 
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
-
-TODO: To be completed during Product Design.
+Acts as the strategic growth translation layer within Client organizations
 
 ### Product Manager
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+Product Manager represents the Client-side product ownership function, aligning AGE outputs with product strategy and user needs.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+Human Persona (Client Team)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Product strategy alignment and requirement definition within Client context.
 
-#### 4. Daily Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Ensure AGE outputs contribute effectively to product direction, feature prioritization, and user experience improvement.
 
-#### 5. Weekly Workflow
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Uses reports and insights (Doc 10)
+- Engages with AI-generated capability outputs
+- Coordinates with Project Manager for implementation alignment
+- Does not influence system architecture or Execution Layer
 
-#### 6. Monthly Workflow
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can define product priorities
+- Can request analysis or insights
+- Cannot approve or trigger execution directly
 
-#### 7. Inputs Required
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- Restricted to Client-level data and permissions
+- Cannot alter platform capabilities
+- Cannot bypass Execution or Security layers
 
-#### 8. Outputs Produced
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Reports (Doc 10)
+- Intelligence outputs (Doc 04)
+- User and market insights via integrations (Doc 11)
+- Project-level execution summaries
 
-#### 9. Dashboards
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Product requirements
+- Priority adjustments
+- Feature direction inputs
 
-#### 10. Reports
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Product improvement alignment
+- Feature impact effectiveness
+- User satisfaction improvement
 
-#### 11. Notifications
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works closely with Marketing Head and Project Manager
 
-#### 12. AI Agents
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+Uses AI insights for product analytics and prioritization support
 
-#### 13. Permissions
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active during Active Client state
 
-#### 14. Integrations Used
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Strict Client-level scoped access
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Client-level configuration defines insight depth and reporting access
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Misalignment between product direction and system outputs
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All product decisions and insights are fully traceable
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+Indirect interaction via Client-facing outputs and reports
 
-#### 19. Collaboration Matrix
+#### 19. Notes
 
-TODO: To be completed during Product Design.
-
-#### 20. Audit Requirements
-
-TODO: To be completed during Product Design.
+Represents Client-side product governance and interpretation layer
 
 ## AI Workforce
 
 ### Executive Agent
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+AI Executive Agent is a high-level reasoning agent responsible for synthesizing business context and guiding strategic interpretation across the AGE platform.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+AI Persona (AI Workforce)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Cross-domain synthesis of business intelligence across Clients and Projects.
 
-#### 4. Processing Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Provide structured, high-level reasoning outputs that support decision-making across business layers.
 
-#### 5. Input Layer
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Consumes BIF outputs and Reports (Doc 10)
+- Operates on aggregated intelligence context
+- Provides reasoning outputs to human personas
+- Does not execute actions or trigger workflows
 
-#### 6. Processing Layer
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can propose strategic interpretations
+- Cannot approve execution or modify system behavior
 
-#### 7. Output Layer
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- Must remain a pure producer (Doc 04 + Doc 12 alignment)
+- No side-effect capability
+- No cross-client memory persistence beyond scoped context
 
-#### 8. Quality Dimensions
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Business Intelligence Framework (BIF)
+- Reports (Doc 10)
+- Integration signals (Doc 11)
 
-#### 9. Operational Modes
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Strategic reasoning summaries
+- Cross-client pattern insights (contextual only)
+- Decision support narratives
 
-#### 10. Inputs Required
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Accuracy of synthesized insights
+- Decision usefulness to human stakeholders
+- Context relevance
 
-#### 11. Outputs Produced
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works with Account Managers, Business Owners, and Strategy-oriented AI agents
 
-#### 12. Dashboards
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+N/A (self-referential agent role within AI workforce)
 
-#### 13. Collaboration Matrix
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active across all Client lifecycle states where data exists
 
-#### 14. Constraints
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Strictly scoped to permitted Client/Organization context
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Depends on configured capability access and data visibility scope
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Misinterpretation of cross-domain signals or context drift
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All outputs are traceable to input intelligence sources
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+None
 
-#### 19. Audit Requirements
+#### 19. Notes
 
-TODO: To be completed during Product Design.
+Serves as top-level reasoning layer within AI Workforce hierarchy
 
 ### Research Agent
 
@@ -3599,81 +3720,93 @@ No evidence may be untraceable.
 
 ### Intelligence Agent
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+AI Intelligence Agent processes structured and unstructured data to generate actionable business insights.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+AI Persona (AI Workforce)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Analysis of business signals across integrations, reports, and system outputs.
 
-#### 4. Processing Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Transform raw and structured data into actionable intelligence signals.
 
-#### 5. Input Layer
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Reads integrations (Doc 11)
+- Consumes reports (Doc 10)
+- Feeds outputs into Executive and Strategy agents
+- Does not execute actions
 
-#### 6. Processing Layer
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can generate insights and recommendations
+- Cannot trigger execution or workflows
 
-#### 7. Output Layer
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- Pure analytical role only
+- No side effects
+- No direct system modification
 
-#### 8. Quality Dimensions
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Integration data
+- Reports
+- BIF signals
 
-#### 9. Operational Modes
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Insight generation
+- Trend detection
+- Anomaly identification
 
-#### 10. Inputs Required
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Insight accuracy
+- Signal relevance
+- Reduction in human analysis overhead
 
-#### 11. Outputs Produced
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Feeds into Executive, Strategy, and Capability agents
 
-#### 12. Dashboards
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+N/A internal role
 
-#### 13. Collaboration Matrix
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Always active within available data scope
 
-#### 14. Constraints
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Scoped access enforced via Doc 13
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Data visibility and integration enablement
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+False positives or misinterpreted signals
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All insights traceable to source data
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+None
 
-#### 19. Audit Requirements
+#### 19. Notes
 
-TODO: To be completed during Product Design.
+Core analytical layer of AI Workforce
 
 ### Strategy Agent
 
@@ -3944,81 +4077,91 @@ No recommendation may be untraceable or unexplainable.
 
 ### Market Discovery Agent
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+AI Market Discovery Agent identifies market opportunities, trends, and competitive signals.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+AI Persona (AI Workforce)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Market scanning and opportunity identification.
 
-#### 4. Processing Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Detect and surface emerging market opportunities relevant to Clients and capabilities.
 
-#### 5. Input Layer
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Uses integrations (Doc 11)
+- Uses external market signals and datasets
+- Provides structured opportunity signals
+- Does not execute actions
 
-#### 6. Processing Layer
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can surface opportunities
+- Cannot validate or execute decisions
 
-#### 7. Output Layer
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- No execution rights
+- No autonomous action triggering
 
-#### 8. Quality Dimensions
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Market data integrations
+- External signals (reviews, platforms, trends)
 
-#### 9. Operational Modes
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Opportunity identification
+- Market trend mapping
+- Competitive landscape signals
 
-#### 10. Inputs Required
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Opportunity accuracy
+- Signal relevance
+- Early detection capability
 
-#### 11. Outputs Produced
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works with Strategy and Intelligence agents
 
-#### 12. Dashboards
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+N/A internal role
 
-#### 13. Collaboration Matrix
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active continuously
 
-#### 14. Constraints
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Scoped to allowed integrations and Client contexts
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Integration enablement and data access scopes
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+False opportunity identification or noise amplification
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All outputs traceable to source signals
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+None (indirect via integrations only)
 
-#### 19. Audit Requirements
+#### 19. Notes
 
-TODO: To be completed during Product Design.
+Primary external signal detection layer
 
 ### SEO Agent
 
@@ -4274,159 +4417,181 @@ No optimization may be untraceable.
 
 ### AEO/GEO Agent
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+AI AEO/GEO Agent optimizes content and signals for discoverability across AI-driven and generative search ecosystems.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+AI Persona (AI Workforce)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Search visibility and generative engine optimization strategy support.
 
-#### 4. Processing Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Improve discoverability of Client content across AI and search ecosystems.
 
-#### 5. Input Layer
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Uses content and reporting outputs
+- Analyzes search ecosystems via integrations
+- Provides optimization recommendations
+- Does not execute publishing
 
-#### 6. Processing Layer
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can recommend optimization strategies
+- Cannot implement changes
 
-#### 7. Output Layer
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- Pure advisory role
+- No execution capability
 
-#### 8. Quality Dimensions
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Content outputs
+- Search and platform signals
+- Performance reports
 
-#### 9. Operational Modes
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Optimization strategies
+- Content structuring recommendations
+- Visibility improvement insights
 
-#### 10. Inputs Required
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Visibility improvement
+- Ranking performance signals
+- Engagement improvement
 
-#### 11. Outputs Produced
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works with Marketing Head and Content workflows (Execution Layer)
 
-#### 12. Dashboards
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+N/A internal role
 
-#### 13. Collaboration Matrix
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active during content lifecycle stages
 
-#### 14. Constraints
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Scoped access only
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Client content and integration access
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Misaligned optimization strategies or noise overfitting
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All recommendations traceable
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+Indirect via integrations
 
-#### 19. Audit Requirements
+#### 19. Notes
 
-TODO: To be completed during Product Design.
+Visibility optimization intelligence layer
 
 ### Paid Media Agent
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+AI Paid Media Agent manages analysis and optimization of paid media performance.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+AI Persona (AI Workforce)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Paid media insight generation and optimization recommendations.
 
-#### 4. Processing Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Maximize efficiency and effectiveness of paid media investments.
 
-#### 5. Input Layer
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Reads ad platform integrations (Doc 11)
+- Consumes performance reports (Doc 10)
+- Provides optimization signals
+- Does not execute campaign changes
 
-#### 6. Processing Layer
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Suggests optimization strategies
+- Cannot execute changes
 
-#### 7. Output Layer
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- No execution authority
+- Advisory-only role
 
-#### 8. Quality Dimensions
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Ads platform data
+- Campaign performance reports
+- Market signals
 
-#### 9. Operational Modes
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Optimization recommendations
+- Budget allocation insights
+- Performance diagnostics
 
-#### 10. Inputs Required
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- ROI improvement signals
+- Cost efficiency insights
+- Conversion improvement trends
 
-#### 11. Outputs Produced
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works with Marketing Head and Project Manager
 
-#### 12. Dashboards
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+N/A internal role
 
-#### 13. Collaboration Matrix
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active during campaign lifecycle
 
-#### 14. Constraints
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Scoped integration access only
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Ad platform access configuration
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Misinterpretation of performance signals
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All recommendations traceable
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+Indirect via integrations only
 
-#### 19. Audit Requirements
+#### 19. Notes
 
-TODO: To be completed during Product Design.
+Performance optimization intelligence layer
 
 ### Content Agent
 
@@ -4947,237 +5112,270 @@ No report may be non-traceable or partially sourced.
 
 ### Proposal Agent
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+AI Proposal Agent generates structured commercial and capability proposals.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+AI Persona (AI Workforce)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Proposal generation support for Revenue Team.
 
-#### 4. Processing Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Translate capabilities and insights into structured proposal artifacts.
 
-#### 5. Input Layer
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Uses Capability Catalog (Doc 15)
+- Uses intelligence outputs (Doc 04)
+- Uses reports (Doc 10)
+- Does not execute or send proposals
 
-#### 6. Processing Layer
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can generate proposals
+- Cannot finalize or send externally
 
-#### 7. Output Layer
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- No execution rights
+- No external communication authority
 
-#### 8. Quality Dimensions
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Capability definitions
+- Market insights
+- Client requirements
 
-#### 9. Operational Modes
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Proposal drafts
+- Capability mappings
+- Value articulation structures
 
-#### 10. Inputs Required
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Proposal quality
+- Conversion support effectiveness
+- Accuracy of capability alignment
 
-#### 11. Outputs Produced
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works with Sales Executive and Proposal Specialist
 
-#### 12. Dashboards
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+N/A internal role
 
-#### 13. Collaboration Matrix
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active during pre-client and onboarding phases
 
-#### 14. Constraints
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Scoped strictly to Organization/Client context
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Capability enablement and Client configuration
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Misalignment between proposals and actual capabilities
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All outputs traceable
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+None
 
-#### 19. Audit Requirements
+#### 19. Notes
 
-TODO: To be completed during Product Design.
+Structured commercial intelligence layer
 
 ### Project Coordinator Agent
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+AI Project Coordinator Agent assists in organizing and coordinating project execution structures.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+AI Persona (AI Workforce)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Project-level coordination support.
 
-#### 4. Processing Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Improve clarity, sequencing, and alignment of Project execution plans.
 
-#### 5. Input Layer
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Reads Project data (Doc 02 workspace model)
+- Uses execution plans (Doc 12)
+- Coordinates task-level structuring
+- Does not execute actions
 
-#### 6. Processing Layer
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can propose coordination structures
+- Cannot modify execution state
 
-#### 7. Output Layer
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- No execution authority
+- Advisory-only role
 
-#### 8. Quality Dimensions
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Project context
+- Capability outputs
+- Execution plans
 
-#### 9. Operational Modes
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- Coordination plans
+- Dependency structures
+- Execution clarity improvements
 
-#### 10. Inputs Required
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Reduced execution friction
+- Improved project clarity
+- Alignment accuracy
 
-#### 11. Outputs Produced
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works with Project Manager and Developer personas
 
-#### 12. Dashboards
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+N/A internal role
 
-#### 13. Collaboration Matrix
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active during Project lifecycle
 
-#### 14. Constraints
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Scoped to Project access only
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Project-level configuration and capability access
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Incorrect coordination assumptions
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All outputs traceable
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+None
 
-#### 19. Audit Requirements
+#### 19. Notes
 
-TODO: To be completed during Product Design.
+Execution structure optimization layer
 
 ### QA Agent
 
-#### 1. Persona Overview
+#### 1. Identity
 
-TODO: To be completed during Product Design.
+AI QA Agent performs automated quality analysis and validation support across system outputs.
 
-#### 2. Responsibilities
+#### 2. Role Type
 
-TODO: To be completed during Product Design.
+AI Persona (AI Workforce)
 
-#### 3. Decision Authority
+#### 3. Scope of Responsibility
 
-TODO: To be completed during Product Design.
+Quality analysis and anomaly detection across outputs.
 
-#### 4. Processing Workflow
+#### 4. Core Objective
 
-TODO: To be completed during Product Design.
+Improve correctness, consistency, and reliability of system outputs.
 
-#### 5. Input Layer
+#### 5. System Interaction Scope
 
-TODO: To be completed during Product Design.
+- Reads execution outputs (Doc 12)
+- Uses reports (Doc 10)
+- Analyzes system outputs for correctness signals
+- Does not approve or execute changes
 
-#### 6. Processing Layer
+#### 6. Decision Authority
 
-TODO: To be completed during Product Design.
+- Can flag quality issues
+- Cannot approve or block execution
 
-#### 7. Output Layer
+#### 7. Constraints
 
-TODO: To be completed during Product Design.
+- Pure analytical validation role
+- No execution authority
 
-#### 8. Quality Dimensions
+#### 8. Key Inputs
 
-TODO: To be completed during Product Design.
+- Execution outputs
+- Reports
+- Project data
 
-#### 9. Operational Modes
+#### 9. Outputs
 
-TODO: To be completed during Product Design.
+- QA signals
+- Defect detection
+- Quality scoring insights
 
-#### 10. Inputs Required
+#### 10. Success Metrics
 
-TODO: To be completed during Product Design.
+- Defect detection accuracy
+- False positive reduction
+- Quality coverage
 
-#### 11. Outputs Produced
+#### 11. Collaboration Model
 
-TODO: To be completed during Product Design.
+Works with QA Lead and Project Manager
 
-#### 12. Dashboards
+#### 12. AI Augmentation
 
-TODO: To be completed during Product Design.
+N/A internal role
 
-#### 13. Collaboration Matrix
+#### 13. Lifecycle Position
 
-TODO: To be completed during Product Design.
+Active during all execution phases
 
-#### 14. Constraints
+#### 14. Security Context
 
-TODO: To be completed during Product Design.
+Scoped strictly via Doc 13
 
-#### 15. KPIs
+#### 15. Configuration Dependencies
 
-TODO: To be completed during Product Design.
+Project-level quality configuration
 
-#### 16. Pain Points
+#### 16. Failure Mode
 
-TODO: To be completed during Product Design.
+Incorrect defect classification
 
-#### 17. Success Criteria
+#### 17. Auditability
 
-TODO: To be completed during Product Design.
+All QA outputs fully traceable
 
-#### 18. Automation Opportunities
+#### 18. External Interaction
 
-TODO: To be completed during Product Design.
+None
 
-#### 19. Audit Requirements
+#### 19. Notes
 
-TODO: To be completed during Product Design.
+Automated quality assurance intelligence layer
 
 ---
 

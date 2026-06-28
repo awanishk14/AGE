@@ -1,105 +1,109 @@
-# Persona Schema Registry (v1.1)
+# Persona Schema Registry (v2.0)
 
 > Single source of truth for **all allowed persona document structures** in AGE. This registry
-> **describes the implementation** in `01_USER_JOURNEYS.md` — it does not redefine it. Both schemas
-> below are **LOCKED**. Scope: all persona documents in `/docs/product/`.
+> **describes the implementation** in `01_USER_JOURNEYS.md`. Scope: all persona documents in
+> `/docs/product/`.
 
 ## Principle
 
-The registry exists to describe the implementation. The implementation does not change to satisfy
-the registry. If a discrepancy is found, the registry is updated — unless an explicit architectural
-migration has been approved. No human-template migration has been approved; the human template is
-frozen as implemented.
+The registry describes the implementation; the implementation does not change to satisfy the
+registry. When a discrepancy is found, the registry is updated to reflect reality.
+
+**As of v2.0**, the canonical, go-forward structure for **every** persona — human or AI — is the
+**Unified Persona Registry Schema** (§1). Two **legacy** schemas (§2, §3) remain in the document for
+personas completed before v2.0 and **coexist**, frozen, until a Product-Owner-approved migration says
+otherwise.
 
 ---
 
-## 1. Human Persona Schema (v1) — FROZEN
+## 1. Unified Persona Registry Schema (v2) — CANONICAL (go-forward)
 
-**Applies to:** Founder / CEO · COO · Growth Director · Executive Leadership · Strategy Team (human
-roles) · Delivery Team · Revenue Team · Client Team · all human personas.
-
-**Structure (STRICT 20 sections, exact order — as implemented):**
-
-1. Persona Overview
-2. Responsibilities
-3. Decision Authority
-4. Daily Workflow
-5. Weekly Workflow
-6. Monthly Workflow
-7. Inputs Required
-8. Outputs Produced
-9. Dashboards
-10. Reports
-11. Notifications
-12. AI Agents
-13. Permissions
-14. Integrations Used
-15. KPIs
-16. Pain Points
-17. Success Criteria
-18. Automation Opportunities
-19. Collaboration Matrix
-20. Audit Requirements
-
-**Rules:** exact ordering · no added/removed sections · no renaming · no merging · no AI-pipeline
-constructs · human lifecycle framing.
-
----
-
-## 2. AI Workforce Agent Schema (v1) — FROZEN
-
-**Applies to:** Executive Agent · Research Agent · Intelligence Agent · Strategy Agent · Market
-Discovery Agent · SEO Agent · AEO/GEO Agent · Paid Media Agent · Content Agent · Reporting Agent ·
-Proposal Agent · Project Coordinator Agent · QA Agent · future execution agents.
+**Applies to:** every persona — human and AI. The **Role Type** field (§1, item 2) distinguishes
+`Human Persona (<Team>)` from `AI Persona (AI Workforce)`. No separate human/AI structures going
+forward.
 
 **Structure (STRICT 19 sections, exact order):**
 
-1. Persona Overview
-2. Responsibilities
-3. Decision Authority
-4. Processing Workflow
-5. Input Layer
-6. Processing Layer
-7. Output Layer
-8. Quality Dimensions
-9. Operational Modes (Daily / Weekly / Monthly)
-10. Inputs Required
-11. Outputs Produced
-12. Dashboards
-13. Collaboration Matrix
-14. Constraints
-15. KPIs
-16. Pain Points
-17. Success Criteria
-18. Automation Opportunities
-19. Audit Requirements
+1. Identity
+2. Role Type
+3. Scope of Responsibility
+4. Core Objective
+5. System Interaction Scope
+6. Decision Authority
+7. Constraints
+8. Key Inputs
+9. Outputs
+10. Success Metrics
+11. Collaboration Model
+12. AI Augmentation
+13. Lifecycle Position
+14. Security Context
+15. Configuration Dependencies
+16. Failure Mode
+17. Auditability
+18. External Interaction
+19. Notes
 
-**Rules:** exact ordering · no added/removed sections · no merging · execution/system-behavior
-framing (not role-play) · no human lifecycle structure (Daily/Weekly/Monthly live only inside
-Operational Modes). `Notifications` are absorbed into Operational Modes (as Alerts) — never a
-separate section.
+**Currently implemented for:** Delivery Team (Account Manager, Project Manager, QA Lead, Developer,
+Designer) · Revenue Team (Sales Executive, Proposal Specialist, Customer Success Manager) · Client
+Team (Business Owner, Marketing Head, Product Manager) · AI Workforce (Executive, Intelligence,
+Market Discovery, AEO/GEO, Paid Media, Proposal, Project Coordinator, QA Agents).
+
+**Rules:** exact ordering · no added/removed/renamed/merged sections · `Role Type` declares
+human-vs-AI · AI personas remain pure producers (no side-effects).
 
 ---
 
-## 3. Hybrid rules (global)
+## 2. Legacy: Human Persona Schema (v1) — FROZEN (coexisting)
 
-- **No cross-schema mixing** — human schema cannot use AI pipeline structure; AI schema cannot use
-  human lifecycle structure.
-- **No structural drift** — no renaming headings, no reordering, no per-persona custom sections.
-- **No content-invented expansion** — content must fit existing section boundaries; if it does not
-  fit, it is reduced, not expanded.
-- **Schema authority** — if any instruction conflicts with this registry, the registry wins (absent
-  an approved architectural migration).
+**Still applies to (completed pre-v2.0, not restructured):** Founder / CEO · COO · Growth Director ·
+SEO Strategist · Paid Media Strategist · Content Strategist · Brand Strategist.
 
-## 4. Validation rule
+**Structure (20 sections):** Persona Overview · Responsibilities · Decision Authority · Daily Workflow
+· Weekly Workflow · Monthly Workflow · Inputs Required · Outputs Produced · Dashboards · Reports ·
+Notifications · AI Agents · Permissions · Integrations Used · KPIs · Pain Points · Success Criteria ·
+Automation Opportunities · Collaboration Matrix · Audit Requirements.
 
-Before finalizing any persona document, verify: schema compliance · section count · heading names ·
-ordering · AI-vs-Human schema match. If any check fails → **do not write the file**.
+---
 
-## 5. Version control
+## 3. Legacy: AI Workforce Agent Schema (v1) — FROZEN (coexisting)
 
-- Schema Version: **v1.1**
-- Status: **LOCKED**
-- Scope: all persona documents in `/docs/product/`
-- Human Schema v1 = the implemented template in `01_USER_JOURNEYS.md` (frozen).
-- AI Agent Schema v1 = the 19-section system template (frozen).
+**Still applies to (completed pre-v2.0, not restructured):** Strategy Agent · Content Agent · SEO
+Agent · Research Agent · Reporting Agent.
+
+**Structure (19 sections):** Persona Overview · Responsibilities · Decision Authority · Processing
+Workflow · Input Layer · Processing Layer · Output Layer · Quality Dimensions · Operational Modes ·
+Inputs Required · Outputs Produced · Dashboards · Collaboration Matrix · Constraints · KPIs · Pain
+Points · Success Criteria · Automation Opportunities · Audit Requirements.
+
+---
+
+## 4. Coexistence & Migration
+
+- **Three formats currently coexist** in `01_USER_JOURNEYS.md`: 19 personas on the Unified Schema
+  (§1), 7 human personas on legacy Human v1 (§2), and 5 AI agents on legacy AI v1 (§3).
+- **Pending decision:** whether to **migrate** the 12 legacy personas to the Unified Schema (§1) for
+  full consistency, or leave them frozen and coexisting. No migration is performed without explicit
+  Product-Owner approval (the legacy personas were previously frozen).
+
+## 5. Hybrid rules (global)
+
+- **No structural drift** — within a schema: no renaming, reordering, or per-persona custom sections.
+- **No content-invented expansion** — content fits existing section boundaries; if it does not fit, it
+  is reduced, not expanded.
+- **Schema authority** — the registry describes reality; conflicts are resolved by updating the
+  registry to match an approved implementation, not by silent drift.
+
+## 6. Validation rule
+
+Before finalizing any persona, verify: correct schema for its era (Unified for new; legacy frozen for
+the listed completed personas) · section count · heading names · ordering. If any check fails →
+**do not write the file**.
+
+## 7. Version control
+
+- Schema Version: **v2.0**
+- Canonical schema: **Unified Persona Registry Schema (19 sections)** — all new personas.
+- Legacy schemas: **Human v1 (20)** and **AI Agent v1 (19)** — frozen, coexisting for completed
+  personas pending a migration decision.
+- Scope: all persona documents in `/docs/product/`.
