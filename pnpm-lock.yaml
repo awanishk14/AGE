@@ -225,6 +225,19 @@ importers:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
 
+  packages/research-intelligence-engine:
+    dependencies:
+      '@age/bif':
+        specifier: workspace:*
+        version: link:../bif
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
+
   packages/sdk:
     dependencies:
       '@age/types':

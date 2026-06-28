@@ -10,6 +10,7 @@
     { "path": "./packages/business-knowledge-graph" },
     { "path": "./packages/persistence" },
     { "path": "./packages/bif" },
+    { "path": "./packages/research-intelligence-engine" },
     { "path": "./packages/types" },
     { "path": "./packages/sdk" },
     { "path": "./packages/integrations" },
