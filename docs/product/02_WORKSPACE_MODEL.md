@@ -5,21 +5,19 @@
 ## Purpose
 
 This document is the canonical definition of **how data is logically organized inside AGE**. It
-defines the containers that own every other concept — organizations, clients, workspaces, projects,
-and the business intelligence attached to them. Permissions, AI agents, workflows, automations,
+defines the business containers that own every other concept — organizations, clients, projects, and
+the business intelligence attached to them. Permissions, AI agents, workflows, automations,
 reporting, navigation, and execution all **reference** this model; none of them redefine it.
 
-It is a **business-domain model only**. It does not define database schema, APIs, permissions, UX,
-or automations.
+It is a **business-domain model only**. It documents business truth, not the persistence model. It
+does not define database schema, APIs, permissions, UX, or automations.
 
-> **Status:** 🟡 In Progress — drafted from the frozen architecture for Product Owner review.
-> Sections marked **[PROPOSED]** are recommendations pending sign-off; genuine product choices are
-> collected in [§20 Open Decisions](#20-open-decisions).
+> **Status:** 🟡 In Progress — Product Owner review decisions incorporated; pending final approval.
 
 ## Scope
 
 - **In scope:** the logical organization of the platform — hierarchy, ownership, isolation,
-  lifecycle, naming, multi-tenancy.
+  lifecycle, naming, multi-tenancy, and the workspace lens.
 - **Out of scope:** permissions (Doc 06), workflows (Doc 09), AI behavior (Doc 04), UI (Doc 07),
   automations (Doc 09), implementation/schema/APIs.
 
@@ -62,245 +60,257 @@ or automations.
 - [17. Workspace Lifecycle](#17-workspace-lifecycle)
 - [18. Naming Conventions](#18-naming-conventions)
 - [19. Future Scalability Considerations](#19-future-scalability-considerations)
-- [20. Open Decisions](#20-open-decisions)
+- [20. Resolved Decisions](#20-resolved-decisions)
 
 ---
 
 ## 1. Purpose
 
 AGE is the operating system for a growth agency. A single agency runs AGE and uses it to grow many
-client businesses. The workspace model defines the containers that hold and isolate the data for
-each of those businesses, and how the agency's own data relates to them.
+client businesses. The workspace model defines the business containers that hold and isolate the
+data for each of those businesses, and how the agency's own resources relate to them.
 
-Every piece of platform data — business truth (BIF), knowledge (BKG), evidence (RIE), decisions
-(SIE), capability plans, assets, projects — lives inside exactly one owning container defined here.
+Every piece of platform data — business truth (BIF), knowledge (BKG), evidence/research (RIE),
+strategy (SIE), capability plans, assets, projects — belongs to exactly one owning business
+container defined here.
+
+Three sentences capture the model:
+
+- **Projects execute work.**
+- **Clients accumulate knowledge.**
+- **Organizations manage clients.**
 
 ## 2. Design Principles
 
-1. **One owner per record.** Every persisted record belongs to exactly one owning scope (grounded
-   in the persistence base field `organizationId`, present on every record).
-2. **Isolation by default.** Data from one client is never visible to another client. The agency
-   can see across its own clients; clients cannot see across the agency.
+1. **One owner per record.** Every record belongs to exactly one owning business scope.
+2. **Isolation by default.** A client's intelligence is isolated; one client's data never enriches
+   another's automatically.
 3. **The BKG is canonical** (ADR-0003) — the workspace model conforms to the ontology, never the
    reverse.
-4. **Soft, versioned, audited.** Containers and their contents are soft-deleted (`deletedAt`),
-   versioned (`version`), and audited (`createdBy`/`updatedBy`, AuditLog) — never hard-erased.
-5. **Multi-tenant ready, RLS later.** The tenant boundary is modeled now; row-level security is an
-   implementation concern deferred to a later epic.
-6. **Capability/engine alignment.** Ownership scopes line up with where BIF/RIE/SIE and the
-   capability layer operate, so engines read from a single, unambiguous container.
+4. **Soft, versioned, audited.** Containers and contents are soft-deleted (`deletedAt`), versioned
+   (`version`), and audited (`createdBy`/`updatedBy`, AuditLog) — never hard-erased.
+5. **Document business truth, not persistence.** Business concepts (Client) are first-class here even
+   where the persistence model represents them differently; mapping is an implementation concern.
+6. **Tenant boundary unchanged.** Organization remains the platform tenant (frozen architecture);
+   this document is a domain clarification, not a tenancy change.
 
 ## 3. Workspace Hierarchy
 
-**[PROPOSED]** A three-level hierarchy:
+The canonical business hierarchy:
 
 ```
-Tenant (Agency Organization)
- └── Client (a client business AGE grows)
-      └── Project (a unit of execution toward an outcome)
+Organization (Agency)            ← platform tenant
+├── Clients                      ← first-class business concept
+│   ├── Projects                 ← execute work
+│   ├── Business Intelligence    ← BIF
+│   ├── Research                 ← evidence / RIE outputs
+│   ├── Strategy                 ← SIE outputs
+│   ├── Knowledge                ← BKG instance
+│   └── Assets
+└── Shared Agency Resources      ← frameworks, templates, playbooks, methodologies
 ```
 
-- **Tenant / Agency Organization** — the top-level account that operates AGE (the SaaS tenant).
-- **Client** — a distinct business the agency serves; the primary unit of business intelligence.
-- **Project** — scoped work inside a client, toward a strategic outcome.
-
-> This introduces **Client** as a first-class container between the existing `organization` (tenant)
-> and `project` domain modules. Whether business intelligence attaches to the Tenant or the Client
-> is the central open decision — see [§20](#20-open-decisions).
+- **Organization** manages Clients.
+- **Clients** accumulate long-term business knowledge (BIF, BKG, Research, Strategy, Assets).
+- **Projects** execute work inside a Client.
 
 ## 4. Organization Model
 
-**[PROPOSED]** The **Organization** is the **agency tenant** — the top-level account that owns all
-other data (consistent with the `organization` domain module: "tenant boundary and top-level
-account that owns all other domain data"). It holds:
+The **Organization** is the **platform tenant** — the top-level account that operates AGE (frozen
+architecture: "tenant boundary and top-level account that owns all other domain data"). It:
 
-- Agency identity and configuration.
-- The set of Clients the agency manages.
-- Agency-level users (the human personas in Doc 01: Executive Leadership, Strategy, Delivery,
-  Revenue teams) and the AI Workforce.
-- Agency-owned assets and templates reused across clients.
+- Holds agency identity and configuration.
+- Manages the set of Clients the agency serves.
+- Owns **Shared Agency Resources** — reusable frameworks, templates, playbooks, and methodologies
+  available across clients.
+- Is the home of the agency's human personas (Doc 01) and the AI Workforce.
 
-Every record in AGE carries the owning `organizationId` (the tenant), enabling SaaS isolation
-between agencies.
+The Organization is the unit of SaaS isolation between agencies.
 
 ## 5. Client Model
 
-**[PROPOSED]** A **Client** represents a single business the agency grows. It is the primary unit of
-**business intelligence**: each client has its own truth model, knowledge graph, research, assets,
-and projects. A Client belongs to exactly one Organization (tenant). A Client is the container the
-"Client Team" personas (Business Owner, Marketing Head, Product Manager) are associated with.
+A **Client** is a **first-class business concept**: a single business the agency grows. It is where
+the platform's intelligence is **primarily accumulated**, because that intelligence describes the
+_client's_ business, not the agency's. A Client belongs to exactly one Organization and owns:
 
-> The `BIF` defined in the architecture "represents an organization" — under this proposal, the
-> business it represents is the **Client**, while the tenant `organizationId` provides agency-level
-> isolation. Reconciling the two senses of "organization" is the headline open decision.
+- Its **Business Intelligence** (BIF), **Knowledge** (BKG), **Research**, **Strategy**, and
+  **Assets**.
+- Its **Projects**.
+
+The "Client Team" personas (Business Owner, Marketing Head, Product Manager) are associated with a
+Client.
+
+**Agency-as-a-Client.** The agency may create **itself as a Client**, so AGE runs the agency using
+the exact same model and workflows it provides to external clients. No separate product mode exists.
+
+> Documenting Client as first-class is a **domain clarification**, not an architecture change. The
+> Organization tenant boundary is unchanged and no ADR is required. If implementation later proves
+> the domain model cannot represent Client cleanly, a dedicated Client aggregate can be introduced
+> via an **implementation ADR** at that time.
 
 ## 6. Workspace Types
 
-**[PROPOSED]** A **Workspace** is the working container a user operates within. Proposed types:
+A **Workspace is not a business entity.** It is a **product lens** through which a user views and
+interacts with a specific context. It carries **no ownership** — ownership is determined entirely by
+the business hierarchy in §3. Workspaces describe **navigation and context**, nothing more.
 
-| Workspace Type        | Owner   | Purpose                                                               |
-| --------------------- | ------- | --------------------------------------------------------------------- |
-| **Agency Workspace**  | Tenant  | The agency's own operations, cross-client portfolio views, templates. |
-| **Client Workspace**  | Client  | All intelligence, research, assets, and projects for one client.      |
-| **Project Workspace** | Project | A focused view of one project's work within a client.                 |
-
-Workspace types are organizational lenses over the hierarchy in §3; they do not introduce new
-ownership beyond Tenant / Client / Project.
+| Workspace (lens)           | Context viewed                                                       |
+| -------------------------- | -------------------------------------------------------------------- |
+| **Organization Workspace** | The agency: its clients, shared resources, portfolio views.          |
+| **Client Workspace**       | One client's intelligence, research, strategy, assets, and projects. |
+| **Project Workspace**      | One project's execution within a client.                             |
 
 ## 7. Project Model
 
-A **Project** (grounded in the `project` domain module — "units of execution that group work toward
-a strategic outcome") belongs to exactly one Client. It groups capability plans, content, campaigns,
-tasks, and decisions toward a defined outcome. Projects reference — but never own — the Client's BIF,
-BKG, and research.
+A **Project** belongs to exactly one Client and is where **execution happens** (grounded in the
+`project` domain module — "units of execution that group work toward a strategic outcome"). A
+Project **owns its execution artifacts** (tasks, drafts, capability plan instances, run outputs) and
+**references** — but does not own — the Client's BIF, BKG, Research, and Strategy.
+
+**Promotion to the Client.** Execution outputs that become durable business knowledge are **promoted
+to the Client**, keeping long-term intelligence independent of any single project.
 
 ## 8. Business Intelligence Framework (BIF) Ownership
 
-**[PROPOSED]** **One BIF per Client.** The BIF is the client business's living, versioned truth
-model. It is owned by the Client and isolated to it. Agency-level roll-ups (e.g., portfolio health)
-are _read-only aggregations_ across client BIFs, not a separate BIF.
-
-> The frozen `BusinessIntelligenceFramework` type carries `organizationId`. If Organization = tenant,
-> a `clientId` scope is required to attach BIF to a Client. See [§20](#20-open-decisions).
+The **BIF is owned by the Client.** It is the client business's living, versioned truth model, and is
+isolated to that Client. Agency-level views (e.g., portfolio health) are **read-only aggregations**
+across the agency's client BIFs — never a separate BIF and never a channel for sharing one client's
+truth into another.
 
 ## 9. Business Knowledge Graph Ownership
 
-**[PROPOSED]** **One BKG per Client.** Each client has its own instance of the canonical ontology
-(26 node types, 22 relationships). The ontology _definition_ is shared platform-wide and immutable
-(ADR-0003); the _graph instance_ (nodes + relationships populated with a client's data) is owned by
-the Client and isolated to it.
+The **BKG instance is owned by the Client.** The ontology _definition_ (26 node types, 22
+relationships) is shared platform-wide and immutable (ADR-0003); the _graph instance_ — nodes and
+relationships populated with a client's data — belongs to and is isolated to the Client.
 
 ## 10. Research Ownership
 
-**[PROPOSED]** **Research and Evidence are owned by the Client** they were gathered for. RIE outputs
-(Evidence, signals, BIF mapping proposals, conflicts) are scoped to a single Client and feed only
-that client's BIF. Evidence entity-links (`organizationId`, `productId`, `competitorId`,
-`marketId`) resolve within the owning Client's scope.
-
-> Exception to confirm: competitor/market evidence may be reusable across clients in the same market.
-> Treated as an open decision (cross-client knowledge reuse) — see [§20](#20-open-decisions).
+**Research and Evidence are owned by the Client** they were gathered for. RIE outputs (Evidence,
+signals, BIF-mapping proposals, conflicts) are scoped to a single Client and feed only that client's
+BIF. Client-derived research never automatically enriches another client (see §15).
 
 ## 11. Asset Ownership
 
-**[PROPOSED]** Assets (websites, landing pages, content, documents, ad accounts, social profiles —
-per the BKG `Asset` node and Doc 01 asset references) are owned by the **Client** they belong to.
-**Agency-owned templates and reusable assets** are owned by the Tenant and may be referenced by any
-client workspace without transferring ownership.
+- **Client assets** (websites, landing pages, content, documents, ad accounts, social profiles — per
+  the BKG `Asset` node) are owned by the **Client**.
+- **Shared Agency Resources** (frameworks, templates, playbooks, methodologies) are owned by the
+  **Organization** and may be referenced by any client without transferring ownership.
+
+The distinction is deliberate: agency-built _methodology_ is shareable; client-derived _knowledge_ is
+not (see §15).
 
 ## 12. User Membership Model
 
-**[PROPOSED]** Membership is modeled at two levels (this section defines _membership_, not
-_permissions_ — see Doc 06):
+This section defines _membership_, not _permissions_ (see Doc 06).
 
-- **Agency members** — users belonging to the Tenant (agency staff personas). They may be granted
-  access to one or more Client Workspaces.
-- **Client members** — external users belonging to a single Client (the Client Team personas). They
-  see only their own Client Workspace.
+- **Agency members** — users belonging to the Organization (agency personas). They may be granted
+  access to one or more Clients.
+- **Client members** — external users belonging to a single Client (the Client Team personas); they
+  see only their own Client.
 
-A user belongs to exactly one Tenant. A user's _visibility_ into Clients/Projects is an access
-concern resolved by the Permission Model, not redefined here.
+A user belongs to exactly one Organization. Visibility into specific Clients/Projects is an access
+concern resolved by the Permission Model.
 
 ## 13. AI Agent Ownership Model
 
-**[PROPOSED]** The **AI Workforce is owned by the Tenant** (the agency operates a single workforce
-of agents — Doc 01 AI Workforce). Agents **operate within a Client scope** when acting on a client's
-data: a Research/SEO/Content/Strategy/Reporting agent reads and writes only within the Client
-Workspace it is invoked for. Agents never cross client boundaries in a single operation. Agent
-identity and configuration are Tenant-level; agent _activity and outputs_ are Client-scoped.
+The **AI Workforce is owned by the Organization** (the agency operates one workforce of agents — Doc
+01 AI Workforce). **Capabilities belong to the platform.** Agents and capabilities **execute within a
+Project / Client scope**: an agent reads and writes only within the Client it is invoked for and
+never crosses client boundaries in a single operation. Knowledge produced through execution
+accumulates at the **Client** level (see §7 promotion). Agent identity and configuration are
+Organization-level; agent activity and outputs are Client-scoped.
 
 ## 14. Cross-Workspace Relationships
 
-**[PROPOSED]** Allowed relationships:
+Allowed:
 
-- **Tenant → Client** (ownership, one-to-many).
+- **Organization → Client** (ownership, one-to-many).
 - **Client → Project** (ownership, one-to-many).
-- **Tenant → portfolio aggregation** — read-only roll-ups across the tenant's clients (e.g.,
-  Growth Director's portfolio view).
+- **Organization → portfolio aggregation** — read-only roll-ups across the agency's own clients.
+- **Shared Agency Resources → Client** (reference, non-transferring).
 
-Disallowed by default:
+Disallowed:
 
-- **Client ↔ Client** — no direct data relationships between two clients.
-- **Cross-tenant** — never, under any condition.
-
-Any cross-client knowledge reuse (e.g., shared market/competitor intelligence) must be an explicit,
-audited, opt-in mechanism — flagged as an open decision.
+- **Client ↔ Client** — no direct data relationships or automatic knowledge flow between clients.
+- **Cross-organization (cross-tenant)** — never, under any condition.
 
 ## 15. Data Isolation Rules
 
-**[PROPOSED]**
+1. Each client's intelligence is **isolated by default**. There is **no automatic cross-client
+   knowledge sharing.**
+2. Agency-wide reusable **frameworks, templates, playbooks, and methodologies** may be shared across
+   clients; **client-derived knowledge** (BIF, BKG, Research, Strategy) may **not** automatically
+   enrich another client's intelligence.
+3. The Organization may read across its **own** clients (aggregations); a Client never reads another
+   Client.
+4. No organization may ever access another organization's data.
+5. Soft-deleted records (`deletedAt`) remain isolated and auditable; excluded from normal reads but
+   retained for audit/version history.
 
-1. Every record resolves to exactly one Tenant and (where applicable) one Client.
-2. A query in a Client scope returns only that Client's records.
-3. The agency (Tenant) may read across its own Clients; a Client may never read another Client.
-4. No tenant may ever access another tenant's data.
-5. Soft-deleted records (`deletedAt`) remain isolated and auditable; they are excluded from normal
-   reads but retained for audit/version history.
-6. Aggregations across Clients are read-only and never leak record-level data between Clients.
-
+This protects client confidentiality and keeps future enterprise deployments predictable.
 (Enforcement mechanism — e.g., row-level security — is an implementation concern, deferred.)
 
 ## 16. Multi-Tenant Architecture
 
-**[PROPOSED]** AGE is multi-tenant at the **Tenant (Agency)** level. The persistence layer already
-mandates `organizationId` on every record as the tenant key, with soft delete, versioning, and audit
-fields. The model supports the SaaS progression (Founder → Agency → Commercial SaaS → Enterprise)
-without restructuring: additional tenants are additional Organizations; clients scale within a
-tenant. **Row-Level Security (RLS) is intentionally not defined here** — only the requirement that a
-tenant key exists on every record.
+AGE is multi-tenant at the **Organization** level — this is the **frozen** tenant boundary and is
+unchanged by this document. Additional tenants are additional Organizations; clients scale within a
+tenant. The model supports the SaaS progression (Founder → Agency → Commercial SaaS → Enterprise)
+without restructuring. Row-Level Security (RLS) remains an implementation concern, not defined here.
 
 ## 17. Workspace Lifecycle
 
-**[PROPOSED]** High-level states (detailed client states live in Doc 03):
+High-level states (detailed client states live in Doc 03):
 
-- **Tenant:** Provisioned → Active → Suspended → Closed.
+- **Organization:** Provisioned → Active → Suspended → Closed.
 - **Client:** Created → Onboarding → Active → Paused → Offboarding → Archived.
 - **Project:** Draft → Active → Completed → Archived.
 
-All lifecycle transitions are audited and reversible via soft delete and version history; archival
-retains data (no hard delete) for traceability.
+All transitions are audited and reversible via soft delete and version history; archival retains data
+(no hard delete) for traceability. Because the agency can be a Client (§5), the agency's own
+"client" follows the Client lifecycle.
 
 ## 18. Naming Conventions
 
-**[PROPOSED]**
-
-- Containers use singular nouns: `Organization` (Tenant), `Client`, `Project`, `Workspace`.
-- Identifiers follow the shared kernel's typed-id convention (`OrganizationId`, `ClientId`,
-  `ProjectId`) — a `ClientId` would be added to the shared identifiers if §20 confirms Client as a
-  first-class container.
+- Business containers use singular nouns: `Organization`, `Client`, `Project`.
+- `Workspace` names a **lens**, qualified by its context: Organization Workspace, Client Workspace,
+  Project Workspace.
 - Display names are human-editable; identity is immutable.
-- Workspace display names are unique within their parent scope (a client name is unique within a
-  tenant; a project name unique within a client).
+- A Client name is unique within its Organization; a Project name is unique within its Client.
+
+(How these business concepts map to persistence identifiers is an implementation concern and is not
+specified here.)
 
 ## 19. Future Scalability Considerations
 
-- **Sub-clients / brands.** A client may later own multiple brands or business units; the hierarchy
-  may need a level between Client and Project. Not introduced now.
-- **Agency networks.** Holding companies operating multiple agencies (multiple tenants) — handled by
-  the tenant boundary; no model change anticipated.
-- **Shared market intelligence.** A controlled, opt-in mechanism for reusing non-client-specific
-  market/competitor knowledge across clients (see §10, §14).
+- **Sub-clients / brands.** A client may later own multiple brands or business units; a level between
+  Client and Project may be added. Not introduced now.
+- **Agency networks.** Holding companies operating multiple agencies are handled by the Organization
+  tenant boundary; no model change anticipated.
+- **Shared methodology library.** The set of Shared Agency Resources may grow into a governed library
+  of frameworks/playbooks; still never a path for client-derived knowledge to cross clients.
 - **Capability scaling.** New capabilities (Sales, Customer Success, Finance) register without
-  changing the workspace model (per the Capability Registry).
-- **Data residency.** Enterprise tenants may require region-pinned storage — a tenant-level attribute
-  to add later.
+  changing the workspace model (Capability Registry).
+- **Data residency.** Enterprise tenants may require region-pinned storage — an Organization-level
+  attribute to add later.
 
-## 20. Open Decisions
+## 20. Resolved Decisions
 
-> These are genuine product decisions surfaced for the Product Owner. None are invented as final.
+The following were resolved by the Product Owner and are now canonical for the Product Bible:
 
-1. **Meaning of "Organization" (headline).** Does `organizationId` (the architecture's tenant key)
-   represent the **agency tenant** (this draft's assumption) or the **client business**? If the
-   former, a **`ClientId`** scope must be introduced for BIF/BKG/Research/Assets. If the latter, the
-   "agency" becomes a higher construct above Organization. **All of §4–§13 depend on this.**
-2. **Is `Client` a first-class domain entity?** The frozen domain has `organization` and `project`
-   modules but **no `client` module**. Adding Client may warrant a domain module + `ClientId` (a
-   change to the frozen domain — would require an ADR).
-3. **BIF/BKG ownership granularity.** Per-Client (proposed) vs per-Tenant vs per-Project.
-4. **Cross-client knowledge reuse.** May shared market/competitor evidence be reused across a
-   tenant's clients, and if so, under what isolation/audit rules?
-5. **Agency-as-a-client.** Does the agency maintain its own BIF/BKG (treating itself as a client of
-   AGE) in addition to managing client BIFs?
-6. **Workspace vs container.** Is "Workspace" a distinct first-class entity, or only a UI/access lens
-   over Tenant/Client/Project (this draft treats it as a lens)?
-7. **Project ↔ Capability scope.** Do capability plans attach to a Project, directly to a Client, or
-   both?
+1. **Organization vs Client.** Organization remains the **platform tenant** (frozen). **Client** is a
+   **first-class business concept**. This is a domain clarification, **not** a tenancy change; no ADR
+   required.
+2. **Ownership.** Organization owns Clients; **Clients own business knowledge** (BIF, BKG, Research,
+   Strategy, Assets); **Projects own execution artifacts**; execution outputs that become long-term
+   knowledge are **promoted to the Client**.
+3. **Cross-client intelligence.** **No** automatic cross-client knowledge sharing. Agency frameworks,
+   templates, playbooks, and methodologies may be shared; client-derived knowledge may not.
+4. **Agency-as-a-Client.** Supported. The agency can create itself as a Client and use the same
+   workflows. No separate product mode.
+5. **Workspace.** Not a business entity — a **product lens** for navigation/context. Ownership is
+   defined by the business hierarchy.
+6. **Capability scope.** Capabilities belong to the platform; execution occurs within Projects;
+   knowledge accumulates at the Client level.
+
+**Deferred to implementation (no decision needed now):** whether persistence requires a dedicated
+`Client` aggregate — handled later as an implementation ADR only if proven necessary.
