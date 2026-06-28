@@ -11,6 +11,7 @@
     { "path": "./packages/persistence" },
     { "path": "./packages/bif" },
     { "path": "./packages/research-intelligence-engine" },
+    { "path": "./packages/strategy-intelligence-engine" },
     { "path": "./packages/types" },
     { "path": "./packages/sdk" },
     { "path": "./packages/integrations" },

@@ -1,4 +1,4 @@
-import type { EvidenceSource, SignalType } from '../types/enums';
+import type { EvidenceSource, EvidenceState, SignalType } from '../types/enums';
 import type { Metadata } from '../types/common';
 import type { ExtractedSignal } from '../signals/extracted-signal';
 
@@ -25,5 +25,7 @@ export interface Evidence {
   readonly extractedSignals: readonly ExtractedSignal[];
   /** 0–100. */
   readonly confidence: number;
+  /** Lifecycle state (Gap 2 hardening). See EvidenceState. */
+  readonly state: EvidenceState;
   readonly metadata: Metadata;
 }
