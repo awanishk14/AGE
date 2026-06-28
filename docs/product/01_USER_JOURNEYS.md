@@ -824,7 +824,7 @@ Nothing in this section may be editable after approval.
 
 **Role**
 
-Growth Director
+Growth Director (Revenue Orchestration & Multi-Channel Growth Capability Owner)
 
 **Department**
 
@@ -832,151 +832,150 @@ Executive Leadership
 
 **Reports To**
 
-Founder / CEO
+CEO / Founder
 
 **Primary Objective**
 
-Translate company strategy into measurable client growth by aligning every capability, team, and AI agent around business outcomes.
+Orchestrate all growth functions (SEO, Paid Media, Content, Brand, Product signals) into a unified, measurable revenue growth system.
 
 **Secondary Objectives**
 
-- Increase client growth velocity
-- Improve marketing ROI
-- Standardize strategic execution
-- Improve client retention
-- Identify new growth opportunities
-- Continuously optimize capability performance
+- Maximize revenue growth efficiency
+- Align all strategy teams toward unified goals
+- Balance short-term performance and long-term growth
+- Optimize CAC vs LTV dynamics
+- Identify cross-channel growth opportunities
+- Eliminate siloed decision-making
 
 **Business Value**
 
-Owns the growth strategy across all clients and ensures every recommendation, campaign, and initiative contributes to measurable business impact.
+Owns the full growth system — ensures all acquisition and retention channels operate as one coordinated engine.
 
 #### 2. Responsibilities
 
 ##### Daily
 
-- Review Growth Command Center
-- Monitor client growth health
-- Review AI growth recommendations
-- Prioritize strategic opportunities
-- Remove execution blockers
+- Review Growth Intelligence Dashboard
+- Monitor revenue and acquisition trends
+- Identify cross-channel performance shifts
+- Resolve strategic conflicts between teams
+- Track CAC, ROAS, and pipeline health
 
 ##### Weekly
 
-- Review client growth performance
-- Align capability leaders
-- Evaluate competitor movements
-- Review opportunity pipeline
-- Approve strategic initiatives
+- Growth performance review
+- Channel contribution analysis
+- Budget reallocation decisions
+- Funnel optimization alignment
+- Strategic initiative prioritization
 
 ##### Monthly
 
-- Review growth KPIs
-- Evaluate capability performance
-- Optimize growth playbooks
-- Review client portfolio performance
-- Identify expansion opportunities
+- Revenue growth evaluation
+- Channel efficiency analysis
+- Growth strategy calibration
+- Forecast vs actual review
+- Market expansion assessment
 
 ##### Quarterly
 
-- Define growth objectives
-- Review market positioning
-- Launch strategic initiatives
-- Evaluate new service offerings
-- Recommend investment priorities
+- Growth strategy redesign
+- Revenue model optimization
+- Cross-channel rebalancing
+- Strategic roadmap definition
+- Executive growth review
 
 #### 3. Decision Authority
 
 Can independently approve:
 
-- Growth strategies
-- Campaign priorities
-- Capability allocation
-- Strategic experiments
-- Client growth initiatives
-- Resource prioritization
+- Cross-channel budget allocation
+- Strategic growth initiatives
+- Funnel optimization changes
+- Channel scaling decisions
+- Growth experiments
 
-Escalates major investment and pricing decisions to the Founder / CEO.
+Escalates:
+
+- Major financial commitments
+- New market entry decisions
+- Organizational restructuring
 
 #### 4. Daily Workflow
 
 ##### Morning
 
-- Growth Executive Brief
-- Portfolio Health Summary
-- Growth Opportunities
-- High-Risk Clients
-- Competitive Alerts
+- Growth Intelligence Brief
+- Revenue performance snapshot
+- CAC vs LTV analysis
+- Channel performance summary
+- Risk/opportunity signals
 
 ##### Mid-Day
 
-- Capability reviews
-- Growth planning
-- Cross-functional coordination
+- Cross-channel coordination
+- Budget optimization decisions
+- Strategic conflict resolution
+- Growth experiment reviews
 
 ##### Afternoon
 
-- Client strategy reviews
-- Opportunity prioritization
-- Leadership collaboration
+- Performance synthesis
+- Team alignment sessions
+- Strategic planning updates
 
 ##### Evening
 
 - Growth summary
-- Pending approvals
+- Executive report preparation
 - Next-day priorities
 
 #### 5. Weekly Workflow
 
 Review:
 
-- Client portfolio growth
-- Organic performance
-- Paid media performance
-- Content performance
-- Pipeline contribution
-- Capability utilization
-- AI recommendations
+- Revenue trends
+- Channel efficiency
+- Funnel performance
+- Budget allocation effectiveness
+- Growth experiments
+- Market opportunities
 
 Approve:
 
-- Growth roadmaps
-- Optimization priorities
+- Budget shifts across channels
+- Growth initiatives
 - Strategic experiments
 
 #### 6. Monthly Workflow
 
 Review:
 
-- Client growth trends
-- Revenue contribution by capability
-- Market opportunities
-- Competitive positioning
-- Capability maturity
-- AI effectiveness
+- Revenue growth rate
+- CAC vs LTV trends
+- Channel contribution balance
+- Funnel efficiency
+- Market expansion potential
+- Strategic initiative ROI
 
 #### 7. Inputs Required
 
 - Business Intelligence Framework
-- Strategy Intelligence
-- Research Intelligence
-- Market Discovery outputs
-- Client KPIs
-- Campaign performance
-- Competitive intelligence
-- Financial metrics
-- Executive priorities
+- Strategy Intelligence Engine
+- SEO Strategist outputs
+- Paid Media Strategist outputs
+- Content Strategist outputs
+- Brand Strategist insights
+- Market research data
 
 #### 8. Outputs Produced
 
 - Growth strategies
-- Client growth roadmaps
-- Capability priorities
-- Strategic recommendations
-- Investment recommendations
-- Expansion plans
-- Growth forecasts
-- Executive updates
+- Revenue optimization plans
+- Cross-channel allocation models
+- Funnel improvement strategies
+- Experiment roadmaps
+- Strategic prioritization frameworks
 
 #### 9. Dashboards
 
@@ -984,39 +983,36 @@ Review:
 
 Contains:
 
-- Portfolio Growth Score
-- Client Health
-- Organic Growth
-- Paid Growth
-- Content Performance
-- Opportunity Pipeline
-- Competitive Movements
-- Capability Performance
-- AI Recommendations
-- Growth Forecast
+- Revenue Growth Metrics
+- CAC / LTV Trends
+- Channel Contribution Breakdown
+- Funnel Conversion Analysis
+- Budget Allocation View
+- Experiment Performance
+- Forecast vs Actual
 
 #### 10. Reports
 
 Receives:
 
 - Daily Growth Brief
-- Weekly Portfolio Review
-- Monthly Growth Report
+- Weekly Growth Performance Report
+- Monthly Revenue Report
 - Quarterly Growth Strategy Review
-- Capability Performance Report
+- Executive Growth Summary
 
 #### 11. Notifications
 
-Only strategic notifications.
+Only revenue-critical alerts.
 
 Examples:
 
-- Client growth decline
-- Major competitor movement
-- Opportunity detected
-- Campaign performance anomaly
-- Capability underperformance
-- Executive approval required
+- Revenue drop
+- CAC spike
+- Funnel conversion breakdown
+- Channel underperformance
+- Budget inefficiency
+- Growth opportunity detected
 
 #### 12. AI Agents
 
@@ -1024,116 +1020,97 @@ Primary Agents:
 
 - Growth Agent
 - Strategy Agent
-- Research Agent
-- Market Discovery Agent
 - Reporting Agent
-- Decision Support Agent
+- Optimization Agent
+- Research Agent
 
 Each recommendation must include:
 
 - Evidence
 - Confidence Score
-- Expected Business Impact
-- Recommended Priority
-- Estimated ROI
+- Expected Revenue Impact
+- Recommended Action
+- Priority Level
+- Risk/Reward Balance
 
 #### 13. Permissions
 
-Full access to client growth data.
-
-Can approve strategic plans and capability priorities.
+Has cross-functional override authority for growth decisions.
 
 Cannot bypass:
 
+- Financial approval limits
 - Audit logs
-- Evidence requirements
-- Executive approvals where required
+- Executive-level strategic approvals
 
 #### 14. Integrations Used
 
-- Google Analytics
-- Google Search Console
-- Google Ads
-- Meta Ads
-- LinkedIn Ads
+- All Marketing Platforms
 - CRM
-- GitHub
-- SSH
-- Email
-- Calendar
-- Slack / Teams
-- Business Intelligence platforms
+- Analytics Systems
+- Paid Media Tools
+- SEO Tools
+- Content Systems
+- Finance/Revenue Dashboards
 
 #### 15. KPIs
 
-- Portfolio Revenue Growth
-- Client Growth Rate
-- Marketing ROI
-- Organic Growth
-- Lead Growth
-- Pipeline Contribution
-- Capability Utilization
-- Client Retention
-- Expansion Revenue
-- Opportunity Conversion Rate
-- Forecast Accuracy
+- Revenue Growth Rate
+- CAC
+- LTV
+- ROAS
+- Conversion Rate
+- Pipeline Growth
+- Channel Contribution Balance
+- Retention Impact
 
 #### 16. Pain Points
 
-- Fragmented growth data
-- Reactive decision making
-- Poor visibility across clients
-- Disconnected capabilities
-- Limited competitive intelligence
-- Manual reporting
-- Difficulty prioritizing opportunities
+- Channel silos
+- Misaligned budgets
+- Unclear attribution
+- Inefficient CAC scaling
+- Poor cross-functional alignment
+- Delayed decision cycles
 
 #### 17. Success Criteria
 
-The Growth Director should understand the growth health of the entire client portfolio within five minutes of logging into AGE.
+The Growth Director should be able to:
 
-Every recommendation should clearly explain:
+- Understand overall business growth health
+- Identify bottlenecks instantly
+- Reallocate resources effectively
 
-- Opportunity
-- Supporting evidence
-- Expected impact
-- Recommended priority
-- Required capabilities
-- Estimated outcome
+within 5 minutes of opening AGE.
 
 #### 18. Automation Opportunities
 
-- Growth Executive Brief
-- Portfolio monitoring
-- Opportunity detection
-- Competitive monitoring
-- Growth forecasting
-- Weekly portfolio reviews
-- Capability scorecards
-- Executive growth reports
-- Client expansion recommendations
+- Revenue anomaly detection
+- Budget optimization suggestions
+- Cross-channel performance alerts
+- Funnel breakdown detection
+- Growth opportunity identification
+- Forecast automation
 
 #### 19. Collaboration Matrix
 
-Works Closely With:
+Works With All Strategy Personas:
 
-- Founder / CEO
-- COO
-- Strategy Team
-- Account Managers
-- Sales Team
+- SEO Strategist
+- Paid Media Strategist
+- Content Strategist
+- Brand Strategist
 
 AI Agents:
 
 - Growth Agent
 - Strategy Agent
-- Research Agent
 - Reporting Agent
-- Market Discovery Agent
+- Optimization Agent
 
 #### 20. Audit Requirements
 
-Every strategic growth decision must record:
+Every growth decision must record:
 
 - Decision
 - Decision Maker
@@ -1141,9 +1118,9 @@ Every strategic growth decision must record:
 - Supporting Evidence
 - AI Recommendation
 - Confidence Score
-- Expected ROI
-- Business Impact
-- Linked Objectives
+- Expected Revenue Impact
+- Business Outcome
+- Budget Impact
 - Approval History
 
 Nothing in this section may be editable after approval.
@@ -1156,7 +1133,7 @@ Nothing in this section may be editable after approval.
 
 **Role**
 
-SEO Strategist (Organic Growth Capability Owner)
+SEO Strategist (Search Intelligence & Organic Growth Capability Owner)
 
 **Department**
 
@@ -1168,174 +1145,166 @@ Growth Director
 
 **Primary Objective**
 
-Design and oversee organic growth systems that increase visibility, traffic quality, and business-relevant search demand across all client properties.
+Drive sustainable organic growth by aligning content, technical SEO, and search intent with market demand.
 
 **Secondary Objectives**
 
-- Increase organic traffic quality
-- Improve search visibility
-- Drive high-intent acquisition
-- Optimize content and technical SEO systems
-- Identify ranking opportunities
-- Align SEO with business outcomes (not keywords)
+- Increase organic visibility
+- Improve search rankings
+- Capture high-intent keywords
+- Optimize content for search intent
+- Improve technical SEO health
+- Support content and paid strategies with search insights
 
 **Business Value**
 
-Owns organic growth as a system, not a channel — ensuring SEO is directly tied to revenue, leads, and business impact.
+Owns the discovery layer of the internet for the business — ensures AGE is visible where intent originates.
 
 #### 2. Responsibilities
 
 ##### Daily
 
-- Review Organic Growth Dashboard
-- Monitor keyword movement and SERP changes
-- Analyze competitor visibility shifts
-- Review AI-generated SEO opportunities
-- Prioritize optimization tasks
+- Review Search Intelligence Dashboard
+- Monitor keyword ranking changes
+- Analyze search trends and intent shifts
+- Identify content gaps
+- Review technical SEO alerts
 
 ##### Weekly
 
-- SEO performance review
-- Content opportunity planning
-- Technical SEO audits review
-- Competitor analysis
-- Backlink and authority review
+- Keyword performance review
+- Content SEO alignment checks
+- Competitor SEO analysis
+- Backlink profile monitoring
+- Search opportunity identification
 
 ##### Monthly
 
-- Organic growth performance analysis
-- Content strategy refinement
-- SEO roadmap updates
-- Market opportunity expansion
-- Technical health audits
+- SEO performance evaluation
+- Content gap analysis
+- Site health review
+- Keyword strategy refinement
+- Organic growth reporting
 
 ##### Quarterly
 
-- Organic growth strategy redesign
-- Market positioning review
-- Content ecosystem planning
-- Authority building strategy
-- SEO capability scaling
+- SEO strategy overhaul
+- Topic authority expansion planning
+- Technical SEO architecture review
+- Competitive SEO positioning analysis
 
 #### 3. Decision Authority
 
 Can independently approve:
 
-- Keyword strategy
-- Content direction
-- SEO prioritization
-- Technical SEO fixes
-- Internal linking structure
-- Content optimization plans
+- Keyword targeting
+- Content SEO optimization
+- On-page SEO changes
+- Internal linking strategy
+- Metadata optimization
 
 Escalates:
 
-- Major site architecture changes
-- Budget-heavy link acquisition strategies
-- Cross-capability tradeoffs
+- Major site structure changes
+- Domain-level SEO strategy shifts
+- Large-scale technical migrations
 
 #### 4. Daily Workflow
 
 ##### Morning
 
-- Organic Performance Brief
-- Ranking movement summary
-- Competitor SEO changes
-- Opportunity alerts
-- Technical issues summary
+- SEO Intelligence Brief
+- Keyword movement summary
+- Ranking changes
+- Search trend updates
+- Technical SEO alerts
 
 ##### Mid-Day
 
-- SEO strategy planning
-- Content gap analysis
-- Technical coordination
-- AI recommendations review
+- Keyword optimization
+- Content SEO alignment
+- SERP analysis
+- Competitor comparison
 
 ##### Afternoon
 
-- Content alignment with strategy
-- Internal linking optimization planning
-- Performance reviews
+- SEO strategy refinement
+- Content coordination
+- Link-building review
 
 ##### Evening
 
-- SEO summary report
-- Priority queue updates
-- Next-day optimization plan
+- SEO performance summary
+- Opportunity backlog
+- Next-day priorities
 
 #### 5. Weekly Workflow
 
 Review:
 
-- Organic traffic performance
-- Keyword movement trends
-- Content performance
-- Backlink profile
-- Technical SEO health
-- Competitor analysis
+- Keyword performance
+- Organic traffic trends
+- SERP feature wins/losses
+- Content SEO alignment
+- Competitor keyword gaps
 
 Approve:
 
-- Content strategy adjustments
-- Optimization backlog
-- SEO experiments
+- Keyword adjustments
+- Content SEO updates
+- Internal linking improvements
 
 #### 6. Monthly Workflow
 
 Review:
 
-- Organic growth trends
-- Content ROI
-- Keyword portfolio performance
-- Domain authority progression
-- Technical SEO stability
-- Market positioning
+- Organic growth metrics
+- Keyword universe expansion
+- Content ranking performance
+- Technical SEO health
+- Domain authority trends
 
 #### 7. Inputs Required
 
 - Research Intelligence Engine
 - Business Intelligence Framework
-- Strategy Intelligence Engine
-- Competitor Intelligence
-- Content Performance Data
-- Technical SEO Audits
-- Search Console Data
-- Analytics Data
+- Content Strategist outputs
+- Technical SEO tools
+- Competitor SEO data
+- Search Console data
+- Analytics data
 
 #### 8. Outputs Produced
 
-- SEO strategies
-- Keyword opportunity maps
-- Content plans
-- Technical SEO recommendations
+- Keyword strategies
+- Content SEO briefs
 - Internal linking strategies
+- Technical SEO recommendations
+- Search intent mappings
 - Ranking improvement plans
-- Organic growth forecasts
 
 #### 9. Dashboards
 
-**Primary Dashboard:** Organic Growth Command Center
+**Primary Dashboard:** SEO Intelligence Command Center
 
 Contains:
 
-- Organic Traffic
 - Keyword Rankings
-- SERP Visibility
-- Content Performance
-- Technical Health Score
-- Competitor Visibility
+- Organic Traffic Trends
+- Search Intent Clusters
+- Content SEO Score
+- Technical SEO Health
 - Backlink Profile
-- Opportunity Pipeline
-- AI SEO Recommendations
+- SERP Feature Tracking
 
 #### 10. Reports
 
 Receives:
 
 - Daily SEO Brief
-- Weekly Organic Performance Report
-- Monthly SEO Strategy Report
-- Quarterly Organic Growth Review
+- Weekly Ranking Report
+- Monthly Organic Growth Report
+- Quarterly SEO Strategy Review
 - Technical SEO Audit Report
 
 #### 11. Notifications
@@ -1344,20 +1313,20 @@ Only SEO-critical alerts.
 
 Examples:
 
-- Ranking drops
+- Ranking drop detected
+- Traffic anomaly
 - Indexing issues
-- Competitor surges
-- Traffic anomalies
-- Technical SEO failures
-- Content decay alerts
+- Backlink loss
+- SERP feature change
+- Technical errors
 
 #### 12. AI Agents
 
 Primary Agents:
 
 - SEO Agent
-- Research Agent
 - Content Agent
+- Research Agent
 - Strategy Agent
 - Reporting Agent
 
@@ -1365,80 +1334,76 @@ Each recommendation must include:
 
 - Evidence
 - Confidence Score
-- Expected Impact
+- Expected SEO Impact
 - Recommended Action
 - Priority Level
-- Estimated ROI
+- Ranking Impact
 
 #### 13. Permissions
 
-Can modify SEO strategy and content direction.
+Can manage SEO strategy and optimization.
 
 Cannot bypass:
 
+- Technical deployment approvals
 - Audit logs
-- Evidence requirements
-- Executive approvals for major changes
+- Structural site changes without approval
 
 #### 14. Integrations Used
 
 - Google Search Console
-- Google Analytics
-- Google Ads (for intent signals)
-- Competitor Intelligence Tools
+- Analytics Platforms
+- SEO Tools (Ahrefs/SEMrush equivalent)
 - CMS
 - Content Systems
-- Backlink Tools
+- Competitor Intelligence Tools
 
 #### 15. KPIs
 
-- Organic Traffic Growth
-- Keyword Ranking Improvements
-- CTR
-- Impressions Growth
+- Organic Traffic
+- Keyword Rankings
+- Click-Through Rate (CTR)
 - Domain Authority
-- Conversion from Organic
-- Content ROI
 - Indexed Pages
-- Technical Health Score
+- Impressions
+- Organic Conversion Rate
+- Backlink Growth
 
 #### 16. Pain Points
 
-- Unclear keyword prioritization
-- Content misalignment
+- Ranking volatility
+- Keyword cannibalization
+- Low CTR pages
 - Technical SEO issues
-- Competitor volatility
-- Slow ranking improvements
-- Poor visibility into intent signals
+- Poor content alignment
+- Weak backlink profile
 
 #### 17. Success Criteria
 
-The SEO Strategist should be able to clearly identify:
+The SEO Strategist should be able to identify:
 
 - What to rank for
-- Why it matters
-- How to rank
-- Expected business impact
+- Why rankings are changing
+- How to improve visibility
 
 within 5 minutes of opening AGE.
 
 #### 18. Automation Opportunities
 
-- Keyword opportunity detection
-- Content gap analysis
+- Keyword tracking
 - Ranking drop alerts
+- Content SEO suggestions
+- Internal linking automation
 - Technical SEO monitoring
-- Competitor tracking
-- Content decay detection
-- SEO reporting automation
+- SERP change detection
 
 #### 19. Collaboration Matrix
 
 Works Closely With:
 
-- Growth Director
 - Content Strategist
-- Technical Team
+- Brand Strategist
+- Paid Media Strategist
 
 AI Agents:
 
@@ -1457,9 +1422,9 @@ Every SEO decision must record:
 - Supporting Evidence
 - AI Recommendation
 - Confidence Score
-- Expected Impact
+- Expected SEO Impact
 - Business Outcome
-- Linked Keywords
+- Ranking Impact
 - Approval History
 
 Nothing in this section may be editable after approval.
