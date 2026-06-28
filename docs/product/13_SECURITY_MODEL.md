@@ -4,125 +4,154 @@
 
 ## Purpose
 
-This document defines, at the **business level**, AGE's **security posture and principles** — how the
-platform **enforces and protects** the access decisions made by the Permission Model (Doc 06), how it
-**isolates** tenant and client data, how it handles **credentials**, and how it guarantees
-**auditability**. Derived from the Permission Model (Doc 06), Workspace Model (Doc 02), Execution
-Model (Doc 12), Integration Catalog (Doc 11), and the persistence foundation.
+This document defines AGE's **security posture and principles** — _how_ the platform enforces and
+protects the access decisions of the Permission Model (Doc 06), isolates data, governs credentials,
+and guarantees auditability. Derived from the Permission Model (Doc 06), Workspace Model (Doc 02),
+Execution Model (Doc 12), and Integration Catalog (Doc 11).
 
-It defines security **principles and responsibilities**, not implementation. It does not define
-cryptographic algorithms, authentication protocols, threat models, or specific compliance
-certifications — those are security-architecture and implementation concerns.
+**Security in AGE is not a layer — it is a constraint system applied across all layers.** It enforces
+_who_ can access, _what_ can be done, _where_ it can be done, and _how_ it is traceable. It **never**
+defines _how_ those controls are technically implemented.
 
-> **Status:** In Progress — derived from Final Docs and the frozen architecture. Genuine security
-> decisions not derivable from existing material are surfaced in [§8 Open Decisions](#8-open-decisions).
+> **Status:** Final — approved by the Product Owner. A foundational, system-wide invariant for all
+> remaining modules.
 
 ## Scope
 
-- **In scope:** security principles, the Doc 06 boundary, authentication/identity posture,
-  authorization enforcement, data protection & isolation, credential handling, auditing guarantees,
-  and the compliance posture.
-- **Out of scope:** cryptographic specifics, auth protocols (SSO/MFA details), enforcement mechanisms
-  (e.g., RLS implementation), threat models, and compliance certifications — security design /
-  implementation.
+- **In scope:** security **posture and principles only** — the Doc 06 boundary, the canonical
+  principles, identity model, authorization alignment, execution integrity, data protection,
+  credential boundary, and auditing as an invariant.
+- **Out of scope (implementation / infrastructure):** authentication mechanisms, encryption
+  algorithms, storage strategies, infrastructure design, compliance implementation, identity
+  providers, and session handling (§9).
 
 ## Status
 
-In Progress.
+Final.
 
 ## Related Documents
 
 - [Permission Model](./06_PERMISSION_MODEL.md) — **Final**; _who may access what_ (this document enforces it).
-- [Workspace Model](./02_WORKSPACE_MODEL.md) · [Execution Model](./12_EXECUTION_MODEL.md) · [Integration Catalog](./11_INTEGRATION_CATALOG.md) — **Final**.
-- [Configuration Model](./14_CONFIGURATION_MODEL.md) — secret storage/configuration.
+- [AI Agent Architecture](./04_AI_AGENT_ARCHITECTURE.md) · [Workspace Model](./02_WORKSPACE_MODEL.md) · [Integration Catalog](./11_INTEGRATION_CATALOG.md) · [Execution Model](./12_EXECUTION_MODEL.md) — **Final**.
+- [Configuration Model](./14_CONFIGURATION_MODEL.md) — secret configuration.
 
 ## Table of Contents
 
-- [1. Purpose & Boundary with the Permission Model](#1-purpose--boundary-with-the-permission-model)
-- [2. Security Principles](#2-security-principles)
-- [3. Authentication & Identity](#3-authentication--identity)
-- [4. Authorization Enforcement](#4-authorization-enforcement)
-- [5. Data Protection & Isolation](#5-data-protection--isolation)
-- [6. Credentials & Secrets](#6-credentials--secrets)
-- [7. Auditing](#7-auditing)
-- [8. Open Decisions](#8-open-decisions)
+- [1. Boundary with the Permission Model](#1-boundary-with-the-permission-model)
+- [2. Core Security Principles](#2-core-security-principles)
+- [3. Identity Model](#3-identity-model)
+- [4. Authorization Alignment](#4-authorization-alignment)
+- [5. Execution Integrity as a Security Boundary](#5-execution-integrity-as-a-security-boundary)
+- [6. Data Protection Principles](#6-data-protection-principles)
+- [7. Credential Handling Boundary](#7-credential-handling-boundary)
+- [8. Auditing](#8-auditing)
+- [9. Resolved Decisions & Out of Scope](#9-resolved-decisions--out-of-scope)
 
 ---
 
-## 1. Purpose & Boundary with the Permission Model
+## 1. Boundary with the Permission Model
 
 The split is canonical (Doc 06 §9.6):
 
 - **Permission Model (Doc 06)** answers **"should this person be allowed?"** — subjects, scopes,
   roles, context, approval.
-- **Security Model (this document)** answers **"how is that decision enforced and protected?"** —
-  authentication, identity, enforcement, data protection, credentials, and audit.
+- **Security Model (this document)** answers **"how is that decision enforced and protected?"**
 
-The two are independent and must not be conflated.
+Security **does not redefine permissions — it enforces them.** The two are independent.
 
-## 2. Security Principles
+## 2. Core Security Principles
 
-1. **Isolation by default.** Tenant and client boundaries (Doc 02 §15–16) are **security guarantees**,
-   not conveniences — never crossed.
-2. **Least privilege.** Access follows responsibility (Doc 06); the platform grants the minimum needed.
-3. **Auditability & traceability.** Every access, action, and side effect is attributable and
-   traceable (Doc 12 chain; persistence AuditLog).
-4. **Defense of the execution boundary.** Only the Execution Layer side-effects (Doc 12); this is a
-   security invariant, not merely a design choice.
-5. **Protect business truth.** Data and credentials are protected commensurate with their sensitivity.
+The following principles are **canonical and non-negotiable**, and apply across **all** modules of AGE:
 
-## 3. Authentication & Identity
+1. **Isolation by default.**
+2. **Least privilege access.**
+3. **Full auditability and traceability.**
+4. **Protection of execution integrity.**
+5. **Protection of business data integrity.**
 
-- Every human actor must be **authenticated**, and **identity established before access** is granted.
-- **AI agents are not identities or permission subjects** (Doc 04, Doc 06) — they act within the
-  initiating human's authenticated context.
-- The **authentication mechanics** (protocols, SSO, MFA, sessions) are security design /
-  implementation (§8).
+## 3. Identity Model
 
-## 4. Authorization Enforcement
+Identity is strictly **human-centric**:
 
-- The Security Model **enforces** the Permission Model: the hybrid **role + context** decision
-  (Doc 06) is applied at access time, and **scope isolation is enforced** so a subject only reaches
-  what its responsibilities grant.
-- Cross-client / cross-tenant access is **structurally prevented** (Doc 02 §15).
-- The **enforcement mechanism** (e.g., row-level security, policy evaluation) is implementation (§8).
+- **Humans are authenticated identities.**
+- **AI Agents are not identities.** They operate strictly within the context of an **authenticated
+  human or an approved workflow** (Doc 04, Doc 12).
+- **No standalone AI identity layer exists** in the product model.
 
-## 5. Data Protection & Isolation
+## 4. Authorization Alignment
 
-- **Tenant/client isolation** is enforced as a security guarantee (Doc 02 §15–16); one client's data
-  never reaches another, and no organization reaches another's data.
-- **Data is protected in transit and at rest** as a principle; the specific cryptographic standards
-  and key management are implementation (§8).
-- **Soft delete & retention.** Data is retained (soft delete, version history) for audit and
-  traceability; protection applies to retained data equally.
+Security enforcement aligns with the Permission Model (Doc 06):
 
-## 6. Credentials & Secrets
+- **Enforce context-scoped access** (Organization / Client / Project).
+- **Prevent cross-client data leakage by design.**
+- **Apply permissions consistently across all layers.**
 
-- **Integration connections** are **authorized, revocable, and scoped to a business context**
-  (Doc 11). The Security Model owns how their **credentials are protected, rotated, and revoked**.
-- **Credential and secret storage** (encryption, vaulting, rotation policy) is security/infrastructure
-  design; secret **configuration** lives in the Configuration Model (Doc 14).
-- Credentials are never exposed to pure layers or surfaced in reasoning; only the Execution Layer uses
-  them to act (Doc 11, Doc 12).
+Security enforces; it does not redefine.
 
-## 7. Auditing
+## 5. Execution Integrity as a Security Boundary
 
-- **Comprehensive audit.** Every access, change, approval, integration action, and side effect is
-  **auditable** (persistence AuditLog) — _no permission bypasses audit_ (Doc 06).
-- **Traceability chains.** Security supports the canonical chains (Evidence → BIF → Decision →
-  Capability Output → Execution, Doc 12) so any outcome is attributable to its origin and actor.
-- **Audit integrity.** Audit records should be tamper-evident and retained; the **implementation** of
-  audit storage/integrity is security design (§8).
+The **Execution Layer is a security-critical boundary**, not merely an architectural one (Doc 12).
+Security must ensure:
 
-## 8. Open Decisions
+- **Only approved execution flows are executed.**
+- **No bypass of the Execution Layer is possible.**
+- **All side effects remain governed and traceable.**
+- **Execution cannot be triggered outside authorized contexts.**
 
-> Genuine security decisions not derivable from the frozen architecture — most belong to security
-> design / implementation; surfaced here for the security architecture effort.
+## 6. Data Protection Principles
 
-1. **Authentication mechanics.** Identity provider(s), SSO, MFA, session model.
-2. **Authorization enforcement mechanism.** How isolation/scoping is enforced technically (e.g., RLS).
-3. **Encryption & key management.** Standards for data at rest / in transit and key handling.
-4. **Credential vaulting & rotation.** How integration credentials are stored, rotated, and revoked.
-5. **Compliance frameworks.** Which compliance/regulatory regimes AGE targets (and resulting controls).
-6. **Data retention & residency.** Retention periods and any region-pinning for enterprise tenants.
-7. **Threat model & incident response.** The platform threat model and response posture.
+- **Data remains isolated by business context.**
+- **Sensitive business information must not leak across Clients or Organizations.**
+- **Access is always scoped and contextual.**
+- **Traceability is preserved for all data-access events.**
+
+Implementation details (encryption, key management, storage systems) are intentionally excluded (§9).
+
+## 7. Credential Handling Boundary
+
+Credentials, secrets, and sensitive configuration:
+
+- **Are not part of the product model.**
+- Are governed entirely by the **Security + Infrastructure** layers.
+- Must be **scoped, revocable, and protected**.
+- **Must never be accessible to AI Agents or pure reasoning layers** (Doc 11, Doc 12).
+
+Secret **configuration** is referenced by the Configuration Model (Doc 14); storage/rotation is
+security/infrastructure.
+
+## 8. Auditing
+
+Auditability is a **system-wide invariant, not a feature**:
+
+- **All meaningful actions must be traceable.**
+- **No system layer may bypass auditability** (Doc 06: no permission bypasses audit).
+- **Audit exists across the reasoning, decision, and execution layers** — supporting the canonical
+  chains (Evidence → BIF → Decision → Capability Output → Execution, Doc 12).
+
+How auditing is implemented (storage, integrity, retention) is outside product scope (§9).
+
+## 9. Resolved Decisions & Out of Scope
+
+**Resolved (canonical):**
+
+1. **Posture & principles only** — the Security Model defines posture and the five canonical
+   principles; nothing technical.
+2. **Identity is human-centric** — AI agents are never identities; no standalone AI identity layer.
+3. **Security enforces, never redefines, permissions** (Doc 06 alignment; cross-client leakage
+   prevented by design).
+4. **Execution integrity is a security boundary** — only approved flows, no bypass, all side effects
+   governed and traceable.
+5. **Data protection is a principle set** — isolation by context, no cross-Client/Org leakage, scoped
+   access, preserved traceability.
+6. **Credentials are out of the product model** — Security + Infrastructure own them; never reachable
+   by AI agents or pure layers.
+7. **Auditing is a system-wide invariant** — all meaningful actions traceable; no layer bypasses it.
+
+**Out of scope (implementation / security-design — not product decisions):** authentication
+mechanisms (identity providers, SSO, MFA, session handling) · encryption algorithms & key management
+· storage strategies · enforcement mechanisms (e.g., row-level security) · compliance implementation
+& certifications · data retention/residency mechanics · threat model & incident response.
+
+**Canonical principle:** security is **not a layer — it is a constraint system applied across all
+layers**: who can access, what can be done, where, and how it is traceable — never _how_ it is
+technically implemented.
