@@ -4,15 +4,20 @@
 
 ## Purpose
 
-This document is the **terminological anchor** for AGE. It is a single, alphabetical reference of the
-platform's canonical terms, each pointing to the **authoritative document** that defines it. It
-**introduces no new definitions or decisions** — every entry summarizes a definition owned elsewhere
-(a Final Product Bible document, an ADR, or the frozen architecture). On any conflict, the cited
-source governs (Data Dictionary, Doc 05, sets terminology precedence: Business → Product →
-Architectural → Implementation).
+This document is the **terminological anchor** and the **entry point into the Product Bible knowledge
+system** — a **reference index, not a definition system**. It is a single, alphabetical lookup of the
+platform's canonical terms, each pointing to the **authoritative source** that defines it. It exists
+to provide quick navigation, point to authoritative sources, and ensure consistent vocabulary across
+all documents. **It introduces no new definitions, decisions, entities, concepts, classifications, or
+naming conventions** — every entry is a one-line **navigation pointer to meaning**, not meaning
+itself.
 
-> **Status:** In Progress — references Final Docs 01–15, the Data Dictionary, and the frozen
-> architecture. No term is defined here for the first time.
+**Source-of-truth precedence.** Each entry defers to the highest authoritative source, in order:
+**(1) Product Bible document (02–16) → (2) ADR (where referenced) → (3) frozen architecture
+(implementation reality).** The Glossary never overrides these sources; it only points to them. It is
+an **index layer for readability and navigation, not part of the system of truth itself.**
+
+> **Status:** Final — approved by the Product Owner. The final Product Bible document.
 
 ## Scope
 
@@ -21,7 +26,7 @@ Architectural → Implementation).
 
 ## Status
 
-In Progress.
+Final.
 
 ## Related Documents
 
@@ -83,6 +88,25 @@ In Progress.
 | **SIE (Strategy Intelligence Engine)**    | The decision layer producing structured decision objects from BIF/RIE/BKG.                                                   | Doc 05; architecture              |
 | **Traceability Chain**                    | Evidence → BIF → Decision → Capability Output → Execution.                                                                   | Doc 12 §8                         |
 | **Workspace**                             | A product **lens** (navigation/context) — not a business entity; carries no ownership.                                       | Doc 02 §6; Doc 07                 |
+
+## Resolved Decisions
+
+The following were resolved by the Product Owner and are now canonical:
+
+1. **Reference index, not a definition system.** The Glossary navigates and points to authoritative
+   sources; it must not introduce independent definitions.
+2. **Source-of-truth precedence.** Product Bible document (02–16) → ADR → frozen architecture. The
+   Glossary never overrides these.
+3. **Atomic granularity.** Terms are atomic, non-overlapping, and non-explanatory beyond a one-line
+   summary — a navigation pointer to meaning, not meaning itself.
+4. **Distinct from the Data Dictionary.** Doc 05 defines business meaning and relationships; Doc 16
+   provides terminological indexing/lookup. The Glossary must not duplicate or expand Doc 05.
+5. **No new canonical concepts.** No new entities, business concepts, classification systems, or
+   alternative naming. Any such need is resolved back into the relevant source document (02–15).
+
+**Canonical principle:** the Glossary is the **entry point into the Product Bible knowledge system**
+but **not part of the system of truth** — an index layer for readability and navigation, preserving
+the separation between authoritative definitions (Docs 02–15) and navigational references (Doc 16).
 
 ## Maintenance
 
