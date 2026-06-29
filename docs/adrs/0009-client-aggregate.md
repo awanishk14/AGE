@@ -72,6 +72,30 @@ This is an **implementation decision only**. It introduces no new product concep
 Product Bible document, and adds no capability or behavior. The canonical business hierarchy
 `Organization → Client → Project` is unchanged; this decision gives it an implementation home.
 
+### Client is a platform aggregate, not a BKG node type
+
+`Client` is a **platform/business aggregate** — it is not one of the 26 BKG node types and it
+is not derived from the BKG ontology (ADR-0003).
+
+The existing 20 bounded contexts each correspond to a BKG node type. The `client` module is
+explicitly the 21st because it exists for a different reason: it represents the **Product Bible
+business hierarchy** (`Organization → Client → Project`, Doc 02 §3), not the semantic ontology
+of the Business Knowledge Graph.
+
+This distinction is architecturally significant:
+
+|                      | BKG-derived modules (1–20)                      | `client` module (21st)                                                     |
+| -------------------- | ----------------------------------------------- | -------------------------------------------------------------------------- |
+| Origin               | BKG ontology — 26 node types                    | Product Bible hierarchy — Doc 02 §3                                        |
+| Purpose              | Model the semantic graph of a client's business | Own the tenancy, identity, and lifecycle boundary of the Client engagement |
+| BKG node counterpart | Is the node                                     | Has none — `Client` is not a BKG node                                      |
+| Instances            | Scoped by `clientId`                            | Defines the `clientId`                                                     |
+
+The BKG `Organization` node represents the client's **company** (canonically called the
+**Business** in the Product Bible, Doc 05 §3). The `Client` aggregate represents the
+**engagement** — the relationship between the agency and that business. These are two distinct
+concepts at two distinct layers; they must never be conflated.
+
 ## Aggregate boundaries
 
 The `Client` aggregate root owns the following within its consistency boundary:
