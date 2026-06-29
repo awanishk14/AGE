@@ -306,3 +306,109 @@ Follow the SFD workflow for every task within EPIC-01. The first EPIC should als
 | What was validated before implementation? | `docs/reviews/SPECIFICATION_VALIDATION_REPORT.md`     |
 | What is the engineering workflow?         | `docs/engineering/SPECIFICATION_FIRST_DEVELOPMENT.md` |
 | What are the milestones?                  | `docs/reviews/MILESTONE_HISTORY.md`                   |
+
+---
+
+## 11. Engineering Principles
+
+These principles communicate the engineering philosophy of AGE to every contributor before they
+write their first line of code. They are not guidelines — they are the reasoning behind every
+structural decision in the frozen specification.
+
+---
+
+### Specification First
+
+The specification is the contract. Implementation must conform to the specification.
+Implementation never redefines the specification.
+
+When code and spec conflict, the code is wrong.
+
+---
+
+### Architecture Before Code
+
+Major architectural decisions are made before implementation begins. If implementation
+discovers a missing architectural decision:
+
+1. Stop.
+2. Create or update the appropriate ADR.
+3. Obtain approval.
+4. Continue implementation.
+
+See `docs/engineering/SPECIFICATION_FIRST_DEVELOPMENT.md`.
+
+---
+
+### Single Source of Truth
+
+There is only one authoritative definition for every concept. Business rules are not duplicated
+across documents. When conflicts exist, follow the Source of Truth hierarchy:
+
+```
+Architecture → Product Bible → ADRs → Implementation
+```
+
+See § 4 of this document.
+
+---
+
+### Capabilities Before Features
+
+AGE is organized around business capabilities (Market Discovery, Intelligence, Growth,
+Authority, Operations, Revenue). Features exist to support capabilities. Features are never
+the architectural organizing principle.
+
+See `docs/architecture/CAPABILITY_ARCHITECTURE.md`.
+
+---
+
+### Business Before Technology
+
+Business concepts define the architecture. Technology exists to realize those business
+concepts. Never reshape a business concept to fit implementation convenience. If a technology
+cannot model the business concept cleanly, the technology decision is revisited — not the
+business model.
+
+The Business Knowledge Graph is the canonical business model. It is not adjusted to
+accommodate an ORM or a database schema.
+
+---
+
+### Pure Intelligence, Controlled Execution
+
+Reasoning and execution are intentionally separated at every layer of the system.
+
+- **AI agents reason.** They are pure producers — they never cause side effects.
+- **The Execution Layer acts.** It is the only layer permitted to perform side effects.
+
+This separation is an architectural invariant. It must never be violated. See
+`docs/product/12_EXECUTION_MODEL.md` and `docs/product/04_AI_AGENT_ARCHITECTURE.md`.
+
+---
+
+### Evolution Through ADRs
+
+Architecture evolves through explicit, approved Architecture Decision Records. It never
+evolves accidentally through implementation. An undocumented architectural decision made in
+code is a defect — not a shortcut.
+
+All ADRs live in `docs/adrs/`. The next reserved identifier is ADR-0009.
+
+---
+
+### Preserve the Freeze
+
+`specification-freeze-v1.0` is the architectural baseline. Future changes extend the
+system — they do not rewrite it. Every significant architectural change must be deliberate,
+documented, reviewed, and approved before implementation begins.
+
+The four completed freeze tags are permanent:
+
+```
+foundation-v0.1           →  architecture-freeze-v1.0
+architecture-freeze-v1.0  →  product-bible-v1.0
+product-bible-v1.0        →  specification-freeze-v1.0
+```
+
+They are not moved, re-tagged, or deleted.
