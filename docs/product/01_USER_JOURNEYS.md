@@ -818,7 +818,7 @@ Owns market perception and consistent, differentiated brand identity.
 
 #### 1. Identity
 
-Account Manager is the primary relationship owner between AGE and a Client organization, responsible for ensuring alignment between Client expectations and delivered outcomes.
+Account Manager is the primary relationship owner between AGE and a Client's business, responsible for ensuring alignment between Client expectations and delivered outcomes.
 
 #### 2. Role Type
 
@@ -1557,7 +1557,7 @@ Acts as the long-term value assurance layer for Client relationships
 
 #### 1. Identity
 
-Business Owner represents the primary decision-making authority within a Client organization using AGE.
+Business Owner represents the primary decision-making authority within a Client's business using AGE.
 
 #### 2. Role Type
 
@@ -1649,7 +1649,7 @@ Represents final authority on Client-side strategic acceptance
 
 #### 1. Identity
 
-Marketing Head is responsible for leveraging AGE outputs to drive marketing strategy, campaigns, and growth initiatives within the Client organization.
+Marketing Head is responsible for leveraging AGE outputs to drive marketing strategy, campaigns, and growth initiatives within the Client's business.
 
 #### 2. Role Type
 
@@ -1735,7 +1735,7 @@ May interact with external marketing channels indirectly via Execution Layer out
 
 #### 19. Notes
 
-Acts as the strategic growth translation layer within Client organizations
+Acts as the strategic growth translation layer within Client businesses
 
 ### Product Manager
 
