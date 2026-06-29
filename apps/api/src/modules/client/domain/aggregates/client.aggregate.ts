@@ -18,10 +18,10 @@ class InvalidTransitionError extends DomainError {
 }
 
 export class ClientAggregate extends AggregateRoot<ClientId> {
-  private _organizationId: OrganizationId;
+  private readonly _organizationId: OrganizationId;
   private _lifecycle: ClientLifecycleState;
-  private _name: string;
-  private _slug: string;
+  private readonly _name: string;
+  private readonly _slug: string;
 
   private constructor(
     id: ClientId,

@@ -9,3 +9,4 @@ export {
   ClientOffboarding,
   ClientArchived,
 } from './events';
+export { ClientName, ClientSlug } from './value-objects';
