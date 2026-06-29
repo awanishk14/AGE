@@ -68,6 +68,7 @@ Final.
 | **Integration**                           | A contextual perception/action channel to an external system (Source / Execution / Hybrid).                                  | Doc 11                            |
 | **Intelligence Capability**               | Capability for truth quality (between RIE and BIF).                                                                          | Capability Architecture           |
 | **KPI**                                   | A standardized business signal for evaluating performance/progress/outcomes.                                                 | Doc 10 §4                         |
+| **LangGraph**                             | The graph-shaped agent orchestration engine used for stateful, resumable AI agent runs.                                      | ADR-0005; Doc 04 §5               |
 | **Market Discovery Capability**           | Capability that finds opportunities (SEO/AEO/GEO/local/competitor/keyword).                                                  | Capability Architecture           |
 | **Metric**                                | A measured value (BKG `Metric` node), produced by execution, accumulating at the Client.                                     | Doc 05; Doc 10 §4                 |
 | **Notification**                          | A business-attention signal in five categories: Critical, Important, Informational, Digest, Escalation.                      | Doc 08 §2                         |

@@ -93,9 +93,8 @@ does not re-define their individual behavior; it references them:
 `Market Discovery Agent` · `SEO Agent` · `AEO/GEO Agent` · `Paid Media Agent` · `Content Agent` ·
 `Reporting Agent` · `Proposal Agent` · `Project Coordinator Agent` · `QA Agent`.
 
-> Five agents have detailed canonical contracts in Doc 01 (Strategy, Content, SEO, Research,
-> Reporting); the remaining eight are skeletons pending completion in Doc 01. Their individual
-> definitions are owned by Doc 01, not this document.
+> All 13 AI agents have canonical contracts in Doc 01 (Unified Persona Registry schema, v3.0).
+> Their individual definitions are owned by Doc 01, not this document.
 
 ## 4. Agent Contract Shape
 

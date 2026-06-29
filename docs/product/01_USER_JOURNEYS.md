@@ -13,7 +13,7 @@
 | Status              | Product Design     |
 | Owner               | Product Team       |
 | Architecture Status | Frozen             |
-| Last Updated        | TBD                |
+| Last Updated        | 2026-06-29         |
 
 ---
 

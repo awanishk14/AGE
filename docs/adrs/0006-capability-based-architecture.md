@@ -17,7 +17,8 @@ From Task 009 onward, everything above the SIE is organized around **business ca
 marketing channels:
 
 - **Intelligence** (truth quality — sits between RIE and SIE)
-- **Discovery**, **Growth**, **Authority**, **Operations**, **Revenue** (sit after SIE)
+- **Market Discovery**, **Growth**, **Authority**, **Operations**, **Revenue** (sit after SIE)
+  _(Note: `Discovery` was subsequently renamed `Market Discovery` in CAPABILITY_ARCHITECTURE §7.)_
 
 A marketing channel (SEO, Google Ads, a blog) is an **execution path within a capability**, never a
 capability itself. Each capability consumes the SIE `DecisionPackage` (and BIF/BKG/curated
