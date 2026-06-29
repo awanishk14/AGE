@@ -495,3 +495,72 @@ The legacy codebase is Python (Python 3.11+, SQLAlchemy 2.0, asyncio). AGE is Ty
 | 23  | Rollup Unit Test Pattern           | DEFER       | Deferred    |
 | 24  | Ad Payload Ingestion Helpers       | DEFER       | Deferred    |
 | 25  | Sample API Fixture Files           | REIMPLEMENT | Not Started |
+
+---
+
+# Legacy Migration Principles
+
+> Permanent engineering policy for using the legacy repository during AGE implementation.
+> These principles apply to every phase and every contributor.
+
+---
+
+## Engineering Knowledge Over Code
+
+The legacy repository is primarily a source of engineering knowledge.
+
+We migrate ideas, algorithms, patterns, and proven implementation approaches — not source files.
+
+---
+
+## Architecture Is Never Imported
+
+The legacy repository must never influence:
+
+- Architecture
+- Capability boundaries
+- Module organization
+- Product workflows
+- Navigation
+- Ownership models
+
+Those are defined exclusively by the frozen AGE specification.
+
+---
+
+## Reimplementation Preferred
+
+Even when an asset is marked **REIMPLEMENT**, developers should recreate the behavior using AGE architecture and TypeScript.
+
+Direct file copying should be avoided except for non-code artifacts such as fixtures or reference prompt text where appropriate.
+
+---
+
+## Every Migration Requires Justification
+
+Every migrated asset must answer:
+
+- Why is it being migrated?
+- Which AGE capability requires it?
+- Which architectural boundary does it belong to?
+- Does it preserve the frozen architecture?
+
+If these questions cannot be answered, the asset should not be migrated.
+
+---
+
+## Migration Is Capability-Driven
+
+Assets are migrated only when required by an implementation EPIC.
+
+No asset should be migrated simply because it already exists.
+
+---
+
+## AGE Always Wins
+
+If the legacy repository and the frozen AGE specification differ:
+
+**The AGE specification is always correct.**
+
+Implementation must adapt the legacy asset — not the specification.
