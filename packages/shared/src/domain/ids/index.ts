@@ -40,3 +40,4 @@ export type DocumentId = Branded<'Document'>;
 export type MeetingId = Branded<'Meeting'>;
 export type TechnologyId = Branded<'Technology'>;
 export type AssetId = Branded<'Asset'>;
+export type ClientId = Branded<'Client'>;
