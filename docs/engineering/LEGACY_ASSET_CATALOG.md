@@ -11,6 +11,17 @@
 
 ---
 
+## Decision Categories
+
+| Decision    | Meaning                                                                                                                                                                                                                 |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| REIMPLEMENT | The engineering logic is architecturally correct and should be recreated in TypeScript with essentially identical behaviour. Typical: pure normalize functions, rollup math utilities, test patterns, fixtures.         |
+| ADAPT       | The engineering logic is valuable but requires architectural changes before integration into AGE. Typical: connectors, crawlers, OAuth helpers, AI cost tracker, Phase 2 prompt assets.                                 |
+| DISCARD     | The asset fundamentally conflicts with one or more frozen AGE architectural invariants and must not be migrated.                                                                                                        |
+| DEFER       | The asset is potentially valuable but belongs to a later implementation phase. Neither rejected nor approved for immediate migration. Typical: Phase 3/4 prompts, attribution engine, Operations rollups, ad ingestion. |
+
+---
+
 ## Catalog Summary
 
 | #   | Asset                          | Legacy Path                                                                                                                                | Reuse Decision | AGE Target                                    |
@@ -27,19 +38,19 @@
 | 10  | Quota manager                  | `connectors/quota.py`                                                                                                                      | ADAPT          | `packages/integrations/`                      |
 | 11  | Playwright crawler             | `crawler/engine.py`                                                                                                                        | ADAPT          | `packages/integrations/crawlers/`             |
 | 12  | AI cost tracker                | `ai/cost_tracker.py`                                                                                                                       | ADAPT          | `packages/shared/` (utility)                  |
-| 13  | Rollup math utilities          | `rollups/util.py`                                                                                                                          | ADOPT          | `packages/shared/utils/`                      |
-| 14  | Connector normalize helpers    | `connectors/ga4.py::normalize_conversions`, `connectors/google_ads.py::normalize_rows`, `connectors/meta_ads.py::extract_purchase_metrics` | ADOPT          | `packages/integrations/providers/*/`          |
+| 13  | Rollup math utilities          | `rollups/util.py`                                                                                                                          | REIMPLEMENT    | `packages/shared/utils/`                      |
+| 14  | Connector normalize helpers    | `connectors/ga4.py::normalize_conversions`, `connectors/google_ads.py::normalize_rows`, `connectors/meta_ads.py::extract_purchase_metrics` | REIMPLEMENT    | `packages/integrations/providers/*/`          |
 | 15  | SEO Architect reasoning prompt | `.serena/skills/seo_architect.md`                                                                                                          | ADAPT          | Capability prompt layer (Phase 2)             |
 | 16  | GEO/AEO Specialist prompt      | `.serena/skills/geo_specialist.md`                                                                                                         | ADAPT          | Capability prompt layer (Phase 2)             |
-| 17  | Content Strategist prompt      | `.serena/skills/content_strategist.md`                                                                                                     | ADAPT          | Capability prompt layer (Phase 2)             |
-| 18  | CRO Specialist prompt          | `.serena/skills/cro_specialist.md`                                                                                                         | ADAPT          | Capability prompt layer (Phase 2)             |
-| 19  | EEAT Specialist prompt         | `.serena/skills/eeat_specialist.md`                                                                                                        | ADAPT          | Capability prompt layer (Phase 2)             |
-| 20  | Growth Engineer prompt         | `.serena/skills/growth_engineer.md`                                                                                                        | ADAPT          | Capability prompt layer (Phase 2)             |
+| 17  | Content Strategist prompt      | `.serena/skills/content_strategist.md`                                                                                                     | DEFER          | Capability prompt layer (Phase 2)             |
+| 18  | CRO Specialist prompt          | `.serena/skills/cro_specialist.md`                                                                                                         | DEFER          | Capability prompt layer (Phase 2)             |
+| 19  | EEAT Specialist prompt         | `.serena/skills/eeat_specialist.md`                                                                                                        | DEFER          | Capability prompt layer (Phase 2)             |
+| 20  | Growth Engineer prompt         | `.serena/skills/growth_engineer.md`                                                                                                        | DEFER          | Capability prompt layer (Phase 2)             |
 | 21  | Technical SEO prompt           | `.serena/skills/technical_seo.md`                                                                                                          | ADAPT          | Capability prompt layer (Phase 2)             |
-| 22  | Connector unit test pattern    | `tests/test_google_ads_connector.py`, `tests/test_meta_ads_connector.py`                                                                   | ADOPT          | `packages/integrations/*/tests/`              |
-| 23  | Rollup unit test pattern       | `tests/test_rollups.py`                                                                                                                    | ADAPT          | Operations Capability tests (Phase 4)         |
-| 24  | Ad payload ingestion helpers   | `ingest/ads.py`                                                                                                                            | ADAPT          | `packages/integrations/` ingest layer         |
-| 25  | Sample API fixture files       | `samples/ga4_conversions.json`, `samples/google_ads_campaign_perf.json`, `samples/meta_ads_insights.json`                                  | ADOPT          | `packages/integrations/*/fixtures/`           |
+| 22  | Connector unit test pattern    | `tests/test_google_ads_connector.py`, `tests/test_meta_ads_connector.py`                                                                   | REIMPLEMENT    | `packages/integrations/*/tests/`              |
+| 23  | Rollup unit test pattern       | `tests/test_rollups.py`                                                                                                                    | DEFER          | Operations Capability tests (Phase 4)         |
+| 24  | Ad payload ingestion helpers   | `ingest/ads.py`                                                                                                                            | DEFER          | `packages/integrations/` ingest layer         |
+| 25  | Sample API fixture files       | `samples/ga4_conversions.json`, `samples/google_ads_campaign_perf.json`, `samples/meta_ads_insights.json`                                  | REIMPLEMENT    | `packages/integrations/*/fixtures/`           |
 
 ---
 
@@ -252,7 +263,7 @@
 **Purpose:** Pure utility functions: `to_float()` (Decimal/int/None → float), `safe_div()` (zero-safe division), `coerce_date()` (date/datetime/string → date), `resolve_range()` (default date window), `derived_metrics()` (CTR, CPC, ROAS, CVR from ad aggregates). All stateless, no I/O.
 **Dependencies:** Python stdlib only (`datetime`, `decimal`).
 **AGE target location:** `packages/shared/utils/`
-**Reuse decision:** ADOPT
+**Reuse decision:** REIMPLEMENT
 **Required adaptation:** Rewrite in TypeScript (trivial — all functions are one-liners or small). Logic is directly portable. No architectural changes needed.
 **Architectural justification:** Pure math utilities with no side effects. `derived_metrics()` computes standard advertising KPIs (CTR, CPC, ROAS, CVR) referenced in Doc 10 (Reporting) and the Growth/Revenue Capability definitions.
 
@@ -264,7 +275,7 @@
 **Purpose:** Module-level (not class methods) pure transform functions, intentionally separated from API calls to be unit-testable without live credentials. Each converts raw API response shapes into structured evidence objects.
 **Dependencies:** None (stdlib only).
 **AGE target location:** Alongside their respective provider packages in `packages/integrations/providers/*/`.
-**Reuse decision:** ADOPT
+**Reuse decision:** REIMPLEMENT
 **Required adaptation:** Port to TypeScript. Logic is directly portable; the separation pattern (pure normalize function + API class) is the correct pattern to preserve in AGE.
 **Architectural justification:** Pure transforms produce structured data from raw API responses — this is the RIE "sensing" step (Doc 05 §5). Keeping them as pure functions (no DB, no network) supports the test-first SFD requirement (`docs/engineering/SPECIFICATION_FIRST_DEVELOPMENT.md`).
 
@@ -301,7 +312,7 @@
 **Legacy path:** `.serena/skills/content_strategist.md`
 **Purpose:** Structured reasoning for content analysis: thin content, missing clusters, outdated content, topical authority, cannibalization. Content brief template with required fields (target keyword, search intent, structure, entities, internal links, schema, word count, competitor reference).
 **AGE target location:** Capability prompt layer — Content Agent (Doc 01, Authority Capability, Phase 3).
-**Reuse decision:** ADAPT
+**Reuse decision:** DEFER
 **Required adaptation:** Adapt for the Content Agent persona (Doc 01). The content brief template is a high-value structured output format. Reformulate to produce outputs that feed into the SIE `DecisionPackage` rather than free-text briefs.
 **Architectural justification:** Content strategy maps to the Authority Capability (CAPABILITY_ARCHITECTURE §7: "content, PR, backlinks, reviews, thought leadership").
 
@@ -312,7 +323,7 @@
 **Legacy path:** `.serena/skills/cro_specialist.md`
 **Purpose:** Could not fully inspect; file exists (confirmed in tree). Expected to contain structured reasoning for conversion rate optimization.
 **AGE target location:** Capability prompt layer — Growth Capability (Phase 3).
-**Reuse decision:** ADAPT (pending full inspection)
+**Reuse decision:** DEFER
 **Required adaptation:** Inspect before Phase 3 begins. Adapt output format to structured evidence objects.
 **Architectural justification:** CRO is part of the Growth Capability (CAPABILITY_ARCHITECTURE §7: "paid media, CRO, funnels").
 
@@ -323,7 +334,7 @@
 **Legacy path:** `.serena/skills/eeat_specialist.md`
 **Purpose:** Could not fully inspect; file exists (confirmed in tree). Expected to contain structured reasoning for Experience, Expertise, Authoritativeness, Trustworthiness signals.
 **AGE target location:** Capability prompt layer — Authority Capability (Phase 3).
-**Reuse decision:** ADAPT (pending full inspection)
+**Reuse decision:** DEFER
 **Required adaptation:** Inspect before Phase 3 begins. EEAT overlaps with Content and SEO agent domains.
 **Architectural justification:** EEAT signals feed both Authority Capability (content depth/trust) and Market Discovery (ranking signals).
 
@@ -334,7 +345,7 @@
 **Legacy path:** `.serena/skills/growth_engineer.md`
 **Purpose:** Could not fully inspect; file exists (confirmed in tree). Expected to cover cross-channel growth engineering reasoning.
 **AGE target location:** Capability prompt layer — Growth Capability (Phase 3).
-**Reuse decision:** ADAPT (pending full inspection)
+**Reuse decision:** DEFER
 **Required adaptation:** Inspect before Phase 3 begins.
 **Architectural justification:** Growth engineering maps to the Growth Capability (CAPABILITY_ARCHITECTURE §7).
 
@@ -345,7 +356,7 @@
 **Legacy path:** `.serena/skills/technical_seo.md`
 **Purpose:** Could not fully inspect; file exists (confirmed in tree). Expected to cover Core Web Vitals, crawlability, indexation, structured data reasoning.
 **AGE target location:** Capability prompt layer — Market Discovery Capability (Phase 2); overlaps with SEO Agent (Doc 01).
-**Reuse decision:** ADAPT (pending full inspection)
+**Reuse decision:** ADAPT
 **Required adaptation:** Inspect alongside Asset 15 (SEO Architect) before Phase 2 begins; merge or distinguish based on content.
 **Architectural justification:** Technical SEO signals feed Market Discovery Capability via the crawler pipeline (Assets 11, 14).
 
@@ -357,7 +368,7 @@
 **Purpose:** Tests connector `normalize()` pure functions against sample JSON fixtures in `samples/`. Pattern: load fixture → call pure function → assert on output shape. No live API calls, no DB, no authentication required.
 **Dependencies:** `pytest`, `pytest-asyncio`. Sample fixtures from `samples/`.
 **AGE target location:** `packages/integrations/providers/*/tests/` (alongside each provider)
-**Reuse decision:** ADOPT
+**Reuse decision:** REIMPLEMENT
 **Required adaptation:** Port test assertions to TypeScript (Jest or Vitest). The pattern — fixture JSON + pure function + shape assertions — is the correct, fully portable test strategy for connector normalization logic.
 **Architectural justification:** SFD requires tests alongside implementation (`docs/engineering/SPECIFICATION_FIRST_DEVELOPMENT.md`). The pure-normalize + fixture pattern is directly compatible with AGE's TypeScript test infrastructure and avoids live API dependency in the test suite.
 
@@ -369,7 +380,7 @@
 **Purpose:** Tests reporting/rollup math using a seeded rolling-back PostgreSQL session. Verifies spend, ROAS, revenue, and attribution rollups against known inserted data. Uses real DB (not mocks) to test the ORM layer accurately.
 **Dependencies:** `pytest`, `sqlalchemy`, PostgreSQL (test DB), `dotenv`.
 **AGE target location:** Operations Capability tests (Phase 4), or `packages/integrations/` for ad-aggregation math.
-**Reuse decision:** ADAPT
+**Reuse decision:** DEFER
 **Required adaptation:** Port to TypeScript + Prisma/TypeORM test patterns. The transactional-rollback pattern (insert → test → rollback) is portable and valuable. Replace SQLAlchemy session with AGE's `@age/persistence` test utilities.
 **Architectural justification:** Reporting accuracy is a first-class concern (Doc 10 §2: "traceable, accurate"). Integration tests against a real DB (vs mocked) provide higher confidence for the reporting layer.
 
@@ -381,7 +392,7 @@
 **Purpose:** Pure-ish mapper functions (`ingest_ad_payload`) that convert normalized connector output into database upsert calls. Handles type coercion (`_to_decimal`, `_to_date`), Decimal precision for cost fields, and null handling.
 **Dependencies:** Legacy SQLAlchemy `crud` layer.
 **AGE target location:** `packages/integrations/` — ingest/persistence bridge for ad data.
-**Reuse decision:** ADAPT
+**Reuse decision:** DEFER
 **Required adaptation:**
 
 - Re-implement in TypeScript.
@@ -397,7 +408,7 @@
 **Legacy path:** `samples/ga4_conversions.json`, `samples/google_ads_campaign_perf.json`, `samples/meta_ads_insights.json`
 **Purpose:** Real-shape (anonymized) API response fixtures used as test inputs for connector normalize functions. Validated against actual API responses.
 **AGE target location:** `packages/integrations/providers/*/fixtures/`
-**Reuse decision:** ADOPT
+**Reuse decision:** REIMPLEMENT
 **Required adaptation:** Copy directly into the corresponding AGE provider package fixture directories. Verify field shapes still match current API versions before adoption (API schemas evolve — GA4 Data API, Google Ads API, Meta Marketing API all have versioned responses).
 **Architectural justification:** Accurate test fixtures are foundational to the pure-normalize test pattern (Asset 22). They require no adaptation of AGE architecture.
 
@@ -447,3 +458,40 @@ The legacy codebase is Python (Python 3.11+, SQLAlchemy 2.0, asyncio). AGE is Ty
 - Ad ingestion helpers (Asset 24) — Phase 3 (Growth Capability, when ad data pipeline is built).
 
 **Pre-migration prerequisite:** ADR-0009 (Client Aggregate) must be completed before any connector or ingestion code is written, since every integration is scoped to `Organization → Client` (Doc 11 §5) and the `Client` implementation model must be resolved first.
+
+---
+
+## Migration Status
+
+> Tracks the implementation progress of each cataloged asset.
+> Updated as Phase 2 implementation proceeds.
+
+**Status values:** Not Started · In Progress · Completed · Deferred · Discarded
+
+| #   | Asset                              | Decision    | Status      |
+| --- | ---------------------------------- | ----------- | ----------- |
+| 1   | BaseConnector                      | ADAPT       | Not Started |
+| 2   | GA4 Connector                      | ADAPT       | Not Started |
+| 3   | GSC Connector                      | ADAPT       | Not Started |
+| 4   | GBP Connector                      | ADAPT       | Not Started |
+| 5   | PageSpeed Connector                | ADAPT       | Not Started |
+| 6   | Google Ads Connector               | ADAPT       | Not Started |
+| 7   | Meta Ads Connector                 | ADAPT       | Not Started |
+| 8   | Google OAuth Helper                | ADAPT       | Not Started |
+| 9   | GBP OAuth Helper                   | ADAPT       | Not Started |
+| 10  | Quota Manager                      | ADAPT       | Not Started |
+| 11  | Playwright Crawler                 | ADAPT       | Not Started |
+| 12  | AI Cost Tracker                    | ADAPT       | Not Started |
+| 13  | Rollup Math Utilities              | REIMPLEMENT | Not Started |
+| 14  | Connector Normalize Pure Functions | REIMPLEMENT | Not Started |
+| 15  | SEO Architect Reasoning Prompt     | ADAPT       | Not Started |
+| 16  | GEO/AEO Specialist Prompt          | ADAPT       | Not Started |
+| 17  | Content Strategist Prompt          | DEFER       | Deferred    |
+| 18  | CRO Specialist Prompt              | DEFER       | Deferred    |
+| 19  | EEAT Specialist Prompt             | DEFER       | Deferred    |
+| 20  | Growth Engineer Prompt             | DEFER       | Deferred    |
+| 21  | Technical SEO Prompt               | ADAPT       | Not Started |
+| 22  | Connector Unit Test Pattern        | REIMPLEMENT | Not Started |
+| 23  | Rollup Unit Test Pattern           | DEFER       | Deferred    |
+| 24  | Ad Payload Ingestion Helpers       | DEFER       | Deferred    |
+| 25  | Sample API Fixture Files           | REIMPLEMENT | Not Started |
