@@ -1,4 +1,4 @@
-export { ClientAggregate } from './aggregates';
+export { ClientAggregate, InvalidTransitionError } from './aggregates';
 export type { ClientRepository } from './repositories';
 export { ClientLifecycleState } from './types';
 export type { ClientProps, CreateClientProps } from './types';

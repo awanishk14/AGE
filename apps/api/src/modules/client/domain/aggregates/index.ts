@@ -1,1 +1,1 @@
-export { ClientAggregate } from './client.aggregate';
+export { ClientAggregate, InvalidTransitionError } from './client.aggregate';

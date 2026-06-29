@@ -10,7 +10,7 @@ import {
 import { ClientLifecycleState } from '../types/client.types';
 import type { CreateClientProps } from '../types/client.types';
 
-class InvalidTransitionError extends DomainError {
+export class InvalidTransitionError extends DomainError {
   readonly code = 'CLIENT_INVALID_TRANSITION';
   constructor(message: string) {
     super(message);
