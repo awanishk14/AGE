@@ -122,8 +122,29 @@ phases.
 
 ---
 
-## Next milestone (planned)
+## Planned milestones
 
-`implementation-phase-2-v1.0` — upon completion of EPIC-01 (Intelligence Platform: Capability Kit
+The following milestones define the progression from specification to general availability.
+Each tag is created when its corresponding capability or phase is **complete and verified** —
+not when implementation begins.
 
-- Intelligence Capability).
+| Tag                            | Phase   | Completion condition                                                              |
+| ------------------------------ | ------- | --------------------------------------------------------------------------------- |
+| `implementation-v0.1`          | Phase 2 | Capability Kit + ADR-0009 resolved; first capability scaffolded and building      |
+| `intelligence-capability-v1.0` | Phase 2 | Intelligence Capability complete (truth quality, BIF↔RIE pipeline, tested)        |
+| `market-discovery-v1.0`        | Phase 2 | Market Discovery Capability complete (SEO/AEO/GEO/competitor/keyword, tested)     |
+| `growth-capability-v1.0`       | Phase 3 | Growth Capability complete (paid media, CRO, funnels, tested)                     |
+| `authority-capability-v1.0`    | Phase 3 | Authority Capability complete (content, PR, backlinks, reviews, tested)           |
+| `operations-capability-v1.0`   | Phase 4 | Operations Capability complete (project management, reporting, delivery, tested)  |
+| `revenue-capability-v1.0`      | Phase 4 | Revenue Capability complete (proposals, CRM, pipeline, account growth, tested)    |
+| `execution-layer-v1.0`         | Phase 5 | Execution Layer complete; human-approved side-effect execution operational        |
+| `beta-v1.0`                    | Beta    | All capabilities integrated; first external clients onboarded; observability live |
+| `ga-v1.0`                      | GA      | General availability; all editions operational; SLA commitments active            |
+
+### Rules for planned milestone tags
+
+- A tag is only created when the milestone is **complete and verified** — not at the start of work.
+- Any milestone that reveals a missing architectural decision triggers an ADR before continuing
+  (see `docs/engineering/SPECIFICATION_FIRST_DEVELOPMENT.md`).
+- Milestones may be split or renamed by Product Owner decision; new tags are additive — existing
+  freeze tags are never moved or deleted.

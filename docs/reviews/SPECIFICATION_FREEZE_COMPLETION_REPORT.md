@@ -142,11 +142,47 @@ Before Phase 2 starts:
 
 ---
 
+## Engineering rule
+
+All implementation work follows **Specification First Development (SFD)**:
+
+```
+ADR (if needed) → Implementation Plan → Feature Branch → Implementation → Tests → Architecture Review → Merge
+```
+
+If implementation uncovers a missing architectural decision: **stop, write the ADR, get
+approval, then continue.** See `docs/engineering/SPECIFICATION_FIRST_DEVELOPMENT.md`.
+
+---
+
+## Freeze preservation
+
+`specification-freeze-v1.0` must not be edited casually. Future changes are intentional:
+
+| Trigger                 | Required action                               |
+| ----------------------- | --------------------------------------------- |
+| New capability          | New ADR                                       |
+| Product behavior change | Product Bible update (Product Owner approval) |
+| Architectural change    | ADR + architecture document update            |
+| Implementation detail   | Code only — no documentation change           |
+
+---
+
 ## Milestone history
 
-| Tag                         | Date       | Significance                                       |
-| --------------------------- | ---------- | -------------------------------------------------- |
-| `foundation-v0.1`           | 2026-06-28 | Phase 1 (Cognitive Core) implementation complete   |
-| `architecture-freeze-v1.0`  | 2026-06-28 | Architecture formally frozen                       |
-| `product-bible-v1.0`        | 2026-06-28 | All 16 Product Bible documents Final               |
-| `specification-freeze-v1.0` | 2026-06-29 | Full spec validated and frozen — ready for Phase 2 |
+| Tag                            | Date       | Status    | Significance                                       |
+| ------------------------------ | ---------- | --------- | -------------------------------------------------- |
+| `foundation-v0.1`              | 2026-06-28 | ✅ Tagged | Phase 1 (Cognitive Core) implementation complete   |
+| `architecture-freeze-v1.0`     | 2026-06-28 | ✅ Tagged | Architecture formally frozen                       |
+| `product-bible-v1.0`           | 2026-06-28 | ✅ Tagged | All 16 Product Bible documents Final               |
+| `specification-freeze-v1.0`    | 2026-06-29 | ✅ Tagged | Full spec validated and frozen — ready for Phase 2 |
+| `implementation-v0.1`          | —          | Planned   | Capability Kit + ADR-0009 resolved                 |
+| `intelligence-capability-v1.0` | —          | Planned   | Intelligence Capability complete                   |
+| `market-discovery-v1.0`        | —          | Planned   | Market Discovery Capability complete               |
+| `growth-capability-v1.0`       | —          | Planned   | Growth Capability complete                         |
+| `authority-capability-v1.0`    | —          | Planned   | Authority Capability complete                      |
+| `operations-capability-v1.0`   | —          | Planned   | Operations Capability complete                     |
+| `revenue-capability-v1.0`      | —          | Planned   | Revenue Capability complete                        |
+| `execution-layer-v1.0`         | —          | Planned   | Human-approved execution operational               |
+| `beta-v1.0`                    | —          | Planned   | First external clients onboarded                   |
+| `ga-v1.0`                      | —          | Planned   | General availability                               |
