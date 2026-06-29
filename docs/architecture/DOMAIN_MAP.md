@@ -41,7 +41,7 @@ between business concepts (not code dependencies):
 ```
 Organization ──OWNS──▶ Brand ──OFFERS──▶ Product ──SOLVES──▶ Problem
                                                               │
-                                                          BELONGS_TO
+                                                          EXISTS_IN
                                                               ▼
                           Competitor ◀──CONTAINS── Market
 
@@ -56,7 +56,7 @@ Research ──GENERATES──▶ Evidence ──SUPPORTS──▶ Decision ─�
 | Organization | OWNS         | Brand      |
 | Brand        | OFFERS       | Product    |
 | Product      | SOLVES       | Problem    |
-| Problem      | BELONGS_TO   | Market     |
+| Problem      | EXISTS_IN    | Market     |
 | Market       | CONTAINS     | Competitor |
 | Campaign     | PROMOTES     | Product    |
 | Content      | SUPPORTS     | Campaign   |

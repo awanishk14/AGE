@@ -1,0 +1,25 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "research-intelligence-engine",
+  "projectType": "library",
+  "sourceRoot": "packages/research-intelligence-engine/src",
+  "tags": ["scope:engine", "type:rie"],
+  "targets": {
+    "build": {
+      "command": "tsc -p tsconfig.json",
+      "options": { "cwd": "packages/research-intelligence-engine" }
+    },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json --noEmit",
+      "options": { "cwd": "packages/research-intelligence-engine" }
+    },
+    "lint": {
+      "command": "eslint .",
+      "options": { "cwd": "packages/research-intelligence-engine" }
+    },
+    "test": {
+      "command": "vitest run --passWithNoTests",
+      "options": { "cwd": "packages/research-intelligence-engine" }
+    }
+  }
+}

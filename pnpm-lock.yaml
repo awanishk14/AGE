@@ -155,11 +155,37 @@ importers:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
 
+  packages/bif:
+    dependencies:
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
+
   packages/business-knowledge-graph:
     dependencies:
       '@age/shared':
         specifier: workspace:*
         version: link:../shared
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
+
+  packages/capabilities/intelligence:
+    dependencies:
+      '@age/capability-kit':
+        specifier: workspace:*
+        version: link:../../capability-kit
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
+
+  packages/capability-kit:
     devDependencies:
       vitest:
         specifier: ^2.1.1
@@ -215,6 +241,19 @@ importers:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
 
+  packages/research-intelligence-engine:
+    dependencies:
+      '@age/bif':
+        specifier: workspace:*
+        version: link:../bif
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
+
   packages/sdk:
     dependencies:
       '@age/types':
@@ -229,6 +268,19 @@ importers:
         version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
 
   packages/shared:
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
+
+  packages/strategy-intelligence-engine:
+    dependencies:
+      '@age/bif':
+        specifier: workspace:*
+        version: link:../bif
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
     devDependencies:
       vitest:
         specifier: ^2.1.1

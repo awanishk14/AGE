@@ -1,0 +1,25 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "strategy-intelligence-engine",
+  "projectType": "library",
+  "sourceRoot": "packages/strategy-intelligence-engine/src",
+  "tags": ["scope:engine", "type:sie"],
+  "targets": {
+    "build": {
+      "command": "tsc -p tsconfig.json",
+      "options": { "cwd": "packages/strategy-intelligence-engine" }
+    },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json --noEmit",
+      "options": { "cwd": "packages/strategy-intelligence-engine" }
+    },
+    "lint": {
+      "command": "eslint .",
+      "options": { "cwd": "packages/strategy-intelligence-engine" }
+    },
+    "test": {
+      "command": "vitest run --passWithNoTests",
+      "options": { "cwd": "packages/strategy-intelligence-engine" }
+    }
+  }
+}

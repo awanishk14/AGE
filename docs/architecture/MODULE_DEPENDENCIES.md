@@ -27,6 +27,7 @@ content        → (none)
 project        → (none)
 decision       → (none)
 integration    → (none)
+problem        → (none)
 reporting      → (none)
 workflow       → (none)
 ```
@@ -40,7 +41,7 @@ Every module's domain layer depends only on the kernel:
 Only the composition root depends on the modules:
 
 ```
-AppModule → DOMAIN_MODULES → [ all 19 domain modules ]
+AppModule → DOMAIN_MODULES → [ all 20 domain modules ]
 ```
 
 ## Intended future direction (non-binding)

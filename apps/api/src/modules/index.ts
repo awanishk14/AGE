@@ -1,3 +1,4 @@
+import { ClientModule } from './client/client.module';
 import { OrganizationModule } from './organization/organization.module';
 import { PeopleModule } from './people/people.module';
 import { BrandModule } from './brand/brand.module';
@@ -19,6 +20,7 @@ import { ReportingModule } from './reporting/reporting.module';
 import { WorkflowModule } from './workflow/workflow.module';
 import { ProblemModule } from './problem/problem.module';
 
+export * from './client';
 export * from './organization';
 export * from './people';
 export * from './brand';
@@ -45,6 +47,7 @@ export * from './problem';
  * Extracting a module into a microservice later only requires moving the folder.
  */
 export const DOMAIN_MODULES = [
+  ClientModule,
   OrganizationModule,
   PeopleModule,
   BrandModule,
