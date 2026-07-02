@@ -17,7 +17,8 @@
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@age/capability-kit": "workspace:*"
+    "@age/capability-kit": "workspace:*",
+    "@age/evidence-contracts": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^2.1.1"

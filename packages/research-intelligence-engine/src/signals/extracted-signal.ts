@@ -1,12 +1,6 @@
-import type { Polarity } from '../types/enums';
-
-/** A single signal extracted from a normalized document. */
-export interface ExtractedSignal {
-  readonly type: string;
-  readonly value: unknown;
-  /** BIF field reference this signal targets. */
-  readonly targetField: string;
-  /** 0–100. */
-  readonly strength: number;
-  readonly polarity: Polarity;
-}
+/**
+ * ExtractedSignal is a canonical evidence contract type owned by
+ * @age/evidence-contracts (ADR-0010). Re-exported here so existing internal
+ * imports (`../signals/extracted-signal`) keep working unchanged.
+ */
+export type { ExtractedSignal } from '@age/evidence-contracts';

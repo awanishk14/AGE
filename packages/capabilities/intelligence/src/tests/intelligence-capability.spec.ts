@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { CapabilityRegistry, Capability } from '@age/capability-kit';
+import type { EvidencePackage } from '@age/evidence-contracts';
 import { INTELLIGENCE_CAPABILITY_ENTRY } from '../intelligence-capability.entry';
 import { IntelligenceCapability } from '../intelligence-capability';
+
+function buildEvidencePackage(overrides: Partial<EvidencePackage> = {}): EvidencePackage {
+  return {
+    clientId: 'client-1',
+    organizationId: 'org-1',
+    evidence: [],
+    generatedAt: '2026-07-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
 
 describe('IntelligenceCapability entry', () => {
   it('has the correct capability name', () => {
@@ -25,13 +36,21 @@ describe('IntelligenceCapability', () => {
     expect(() => new IntelligenceCapability()).not.toThrow();
   });
 
-  it('run() returns a CapabilityOutput for the given context', async () => {
+  it('run() returns an IntelligenceResult for the given context and evidence package', async () => {
     const capability = new IntelligenceCapability();
     const { ClientContext } = await import('@age/capability-kit');
     const ctx = new ClientContext('client-1', 'org-1');
-    const output = await capability.run(ctx);
-    expect(output.capability).toBe(Capability.Intelligence);
-    expect(output.clientId).toBe('client-1');
-    expect(output.items).toBeInstanceOf(Array);
+    const result = await capability.run(ctx, buildEvidencePackage());
+
+    expect(result.output.capability).toBe(Capability.Intelligence);
+    expect(result.output.clientId).toBe('client-1');
+    expect(result.output.items).toBeInstanceOf(Array);
+
+    expect(result.summary.acceptedCount).toBe(0);
+    expect(result.summary.rejectedCount).toBe(0);
+    expect(result.summary.duplicateCount).toBe(0);
+    expect(result.summary.contradictionCount).toBe(0);
+    expect(result.summary.rejectedReasons).toEqual([]);
+    expect(result.summary.duplicateReferences).toEqual([]);
   });
 });
