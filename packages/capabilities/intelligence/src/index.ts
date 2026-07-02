@@ -14,4 +14,5 @@ export {
   scoreEvidenceQuality,
   calculateFreshnessDays,
   detectContradictions,
+  processEvidencePackage,
 } from './processing';
