@@ -193,6 +193,12 @@ importers:
 
   packages/config: {}
 
+  packages/evidence-contracts:
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
+
   packages/integrations:
     dependencies:
       '@age/types':
