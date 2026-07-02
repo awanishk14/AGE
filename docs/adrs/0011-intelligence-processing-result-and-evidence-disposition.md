@@ -48,11 +48,12 @@ interface ProcessingSummary {
 }
 
 type RejectedEvidenceReasonCode =
-  | 'MISSING_REQUIRED_FIELD'
-  | 'INVALID_SOURCE'
-  | 'INVALID_SIGNAL_TYPE'
-  | 'STALE_BEYOND_THRESHOLD'
-  | 'FAILED_SCHEMA_VALIDATION';
+  | 'MISSING_ID'
+  | 'EMPTY_SOURCE_URL'
+  | 'INVALID_CONFIDENCE'
+  | 'UNRECOGNIZED_STATE'
+  | 'RAW_CONTENT_TOO_SHORT'
+  | 'MISSING_TIMESTAMP';
 
 interface RejectedEvidenceReason {
   readonly evidenceId: string;
