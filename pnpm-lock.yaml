@@ -180,6 +180,9 @@ importers:
       '@age/capability-kit':
         specifier: workspace:*
         version: link:../../capability-kit
+      '@age/evidence-contracts':
+        specifier: workspace:*
+        version: link:../../evidence-contracts
     devDependencies:
       vitest:
         specifier: ^2.1.1
