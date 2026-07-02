@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@age/bif": "workspace:*",
+    "@age/evidence-contracts": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {
