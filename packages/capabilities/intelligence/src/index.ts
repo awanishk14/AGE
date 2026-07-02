@@ -8,3 +8,10 @@ export type {
   RejectedEvidenceReason,
   DuplicateEvidenceReference,
 } from './processing-summary';
+export {
+  validateEvidence,
+  deduplicateEvidence,
+  scoreEvidenceQuality,
+  calculateFreshnessDays,
+  detectContradictions,
+} from './processing';
