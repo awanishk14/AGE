@@ -107,6 +107,6 @@ specific to evidence truth-quality and is not part of opportunity identification
   If a **third** capability needs the same shape, that recurrence — not this ADR — is what should
   justify promoting a shared disposition contract into `@age/capability-kit`. Until then the minor
   duplication is the accepted cost of keeping the generic envelope stable.
-- Adoption of this ADR is conditional on the EPIC-03 decision that opportunity disposition tracking
-  is required. If disposition tracking is dropped, Market Discovery returns a bare
-  `CapabilityOutput<MarketDiscoveryOpportunityItem>` and this ADR is withdrawn.
+- This adoption is **final for EPIC-03**: Market Discovery returns `MarketDiscoveryResult { output,
+summary }`, never a bare `CapabilityOutput<MarketDiscoveryOpportunityItem>`. Opportunity
+  disposition tracking is a required, non-optional part of the capability.
