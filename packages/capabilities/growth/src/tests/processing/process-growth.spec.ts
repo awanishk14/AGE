@@ -2,9 +2,29 @@ import { describe, expect, it } from 'vitest';
 import { Capability, ClientContext, ExecutionDomain } from '@age/capability-kit';
 import type { GrowthInput, GrowthPlanningInputItem } from '@age/growth-contracts';
 import { processGrowth } from '../../processing/process-growth';
+import type { GrowthResult } from '../../growth-result';
 
 const RUN_AT = '2026-07-10T00:00:00.000Z';
 const context = new ClientContext('client-1', 'org-1');
+
+/**
+ * A deterministic view of a GrowthResult that excludes CapabilityOutput's
+ * wall-clock `producedAt` (set via `new Date()` in the CapabilityOutput
+ * constructor). Repeated-run equivalence must be asserted on this view, never
+ * on the full result object.
+ */
+function deterministicResultView(result: GrowthResult) {
+  return {
+    output: {
+      clientId: result.output.clientId,
+      organizationId: result.output.organizationId,
+      capability: result.output.capability,
+      executionDomains: result.output.executionDomains,
+      items: result.output.items,
+    },
+    summary: result.summary,
+  };
+}
 
 function buildPlanningItem(
   overrides: Partial<GrowthPlanningInputItem> = {},
@@ -236,6 +256,8 @@ describe('processGrowth', () => {
         executionDomains: [ExecutionDomain.CRO],
       }),
     ]);
-    expect(processGrowth(context, input)).toEqual(processGrowth(context, input));
+    expect(deterministicResultView(processGrowth(context, input))).toEqual(
+      deterministicResultView(processGrowth(context, input)),
+    );
   });
 });
