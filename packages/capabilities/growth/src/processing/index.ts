@@ -5,3 +5,4 @@ export { deduplicateGrowthPlans } from './deduplicate-growth-plans';
 export type { GrowthDeduplicationResult } from './deduplicate-growth-plans';
 export { scoreGrowthPlan } from './score-growth-plan';
 export type { GrowthPlanScore } from './score-growth-plan';
+export { processGrowth } from './process-growth';

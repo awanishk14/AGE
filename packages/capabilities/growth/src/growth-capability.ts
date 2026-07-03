@@ -1,8 +1,7 @@
-import { Capability, CapabilityOutput } from '@age/capability-kit';
 import type { ClientContext } from '@age/capability-kit';
 import type { GrowthInput } from '@age/growth-contracts';
-import type { GrowthPlanItem } from './growth-plan-item';
 import type { GrowthResult } from './growth-result';
+import { processGrowth } from './processing/process-growth';
 
 /**
  * GrowthCapability — produces growth plan candidates (paid-acquisition,
@@ -18,28 +17,11 @@ import type { GrowthResult } from './growth-result';
  * by the input. `context.clientId` / `context.organizationId` are authoritative;
  * `input.clientId` / `input.organizationId` are provenance/scope only.
  *
- * Contract scaffold only (T19). The deterministic pipeline (derive → validate →
- * deduplicate → score/prioritize → assemble) lands in T20/T21.
+ * The full deterministic pipeline (derive → validate → deduplicate →
+ * score/prioritize → assemble) lives in processGrowth (T21).
  */
 export class GrowthCapability {
-  async run(context: ClientContext, _input: GrowthInput): Promise<GrowthResult> {
-    const output = new CapabilityOutput<GrowthPlanItem>({
-      clientId: context.clientId,
-      organizationId: context.organizationId,
-      capability: Capability.Growth,
-      executionDomains: [],
-      items: [],
-    });
-
-    return {
-      output,
-      summary: {
-        acceptedCount: 0,
-        rejectedCount: 0,
-        duplicateCount: 0,
-        rejectedReasons: [],
-        duplicateReferences: [],
-      },
-    };
+  async run(context: ClientContext, input: GrowthInput): Promise<GrowthResult> {
+    return processGrowth(context, input);
   }
 }
