@@ -1,6 +1,6 @@
 # ADR 0014: Growth Input Contract Boundary
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-03
 
 ## Context
@@ -47,10 +47,18 @@ It owns the canonical, framework-agnostic input contract types Growth consumes:
   its originating input reference(s).
 - `MarketOpportunityReference` — a **small, read-only, neutral mirror** of the minimal
   Market Discovery opportunity fields Growth consumes (e.g. an opportunity id, its type, target
-  identity, execution-domain tags, and score). This is a value/reference shape owned by
-  `@age/growth-contracts`; it is **not** imported from `@age/capability-market-discovery`. Growth
-  therefore consumes Market Discovery _concepts_ through a neutral contract, never the capability
-  package.
+  identity, execution-domain tags, and score). This is a **value/reference shape**, defined and
+  owned by `@age/growth-contracts` — **not a backdoor dependency on Market Discovery internals**.
+  It carries only plain data fields; it exposes no Market Discovery behavior, and reading it never
+  reaches into the `@age/capability-market-discovery` package. Growth therefore consumes Market
+  Discovery _concepts_ through a neutral contract, never the capability package.
+
+  Furthermore, `@age/growth-contracts` **must not import or re-export any type from**
+  `@age/capability-market-discovery` (nor from `@age/market-discovery-contracts` for the purpose of
+  passing Market Discovery types through). `MarketOpportunityReference` is declared independently
+  in `@age/growth-contracts`; re-exporting another package's types would reintroduce the coupling
+  this boundary exists to prevent.
+
 - Read-only SIE/BIF/BKG reference shapes **only if actually required** by the fixed field-level
   design; if not required, they are omitted (not stubbed), following ADR-0012's restraint.
 
@@ -68,6 +76,16 @@ Boundary rules (mirroring ADR-0010/0012):
 - Neutral reference shapes are **intentionally small and read-only** — minimal address/value
   fields Growth actually reads, not full copies of the Market Discovery / SIE / BIF / BKG domain
   models. The contracts package must not become a parallel re-implementation of those models.
+- `GrowthInput` is **caller-assembled and fully in-memory**. Growth does **not** read a datastore
+  and does **not** depend on persisted Market Discovery output (or any persisted upstream). The
+  caller is responsible for populating `GrowthInput` (including any `MarketOpportunityReference`
+  values) before invocation, exactly as callers assembled `EvidencePackage` / `MarketDiscoveryInput`
+  in EPIC-02/03.
+- **`ClientContext` remains authoritative** for the produced `CapabilityOutput`'s `clientId` and
+  `organizationId` (enforced from the capability layer, not by this contract type). If `GrowthInput`
+  carries `clientId` / `organizationId`, they are **provenance/scope fields only** and must never be
+  used to scope the output. Any future mismatch check between the two is an explicit validation
+  rule / ADR concern, never a silent reconciliation.
 
 ```
 @age/growth-contracts   (canonical GrowthInput, GrowthPlanningInputItem, GrowthPlanSourceRef,

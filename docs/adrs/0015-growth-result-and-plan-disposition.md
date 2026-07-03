@@ -1,6 +1,6 @@
 # ADR 0015: Growth Result and Plan Disposition
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-03
 
 ## Context
@@ -83,7 +83,9 @@ confidence, priority) **must be deterministic and computed only from fields expl
 the input contract** (`GrowthInput` / `GrowthPlanningInputItem` / `MarketOpportunityReference` /
 `GrowthPlanSourceRef`). No hidden heuristics, no clock reads (any time-dependent term takes a
 caller-supplied timestamp), and the same input must always yield the same score. Scoring logic must
-be transparent and boundary-tested.
+be transparent and boundary-tested. Scoring **must not apply channel-specific weighting** (e.g.
+ranking a GoogleAds plan above a CRO plan by channel) unless a dedicated future ADR defines such a
+weighting; execution domains carry no scoring weight of their own.
 
 Source-reliability weighting remains **deferred** (carried forward from EPIC-02/03): no source-tier
 ranking may be introduced into Growth scoring unless a dedicated future product/architecture ADR
@@ -105,7 +107,9 @@ introduces one.
 Execution boundary: Growth produces **plan candidates only** (decision objects). It must never
 create campaigns, configure ad accounts, publish landing pages, make live website changes, schedule
 tasks, call external APIs, or own channel-specific engine logic. `GrowthPlanItem.executionDomains`
-are opaque structural tags, never interpreted as execution instructions.
+are **opaque structural tags only**: they are carried through as labels and **cannot trigger any
+execution behavior**, cannot be dispatched to a channel, and are never interpreted as execution
+instructions. Any actual execution is the Execution Layer's responsibility (Phase 5), not Growth's.
 
 ## Consequences
 
@@ -118,9 +122,10 @@ are opaque structural tags, never interpreted as execution instructions.
 - This is now the **third** capability (Intelligence, Market Discovery, Growth) with a parallel
   result/summary wrapper. That recurrence is a concrete signal: a future ADR should evaluate
   promoting a shared disposition contract (e.g. a generic `ProcessingSummary<TReasonCode>`) into
-  `@age/capability-kit`. This ADR does **not** perform that promotion — it keeps Growth consistent
-  with the established per-capability pattern and defers the consolidation decision to its own ADR,
-  so EPIC-04 introduces no change to the generic envelope.
+  `@age/capability-kit`. **That consolidation is explicitly out of scope for EPIC-04.** Growth
+  follows the existing per-capability wrapper pattern; a future, separate ADR may evaluate a shared
+  generic disposition contract. EPIC-04 does **not** modify `@age/capability-kit` and introduces no
+  change to the generic envelope.
 - This adoption is **final for EPIC-04**: Growth returns `GrowthResult { output, summary }`, never a
   bare `CapabilityOutput<GrowthPlanItem>`. Plan disposition tracking is a required, non-optional
   part of the capability.
