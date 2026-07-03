@@ -175,6 +175,19 @@ importers:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
 
+  packages/capabilities/growth:
+    dependencies:
+      '@age/capability-kit':
+        specifier: workspace:*
+        version: link:../../capability-kit
+      '@age/growth-contracts':
+        specifier: workspace:*
+        version: link:../../growth-contracts
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
+
   packages/capabilities/intelligence:
     dependencies:
       '@age/capability-kit':
