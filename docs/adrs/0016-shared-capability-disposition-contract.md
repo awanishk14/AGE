@@ -1,6 +1,6 @@
 # ADR 0016: Shared Capability Disposition Contract
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-03
 
 ## Context
