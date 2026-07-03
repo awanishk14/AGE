@@ -1,3 +1,5 @@
+import type { ProcessingSummary } from '@age/capability-kit';
+
 /**
  * Reason codes for rejected opportunity candidates (ADR-0013). Constrained
  * union, never a free-form string. Every code corresponds to a planned
@@ -36,11 +38,12 @@ export interface DuplicateOpportunityReference {
  *  - duplicateReferences.length === duplicateCount, each opportunityId appears once
  *
  * Unlike Intelligence (ADR-0011), there is no contradiction concept.
+ *
+ * Expressed as the shared `ProcessingSummary` generic (ADR-0016) over the
+ * Market Discovery-specific reason/reference types; the runtime shape is
+ * unchanged.
  */
-export interface OpportunityProcessingSummary {
-  readonly acceptedCount: number;
-  readonly rejectedCount: number;
-  readonly duplicateCount: number;
-  readonly rejectedReasons: readonly RejectedOpportunityReason[];
-  readonly duplicateReferences: readonly DuplicateOpportunityReference[];
-}
+export type OpportunityProcessingSummary = ProcessingSummary<
+  RejectedOpportunityReason,
+  DuplicateOpportunityReference
+>;

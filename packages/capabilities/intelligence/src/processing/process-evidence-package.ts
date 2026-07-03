@@ -5,7 +5,7 @@ import type { IntelligenceOutputItem } from '../intelligence-output-item';
 import type { IntelligenceResult } from '../intelligence-result';
 import type {
   DuplicateEvidenceReference,
-  ProcessingSummary,
+  IntelligenceProcessingSummary,
   RejectedEvidenceReason,
 } from '../processing-summary';
 import { validateEvidence } from './validate-evidence';
@@ -81,7 +81,7 @@ export function processEvidencePackage(
     items,
   });
 
-  const summary: ProcessingSummary = {
+  const summary: IntelligenceProcessingSummary = {
     acceptedCount: acceptedEvidence.length,
     rejectedCount: rejectedReasons.length,
     duplicateCount: duplicateReferences.length,

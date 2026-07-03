@@ -1,3 +1,5 @@
+import type { ProcessingSummary } from '@age/capability-kit';
+
 /**
  * Reason codes for rejected growth plan candidates (ADR-0015). Constrained
  * union, never a free-form string. Every code corresponds to a planned
@@ -36,11 +38,11 @@ export interface DuplicateGrowthReference {
  *  - duplicateReferences.length === duplicateCount, each planId appears once
  *
  * There is no contradiction concept (ADR-0015).
+ *
+ * Expressed as the shared `ProcessingSummary` generic (ADR-0016) over the
+ * Growth-specific reason/reference types; the runtime shape is unchanged.
  */
-export interface GrowthProcessingSummary {
-  readonly acceptedCount: number;
-  readonly rejectedCount: number;
-  readonly duplicateCount: number;
-  readonly rejectedReasons: readonly RejectedGrowthReason[];
-  readonly duplicateReferences: readonly DuplicateGrowthReference[];
-}
+export type GrowthProcessingSummary = ProcessingSummary<
+  RejectedGrowthReason,
+  DuplicateGrowthReference
+>;
