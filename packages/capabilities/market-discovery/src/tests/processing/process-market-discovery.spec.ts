@@ -2,9 +2,29 @@ import { describe, expect, it } from 'vitest';
 import { Capability, ClientContext, ExecutionDomain } from '@age/capability-kit';
 import type { MarketDiscoveryInput, MarketSignal } from '@age/market-discovery-contracts';
 import { processMarketDiscovery } from '../../processing/process-market-discovery';
+import type { MarketDiscoveryResult } from '../../market-discovery-result';
 
 const RUN_AT = '2026-07-10T00:00:00.000Z';
 const context = new ClientContext('client-1', 'org-1');
+
+/**
+ * A deterministic view of a MarketDiscoveryResult that excludes CapabilityOutput's
+ * wall-clock `producedAt` (set via `new Date()` in the CapabilityOutput
+ * constructor). Repeated-run equivalence must be asserted on this view, never on
+ * the full result object.
+ */
+function deterministicResultView(result: MarketDiscoveryResult) {
+  return {
+    output: {
+      clientId: result.output.clientId,
+      organizationId: result.output.organizationId,
+      capability: result.output.capability,
+      executionDomains: result.output.executionDomains,
+      items: result.output.items,
+    },
+    summary: result.summary,
+  };
+}
 
 function buildSignal(overrides: Partial<MarketSignal> = {}): MarketSignal {
   return {
@@ -190,6 +210,8 @@ describe('processMarketDiscovery', () => {
       buildSignal({ id: 's1' }),
       buildSignal({ id: 's2', target: { kind: 'TOPIC', key: 'onboarding' } }),
     ]);
-    expect(processMarketDiscovery(context, input)).toEqual(processMarketDiscovery(context, input));
+    expect(deterministicResultView(processMarketDiscovery(context, input))).toEqual(
+      deterministicResultView(processMarketDiscovery(context, input)),
+    );
   });
 });
