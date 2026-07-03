@@ -3,7 +3,7 @@ export { INTELLIGENCE_CAPABILITY_ENTRY } from './intelligence-capability.entry';
 export type { IntelligenceOutputItem } from './intelligence-output-item';
 export type { IntelligenceResult } from './intelligence-result';
 export type {
-  ProcessingSummary,
+  IntelligenceProcessingSummary,
   RejectedEvidenceReasonCode,
   RejectedEvidenceReason,
   DuplicateEvidenceReference,

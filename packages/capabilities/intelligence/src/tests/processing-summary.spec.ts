@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type {
   DuplicateEvidenceReference,
-  ProcessingSummary,
+  IntelligenceProcessingSummary,
   RejectedEvidenceReason,
   RejectedEvidenceReasonCode,
 } from '../processing-summary';
 
-describe('ProcessingSummary contracts (ADR-0011)', () => {
+describe('IntelligenceProcessingSummary contracts (ADR-0011/0016)', () => {
   it('constrains RejectedEvidenceReasonCode to the known set of codes', () => {
     const codes: RejectedEvidenceReasonCode[] = [
       'MISSING_ID',
@@ -39,8 +39,8 @@ describe('ProcessingSummary contracts (ADR-0011)', () => {
     expect(duplicate.duplicateOfEvidenceId).toBe('evidence-1');
   });
 
-  it('allows constructing a well-formed ProcessingSummary satisfying the accounting shape', () => {
-    const summary: ProcessingSummary = {
+  it('allows constructing a well-formed IntelligenceProcessingSummary satisfying the accounting shape', () => {
+    const summary: IntelligenceProcessingSummary = {
       acceptedCount: 1,
       rejectedCount: 1,
       duplicateCount: 1,
