@@ -1,6 +1,6 @@
 # ADR 0017: Authority Input Contract Boundary
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-03
 
 ## Context
@@ -42,7 +42,7 @@ field-level shapes are **not** frozen by this ADR (see below); the likely owned 
   (derived upstream; Authority does not collect it).
 - `AuthorityPlanSourceRef` — a neutral provenance reference tying a derived plan candidate back to
   its originating input reference(s).
-- `AuthorityUpstreamReference` — a **small, read-only, neutral value shape** mirroring only the
+- `AuthorityPlanReference` — a **small, read-only, neutral value shape** mirroring only the
   minimal upstream opportunity/plan/decision fields Authority reads. Declared **independently** in
   `@age/authority-contracts`; not imported or re-exported from `@age/capability-market-discovery`,
   `@age/capability-growth`, `@age/market-discovery-contracts`, or `@age/growth-contracts`.
@@ -62,7 +62,7 @@ Boundary rules (mirroring ADR-0010/0012/0014):
 - `@age/capability-authority` depends on `@age/capability-kit` and `@age/authority-contracts`
   **only** — never on `@age/capability-market-discovery`, `@age/capability-growth`, SIE, BIF, BKG,
   or RIE.
-- `AuthorityUpstreamReference` is a **value/reference shape**, not a backdoor dependency on any
+- `AuthorityPlanReference` is a **value/reference shape**, not a backdoor dependency on any
   producer capability's internals: it carries only plain data fields, exposes no upstream behavior,
   and must not import or re-export another package's types (nor pass them through). It is
   intentionally small and read-only — minimal fields Authority actually reads, not a full copy of
@@ -84,7 +84,7 @@ Boundary rules (mirroring ADR-0010/0012/0014):
 
 ```
 @age/authority-contracts   (canonical AuthorityInput, AuthorityPlanningInputItem,
-        ^                    AuthorityPlanSourceRef, AuthorityUpstreamReference — small
+        ^                    AuthorityPlanSourceRef, AuthorityPlanReference — small
         |                    read-only shapes, no logic)
         |
 @age/capability-authority  (consumer — pure capability)
@@ -94,7 +94,7 @@ This ADR decides only the **input** boundary and the existence/purity rules of t
 package. The **boundary decision is final**: Authority consumes its input via a neutral
 `@age/authority-contracts` package and never imports the Market Discovery / Growth capability or
 contracts packages, SIE, BIF, BKG, or RIE. The exact field-level shapes of `AuthorityInput`,
-`AuthorityPlanningInputItem`, `AuthorityPlanSourceRef`, `AuthorityUpstreamReference`, and the output
+`AuthorityPlanningInputItem`, `AuthorityPlanSourceRef`, `AuthorityPlanReference`, and the output
 `AuthorityPlanItem` are deliberately **not** frozen here — they are fixed in the first EPIC-06
 implementation planning step (field-shape approval) after this ADR is accepted. Fixing shapes later
 does not reopen the boundary decision.
@@ -139,7 +139,7 @@ Authority has no contradiction concept (that is Intelligence-specific).
   acyclic and shallow.
 - Authority is the first capability to adopt the ADR-0016 shared disposition contract from inception,
   validating that consolidation and avoiding a fourth local wrapper.
-- The neutral `AuthorityUpstreamReference` deliberately duplicates a small subset of upstream fields;
+- The neutral `AuthorityPlanReference` deliberately duplicates a small subset of upstream fields;
   that minor, intentional duplication is the accepted cost of boundary purity (consistent with
   ADR-0010/0012/0014).
 - Establishes/continues the reusable pattern for every future pure capability consuming upstream
