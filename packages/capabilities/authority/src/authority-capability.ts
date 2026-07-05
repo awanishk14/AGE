@@ -1,9 +1,7 @@
-import { CapabilityOutput, Capability } from '@age/capability-kit';
 import type { ClientContext } from '@age/capability-kit';
 import type { AuthorityInput } from '@age/authority-contracts';
-import type { AuthorityPlanItem } from './authority-plan-item';
-import type { AuthorityProcessingSummary } from './authority-processing-summary';
 import type { AuthorityResult } from './authority-result';
+import { processAuthority } from './processing/process-authority';
 
 /**
  * AuthorityCapability — produces authority plan candidates (content-strategy,
@@ -19,29 +17,12 @@ import type { AuthorityResult } from './authority-result';
  * by the input. `context.clientId` / `context.organizationId` are authoritative;
  * `input.clientId` / `input.organizationId` are provenance/scope only.
  *
- * T27 is scaffold only: `run()` returns an empty output and a zeroed summary. No
- * derivation, validation, deduplication, or scoring exists yet. The full
- * deterministic pipeline (derive → validate → deduplicate → score/prioritize →
- * assemble) lands in T29.
+ * The full deterministic pipeline (derive → validate → deduplicate →
+ * score/prioritize → assemble) lives in processAuthority (T29); `run()` only
+ * delegates to it and adds no behavior of its own.
  */
 export class AuthorityCapability {
-  async run(context: ClientContext, _input: AuthorityInput): Promise<AuthorityResult> {
-    const output = new CapabilityOutput<AuthorityPlanItem>({
-      clientId: context.clientId,
-      organizationId: context.organizationId,
-      capability: Capability.Authority,
-      executionDomains: [],
-      items: [],
-    });
-
-    const summary: AuthorityProcessingSummary = {
-      acceptedCount: 0,
-      rejectedCount: 0,
-      duplicateCount: 0,
-      rejectedReasons: [],
-      duplicateReferences: [],
-    };
-
-    return { output, summary };
+  async run(context: ClientContext, input: AuthorityInput): Promise<AuthorityResult> {
+    return processAuthority(context, input);
   }
 }

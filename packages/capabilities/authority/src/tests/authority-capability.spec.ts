@@ -1,9 +1,15 @@
 import { describe, expect, it, expectTypeOf } from 'vitest';
-import { CapabilityRegistry, Capability, ClientContext } from '@age/capability-kit';
+import {
+  CapabilityRegistry,
+  Capability,
+  ClientContext,
+  ExecutionDomain,
+} from '@age/capability-kit';
 import type { CapabilityResult, ProcessingSummary } from '@age/capability-kit';
 import type { AuthorityInput } from '@age/authority-contracts';
 import { AUTHORITY_CAPABILITY_ENTRY } from '../authority-capability.entry';
 import { AuthorityCapability } from '../authority-capability';
+import { processAuthority } from '../processing/process-authority';
 import type { AuthorityPlanItem } from '../authority-plan-item';
 import type { AuthorityResult } from '../authority-result';
 import type {
@@ -78,7 +84,7 @@ describe('AuthorityCapability', () => {
     expect(() => new AuthorityCapability()).not.toThrow();
   });
 
-  it('run() returns an empty CapabilityOutput<AuthorityPlanItem> with a zeroed summary', async () => {
+  it('run() returns an empty CapabilityOutput<AuthorityPlanItem> with a zeroed summary for empty input', async () => {
     const capability = new AuthorityCapability();
     const ctx = new ClientContext('client-1', 'org-1');
     const result = await capability.run(ctx, buildInput());
@@ -95,6 +101,41 @@ describe('AuthorityCapability', () => {
       rejectedReasons: [],
       duplicateReferences: [],
     });
+  });
+
+  it('run() delegates to processAuthority (equivalent result, no added behavior)', async () => {
+    const capability = new AuthorityCapability();
+    const ctx = new ClientContext('client-1', 'org-1');
+    const input = buildInput({
+      planningItems: [
+        {
+          id: 'plan-1',
+          planType: 'CONTENT_STRATEGY',
+          reference: {
+            referenceId: 'ref-1',
+            referenceType: 'OPPORTUNITY',
+            target: { kind: 'OPPORTUNITY', key: 'opp:signal-1' },
+            executionDomains: [ExecutionDomain.SEO],
+            impactScore: 70,
+            confidenceScore: 65,
+          },
+          executionDomains: [ExecutionDomain.Content],
+          expectedImpact: 80,
+          confidence: 70,
+          estimatedEffort: 40,
+        },
+      ],
+    });
+
+    const viaRun = await capability.run(ctx, input);
+    const viaProcess = processAuthority(ctx, input);
+
+    // Same items and summary; producedAt is wall-clock so excluded from comparison.
+    expect(viaRun.output.items).toEqual(viaProcess.output.items);
+    expect(viaRun.summary).toEqual(viaProcess.summary);
+    expect(viaRun.output.clientId).toBe(viaProcess.output.clientId);
+    expect(viaRun.output.executionDomains).toEqual(viaProcess.output.executionDomains);
+    expect(viaRun.output.items).toHaveLength(1);
   });
 
   it('scopes the scaffold output by ClientContext, not by the input (authority rule)', async () => {

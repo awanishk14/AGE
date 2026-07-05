@@ -5,3 +5,4 @@ export { deduplicateAuthorityPlanCandidates } from './deduplicate-authority-plan
 export type { AuthorityDeduplicationResult } from './deduplicate-authority-plan-candidates';
 export { scoreAuthorityPlanCandidate } from './score-authority-plan-candidate';
 export type { AuthorityPlanScore } from './score-authority-plan-candidate';
+export { processAuthority } from './process-authority';
