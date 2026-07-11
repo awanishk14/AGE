@@ -1,9 +1,7 @@
-import { Capability, CapabilityOutput } from '@age/capability-kit';
 import type { ClientContext } from '@age/capability-kit';
 import type { OperationsInput } from '@age/operations-contracts';
-import type { OperationsPlanItem } from './operations-plan-item';
-import type { OperationsProcessingSummary } from './operations-processing-summary';
 import type { OperationsResult } from './operations-result';
+import { processOperations } from './processing/process-operations';
 
 /**
  * OperationsCapability — produces operations plan candidates (project plans,
@@ -19,30 +17,12 @@ import type { OperationsResult } from './operations-result';
  * by the input. `context.clientId` / `context.organizationId` are authoritative;
  * `input.clientId` / `input.organizationId` are provenance/scope only.
  *
- * T32 is scaffold only: `run()` returns an empty, ClientContext-scoped output
- * with an all-zero summary and does NOT inspect `input.planningItems`. The
- * deterministic pipeline (derive → validate → deduplicate → score/prioritize →
- * assemble) is added later (T33/T34); no processing, scoring, validation, or
- * deduplication exists yet.
+ * The full deterministic pipeline (derive → validate → deduplicate →
+ * score/prioritize → assemble) lives in processOperations (T34); `run()` only
+ * delegates to it and adds no behavior of its own.
  */
 export class OperationsCapability {
-  async run(context: ClientContext, _input: OperationsInput): Promise<OperationsResult> {
-    const output = new CapabilityOutput<OperationsPlanItem>({
-      clientId: context.clientId,
-      organizationId: context.organizationId,
-      capability: Capability.Operations,
-      executionDomains: [],
-      items: [],
-    });
-
-    const summary: OperationsProcessingSummary = {
-      acceptedCount: 0,
-      rejectedCount: 0,
-      duplicateCount: 0,
-      rejectedReasons: [],
-      duplicateReferences: [],
-    };
-
-    return { output, summary };
+  async run(context: ClientContext, input: OperationsInput): Promise<OperationsResult> {
+    return processOperations(context, input);
   }
 }

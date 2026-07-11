@@ -5,3 +5,4 @@ export { deduplicateOperationsPlanCandidates } from './deduplicate-operations-pl
 export type { OperationsDeduplicationResult } from './deduplicate-operations-plan-candidates';
 export { scoreOperationsPlanCandidate } from './score-operations-plan-candidate';
 export type { OperationsPlanScore } from './score-operations-plan-candidate';
+export { processOperations } from './process-operations';
