@@ -1,9 +1,7 @@
-import { Capability, CapabilityOutput } from '@age/capability-kit';
 import type { ClientContext } from '@age/capability-kit';
 import type { RevenueInput } from '@age/revenue-contracts';
-import type { RevenuePlanItem } from './revenue-plan-item';
-import type { RevenueProcessingSummary } from './revenue-processing-summary';
 import type { RevenueResult } from './revenue-result';
+import { processRevenue } from './processing/process-revenue';
 
 /**
  * RevenueCapability — produces revenue plan candidates (upsell, cross-sell,
@@ -22,30 +20,12 @@ import type { RevenueResult } from './revenue-result';
  * the input. `context.clientId` / `context.organizationId` are authoritative;
  * `input.clientId` / `input.organizationId` are provenance/scope only.
  *
- * T37 is scaffold only: `run()` returns an empty, ClientContext-scoped output
- * with an all-zero summary and does NOT inspect `input.planningItems`. The
- * deterministic pipeline (derive → validate → deduplicate → score/prioritize →
- * assemble) is added later; no processing, scoring, validation, or
- * deduplication exists yet.
+ * The full deterministic pipeline (derive → validate → deduplicate →
+ * score/prioritize → assemble) lives in processRevenue (T39); `run()` only
+ * delegates to it and adds no behavior of its own.
  */
 export class RevenueCapability {
-  async run(context: ClientContext, _input: RevenueInput): Promise<RevenueResult> {
-    const output = new CapabilityOutput<RevenuePlanItem>({
-      clientId: context.clientId,
-      organizationId: context.organizationId,
-      capability: Capability.Revenue,
-      executionDomains: [],
-      items: [],
-    });
-
-    const summary: RevenueProcessingSummary = {
-      acceptedCount: 0,
-      rejectedCount: 0,
-      duplicateCount: 0,
-      rejectedReasons: [],
-      duplicateReferences: [],
-    };
-
-    return { output, summary };
+  async run(context: ClientContext, input: RevenueInput): Promise<RevenueResult> {
+    return processRevenue(context, input);
   }
 }

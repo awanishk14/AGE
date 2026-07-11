@@ -5,3 +5,4 @@ export { deduplicateRevenuePlanCandidates } from './deduplicate-revenue-plan-can
 export type { RevenueDeduplicationResult } from './deduplicate-revenue-plan-candidates';
 export { scoreRevenuePlanCandidate } from './score-revenue-plan-candidate';
 export type { RevenuePlanScore } from './score-revenue-plan-candidate';
+export { processRevenue } from './process-revenue';

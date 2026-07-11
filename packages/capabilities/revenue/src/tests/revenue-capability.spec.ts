@@ -9,6 +9,7 @@ import type { CapabilityResult, ProcessingSummary } from '@age/capability-kit';
 import type { RevenueInput } from '@age/revenue-contracts';
 import { REVENUE_CAPABILITY_ENTRY } from '../revenue-capability.entry';
 import { RevenueCapability } from '../revenue-capability';
+import { processRevenue } from '../processing/process-revenue';
 import type { RevenuePlanItem } from '../revenue-plan-item';
 import type { RevenueResult } from '../revenue-result';
 import type {
@@ -159,9 +160,48 @@ describe('RevenuePlanItem shape', () => {
   });
 });
 
-describe('RevenueCapability (scaffold-only, T37)', () => {
+describe('RevenueCapability', () => {
   it('is instantiable', () => {
     expect(() => new RevenueCapability()).not.toThrow();
+  });
+
+  it('run() delegates to processRevenue (equivalent result, no added behavior)', async () => {
+    const capability = new RevenueCapability();
+    const ctx = new ClientContext('client-1', 'org-1');
+    const input = buildInput({
+      planningItems: [
+        {
+          id: 'rev-plan-1',
+          planType: 'UPSELL',
+          reference: {
+            referenceId: 'ops-1',
+            referenceType: 'OPERATIONS_PLAN',
+            target: { kind: 'ACCOUNT', key: 'account:acme' },
+            executionDomains: [ExecutionDomain.Reporting],
+            expectedValueScore: 60,
+            conversionProbabilityScore: 50,
+            retentionRiskScore: 40,
+            confidenceScore: 55,
+          },
+          executionDomains: [ExecutionDomain.CRM],
+          expectedValue: 80,
+          conversionProbability: 50,
+          retentionRisk: 40,
+          estimatedEffort: 40,
+          confidence: 70,
+        },
+      ],
+    });
+
+    const viaRun = await capability.run(ctx, input);
+    const viaProcess = processRevenue(ctx, input);
+
+    // Same items and summary; producedAt is wall-clock so excluded from comparison.
+    expect(viaRun.output.items).toEqual(viaProcess.output.items);
+    expect(viaRun.summary).toEqual(viaProcess.summary);
+    expect(viaRun.output.clientId).toBe(viaProcess.output.clientId);
+    expect(viaRun.output.executionDomains).toEqual(viaProcess.output.executionDomains);
+    expect(viaRun.output.items).toHaveLength(1);
   });
 
   it('run() returns an empty CapabilityOutput<RevenuePlanItem> with a zeroed summary', async () => {
