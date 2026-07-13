@@ -95,7 +95,9 @@ pnpm --filter @age/web dev            # serves http://localhost:3000/demo
 
 The web page reads the API via `NEXT_PUBLIC_API_URL` (defaults to
 `http://localhost:4000`). See [`apps/demo/README.md`](./apps/demo/README.md) for
-details and a sample run.
+details and a sample run, or the
+[Demo Run Guide](./docs/DEMO_RUN_GUIDE.md) for a full local walkthrough of all
+three modes.
 
 ## License
 
