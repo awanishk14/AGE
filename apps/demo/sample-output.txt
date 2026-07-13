@@ -1,0 +1,122 @@
+########################################################################
+AGE — In-Memory Capability Demo (Human-Approved Execution)
+This is what AGE recommends. Human approval is required before execution.
+No external side effects are performed by this demo.
+########################################################################
+
+========================================================================
+CAPABILITY: Intelligence
+========================================================================
+accepted=1  rejected=1  duplicate=1  derived=3  |  contradictionCount=0
+accounting: 1 + 1 + 1 = 3 (input items: 3) — OK
+
+Accepted decision objects:
+  - {"id":"ev-001","capability":"Intelligence","createdAt":"2026-07-12T00:00:00.000Z","evidenceId":"ev-001","qualityScore":75,"isContradiction":false,"freshnessDays":11}
+
+Rejected (surfaced, not dropped silently):
+  - {"evidenceId":"ev-002","reasonCode":"EMPTY_SOURCE_URL","detail":"Evidence \"ev-002\" has an empty sourceUrl."}
+
+Duplicates (merged into the accepted original):
+  - {"evidenceId":"ev-003","duplicateOfEvidenceId":"ev-001"}
+
+PENDING HUMAN APPROVAL:
+  [ ] approve  Intelligence  ev-001
+
+========================================================================
+CAPABILITY: Market Discovery
+========================================================================
+accepted=1  rejected=1  duplicate=1  derived=3
+accounting: 1 + 1 + 1 = 3 (input items: 3) — OK
+
+Accepted decision objects:
+  - {"id":"sig-001","capability":"MarketDiscovery","createdAt":"2026-07-12T00:00:00.000Z","opportunityId":"sig-001","opportunityType":"DEMAND_CAPTURE","target":{"kind":"SEGMENT","key":"segment:smb-saas"},"executionDomains":["SEO"],"impactScore":74,"confidenceScore":66,"priority":"HIGH","sourceRefs":[{"signalId":"sig-001","signalType":"UNMET_DEMAND"},{"signalId":"sig-003","signalType":"UNMET_DEMAND"}]}
+
+Rejected (surfaced, not dropped silently):
+  - {"opportunityId":"sig-002","reasonCode":"NO_EXECUTION_DOMAIN","detail":"Opportunity \"sig-002\" has no execution domains."}
+
+Duplicates (merged into the accepted original):
+  - {"opportunityId":"sig-003","duplicateOfOpportunityId":"sig-001"}
+
+PENDING HUMAN APPROVAL:
+  [ ] approve  Market Discovery  sig-001
+
+========================================================================
+CAPABILITY: Growth
+========================================================================
+accepted=1  rejected=1  duplicate=1  derived=3
+accounting: 1 + 1 + 1 = 3 (input items: 3) — OK
+
+Accepted decision objects:
+  - {"id":"gp-001","capability":"Growth","createdAt":"2026-07-12T00:00:00.000Z","planId":"gp-001","planType":"PAID_ACQUISITION","target":{"kind":"OPPORTUNITY","key":"opp:smb-saas"},"executionDomains":["GoogleAds"],"impactScore":76,"effortScore":40,"effortBand":"MEDIUM","confidenceScore":70,"priority":"HIGH","sourceRefs":[{"opportunityId":"opp-001"},{"opportunityId":"opp-001"}]}
+
+Rejected (surfaced, not dropped silently):
+  - {"planId":"gp-002","reasonCode":"NO_EXECUTION_DOMAIN","detail":"Growth plan \"gp-002\" has no execution domains."}
+
+Duplicates (merged into the accepted original):
+  - {"planId":"gp-003","duplicateOfPlanId":"gp-001"}
+
+PENDING HUMAN APPROVAL:
+  [ ] approve  Growth  gp-001
+
+========================================================================
+CAPABILITY: Authority
+========================================================================
+accepted=1  rejected=1  duplicate=1  derived=3
+accounting: 1 + 1 + 1 = 3 (input items: 3) — OK
+
+Accepted decision objects:
+  - {"id":"ap-001","authorityPlanId":"ap-001","capability":"Authority","createdAt":"2026-07-12T00:00:00.000Z","planType":"THOUGHT_LEADERSHIP","target":{"kind":"TOPIC","key":"topic:api-security"},"executionDomains":["Content"],"impactScore":76,"effortScore":40,"effortBand":"MEDIUM","confidenceScore":70,"priority":"HIGH","sourceRefs":[{"referenceId":"ref-001","referenceType":"OPPORTUNITY"},{"referenceId":"ref-001","referenceType":"OPPORTUNITY"}]}
+
+Rejected (surfaced, not dropped silently):
+  - {"authorityPlanId":"ap-002","reasonCode":"NO_EXECUTION_DOMAIN","detail":"Authority plan \"ap-002\" has no execution domains."}
+
+Duplicates (merged into the accepted original):
+  - {"authorityPlanId":"ap-003","duplicateOfAuthorityPlanId":"ap-001"}
+
+PENDING HUMAN APPROVAL:
+  [ ] approve  Authority  ap-001
+
+========================================================================
+CAPABILITY: Operations
+========================================================================
+accepted=1  rejected=1  duplicate=1  derived=3
+accounting: 1 + 1 + 1 = 3 (input items: 3) — OK
+
+Accepted decision objects:
+  - {"id":"op-001","operationsPlanId":"op-001","capability":"Operations","createdAt":"2026-07-12T00:00:00.000Z","planType":"PROJECT_PLAN","target":{"kind":"PROJECT","key":"project:acme-redesign"},"executionDomains":["Reporting"],"operationalImpactScore":67,"effortScore":40,"effortBand":"MEDIUM","confidenceScore":70,"priority":"MEDIUM","sourceRefs":[{"referenceId":"ref-001","referenceType":"AUTHORITY_PLAN"},{"referenceId":"ref-001","referenceType":"AUTHORITY_PLAN"}]}
+
+Rejected (surfaced, not dropped silently):
+  - {"operationsPlanId":"op-002","reasonCode":"NO_EXECUTION_DOMAIN","detail":"Operations plan \"op-002\" has no execution domains."}
+
+Duplicates (merged into the accepted original):
+  - {"operationsPlanId":"op-003","duplicateOfOperationsPlanId":"op-001"}
+
+PENDING HUMAN APPROVAL:
+  [ ] approve  Operations  op-001
+
+========================================================================
+CAPABILITY: Revenue
+========================================================================
+accepted=1  rejected=1  duplicate=1  derived=3
+accounting: 1 + 1 + 1 = 3 (input items: 3) — OK
+
+Accepted decision objects:
+  - {"id":"rp-001","revenuePlanId":"rp-001","capability":"Revenue","createdAt":"2026-07-12T00:00:00.000Z","planType":"UPSELL","target":{"kind":"ACCOUNT","key":"account:acme"},"executionDomains":["CRM"],"revenueImpactScore":31,"valueBand":"LOW","effortScore":40,"effortBand":"MEDIUM","confidenceScore":70,"priority":"MEDIUM","sourceRefs":[{"referenceId":"ops-001","referenceType":"OPERATIONS_PLAN"},{"referenceId":"ops-001","referenceType":"OPERATIONS_PLAN"}],"recommendsProposalDraft":true,"monetaryAmount":12000,"currency":"USD"}
+
+Rejected (surfaced, not dropped silently):
+  - {"revenuePlanId":"rp-002","reasonCode":"NO_EXECUTION_DOMAIN","detail":"Revenue plan \"rp-002\" has no execution domains."}
+
+Duplicates (merged into the accepted original):
+  - {"revenuePlanId":"rp-003","duplicateOfRevenuePlanId":"rp-001"}
+
+PENDING HUMAN APPROVAL:
+  [ ] approve  Revenue  rp-001
+
+########################################################################
+SUMMARY: 6 capabilities ran; 6 decision object(s) pending human approval.
+Accounting invariant across all capabilities: OK
+Human approval is required before any execution. No side effects were performed.
+########################################################################
+
+Note: the `createdAt` envelope timestamp is the only non-deterministic field
+between runs; all decision values above are deterministic given the fixtures.

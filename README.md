@@ -77,6 +77,17 @@ pnpm dev
 | `pnpm graph`     | Open the Nx project graph            |
 | `pnpm format`    | Format the codebase with Prettier    |
 
+## Run the AGE demo
+
+See the six completed capabilities produce human-reviewable decision objects,
+fully in-memory with no side effects:
+
+```bash
+pnpm demo
+```
+
+See [`apps/demo/README.md`](./apps/demo/README.md) for details and a sample run.
+
 ## License
 
 [MIT](./LICENSE) © Digital Dadi
