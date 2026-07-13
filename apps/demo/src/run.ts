@@ -1,4 +1,4 @@
-import { runAllCapabilities, type CapabilityRunReport } from './capabilities';
+import { runAllCapabilities, type CapabilityRunReport } from '@age/demo-runtime';
 
 /**
  * AGE in-memory capability demo runner.

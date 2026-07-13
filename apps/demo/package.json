@@ -14,19 +14,7 @@
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@age/capability-kit": "workspace:*",
-    "@age/capability-intelligence": "workspace:*",
-    "@age/capability-market-discovery": "workspace:*",
-    "@age/capability-growth": "workspace:*",
-    "@age/capability-authority": "workspace:*",
-    "@age/capability-operations": "workspace:*",
-    "@age/capability-revenue": "workspace:*",
-    "@age/evidence-contracts": "workspace:*",
-    "@age/market-discovery-contracts": "workspace:*",
-    "@age/growth-contracts": "workspace:*",
-    "@age/authority-contracts": "workspace:*",
-    "@age/operations-contracts": "workspace:*",
-    "@age/revenue-contracts": "workspace:*"
+    "@age/demo-runtime": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.1",

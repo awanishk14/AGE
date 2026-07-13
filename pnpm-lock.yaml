@@ -53,6 +53,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@age/demo-runtime':
+        specifier: workspace:*
+        version: link:../../packages/demo-runtime
       '@age/integrations':
         specifier: workspace:*
         version: link:../../packages/integrations
@@ -114,45 +117,9 @@ importers:
 
   apps/demo:
     dependencies:
-      '@age/authority-contracts':
+      '@age/demo-runtime':
         specifier: workspace:*
-        version: link:../../packages/authority-contracts
-      '@age/capability-authority':
-        specifier: workspace:*
-        version: link:../../packages/capabilities/authority
-      '@age/capability-growth':
-        specifier: workspace:*
-        version: link:../../packages/capabilities/growth
-      '@age/capability-intelligence':
-        specifier: workspace:*
-        version: link:../../packages/capabilities/intelligence
-      '@age/capability-kit':
-        specifier: workspace:*
-        version: link:../../packages/capability-kit
-      '@age/capability-market-discovery':
-        specifier: workspace:*
-        version: link:../../packages/capabilities/market-discovery
-      '@age/capability-operations':
-        specifier: workspace:*
-        version: link:../../packages/capabilities/operations
-      '@age/capability-revenue':
-        specifier: workspace:*
-        version: link:../../packages/capabilities/revenue
-      '@age/evidence-contracts':
-        specifier: workspace:*
-        version: link:../../packages/evidence-contracts
-      '@age/growth-contracts':
-        specifier: workspace:*
-        version: link:../../packages/growth-contracts
-      '@age/market-discovery-contracts':
-        specifier: workspace:*
-        version: link:../../packages/market-discovery-contracts
-      '@age/operations-contracts':
-        specifier: workspace:*
-        version: link:../../packages/operations-contracts
-      '@age/revenue-contracts':
-        specifier: workspace:*
-        version: link:../../packages/revenue-contracts
+        version: link:../../packages/demo-runtime
     devDependencies:
       tsx:
         specifier: ^4.19.1
@@ -319,6 +286,52 @@ importers:
         version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
 
   packages/config: {}
+
+  packages/demo-runtime:
+    dependencies:
+      '@age/authority-contracts':
+        specifier: workspace:*
+        version: link:../authority-contracts
+      '@age/capability-authority':
+        specifier: workspace:*
+        version: link:../capabilities/authority
+      '@age/capability-growth':
+        specifier: workspace:*
+        version: link:../capabilities/growth
+      '@age/capability-intelligence':
+        specifier: workspace:*
+        version: link:../capabilities/intelligence
+      '@age/capability-kit':
+        specifier: workspace:*
+        version: link:../capability-kit
+      '@age/capability-market-discovery':
+        specifier: workspace:*
+        version: link:../capabilities/market-discovery
+      '@age/capability-operations':
+        specifier: workspace:*
+        version: link:../capabilities/operations
+      '@age/capability-revenue':
+        specifier: workspace:*
+        version: link:../capabilities/revenue
+      '@age/evidence-contracts':
+        specifier: workspace:*
+        version: link:../evidence-contracts
+      '@age/growth-contracts':
+        specifier: workspace:*
+        version: link:../growth-contracts
+      '@age/market-discovery-contracts':
+        specifier: workspace:*
+        version: link:../market-discovery-contracts
+      '@age/operations-contracts':
+        specifier: workspace:*
+        version: link:../operations-contracts
+      '@age/revenue-contracts':
+        specifier: workspace:*
+        version: link:../revenue-contracts
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
 
   packages/evidence-contracts:
     devDependencies:

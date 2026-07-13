@@ -19,6 +19,7 @@ import { IntegrationModule } from './integration/integration.module';
 import { ReportingModule } from './reporting/reporting.module';
 import { WorkflowModule } from './workflow/workflow.module';
 import { ProblemModule } from './problem/problem.module';
+import { DemoModule } from './demo/demo.module';
 
 export * from './client';
 export * from './organization';
@@ -41,6 +42,7 @@ export * from './integration';
 export * from './reporting';
 export * from './workflow';
 export * from './problem';
+export * from './demo';
 
 /**
  * DOMAIN_MODULES — every AGE domain module, registered in the modular monolith.
@@ -68,4 +70,5 @@ export const DOMAIN_MODULES = [
   ReportingModule,
   WorkflowModule,
   ProblemModule,
+  DemoModule,
 ];
