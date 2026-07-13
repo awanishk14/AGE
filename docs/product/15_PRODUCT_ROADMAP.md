@@ -121,7 +121,13 @@ Canonical:
 - **Capability-by-capability progression** — each capability matures as a coherent increment of
   business value.
 - **Architecture remains frozen** — no structural drift during expansion.
-- **Branch flow** `feature → develop → main`; `main` holds stable releases.
+- **Branch flow** (per ADR-0020) — for the current pre-Phase-5 stage the canonical flow is
+  `feature/<epic-or-task> → main`; `main` is the **stable integration branch**. Every merge to `main`
+  requires: a feature branch, task-scoped commits, a reviewed PR into `main`, green PR CI, ChatGPT
+  review, founder approval, explicit merge approval, green post-merge `main` CI, and feature-branch
+  cleanup. **Phase 5 reconsideration trigger:** revisit `develop`, release branches, environment
+  branches, or staged-promotion branches before Phase 5 Autonomous Execution, multi-team parallel
+  release trains, or an external production release cadence begins. See ADR-0020.
 - **ADR governs architectural change** only when explicitly required (Security / Scalability /
   Performance / Extensibility / Correctness).
 - **No autonomous side effects prior to Phase 5** (Docs 09, 12).
