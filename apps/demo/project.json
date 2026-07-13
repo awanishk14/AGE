@@ -1,0 +1,14 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "demo",
+  "projectType": "application",
+  "sourceRoot": "apps/demo/src",
+  "tags": ["scope:demo", "type:app"],
+  "targets": {
+    "run": { "command": "tsx src/run.ts", "options": { "cwd": "apps/demo" } },
+    "build": { "command": "tsc -p tsconfig.json", "options": { "cwd": "apps/demo" } },
+    "typecheck": { "command": "tsc -p tsconfig.json --noEmit", "options": { "cwd": "apps/demo" } },
+    "lint": { "command": "eslint .", "options": { "cwd": "apps/demo" } },
+    "test": { "command": "vitest run --passWithNoTests", "options": { "cwd": "apps/demo" } }
+  }
+}

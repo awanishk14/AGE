@@ -18,6 +18,7 @@
     "typecheck": "nx run-many -t typecheck",
     "test": "nx run-many -t test",
     "test:e2e": "nx run-many -t test:e2e",
+    "demo": "nx run demo:run",
     "affected": "nx affected -t lint test build",
     "graph": "nx graph",
     "clean": "nx reset && rimraf node_modules",
