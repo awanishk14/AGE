@@ -80,13 +80,22 @@ pnpm dev
 ## Run the AGE demo
 
 See the six completed capabilities produce human-reviewable decision objects,
-fully in-memory with no side effects:
+fully in-memory with no side effects. Three ways to view the same demo:
 
 ```bash
+# 1. CLI — prints the decision reports to your terminal
 pnpm demo
+
+# 2. API — read-only endpoint: GET /demo/capabilities
+pnpm --filter @age/api dev            # serves http://localhost:4000
+
+# 3. Web — a simple read-only page at /demo
+pnpm --filter @age/web dev            # serves http://localhost:3000/demo
 ```
 
-See [`apps/demo/README.md`](./apps/demo/README.md) for details and a sample run.
+The web page reads the API via `NEXT_PUBLIC_API_URL` (defaults to
+`http://localhost:4000`). See [`apps/demo/README.md`](./apps/demo/README.md) for
+details and a sample run.
 
 ## License
 
