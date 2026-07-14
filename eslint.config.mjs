@@ -45,5 +45,21 @@ export default tseslint.config(
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
+  {
+    // Node ESM utility scripts (build/smoke helpers) run under Node with its
+    // global environment.
+    files: ['**/scripts/**/*.mjs'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
   prettier,
 );

@@ -150,3 +150,7 @@ The demo is intentionally inert. Across all three modes:
   problem is in the API/web wiring.
 - **Verify the API layer** — run the API tests:
   `pnpm --filter @age/api test`.
+- **Verify the compiled API actually boots** — run the runtime smoke check
+  (build first): `pnpm --filter @age/api build && pnpm --filter @age/api smoke:demo`.
+  It boots `dist/main.js` on a test port, checks `GET /demo/capabilities`, and
+  shuts the process down. This also runs in CI after the build step.
