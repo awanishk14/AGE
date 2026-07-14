@@ -111,6 +111,9 @@ importers:
       prisma:
         specifier: ^5.20.0
         version: 5.22.0
+      ts-loader:
+        specifier: ^9.5.1
+        version: 9.6.2(typescript@5.7.2)(webpack@5.97.1)
       vitest:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
@@ -4052,6 +4055,17 @@ packages:
   ts-interface-checker@0.1.13:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
 
+  ts-loader@9.6.2:
+    resolution: {integrity: sha512-R4iuczmtgxvtuI556s+hTZ6/7Ee03VCAk/l/M8LY1OAsUgB7YydsCxkgq9D9pKRaD7GJqUi2u8fp9zZP/ufjKA==}
+    engines: {node: '>=12.0.0'}
+    peerDependencies:
+      loader-utils: '*'
+      typescript: '*'
+      webpack: ^4.0.0 || ^5.0.0
+    peerDependenciesMeta:
+      loader-utils:
+        optional: true
+
   tsconfig-paths-webpack-plugin@4.2.0:
     resolution: {integrity: sha512-zbem3rfRS8BgeNK50Zz5SIQgXzLafiHjOwUAvk/38/o1jHn/V5QAgVUcz884or7WYcPaH3N2CIfUc2u0ul7UcA==}
     engines: {node: '>=10.13.0'}
@@ -7753,6 +7767,14 @@ snapshots:
       typescript: 5.9.3
 
   ts-interface-checker@0.1.13: {}
+
+  ts-loader@9.6.2(typescript@5.7.2)(webpack@5.97.1):
+    dependencies:
+      chalk: 4.1.2
+      picomatch: 4.0.4
+      source-map: 0.7.4
+      typescript: 5.7.2
+      webpack: 5.97.1
 
   tsconfig-paths-webpack-plugin@4.2.0:
     dependencies:

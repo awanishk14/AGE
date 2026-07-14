@@ -4,8 +4,8 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "dev": "nest start --watch",
-    "build": "nest build",
+    "dev": "nest start --webpack --webpackPath webpack.config.js --watch",
+    "build": "nest build --webpack --webpackPath webpack.config.js",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
@@ -37,6 +37,7 @@
     "@playwright/test": "^1.47.2",
     "@types/express": "^5.0.0",
     "prisma": "^5.20.0",
+    "ts-loader": "^9.5.1",
     "vitest": "^2.1.1"
   }
 }
