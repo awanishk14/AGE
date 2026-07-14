@@ -28,5 +28,22 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // CommonJS build-tool config files (e.g. the Nest CLI requires
+    // webpack.config.js to be CommonJS).
+    files: ['**/webpack.config.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: {
+        require: 'readonly',
+        module: 'writable',
+        __dirname: 'readonly',
+        process: 'readonly',
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
   prettier,
 );
