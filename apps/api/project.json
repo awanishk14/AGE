@@ -5,8 +5,14 @@
   "sourceRoot": "apps/api/src",
   "tags": ["scope:api", "type:app"],
   "targets": {
-    "build": { "command": "nest build", "options": { "cwd": "apps/api" } },
-    "dev": { "command": "nest start --watch", "options": { "cwd": "apps/api" } },
+    "build": {
+      "command": "nest build --webpack --webpackPath webpack.config.js",
+      "options": { "cwd": "apps/api" }
+    },
+    "dev": {
+      "command": "nest start --webpack --webpackPath webpack.config.js --watch",
+      "options": { "cwd": "apps/api" }
+    },
     "typecheck": { "command": "tsc -p tsconfig.json --noEmit", "options": { "cwd": "apps/api" } },
     "lint": { "command": "eslint .", "options": { "cwd": "apps/api" } },
     "test": { "command": "vitest run --passWithNoTests", "options": { "cwd": "apps/api" } },

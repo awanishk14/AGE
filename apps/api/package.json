@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test",
+    "smoke:demo": "node scripts/smoke-demo.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "clean": "rimraf dist .turbo *.tsbuildinfo"
