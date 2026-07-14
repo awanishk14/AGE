@@ -1,6 +1,6 @@
 # ADR 0021: Execution Foundation Contract Boundary (Human-Approved, Dry-Run Only)
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-14
 
 ## Context
@@ -119,6 +119,7 @@ effects, no integration calls, and no autonomy**.
 
 ## Status note
 
-This ADR is **Proposed** and requires Product Owner acceptance (per ADR-0001 / the ADR-0020
-precedent) **before** any execution code is written. No `@age/execution-contracts` package or
-execution domain code is implemented until this decision is accepted.
+**Accepted** by the Product Owner (2026-07-14). Phase 5 Slice 1 implements this boundary in
+`@age/execution-contracts`: the dry-run/no-op, Human-Approved execution foundation. Real
+integrations, persistence, and any move toward autonomy remain out of scope and each require their
+own future ADR.

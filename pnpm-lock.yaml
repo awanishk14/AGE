@@ -342,6 +342,16 @@ importers:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
 
+  packages/execution-contracts:
+    dependencies:
+      '@age/capability-kit':
+        specifier: workspace:*
+        version: link:../capability-kit
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
+
   packages/growth-contracts:
     dependencies:
       '@age/capability-kit':
