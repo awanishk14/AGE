@@ -24,6 +24,7 @@
     "@age/capability-authority": "workspace:*",
     "@age/capability-operations": "workspace:*",
     "@age/capability-revenue": "workspace:*",
+    "@age/execution-contracts": "workspace:*",
     "@age/evidence-contracts": "workspace:*",
     "@age/market-discovery-contracts": "workspace:*",
     "@age/growth-contracts": "workspace:*",
