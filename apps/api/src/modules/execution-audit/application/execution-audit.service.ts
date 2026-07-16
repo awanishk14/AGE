@@ -1,8 +1,18 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
-import type { ExecutionAuditPersistedRecord } from '@age/execution-audit-persistence';
-import { InMemoryExecutionAuditRepository } from '@age/execution-audit-persistence';
+import { Inject, Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import type {
+  ExecutionAuditPersistedRecord,
+  ExecutionAuditPersistenceRepository,
+} from '@age/execution-audit-persistence';
 import type { ExecutionId, ExecutionScope } from '@age/execution-contracts';
 import type { ExecutionAuditListResponseDto, ExecutionAuditRecordDto } from './dto';
+
+/**
+ * DI token for the `ExecutionAuditPersistenceRepository` port. The service
+ * depends only on this abstract port (Repository Pattern / DIP) so a future
+ * durable adapter (e.g. Prisma-backed, a later slice) can be bound to the
+ * same token without changing this service.
+ */
+export const EXECUTION_AUDIT_REPOSITORY = Symbol('EXECUTION_AUDIT_REPOSITORY');
 
 /** Project one persisted record into the read-only API DTO shape. */
 function toExecutionAuditRecordDto(record: ExecutionAuditPersistedRecord): ExecutionAuditRecordDto {
@@ -48,7 +58,10 @@ function requireScope(organizationId?: string, clientId?: string): ExecutionScop
  */
 @Injectable()
 export class ExecutionAuditService {
-  constructor(private readonly repository: InMemoryExecutionAuditRepository) {}
+  constructor(
+    @Inject(EXECUTION_AUDIT_REPOSITORY)
+    private readonly repository: ExecutionAuditPersistenceRepository,
+  ) {}
 
   async list(organizationId?: string, clientId?: string): Promise<ExecutionAuditListResponseDto> {
     const scope = requireScope(organizationId, clientId);
