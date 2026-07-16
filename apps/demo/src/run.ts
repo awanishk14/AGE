@@ -1,4 +1,10 @@
-import { runAllCapabilities, type CapabilityRunReport } from '@age/demo-runtime';
+import {
+  runAllCapabilities,
+  buildExecutionPreviews,
+  simulatedDemoApproval,
+  type CapabilityRunReport,
+  type ExecutionPreviewEntry,
+} from '@age/demo-runtime';
 
 /**
  * AGE in-memory capability demo runner.
@@ -74,6 +80,45 @@ function printReport(report: CapabilityRunReport): void {
   }
 }
 
+function printExecutionPreview(entries: readonly ExecutionPreviewEntry[]): void {
+  console.log('');
+  console.log(line('='));
+  console.log('EXECUTION PREVIEW: dry-run only');
+  console.log(line('='));
+  console.log('Human approval required — approvals below are SIMULATED for the demo.');
+  console.log('This is a preview of what execution would do. No real execution happened.');
+  console.log('');
+
+  if (entries.length === 0) {
+    console.log('  (no accepted decision objects to preview)');
+    return;
+  }
+
+  let allNoSideEffects = true;
+  for (const entry of entries) {
+    const { result } = entry;
+    allNoSideEffects = allNoSideEffects && result.sideEffectsPerformed === false;
+    console.log(`  - ${entry.capabilityName}  ${entry.sourceItemId}  →  ${entry.executionDomain}`);
+    console.log(
+      `      status=${result.status}  mode=${result.mode}  ` +
+        `Side effects performed: ${result.sideEffectsPerformed}`,
+    );
+    console.log(`      traceability: ${result.audit.traceability}`);
+    if (result.detail) {
+      console.log(`      ${result.detail}`);
+    }
+  }
+
+  console.log('');
+  console.log(
+    `Execution preview: dry-run only  |  Side effects performed: ` +
+      `${allNoSideEffects ? 'false' : 'TRUE (INVARIANT VIOLATED)'}  |  Human approval required.`,
+  );
+  if (!allNoSideEffects) {
+    process.exitCode = 1;
+  }
+}
+
 async function main(): Promise<void> {
   console.log(line('#'));
   console.log('AGE — In-Memory Capability Demo (Human-Approved Execution)');
@@ -102,6 +147,9 @@ async function main(): Promise<void> {
   );
   console.log('Human approval is required before any execution. No side effects were performed.');
   console.log(line('#'));
+
+  const previews = buildExecutionPreviews(reports, simulatedDemoApproval());
+  printExecutionPreview(previews);
 
   if (!allAccountingHolds) {
     process.exitCode = 1;

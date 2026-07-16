@@ -319,6 +319,9 @@ importers:
       '@age/evidence-contracts':
         specifier: workspace:*
         version: link:../evidence-contracts
+      '@age/execution-contracts':
+        specifier: workspace:*
+        version: link:../execution-contracts
       '@age/growth-contracts':
         specifier: workspace:*
         version: link:../growth-contracts
