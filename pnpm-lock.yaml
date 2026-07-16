@@ -345,6 +345,19 @@ importers:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
 
+  packages/execution-audit-persistence:
+    dependencies:
+      '@age/execution-contracts':
+        specifier: workspace:*
+        version: link:../execution-contracts
+    devDependencies:
+      '@age/capability-kit':
+        specifier: workspace:*
+        version: link:../capability-kit
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
+
   packages/execution-contracts:
     dependencies:
       '@age/capability-kit':
