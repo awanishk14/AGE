@@ -85,6 +85,42 @@ describe('DemoController GET /demo/capabilities', () => {
     }
   });
 
+  it('exposes a read-only, dry-run-only execution preview (not a real execution result)', async () => {
+    const response = await controller.getCapabilities();
+    const { executionPreview } = response;
+
+    expect(executionPreview.mode).toBe('dry_run');
+    expect(executionPreview.sideEffectsPerformed).toBe(false);
+    expect(executionPreview.humanApprovalRequired).toBe(true);
+    expect(executionPreview.simulatedApproval.approvedBy).toContain('simulated');
+    expect(typeof executionPreview.simulatedApproval.approvedAt).toBe('string');
+
+    // One preview entry per accepted decision object across all six capabilities.
+    const totalAccepted = response.reports.reduce((sum, r) => sum + r.acceptedCount, 0);
+    expect(executionPreview.entries).toHaveLength(totalAccepted);
+
+    for (const entry of executionPreview.entries) {
+      expect(entry.sideEffectsPerformed).toBe(false);
+      expect(entry.mode).toBe('dry_run');
+      expect(typeof entry.status).toBe('string');
+      expect(typeof entry.executionDomain).toBe('string');
+      expect(entry.traceability).toContain('Evidence');
+      expect(entry).not.toHaveProperty('executionResult');
+    }
+
+    // executionPreview must never be mistaken for a real execution result field.
+    expect(response).not.toHaveProperty('executionResult');
+  });
+
+  it('is read-only: GET /demo/capabilities has no sibling mutation route', () => {
+    const controllerMetadataKeys = Object.getOwnPropertyNames(
+      Object.getPrototypeOf(controller) as object,
+    ).filter((key) => key !== 'constructor');
+    // Only the one read-only handler is defined on the controller.
+    expect(controllerMetadataKeys).toEqual(['getCapabilities']);
+    expect(Reflect.getMetadata('method', controller.getCapabilities)).toBe(0); // RequestMethod.GET
+  });
+
   it('imports no persistence/integration/side-effecting modules in the demo module', () => {
     const moduleDir = join(__dirname, '..');
     const files = collectTsFiles(moduleDir).filter((f) => f !== __filename);
