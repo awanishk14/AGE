@@ -81,6 +81,38 @@ curl http://localhost:4000/demo/capabilities
 
 ---
 
+## B.1 Execution audit history (read-only, ADR-0022 Slice B)
+
+With the API running (mode B above), the dry-run execution audit history API
+is available:
+
+```bash
+curl "http://localhost:4000/execution-audit?organizationId=org-1&clientId=client-1"
+curl "http://localhost:4000/execution-audit/<executionId>?organizationId=org-1&clientId=client-1"
+```
+
+- Routes: **`GET /execution-audit`** and **`GET /execution-audit/:executionId`**
+  — read-only. There is no approval endpoint, no execute endpoint, and no
+  mutation route (no POST/PUT/PATCH/DELETE) anywhere on this path.
+- Every read **requires** `organizationId` and `clientId` query parameters.
+  There is no finalized auth/tenant mechanism in this codebase yet (open
+  question in ADR-0021/0022), so this is an explicit, test-safe/demo scoping
+  strategy, not a production auth boundary — a request without both params is
+  rejected with `400 Bad Request`, and a lookup by `executionId` outside the
+  given scope returns `404 Not Found` rather than leaking another tenant's
+  record.
+- Data source: the in-memory `InMemoryExecutionAuditRepository` reference
+  implementation from `@age/execution-audit-persistence` (ADR-0022 Slice A).
+  No database/Prisma wiring exists yet, so — since nothing in this repo
+  currently writes to it — a fresh process will typically return an **empty
+  list**, which is expected and safe.
+- Every returned record is a **dry-run audit history entry**:
+  `mode: "dry_run"`, `sideEffectsPerformed: false`. The result snapshot field
+  is named `dryRunResultSnapshot`, never `executionResult`, so it can't be
+  mistaken for a real command execution outcome.
+
+---
+
 ## C. Web demo
 
 Start the web app (Next.js) using the repo's existing dev command:
@@ -140,6 +172,13 @@ NEXT_PUBLIC_API_URL=http://localhost:4000 pnpm --filter @age/web dev
   `/demo` web page renders it in a read-only, labelled section. No new route,
   no approve/execute button, no execution logic duplicated (reuses
   `@age/demo-runtime`)
+- **ADR-0022 Slice A** — `@age/execution-audit-persistence`: pure, in-memory,
+  append-only dry-run execution audit persistence model + repository port +
+  reference in-memory repository. No DB wiring, no API/Web surface.
+- **ADR-0022 Slice B** — **read-only** `GET /execution-audit` and
+  `GET /execution-audit/:executionId` API, backed by the Slice A in-memory
+  repository. No Web UI, no approval endpoint, no execute endpoint, no DB
+  wiring yet — see [§B.1](#b1-execution-audit-history-read-only-adr-0022-slice-b).
 
 ### Pending (not yet built)
 
