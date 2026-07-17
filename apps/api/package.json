@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@age/demo-runtime": "workspace:*",
+    "@age/execution-approval-workflow": "workspace:*",
     "@age/execution-audit-persistence": "workspace:*",
     "@age/execution-contracts": "workspace:*",
     "@age/integrations": "workspace:*",
