@@ -1,6 +1,6 @@
 # ADR 0023: Human Approval Workflow Boundary
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-17
 
 ## Context
@@ -221,8 +221,9 @@ ADR accepts it:
 
 ## Status note
 
-**Proposed.** This ADR records the architectural boundary for a future Human Approval Workflow
-(ADR-0022 Slice D). It does not implement an approval endpoint, approval UI, approval persistence, or
-any mutation surface. Acceptance would enable a future implementation slice to proceed against this
-recorded boundary; real (side-effecting) execution remains gated on a separate future ADR (ADR-0022
-Slice E) regardless of this ADR's disposition.
+**Accepted** after PR #50 review (2026-07-17). Acceptance records the Human Approval Workflow Boundary
+and enables a future implementation slice for the approval workflow (ADR-0022 Slice D) to proceed
+against this recorded boundary. Acceptance itself does not implement an approval endpoint, approval UI,
+approval persistence, an execute endpoint, real execution, DB persistence, or Autonomous Execution — each
+remains a separate, future implementation slice. Real (side-effecting) execution remains gated on a
+separate future ADR (ADR-0022 Slice E) regardless of this ADR's disposition.
