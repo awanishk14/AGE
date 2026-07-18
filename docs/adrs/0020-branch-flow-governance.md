@@ -127,3 +127,19 @@ this task** — the amendment is a separate, follow-up change gated on acceptanc
 reconsideration trigger. It matches proven practice, removes the doc/practice contradiction and
 stale-branch risk, and preserves staged integration as a deliberate future decision rather than an
 unused mandate or a discarded option.
+
+## Operational follow-up (added 2026-07-18)
+
+This ADR already makes `main` the canonical integration branch and `develop` stale. Separately, it was
+observed that the **GitHub repository default branch is still configured as `develop`**. This is an
+operational repository-setting mismatch, not a new architecture decision — the decision above already
+stands and is unchanged.
+
+Until the repository default-branch setting is corrected:
+
+- Agents and contributors MUST still branch from `origin/main` and open PRs into `main`, per this ADR's
+  Decision section, regardless of what GitHub shows as the default branch.
+- **Required follow-up outside this ADR (not performed here):** change the GitHub repository default
+  branch from `develop` to `main`.
+- This follow-up note does not reconcile, merge, reset, or delete `develop`, and does not itself change
+  any repository setting.
