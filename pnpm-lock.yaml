@@ -71,6 +71,9 @@ importers:
       '@age/knowledge':
         specifier: workspace:*
         version: link:../../packages/knowledge
+      '@age/platform-context':
+        specifier: workspace:*
+        version: link:../../packages/platform-context
       '@age/shared':
         specifier: workspace:*
         version: link:../../packages/shared
