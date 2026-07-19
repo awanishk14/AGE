@@ -66,17 +66,9 @@ Then call the read-only endpoint:
 curl http://localhost:4000/demo/capabilities
 ```
 
-- Route: **`GET /demo/capabilities`** (the only route — no `/execute`,
-  `/approve`, or other mutation route exists)
+- Route: **`GET /demo/capabilities`**
 - Returns the six capability reports plus a summary (capabilities run, total
   pending approvals, accounting invariant) as JSON.
-- Also returns a read-only `executionPreview` field (Phase 5 Slices 1–2):
-  `mode: "dry_run"`, `sideEffectsPerformed: false`, `humanApprovalRequired: true`,
-  a `simulatedApproval` context, and one dry-run preview `entries[]` item per
-  accepted decision object. This reuses the existing `@age/demo-runtime`
-  preview (via `@age/execution-contracts`) — no execution logic is duplicated
-  in the API. It is **not** a real execution result and is never named
-  `executionResult`.
 - Read-only — nothing is persisted or executed.
 
 ---
@@ -94,11 +86,7 @@ Then open:
 - **`http://localhost:3000/demo`**
 
 The page fetches `GET /demo/capabilities` and renders the six reports with a
-summary and the Human-Approved Execution notice, plus a read-only
-**Execution preview** section labelled `Dry-run only`, `Side effects
-performed: false`, and `Human approval required`. The section is purely
-informational — there is no approve or execute button, no form, and no
-client-side execution trigger.
+summary and the Human-Approved Execution notice.
 
 ### API URL configuration
 
@@ -135,11 +123,6 @@ NEXT_PUBLIC_API_URL=http://localhost:4000 pnpm --filter @age/web dev
 - **Phase 5 Slice 2** — CLI **execution preview**: bridges accepted demo
   decision objects through `@age/execution-contracts` to a read-only,
   dry-run execution preview (`pnpm demo`); no API/Web execution surface
-- **Phase 5 Slice 3** — API/Web **read-only exposure** of the same preview:
-  `GET /demo/capabilities` now includes an `executionPreview` field, and the
-  `/demo` web page renders it in a read-only, labelled section. No new route,
-  no approve/execute button, no execution logic duplicated (reuses
-  `@age/demo-runtime`)
 
 ### Pending (not yet built)
 
@@ -169,9 +152,7 @@ The demo is intentionally inert. Across all three modes:
   only produces recommendations, and the execution preview uses a simulated
   approval context.
 - **Phase 5 has started** as **Human-Approved Execution** only (Slice 1:
-  execution contracts/foundation; Slice 2: CLI dry-run execution preview;
-  Slice 3: read-only API/Web exposure of the same preview — no new route, no
-  approve/execute action).
+  execution contracts/foundation; Slice 2: dry-run execution preview).
   **Autonomous Execution remains out of scope** unless a future ADR
   explicitly accepts it.
 

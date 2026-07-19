@@ -27,36 +27,6 @@ export interface CapabilityDemoReport {
   readonly extra?: Readonly<Record<string, number>>;
 }
 
-/**
- * One accepted decision object's dry-run execution preview, as returned by the
- * API. NOT a real execution result — `sideEffectsPerformed` is always `false`.
- */
-export interface ExecutionPreviewEntry {
-  readonly capability: string;
-  readonly sourceItemId: string;
-  readonly executionDomain: string;
-  readonly status: string;
-  readonly mode: string;
-  readonly sideEffectsPerformed: boolean;
-  readonly traceability: string;
-  readonly detail?: string;
-}
-
-/**
- * Read-only, dry-run-only execution preview envelope (Phase 5, ADR-0021). Not
- * real execution and not Autonomous Execution — display only.
- */
-export interface ExecutionPreview {
-  readonly mode: string;
-  readonly sideEffectsPerformed: boolean;
-  readonly humanApprovalRequired: boolean;
-  readonly simulatedApproval: {
-    readonly approvedBy: string;
-    readonly approvedAt: string;
-  };
-  readonly entries: readonly ExecutionPreviewEntry[];
-}
-
 /** Top-level response envelope for the capability demo endpoint. */
 export interface CapabilityDemoResponse {
   readonly title: string;
@@ -69,7 +39,6 @@ export interface CapabilityDemoResponse {
     readonly totalPendingApprovals: number;
     readonly accountingInvariantHolds: boolean;
   };
-  readonly executionPreview: ExecutionPreview;
 }
 
 /** Sensible local default matching the API's default port (API_PORT ?? 4000). */
