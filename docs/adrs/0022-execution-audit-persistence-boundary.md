@@ -1,6 +1,6 @@
 # ADR 0022: Durable Human-Approved Execution Audit / Approval Persistence Boundary
 
-- Status: Accepted
+- Status: Proposed
 - Date: 2026-07-16
 
 ## Context
@@ -185,12 +185,3 @@ ADR accepts it:
   layer introduced under this ADR lives outside that package (e.g., at the app or a new
   persistence-adapter package level) and consumes its types — it does not add a database dependency,
   an ORM, or any I/O into `@age/execution-contracts` itself.
-
-## Status note
-
-**Accepted** after PR #45 review (2026-07-16). Acceptance records the durable execution audit
-persistence boundary and enables future implementation slices (Slices A–E above) for durable dry-run
-execution audit persistence. Acceptance itself does not implement persistence, an approval endpoint,
-an execution endpoint, Web UI, or real execution — each remains a separate, future slice, with Slices
-D and E each requiring their own ADR before an approval workflow or a real (side-effecting) executor
-is built.
