@@ -6,7 +6,6 @@ import {
   type ApprovalDecisionRepository,
 } from '@age/execution-approval-workflow';
 import type { ExecutionId, ExecutionScope } from '@age/execution-contracts';
-import { createDemoTrustedContextFromRequestFields } from '../../platform-context';
 import type {
   ExecutionApprovalDecisionDto,
   ExecutionApprovalListResponseDto,
@@ -60,8 +59,8 @@ function requireOperatorId(operatorId?: string): string {
  *
  * This service ONLY records and reads approval decisions via the
  * `@age/execution-approval-workflow` foundation (Slice D1). It never calls
- * the execution guard, the dry-run executor, a real executor, a background
- * job runner of any kind, or any capability runner — approval and execution
+ * the execution guard, the dry-run executor, a real executor, an adapter, a
+ * queue/worker/scheduler, or any capability runner — approval and execution
  * remain strictly separate, per ADR-0023.
  *
  * Tenant scoping: this codebase has no finalized auth/tenant mechanism yet
@@ -100,32 +99,17 @@ export class ExecutionApprovalService {
     outcome: 'approved_for_dry_run' | 'rejected',
     request: RecordApprovalDecisionRequestDto,
   ): Promise<ExecutionApprovalDecisionDto> {
-    // Preserve the existing, request-shape-specific validation errors first —
-    // the ADR-0024 adapter below re-validates the same fields, but with its
-    // own generic messages, so we must not let it be the first thing to throw.
     const scope: ExecutionScope = {
       ...requireScope(request?.organizationId, request?.clientId),
       projectId: request?.projectId,
     };
     const operatorId = requireOperatorId(request?.operatorId);
 
-    // ADR-0024 bridge: convert the same explicit, demo/test-safe request
-    // fields into a validated TrustedOperatorTenantContext, and use its
-    // operator/scope — rather than the raw request fields — to populate the
-    // approval decision. Still demo/test-safe (see the adapter's own
-    // doc-comment); no auth, no membership validation, no behavior change.
-    const trustedContext = createDemoTrustedContextFromRequestFields({
-      organizationId: scope.organizationId,
-      clientId: scope.clientId,
-      ...(scope.projectId === undefined ? {} : { projectId: scope.projectId }),
-      operatorId,
-    });
-
     const decision = createApprovalDecision({
       executionId,
-      scope: trustedContext.scope,
+      scope,
       outcome,
-      operatorId: trustedContext.operator.operatorId,
+      operatorId,
       decidedAt: new Date(),
       reason: request?.reason,
     });
