@@ -149,29 +149,6 @@ NEXT_PUBLIC_API_URL=http://localhost:4000 pnpm --filter @age/web dev
 > Start the API (mode B) **before** loading `/demo`, otherwise the page shows a
 > connection error.
 
-### C.1 Execution audit history view (read-only, ADR-0022 Slice C)
-
-With the API running (mode B, plus [§B.1](#b1-execution-audit-history-read-only-adr-0022-slice-b))
-and the web app running (mode C above), open:
-
-- **`http://localhost:3000/execution-audit`**
-
-The page reads `GET /execution-audit` and renders each dry-run audit record,
-labelled `Read-only`, `Dry-run only`, and `Side effects performed: false`. It
-is display-only — there is no approve, execute, retry, or run action, no
-mutation form, and no server action of any kind.
-
-- Scope: there is no finalized auth/tenant mechanism in this codebase yet
-  (same open question as ADR-0021/0022), so the page uses the same explicit
-  `organizationId`/`clientId` test-safe/demo scoping strategy as the API,
-  defaulting to `org-1`/`client-1` to match the [§B.1](#b1-execution-audit-history-read-only-adr-0022-slice-b)
-  curl examples. The scope fields on the page only trigger a re-read (GET) —
-  never a mutation.
-- Data source: the same in-memory, process-local repository as the API
-  (ADR-0022 Slice A). No database/Prisma wiring exists yet, so a fresh
-  process will typically show the empty state: "No dry-run audit records
-  found for this scope."
-
 ---
 
 ## What is completed / pending
@@ -202,10 +179,6 @@ mutation form, and no server action of any kind.
   `GET /execution-audit/:executionId` API, backed by the Slice A in-memory
   repository. No Web UI, no approval endpoint, no execute endpoint, no DB
   wiring yet — see [§B.1](#b1-execution-audit-history-read-only-adr-0022-slice-b).
-- **ADR-0022 Slice C** — **read-only** Web view (`/execution-audit`)
-  rendering Slice B's audit history, with a test-safe/demo scope selector
-  that only re-reads (never mutates). No approval action, no execution
-  action, no DB wiring — see [§C.1](#c1-execution-audit-history-view-read-only-adr-0022-slice-c).
 
 ### Pending (not yet built)
 
