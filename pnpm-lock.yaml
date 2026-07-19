@@ -56,9 +56,6 @@ importers:
       '@age/demo-runtime':
         specifier: workspace:*
         version: link:../../packages/demo-runtime
-      '@age/execution-approval-workflow':
-        specifier: workspace:*
-        version: link:../../packages/execution-approval-workflow
       '@age/execution-audit-persistence':
         specifier: workspace:*
         version: link:../../packages/execution-audit-persistence
