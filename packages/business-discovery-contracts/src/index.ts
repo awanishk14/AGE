@@ -85,3 +85,23 @@ export {
   validateProfileAgainstQuestionnaire,
 } from './questionnaire-validation';
 export type { QuestionnaireValidationResult } from './questionnaire-validation';
+
+// BIF-compatible projection shape (local; not wired into @age/bif — see file note).
+export {
+  BIF_COMPATIBLE_SECTION_KEYS,
+  bifOrganizationIdentitySchema,
+  bifMarketCompetitionSchema,
+  bifCompatibleBusinessContextSchema,
+} from './bif-compatible-context';
+export type {
+  BifCompatibleSectionKey,
+  BifOrganizationIdentity,
+  BifMarketCompetition,
+  BifCompatibleBusinessContext,
+} from './bif-compatible-context';
+
+// Discovery -> BIF-compatible projection (pure, deterministic mapper).
+export { mapBusinessDiscoveryToBifContext } from './business-discovery-bif-mapping';
+
+// Representative sample fixture (generic fictional data, no side effects).
+export { SAMPLE_BUSINESS_DISCOVERY_PROFILE } from './sample-profile';
