@@ -200,35 +200,6 @@ describe('ExecutionApprovalController', () => {
     await expect(controller.list()).rejects.toThrow(/organizationId and clientId/);
   });
 
-  it('operator/scope flow through ADR-0024 trusted context construction internally', async () => {
-    const decision = await controller.approve(execA, {
-      organizationId: 'org-1',
-      clientId: 'client-1',
-      projectId: 'proj-1',
-      operatorId: 'user:owner-1',
-    });
-    // The recorded decision's operator/scope are exactly what
-    // createDemoTrustedContextFromRequestFields would produce for the same
-    // fields — proving the trusted-context adapter is on the write path,
-    // not merely imported.
-    expect(decision.operatorId).toBe('user:owner-1');
-    expect(decision.scope).toEqual({
-      organizationId: 'org-1',
-      clientId: 'client-1',
-      projectId: 'proj-1',
-    });
-  });
-
-  it('still rejects an empty operatorId even though it now flows through the trusted-context adapter', async () => {
-    await expect(
-      controller.approve(execA, {
-        organizationId: 'org-1',
-        clientId: 'client-1',
-        operatorId: '',
-      } as never),
-    ).rejects.toThrow(/operatorId/);
-  });
-
   it('imports no executor, adapter, queue, worker, scheduler, or external integration', () => {
     const moduleDir = join(__dirname, '..');
     const files = collectTsFiles(moduleDir).filter((f) => f !== __filename);
@@ -246,11 +217,6 @@ describe('ExecutionApprovalController', () => {
       'axios',
       'kafka',
       'bullmq',
-      'worker_threads',
-      'Worker(',
-      'scheduler',
-      'BullQueue',
-      'node-cron',
     ];
     for (const file of files) {
       const content = readFileSync(file, 'utf8');

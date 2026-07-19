@@ -71,9 +71,6 @@ importers:
       '@age/knowledge':
         specifier: workspace:*
         version: link:../../packages/knowledge
-      '@age/platform-context':
-        specifier: workspace:*
-        version: link:../../packages/platform-context
       '@age/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -470,12 +467,6 @@ importers:
       prisma:
         specifier: ^5.20.0
         version: 5.22.0
-      vitest:
-        specifier: ^2.1.1
-        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
-
-  packages/platform-context:
-    devDependencies:
       vitest:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
