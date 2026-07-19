@@ -23,7 +23,6 @@
     "@age/execution-contracts": "workspace:*",
     "@age/integrations": "workspace:*",
     "@age/knowledge": "workspace:*",
-    "@age/platform-context": "workspace:*",
     "@age/shared": "workspace:*",
     "@age/types": "workspace:*",
     "@nestjs/common": "^10.4.4",
