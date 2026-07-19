@@ -20,8 +20,6 @@ import { ReportingModule } from './reporting/reporting.module';
 import { WorkflowModule } from './workflow/workflow.module';
 import { ProblemModule } from './problem/problem.module';
 import { DemoModule } from './demo/demo.module';
-import { ExecutionAuditModule } from './execution-audit/execution-audit.module';
-import { ExecutionApprovalModule } from './execution-approval/execution-approval.module';
 
 export * from './client';
 export * from './organization';
@@ -45,8 +43,6 @@ export * from './reporting';
 export * from './workflow';
 export * from './problem';
 export * from './demo';
-export * from './execution-audit';
-export * from './execution-approval';
 
 /**
  * DOMAIN_MODULES — every AGE domain module, registered in the modular monolith.
@@ -75,6 +71,4 @@ export const DOMAIN_MODULES = [
   WorkflowModule,
   ProblemModule,
   DemoModule,
-  ExecutionAuditModule,
-  ExecutionApprovalModule,
 ];

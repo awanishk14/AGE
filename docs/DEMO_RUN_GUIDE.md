@@ -32,16 +32,6 @@ What it shows:
 - **accepted / rejected / duplicate** accounting per capability, with the
   invariant `accepted + rejected + duplicate === derived === input items`
 - a **pending human approval** checklist — every accepted item awaits sign-off
-- an **execution preview** section (Phase 5 Slice 2) showing what a
-  **dry-run/no-op** execution would look like for each accepted item, clearly
-  labelled:
-  - `Execution preview: dry-run only`
-  - `Side effects performed: false`
-  - `Human approval required`
-
-  The preview uses a **simulated** approval context for demo purposes only —
-  no real execution happens, and every result carries
-  `sideEffectsPerformed: false`.
 
 See [`apps/demo/README.md`](../apps/demo/README.md) and
 [`apps/demo/sample-output.txt`](../apps/demo/sample-output.txt) for a full
@@ -66,50 +56,10 @@ Then call the read-only endpoint:
 curl http://localhost:4000/demo/capabilities
 ```
 
-- Route: **`GET /demo/capabilities`** (the only route — no `/execute`,
-  `/approve`, or other mutation route exists)
+- Route: **`GET /demo/capabilities`**
 - Returns the six capability reports plus a summary (capabilities run, total
   pending approvals, accounting invariant) as JSON.
-- Also returns a read-only `executionPreview` field (Phase 5 Slices 1–2):
-  `mode: "dry_run"`, `sideEffectsPerformed: false`, `humanApprovalRequired: true`,
-  a `simulatedApproval` context, and one dry-run preview `entries[]` item per
-  accepted decision object. This reuses the existing `@age/demo-runtime`
-  preview (via `@age/execution-contracts`) — no execution logic is duplicated
-  in the API. It is **not** a real execution result and is never named
-  `executionResult`.
 - Read-only — nothing is persisted or executed.
-
----
-
-## B.1 Execution audit history (read-only, ADR-0022 Slice B)
-
-With the API running (mode B above), the dry-run execution audit history API
-is available:
-
-```bash
-curl "http://localhost:4000/execution-audit?organizationId=org-1&clientId=client-1"
-curl "http://localhost:4000/execution-audit/<executionId>?organizationId=org-1&clientId=client-1"
-```
-
-- Routes: **`GET /execution-audit`** and **`GET /execution-audit/:executionId`**
-  — read-only. There is no approval endpoint, no execute endpoint, and no
-  mutation route (no POST/PUT/PATCH/DELETE) anywhere on this path.
-- Every read **requires** `organizationId` and `clientId` query parameters.
-  There is no finalized auth/tenant mechanism in this codebase yet (open
-  question in ADR-0021/0022), so this is an explicit, test-safe/demo scoping
-  strategy, not a production auth boundary — a request without both params is
-  rejected with `400 Bad Request`, and a lookup by `executionId` outside the
-  given scope returns `404 Not Found` rather than leaking another tenant's
-  record.
-- Data source: the in-memory `InMemoryExecutionAuditRepository` reference
-  implementation from `@age/execution-audit-persistence` (ADR-0022 Slice A).
-  No database/Prisma wiring exists yet, so — since nothing in this repo
-  currently writes to it — a fresh process will typically return an **empty
-  list**, which is expected and safe.
-- Every returned record is a **dry-run audit history entry**:
-  `mode: "dry_run"`, `sideEffectsPerformed: false`. The result snapshot field
-  is named `dryRunResultSnapshot`, never `executionResult`, so it can't be
-  mistaken for a real command execution outcome.
 
 ---
 
@@ -126,11 +76,7 @@ Then open:
 - **`http://localhost:3000/demo`**
 
 The page fetches `GET /demo/capabilities` and renders the six reports with a
-summary and the Human-Approved Execution notice, plus a read-only
-**Execution preview** section labelled `Dry-run only`, `Side effects
-performed: false`, and `Human approval required`. The section is purely
-informational — there is no approve or execute button, no form, and no
-client-side execution trigger.
+summary and the Human-Approved Execution notice.
 
 ### API URL configuration
 
@@ -149,29 +95,6 @@ NEXT_PUBLIC_API_URL=http://localhost:4000 pnpm --filter @age/web dev
 > Start the API (mode B) **before** loading `/demo`, otherwise the page shows a
 > connection error.
 
-### C.1 Execution audit history view (read-only, ADR-0022 Slice C)
-
-With the API running (mode B, plus [§B.1](#b1-execution-audit-history-read-only-adr-0022-slice-b))
-and the web app running (mode C above), open:
-
-- **`http://localhost:3000/execution-audit`**
-
-The page reads `GET /execution-audit` and renders each dry-run audit record,
-labelled `Read-only`, `Dry-run only`, and `Side effects performed: false`. It
-is display-only — there is no approve, execute, retry, or run action, no
-mutation form, and no server action of any kind.
-
-- Scope: there is no finalized auth/tenant mechanism in this codebase yet
-  (same open question as ADR-0021/0022), so the page uses the same explicit
-  `organizationId`/`clientId` test-safe/demo scoping strategy as the API,
-  defaulting to `org-1`/`client-1` to match the [§B.1](#b1-execution-audit-history-read-only-adr-0022-slice-b)
-  curl examples. The scope fields on the page only trigger a re-read (GET) —
-  never a mutation.
-- Data source: the same in-memory, process-local repository as the API
-  (ADR-0022 Slice A). No database/Prisma wiring exists yet, so a fresh
-  process will typically show the empty state: "No dry-run audit records
-  found for this scope."
-
 ---
 
 ## What is completed / pending
@@ -184,39 +107,15 @@ mutation form, and no server action of any kind.
 - **Web demo screen** (`/demo`)
 - **ADR-0020** governance (branch flow) accepted
 - **Human-Approved Execution** flow — decision objects only, awaiting approval
-- **Phase 5 Slice 1** — `@age/execution-contracts`: pure, in-memory,
-  dry-run/no-op execution foundation (deterministic guard, dry-run executor,
-  audit/provenance chain), governed by **ADR-0021** (Accepted)
-- **Phase 5 Slice 2** — CLI **execution preview**: bridges accepted demo
-  decision objects through `@age/execution-contracts` to a read-only,
-  dry-run execution preview (`pnpm demo`); no API/Web execution surface
-- **Phase 5 Slice 3** — API/Web **read-only exposure** of the same preview:
-  `GET /demo/capabilities` now includes an `executionPreview` field, and the
-  `/demo` web page renders it in a read-only, labelled section. No new route,
-  no approve/execute button, no execution logic duplicated (reuses
-  `@age/demo-runtime`)
-- **ADR-0022 Slice A** — `@age/execution-audit-persistence`: pure, in-memory,
-  append-only dry-run execution audit persistence model + repository port +
-  reference in-memory repository. No DB wiring, no API/Web surface.
-- **ADR-0022 Slice B** — **read-only** `GET /execution-audit` and
-  `GET /execution-audit/:executionId` API, backed by the Slice A in-memory
-  repository. No Web UI, no approval endpoint, no execute endpoint, no DB
-  wiring yet — see [§B.1](#b1-execution-audit-history-read-only-adr-0022-slice-b).
-- **ADR-0022 Slice C** — **read-only** Web view (`/execution-audit`)
-  rendering Slice B's audit history, with a test-safe/demo scope selector
-  that only re-reads (never mutates). No approval action, no execution
-  action, no DB wiring — see [§C.1](#c1-execution-audit-history-view-read-only-adr-0022-slice-c).
 
 ### Pending (not yet built)
 
 - Real product workflows
 - Auth / tenant-aware demo access (not wired yet)
 - Persistence-backed inputs and outputs
-- A real approval workflow (approvals are display-only today; Phase 5 preview
-  approvals are simulated, not real)
+- A real approval workflow (approvals are display-only today)
 - External integrations
-- Real (side-effecting) execution engines and Autonomous Execution — remain
-  out of scope until a future ADR explicitly accepts them
+- Phase 5 execution engines
 - Production deployment hardening
 
 ---
@@ -226,20 +125,13 @@ mutation form, and no server action of any kind.
 The demo is intentionally inert. Across all three modes:
 
 - The demo is **read-only**.
-- There are **no real (side-effecting) execution engines**.
-- **No side effects** are performed — the Phase 5 execution preview is
-  **dry-run/no-op only**; every result has `sideEffectsPerformed: false`.
+- There are **no execution engines**.
+- **No side effects** are performed.
 - **No external APIs** are called.
 - **No database writes** occur.
 - **Every accepted item requires human approval before execution** — the demo
-  only produces recommendations, and the execution preview uses a simulated
-  approval context.
-- **Phase 5 has started** as **Human-Approved Execution** only (Slice 1:
-  execution contracts/foundation; Slice 2: CLI dry-run execution preview;
-  Slice 3: read-only API/Web exposure of the same preview — no new route, no
-  approve/execute action).
-  **Autonomous Execution remains out of scope** unless a future ADR
-  explicitly accepts it.
+  only produces recommendations.
+- **Phase 5 is not started.**
 
 ---
 

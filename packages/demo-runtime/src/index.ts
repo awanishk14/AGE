@@ -11,13 +11,4 @@
  * runner logic and fixtures live in exactly one place.
  */
 export { runAllCapabilities, type CapabilityRunReport } from './capabilities';
-export {
-  DEMO_EXECUTION_DOMAINS,
-  SIMULATED_DEMO_APPROVED_AT,
-  SIMULATED_DEMO_APPROVER,
-  simulatedDemoApproval,
-  previewItemExecution,
-  buildExecutionPreviews,
-  type ExecutionPreviewEntry,
-} from './execution-preview';
 export * from './fixtures';

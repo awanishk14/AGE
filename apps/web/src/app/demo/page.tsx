@@ -8,7 +8,6 @@ import {
   getApiBaseUrl,
   type CapabilityDemoReport,
   type CapabilityDemoResponse,
-  type ExecutionPreview,
 } from '@/lib/demo';
 
 type LoadState =
@@ -95,51 +94,6 @@ function CapabilityCard({ report }: { report: CapabilityDemoReport }) {
   );
 }
 
-/**
- * Read-only execution preview section. Display only — no approve/execute
- * button, no form, no action of any kind. Every result is dry-run/no-op.
- */
-function ExecutionPreviewSection({ preview }: { preview: ExecutionPreview }) {
-  return (
-    <section className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-          Execution preview
-        </h2>
-        <Notice ok>Dry-run only</Notice>
-        <Notice ok={!preview.sideEffectsPerformed}>
-          Side effects performed: {String(preview.sideEffectsPerformed)}
-        </Notice>
-        <Notice ok={preview.humanApprovalRequired}>Human approval required</Notice>
-      </div>
-      <p className="mt-2 text-xs text-neutral-500">
-        No real execution has occurred. Approval shown below is simulated for this demo only.
-      </p>
-      <p className="mt-1 text-xs text-neutral-400">
-        Simulated approval by {preview.simulatedApproval.approvedBy} at{' '}
-        {preview.simulatedApproval.approvedAt}
-      </p>
-
-      {preview.entries.length === 0 ? (
-        <p className="mt-3 text-sm text-neutral-400">(no accepted items to preview)</p>
-      ) : (
-        <ul className="mt-3 space-y-1">
-          {preview.entries.map((entry) => (
-            <li
-              key={`${entry.capability}-${entry.sourceItemId}`}
-              className="overflow-x-auto rounded bg-white px-2 py-1 font-mono text-xs text-neutral-700"
-            >
-              {entry.capability} {entry.sourceItemId} → {entry.executionDomain} — status=
-              {entry.status} mode={entry.mode} sideEffectsPerformed=
-              {String(entry.sideEffectsPerformed)}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div>
@@ -219,8 +173,6 @@ export default function DemoPage() {
               <CapabilityCard key={report.capability} report={report} />
             ))}
           </div>
-
-          <ExecutionPreviewSection preview={state.data.executionPreview} />
 
           <p className="text-xs text-neutral-400">
             Read-only demo. Nothing here is executed — every accepted item awaits human approval.

@@ -1,44 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import {
-  runAllCapabilities,
-  buildExecutionPreviews,
-  simulatedDemoApproval,
-  SIMULATED_DEMO_APPROVER,
-  SIMULATED_DEMO_APPROVED_AT,
-  type CapabilityRunReport,
-  type ExecutionPreviewEntry,
-} from '@age/demo-runtime';
-import type {
-  CapabilityDemoReport,
-  CapabilityDemoResponse,
-  ExecutionPreviewDto,
-  ExecutionPreviewEntryDto,
-} from './dto';
+import { runAllCapabilities, type CapabilityRunReport } from '@age/demo-runtime';
+import type { CapabilityDemoReport, CapabilityDemoResponse } from './dto';
 
 const DEMO_TITLE = 'AGE — In-Memory Capability Demo';
 const DEMO_DESCRIPTION =
   'Runs the six completed AGE capabilities against local fixtures, in-memory, ' +
   'and returns human-reviewable decision objects. Read-only: nothing is ' +
   'persisted, dispatched, or executed.';
-
-/**
- * Project one shared-runtime execution preview entry into the read-only API
- * DTO shape. Pure projection — reuses the dry-run result produced by
- * `@age/demo-runtime` (which itself delegates to `@age/execution-contracts`);
- * no execution logic is duplicated here.
- */
-function toExecutionPreviewEntryDto(entry: ExecutionPreviewEntry): ExecutionPreviewEntryDto {
-  return {
-    capability: entry.capabilityName,
-    sourceItemId: entry.sourceItemId,
-    executionDomain: entry.executionDomain,
-    status: entry.result.status,
-    mode: entry.result.mode,
-    sideEffectsPerformed: entry.result.sideEffectsPerformed,
-    traceability: entry.result.audit.traceability,
-    detail: entry.result.detail,
-  };
-}
 
 /** Project one shared-runtime report into the read-only API report shape. */
 function toDemoReport(report: CapabilityRunReport): CapabilityDemoReport {
@@ -80,18 +48,6 @@ export class DemoService {
     );
     const accountingInvariantHolds = reports.every((report) => report.accountingHolds);
 
-    const previewEntries = buildExecutionPreviews(reports, simulatedDemoApproval());
-    const executionPreview: ExecutionPreviewDto = {
-      mode: 'dry_run',
-      sideEffectsPerformed: false,
-      humanApprovalRequired: true,
-      simulatedApproval: {
-        approvedBy: SIMULATED_DEMO_APPROVER,
-        approvedAt: SIMULATED_DEMO_APPROVED_AT.toISOString(),
-      },
-      entries: previewEntries.map(toExecutionPreviewEntryDto),
-    };
-
     return {
       title: DEMO_TITLE,
       description: DEMO_DESCRIPTION,
@@ -103,7 +59,6 @@ export class DemoService {
         totalPendingApprovals,
         accountingInvariantHolds,
       },
-      executionPreview,
     };
   }
 }

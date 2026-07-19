@@ -92,36 +92,6 @@ function validate(body) {
       `report "${report.capability}" must not contain an executionResult field`,
     );
   }
-
-  const preview = body.executionPreview;
-  assert(preview !== undefined, 'response has no `executionPreview` field');
-  assert(
-    preview.mode === 'dry_run',
-    `expected executionPreview.mode === 'dry_run', got ${preview.mode}`,
-  );
-  assert(
-    preview.sideEffectsPerformed === false,
-    'expected executionPreview.sideEffectsPerformed === false',
-  );
-  assert(
-    preview.humanApprovalRequired === true,
-    'expected executionPreview.humanApprovalRequired === true',
-  );
-  assert(Array.isArray(preview.entries), 'executionPreview.entries must be an array');
-  assert(
-    !('executionResult' in preview),
-    'executionPreview must not contain an executionResult field',
-  );
-  for (const entry of preview.entries) {
-    assert(
-      entry.sideEffectsPerformed === false,
-      `execution preview entry for "${entry.sourceItemId}" must have sideEffectsPerformed === false`,
-    );
-    assert(
-      !('executionResult' in entry),
-      `execution preview entry for "${entry.sourceItemId}" must not contain an executionResult field`,
-    );
-  }
 }
 
 async function main() {
@@ -175,8 +145,7 @@ async function main() {
     validate(body);
     console.log(
       `[smoke] OK: 6 capabilities, ${body.summary.totalPendingApprovals} pending approvals, ` +
-        `accounting invariant ${body.summary.accountingInvariantHolds}, ` +
-        `${body.executionPreview.entries.length} dry-run execution preview entries, no side effects.`,
+        `accounting invariant ${body.summary.accountingInvariantHolds}, no side effects.`,
     );
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));

@@ -56,15 +56,6 @@ importers:
       '@age/demo-runtime':
         specifier: workspace:*
         version: link:../../packages/demo-runtime
-      '@age/execution-approval-workflow':
-        specifier: workspace:*
-        version: link:../../packages/execution-approval-workflow
-      '@age/execution-audit-persistence':
-        specifier: workspace:*
-        version: link:../../packages/execution-audit-persistence
-      '@age/execution-contracts':
-        specifier: workspace:*
-        version: link:../../packages/execution-contracts
       '@age/integrations':
         specifier: workspace:*
         version: link:../../packages/integrations
@@ -105,9 +96,6 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      '@age/capability-kit':
-        specifier: workspace:*
-        version: link:../../packages/capability-kit
       '@nestjs/cli':
         specifier: ^10.4.5
         version: 10.4.9
@@ -331,9 +319,6 @@ importers:
       '@age/evidence-contracts':
         specifier: workspace:*
         version: link:../evidence-contracts
-      '@age/execution-contracts':
-        specifier: workspace:*
-        version: link:../execution-contracts
       '@age/growth-contracts':
         specifier: workspace:*
         version: link:../growth-contracts
@@ -352,42 +337,6 @@ importers:
         version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
 
   packages/evidence-contracts:
-    devDependencies:
-      vitest:
-        specifier: ^2.1.1
-        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
-
-  packages/execution-approval-workflow:
-    dependencies:
-      '@age/execution-contracts':
-        specifier: workspace:*
-        version: link:../execution-contracts
-    devDependencies:
-      '@age/capability-kit':
-        specifier: workspace:*
-        version: link:../capability-kit
-      vitest:
-        specifier: ^2.1.1
-        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
-
-  packages/execution-audit-persistence:
-    dependencies:
-      '@age/execution-contracts':
-        specifier: workspace:*
-        version: link:../execution-contracts
-    devDependencies:
-      '@age/capability-kit':
-        specifier: workspace:*
-        version: link:../capability-kit
-      vitest:
-        specifier: ^2.1.1
-        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
-
-  packages/execution-contracts:
-    dependencies:
-      '@age/capability-kit':
-        specifier: workspace:*
-        version: link:../capability-kit
     devDependencies:
       vitest:
         specifier: ^2.1.1
