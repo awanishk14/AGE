@@ -1,6 +1,6 @@
 # ADR 0024: Production Operator and Tenant Context Boundary
 
-- Status: Accepted
+- Status: Proposed
 - Date: 2026-07-18
 
 ## Context
