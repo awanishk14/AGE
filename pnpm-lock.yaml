@@ -56,12 +56,6 @@ importers:
       '@age/demo-runtime':
         specifier: workspace:*
         version: link:../../packages/demo-runtime
-      '@age/execution-audit-persistence':
-        specifier: workspace:*
-        version: link:../../packages/execution-audit-persistence
-      '@age/execution-contracts':
-        specifier: workspace:*
-        version: link:../../packages/execution-contracts
       '@age/integrations':
         specifier: workspace:*
         version: link:../../packages/integrations
@@ -102,9 +96,6 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      '@age/capability-kit':
-        specifier: workspace:*
-        version: link:../../packages/capability-kit
       '@nestjs/cli':
         specifier: ^10.4.5
         version: 10.4.9
