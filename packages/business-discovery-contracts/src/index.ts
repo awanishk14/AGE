@@ -58,3 +58,30 @@ export type { DiscoverySection } from './discovery-section';
 
 export { businessDiscoveryProfileSchema } from './business-discovery-profile';
 export type { BusinessDiscoveryProfile } from './business-discovery-profile';
+
+// Questionnaire definition layer (curated sections/questions + Zod schemas).
+export {
+  PROFILE_SIGNALS,
+  profileSignalSchema,
+  businessDiscoveryQuestionnaireVersionSchema,
+  businessDiscoveryQuestionnaireQuestionSchema,
+  businessDiscoveryQuestionnaireSectionSchema,
+  businessDiscoveryQuestionnaireSchema,
+} from './questionnaire';
+export type {
+  ProfileSignal,
+  BusinessDiscoveryQuestionnaireVersion,
+  BusinessDiscoveryQuestionnaireQuestion,
+  BusinessDiscoveryQuestionnaireSection,
+  BusinessDiscoveryQuestionnaire,
+} from './questionnaire';
+
+// Curated default questionnaire (static definition, no side effects).
+export { DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE } from './default-questionnaire';
+
+// Questionnaire validation (pure, deterministic completeness check).
+export {
+  questionnaireValidationResultSchema,
+  validateProfileAgainstQuestionnaire,
+} from './questionnaire-validation';
+export type { QuestionnaireValidationResult } from './questionnaire-validation';
