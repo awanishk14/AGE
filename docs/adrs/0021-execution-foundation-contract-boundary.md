@@ -120,8 +120,6 @@ effects, no integration calls, and no autonomy**.
 ## Status note
 
 **Accepted** by the Product Owner (2026-07-14). Phase 5 Slice 1 implements this boundary in
-`@age/execution-contracts`: the dry-run/no-op, Human-Approved execution foundation. Phase 5 Slice 2
-(merged 2026-07-16) consumes this boundary from `@age/demo-runtime` + the demo CLI to produce a
-read-only, dry-run execution preview — no new execution surface, package, or behavior was added to
-this boundary itself. Real integrations, persistence, and any move toward autonomy remain out of
-scope and each require their own future ADR.
+`@age/execution-contracts`: the dry-run/no-op, Human-Approved execution foundation. Real
+integrations, persistence, and any move toward autonomy remain out of scope and each require their
+own future ADR.

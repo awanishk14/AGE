@@ -32,16 +32,6 @@ What it shows:
 - **accepted / rejected / duplicate** accounting per capability, with the
   invariant `accepted + rejected + duplicate === derived === input items`
 - a **pending human approval** checklist — every accepted item awaits sign-off
-- an **execution preview** section (Phase 5 Slice 2) showing what a
-  **dry-run/no-op** execution would look like for each accepted item, clearly
-  labelled:
-  - `Execution preview: dry-run only`
-  - `Side effects performed: false`
-  - `Human approval required`
-
-  The preview uses a **simulated** approval context for demo purposes only —
-  no real execution happens, and every result carries
-  `sideEffectsPerformed: false`.
 
 See [`apps/demo/README.md`](../apps/demo/README.md) and
 [`apps/demo/sample-output.txt`](../apps/demo/sample-output.txt) for a full
@@ -117,23 +107,15 @@ NEXT_PUBLIC_API_URL=http://localhost:4000 pnpm --filter @age/web dev
 - **Web demo screen** (`/demo`)
 - **ADR-0020** governance (branch flow) accepted
 - **Human-Approved Execution** flow — decision objects only, awaiting approval
-- **Phase 5 Slice 1** — `@age/execution-contracts`: pure, in-memory,
-  dry-run/no-op execution foundation (deterministic guard, dry-run executor,
-  audit/provenance chain), governed by **ADR-0021** (Accepted)
-- **Phase 5 Slice 2** — CLI **execution preview**: bridges accepted demo
-  decision objects through `@age/execution-contracts` to a read-only,
-  dry-run execution preview (`pnpm demo`); no API/Web execution surface
 
 ### Pending (not yet built)
 
 - Real product workflows
 - Auth / tenant-aware demo access (not wired yet)
 - Persistence-backed inputs and outputs
-- A real approval workflow (approvals are display-only today; Phase 5 preview
-  approvals are simulated, not real)
+- A real approval workflow (approvals are display-only today)
 - External integrations
-- Real (side-effecting) execution engines and Autonomous Execution — remain
-  out of scope until a future ADR explicitly accepts them
+- Phase 5 execution engines
 - Production deployment hardening
 
 ---
@@ -143,18 +125,13 @@ NEXT_PUBLIC_API_URL=http://localhost:4000 pnpm --filter @age/web dev
 The demo is intentionally inert. Across all three modes:
 
 - The demo is **read-only**.
-- There are **no real (side-effecting) execution engines**.
-- **No side effects** are performed — the Phase 5 execution preview is
-  **dry-run/no-op only**; every result has `sideEffectsPerformed: false`.
+- There are **no execution engines**.
+- **No side effects** are performed.
 - **No external APIs** are called.
 - **No database writes** occur.
 - **Every accepted item requires human approval before execution** — the demo
-  only produces recommendations, and the execution preview uses a simulated
-  approval context.
-- **Phase 5 has started** as **Human-Approved Execution** only (Slice 1:
-  execution contracts/foundation; Slice 2: dry-run execution preview).
-  **Autonomous Execution remains out of scope** unless a future ADR
-  explicitly accepts it.
+  only produces recommendations.
+- **Phase 5 is not started.**
 
 ---
 
