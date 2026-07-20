@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, extname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { runAllCapabilities } from '@age/demo-runtime';
+import { runAllCapabilities, runBusinessDiscoveryIntake } from '@age/demo-runtime';
 
 /**
  * The CLI app is now a thin shell over `@age/demo-runtime`. These tests assert
@@ -31,6 +31,20 @@ describe('AGE demo CLI app', () => {
   });
 
   it('has exactly six decision objects pending human approval', async () => {
+    const reports = await runAllCapabilities();
+    const pending = reports.reduce((sum, r) => sum + r.acceptedItems.length, 0);
+    expect(pending).toBe(6);
+  });
+
+  it('runs the upstream Business Discovery intake via the shared runtime', () => {
+    const summary = runBusinessDiscoveryIntake();
+    expect(summary.profileSchemaValid).toBe(true);
+    expect(summary.questionnaireValid).toBe(true);
+    expect(summary.mappedSectionKeys.length).toBeGreaterThan(0);
+  });
+
+  it('keeps discovery out of the approval model (pending count unchanged)', async () => {
+    runBusinessDiscoveryIntake();
     const reports = await runAllCapabilities();
     const pending = reports.reduce((sum, r) => sum + r.acceptedItems.length, 0);
     expect(pending).toBe(6);

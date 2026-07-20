@@ -11,4 +11,8 @@
  * runner logic and fixtures live in exactly one place.
  */
 export { runAllCapabilities, type CapabilityRunReport } from './capabilities';
+export {
+  runBusinessDiscoveryIntake,
+  type BusinessDiscoveryIntakeSummary,
+} from './business-discovery';
 export * from './fixtures';

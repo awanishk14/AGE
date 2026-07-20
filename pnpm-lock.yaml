@@ -305,6 +305,9 @@ importers:
       '@age/authority-contracts':
         specifier: workspace:*
         version: link:../authority-contracts
+      '@age/business-discovery-contracts':
+        specifier: workspace:*
+        version: link:../business-discovery-contracts
       '@age/capability-authority':
         specifier: workspace:*
         version: link:../capabilities/authority

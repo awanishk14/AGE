@@ -1,4 +1,9 @@
-import { runAllCapabilities, type CapabilityRunReport } from '@age/demo-runtime';
+import {
+  runAllCapabilities,
+  runBusinessDiscoveryIntake,
+  type BusinessDiscoveryIntakeSummary,
+  type CapabilityRunReport,
+} from '@age/demo-runtime';
 
 /**
  * AGE in-memory capability demo runner.
@@ -12,6 +17,47 @@ import { runAllCapabilities, type CapabilityRunReport } from '@age/demo-runtime'
 
 function line(char = '-', width = 72): string {
   return char.repeat(width);
+}
+
+/**
+ * Print the upstream Business Discovery intake stage. This runs *before* the
+ * capabilities and produces no decision objects — nothing here is approved or
+ * executed, so it is reported as context, not as pending work.
+ */
+function printDiscovery(summary: BusinessDiscoveryIntakeSummary): void {
+  console.log('');
+  console.log(line('='));
+  console.log('DISCOVERY / INTAKE: Business Discovery (upstream — not a capability)');
+  console.log(line('='));
+  console.log(`profile: ${summary.profileId}  |  business: ${summary.businessName}`);
+  console.log(
+    `questionnaire: ${summary.questionnaireId} v${summary.questionnaireVersion}  |  ` +
+      `profile schema: ${summary.profileSchemaValid ? 'VALID' : 'INVALID'}  |  ` +
+      `questionnaire: ${summary.questionnaireValid ? 'VALID' : 'INCOMPLETE'}`,
+  );
+  console.log(
+    `missingRequired=${summary.missingRequiredCount}  criticalGaps=${summary.criticalGapCount}`,
+  );
+
+  console.log('');
+  console.log('BIF-compatible projection:');
+  console.log(`  mapped sections (${summary.mappedSectionKeys.length}):`);
+  for (const key of summary.mappedSectionKeys) {
+    console.log(`    - ${key}`);
+  }
+  console.log(
+    `  segments=${summary.customerSegmentCount}  offerings=${summary.offeringCount}  ` +
+      `competitors=${summary.competitorCount}  goals=${summary.goalCount}`,
+  );
+  console.log(
+    `  evidenceRefs=${summary.evidenceReferenceCount}  assumptions=${summary.assumptionCount}`,
+  );
+
+  console.log('');
+  console.log(
+    'Discovery captures context only — no strategy, no scoring, no approval required. ' +
+      'Evidence references are counted, never fetched.',
+  );
 }
 
 function printReport(report: CapabilityRunReport): void {
@@ -81,6 +127,9 @@ async function main(): Promise<void> {
   console.log('No external side effects are performed by this demo.');
   console.log(line('#'));
 
+  const discovery = runBusinessDiscoveryIntake();
+  printDiscovery(discovery);
+
   const reports = await runAllCapabilities();
 
   let totalPending = 0;
@@ -94,7 +143,9 @@ async function main(): Promise<void> {
   console.log('');
   console.log(line('#'));
   console.log(
-    `SUMMARY: ${reports.length} capabilities ran; ` +
+    `SUMMARY: Business Discovery intake loaded (profile ${discovery.profileId}, ` +
+      `${discovery.mappedSectionKeys.length} mapped section(s)); ` +
+      `${reports.length} capabilities ran; ` +
       `${totalPending} decision object(s) pending human approval.`,
   );
   console.log(
