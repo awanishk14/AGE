@@ -4,14 +4,14 @@
 > `c0586a707cff53bbe6b23d5a9c83f7242089e276` (PR #75 merged, main CI green).
 > **No code, package, ADR-status or configuration change accompanies this document.**
 
-| Field         | Value                                                       |
-| ------------- | ----------------------------------------------------------- |
-| Date          | 2026-07-20                                                  |
-| Base commit   | `c0586a707cff53bbe6b23d5a9c83f7242089e276`                  |
-| Branch        | `docs/business-discovery-bif-checkpoint`                    |
-| Scope         | Documentation only                                          |
-| PR sequence   | #67 → #75 (nine PRs, all merged to `main`)                  |
-| Governing ADR | ADR-0025 — Discovery to BIF Wiring Prerequisites (Accepted) |
+| Field         | Value                                                                              |
+| ------------- | ---------------------------------------------------------------------------------- |
+| Date          | 2026-07-20                                                                         |
+| Base commit   | `c0586a707cff53bbe6b23d5a9c83f7242089e276`                                         |
+| Branch        | `docs/business-discovery-bif-checkpoint`                                           |
+| Scope         | Documentation only                                                                 |
+| PR sequence   | #67 → #75 (nine PRs, all merged to `main`)                                         |
+| Governing ADR | ADR-0025 — Discovery to BIF Wiring Prerequisites (**Proposed** — not yet ratified) |
 
 ---
 
@@ -106,7 +106,7 @@ returns only the mapper's own source, its own barrel export, and its own tests.
 | **#70** | `feat: integrate Business Discovery into demo runner`          | `@age/demo-runtime` gains a discovery module; the CLI demo (`pnpm demo`) reports discovery using the #69 projection. Read-only; no API or Web surface.                                                             |
 | **#71** | `docs: decide Business Discovery PR5 scope`                    | Decision record: **skip** the originally planned API/Web PR #5. Exposure was judged premature while the discovery→BIF semantics were unsettled — a decision this checkpoint reaffirms.                             |
 | **#72** | `feat: add Business Discovery completeness scoring`            | Deterministic capture completeness with a per-section breakdown, `discoveryConfidenceScore` (confidence in the **input**, explicitly not strategic confidence) and a readiness band.                               |
-| **#73** | `docs: propose Discovery to BIF wiring ADR`                    | **ADR-0025**, establishing the prerequisites for wiring discovery into BIF: date determinism, field-level provenance, score mapping, partial-draft rules. Accepted.                                                |
+| **#73** | `docs: propose Discovery to BIF wiring ADR`                    | **ADR-0025**, proposing the prerequisites for wiring discovery into BIF: date determinism, field-level provenance, score mapping, partial-draft rules. **Status `Proposed` — never ratified.**                     |
 | **#74** | `feat: add Business Discovery field-level evidence references` | Field-level evidence citations, the `EvidenceableFieldPath` vocabulary, and validation that detects **dangling** references (citations naming no declared source). The provenance PR #75 consumes.                 |
 | **#75** | `feat: map Business Discovery to BIF draft`                    | **`mapBusinessDiscoveryToBifDraft`** — the first real canonical BIF. Draft status, caller-supplied context, canonical field keys, honest provenance, and BIF population completeness computed from emitted fields. |
 
@@ -114,9 +114,16 @@ returns only the mapper's own source, its own barrel export, and its own tests.
 and set root `completenessScore` from discovery capture completeness. That published `97` on a BIF
 populating 10 of 84 fields. The PR was refined before merge to compute completeness from BIF field
 population (`12`), keep `discoveryCompletenessScore` (`97`) in metadata, apply the same population
-metric to sections, and emit warnings stating the two are separate. **ADR-0025 was deliberately not
-amended in that PR** — the implementation now differs from the letter of Decision 3, and reconciling
-the ADR text is outstanding work (see §7).
+metric to sections, and emit warnings stating the two are separate.
+
+**The divergence was intentional and remains the right call.** BIF population completeness and
+discovery capture completeness are genuinely different metrics — one describes the BIF, the other
+describes the interview — and mapping the second onto the first would have overstated how populated
+the BIF is. **ADR-0025 was deliberately not edited in that PR**, which was scoped to exclude ADR
+changes, so its Decision 3 still reads "map completeness directly" while the merged implementation
+does not. Because **ADR-0025 is `Proposed` and was never ratified**, this is a proposal that
+implementation experience has since improved upon, not an accepted decision being contravened —
+which makes it cheap to fix (see §5 and §8).
 
 ---
 
@@ -251,10 +258,22 @@ each is recorded so it is not mistaken for an oversight.
 
 **Governance**
 
-- **ADR-0025 Decision 3 no longer matches the implementation.** The ADR says map completeness
-  directly; the merged mapper computes BIF population completeness instead, for the reasons in §1.
-  The deviation is deliberate, documented in code and in the PR, and **not yet reconciled in the ADR
-  text.** Whoever takes the next slice should expect to amend ADR-0025 or supersede Decision 3.
+- **ADR-0025 is `Proposed`, not accepted.** Its status field reads `Status: Proposed`. It has never
+  been ratified, so it governs the discovery→BIF work as a **standing proposal** rather than as an
+  accepted decision. (The one "Accepted" inside that file refers to **ADR-0020**, Branch Flow
+  Governance, which is unrelated.)
+- **ADR-0025 Decision 3 does not match the implementation.** The ADR says map completeness directly;
+  the merged mapper computes BIF population completeness instead, for the reasons in §1. The
+  divergence is deliberate, documented in code and in PR #75, and **not yet reconciled in the ADR
+  text** — PR #75 was scoped to exclude ADR changes.
+- **The cleaner governance path is to revise Decision 3 _before_ accepting ADR-0025** — not to accept
+  it as written and then amend or supersede it. Because nothing has been ratified, there is no
+  accepted decision to contravene and no supersession record to create: the proposal can simply be
+  corrected to describe the two-metric approach the implementation demonstrated, and then put forward
+  for acceptance. Ratifying a Decision 3 that is already known to be wrong, purely to amend it
+  afterwards, would manufacture governance churn for no benefit.
+- **This checkpoint does not modify ADR-0025.** It records the reconciliation as outstanding work;
+  revising the ADR is its own reviewed change (see §6 and §8).
 
 ---
 
@@ -274,8 +293,10 @@ each is recorded so it is not mistaken for an oversight.
   Execution Model.
 - **Do not move anything to SAGE.**
 - **Do not touch `develop`.** It is stale; `main` is canonical.
-- **Do not amend ADR-0025 as a side effect** of an implementation slice. If Decision 3 needs
-  reconciling, that is its own reviewed change.
+- **Do not revise ADR-0025 as a side effect** of an implementation slice. Decision 3 does need
+  reconciling before the ADR is accepted, but that is its own reviewed change.
+- **Do not accept ADR-0025 as currently written.** Its Decision 3 is already known not to match the
+  merged implementation; ratifying it unchanged would accept a decision that is wrong on arrival.
 
 ---
 
@@ -351,8 +372,15 @@ by 1 of 9 fields, all user-confirmed, score _low confidence_ (little corroborati
 confidence_ (everything present is directly client-stated)? These give opposite answers, and the
 choice determines the whole layer. Confidence and completeness are orthogonal — a small,
 well-evidenced section can be highly trustworthy — and conflating them would recreate exactly the
-category error §1 records. **Resolve this before writing code**, and expect it to require amending or
-superseding ADR-0025 Decision 3, which is separately out of step with the merged implementation.
+category error §1 records. **Resolve this before writing code.**
+
+**Governance prerequisite.** ADR-0025 is `Proposed`, and its Decision 3 is already out of step with
+the merged mapper (§5). The natural moment to fix that is alongside this slice: **revise Decision 3
+to describe the two-metric approach — BIF population completeness on the BIF, discovery capture
+completeness in metadata — and settle the confidence question above, then put ADR-0025 forward for
+acceptance as a coherent whole.** That is one reviewed governance change rather than accept-then-amend,
+and it means the scoring layer is built against a ratified decision instead of a stale proposal.
+Revising the ADR is **not** part of the implementation slice itself.
 
 ---
 
@@ -363,8 +391,11 @@ This PR is **documentation-only**:
 - One file added: `docs/reviews/BUSINESS_DISCOVERY_TO_BIF_CHECKPOINT.md`.
 - **No code changes. No package changes.** No `package.json`, no lockfile, no source file.
 - **No API, Web, DB or persistence changes.**
-- **No ADR status changes.** ADR-0025 remains `Accepted` and unedited; the §5 note that its Decision
-  3 is out of step with the implementation is an observation recorded here, **not** an amendment.
+- **No ADR status changes, and ADR-0025 itself is not edited.** It remains at `Status: Proposed`,
+  exactly as it stands on `main` — this checkpoint **describes** that status, it does not set or
+  change it. The §5 notes that ADR-0025 is unratified and that its Decision 3 is out of step with the
+  implementation are observations recorded here, **not** an amendment, an acceptance, or a
+  supersession.
 - **No SAGE changes. `develop` untouched.**
 - **No implementation started.** §7 and §8 are a recommendation and a proposed scope awaiting
   approval — not a commitment, and not work in progress.
