@@ -55,6 +55,33 @@ const MISSING_CRITICAL_PROFILE: BusinessDiscoveryProfile = {
   goals: [],
 };
 
+/**
+ * Evidence sources are declared, but no captured answer cites any of them —
+ * nominal evidence. Must not read as confident, and must not beat a profile
+ * that genuinely cites fewer sources.
+ */
+const LISTED_BUT_UNCITED_PROFILE: BusinessDiscoveryProfile = {
+  ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
+  sections: [],
+};
+
+/** The same, but padding the list with many more uncited sources. */
+const UNCITED_MANY_SOURCES_PROFILE: BusinessDiscoveryProfile = {
+  ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
+  sections: [],
+  evidenceSources: Array.from({ length: 8 }, (_, index) => ({
+    id: `padded-source-${index}`,
+    label: `Padded source ${index}`,
+    kind: 'document' as const,
+  })),
+};
+
+/** Genuinely cites its evidence, but declares only a single source. */
+const CITED_SINGLE_SOURCE_PROFILE: BusinessDiscoveryProfile = {
+  ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
+  evidenceSources: SAMPLE_BUSINESS_DISCOVERY_PROFILE.evidenceSources.slice(0, 1),
+};
+
 describe('Business Discovery completeness scoring', () => {
   describe('pinned score examples', () => {
     it('scores the fully-populated sample profile', () => {
@@ -82,6 +109,15 @@ describe('Business Discovery completeness scoring', () => {
       // ...so it is emphatically not "strong".
       expect(result.readinessBand).toBe('partial');
       expect(result.reasons).toContain('no-evidence-sources');
+      expect(result.reasons).toContain('confidence-capped:no-evidence');
+    });
+
+    it('scores a profile whose evidence is listed but never cited', () => {
+      const result = calculateBusinessDiscoveryCompleteness(LISTED_BUT_UNCITED_PROFILE);
+      expect(result.completenessScore).toBe(97);
+      // Capped: nominal evidence is barely better than none.
+      expect(result.discoveryConfidenceScore).toBe(45);
+      expect(result.readinessBand).toBe('usable');
     });
 
     it('scores a profile with a missing required/critical area', () => {
@@ -148,14 +184,44 @@ describe('Business Discovery completeness scoring', () => {
     });
 
     it('rewards evidence that is actually cited over evidence merely listed', () => {
-      const listedOnly = calculateBusinessDiscoveryCompleteness({
-        ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
-        sections: [],
-      });
+      const listedOnly = calculateBusinessDiscoveryCompleteness(LISTED_BUT_UNCITED_PROFILE);
       const cited = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
       expect(listedOnly.reasons).toContain('evidence-sources-unlinked');
       expect(cited.reasons).toContain('evidence-backed');
-      expect(cited.discoveryConfidenceScore).toBeGreaterThan(listedOnly.discoveryConfidenceScore);
+      expect(cited.discoveryConfidenceScore).toBe(63);
+      expect(listedOnly.discoveryConfidenceScore).toBe(45);
+    });
+
+    it('caps uncited evidence and surfaces it as a limiting reason', () => {
+      const result = calculateBusinessDiscoveryCompleteness(LISTED_BUT_UNCITED_PROFILE);
+      expect(result.discoveryConfidenceScore).toBeLessThanOrEqual(45);
+      expect(result.reasons).toContain('confidence-capped:uncited-evidence');
+      expect(result.reasons).toContain('evidence-sources-unlinked');
+      expect(result.readinessBand).not.toBe('strong');
+    });
+
+    it('does not let extra uncited sources buy any confidence', () => {
+      const three = calculateBusinessDiscoveryCompleteness(LISTED_BUT_UNCITED_PROFILE);
+      const eight = calculateBusinessDiscoveryCompleteness(UNCITED_MANY_SOURCES_PROFILE);
+      expect(eight.evidenceReferenceCount).toBe(8);
+      expect(three.evidenceReferenceCount).toBe(3);
+      // Padding the list changes nothing once the cap binds.
+      expect(eight.discoveryConfidenceScore).toBe(three.discoveryConfidenceScore);
+      expect(eight.discoveryConfidenceScore).toBe(45);
+      expect(eight.readinessBand).toBe('usable');
+    });
+
+    it('ranks one genuinely cited source above eight uncited ones', () => {
+      const citedOnce = calculateBusinessDiscoveryCompleteness(CITED_SINGLE_SOURCE_PROFILE);
+      const uncitedEight = calculateBusinessDiscoveryCompleteness(UNCITED_MANY_SOURCES_PROFILE);
+      expect(citedOnce.evidenceReferenceCount).toBe(1);
+      expect(uncitedEight.evidenceReferenceCount).toBe(8);
+      // Citing beats listing, even at 1 source against 8.
+      expect(citedOnce.discoveryConfidenceScore).toBe(52);
+      expect(uncitedEight.discoveryConfidenceScore).toBe(45);
+      expect(citedOnce.discoveryConfidenceScore).toBeGreaterThan(
+        uncitedEight.discoveryConfidenceScore,
+      );
     });
 
     it('drops when critical gaps are present', () => {
@@ -227,6 +293,13 @@ describe('Business Discovery completeness scoring', () => {
       expect(result.completenessScore).toBe(93); // would band `strong` on completeness alone
       expect(result.discoveryConfidenceScore).toBe(35); // below the 40 floor
       expect(result.readinessBand).toBe('partial');
+    });
+
+    it('demotes to usable on uncited evidence despite 97 completeness', () => {
+      const result = calculateBusinessDiscoveryCompleteness(LISTED_BUT_UNCITED_PROFILE);
+      expect(result.completenessScore).toBe(97); // would band `strong` on completeness alone
+      expect(result.discoveryConfidenceScore).toBe(45); // between the 40 and 60 floors
+      expect(result.readinessBand).toBe('usable');
     });
 
     it('bands an empty profile as incomplete', () => {

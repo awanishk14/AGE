@@ -41,6 +41,23 @@ import { validateProfileAgainstQuestionnaire } from './questionnaire-validation'
  * scores high completeness and low confidence, and `readinessBand` reflects the
  * weaker of the two. Keeping them independent is what makes them useful to a
  * later BIF wiring slice, which needs both numbers to mean different things.
+ *
+ * KNOWN LIMITATION (v2.1.0) — evidence coverage depends on **answer-level**
+ * citation via `DiscoveryAnswer.evidenceSourceIds`. That is the only place the
+ * current contracts can express provenance. When a structured profile field
+ * satisfies a questionnaire signal directly (via `satisfiedBy`) rather than
+ * through a captured answer, there is nowhere to attach an evidence reference,
+ * so the scorer cannot credit that field as evidence-covered — even if the fact
+ * genuinely came from a cited source. Consequence: a profile captured entirely
+ * through structured fields is ceilinged by `uncitedEvidenceCap` no matter how
+ * well-sourced it really is.
+ *
+ * This is acceptable for now (it errs toward under-claiming confidence, never
+ * over-claiming) but it is explicitly called out because a future Discovery →
+ * BIF wiring slice needs **field-level provenance**: the canonical BIF requires
+ * `source` and `confidence` per field, which this limitation would otherwise
+ * silently under-populate. Lifting it means adding field-level evidence
+ * references to the discovery contracts — a separate, decided slice.
  */
 
 /**
@@ -48,7 +65,7 @@ import { validateProfileAgainstQuestionnaire } from './questionnaire-validation'
  * be traced to the model that produced it. Not a timestamp — deliberately no
  * wall-clock anywhere in this module.
  */
-export const BUSINESS_DISCOVERY_SCORING_VERSION = '2.0.0';
+export const BUSINESS_DISCOVERY_SCORING_VERSION = '2.1.0';
 
 /**
  * Explicit per-section weights, summing to 100 across every
@@ -115,8 +132,15 @@ const CONFIDENCE = {
   /** Flat, small credit for declaring assumptions at all (transparency). Capped
    *  so that declaring many assumptions can never inflate confidence. */
   assumptionTransparencyMax: 5,
-  /** Hard ceiling applied when the profile has zero evidence sources. */
+  /** Hard ceiling when the profile has zero evidence sources. */
   noEvidenceCap: 35,
+  /**
+   * Hard ceiling when evidence sources exist but nothing cites them. Set above
+   * `noEvidenceCap` (listing sources is marginally better than none) but well
+   * below the `strong` band floor, so nominal evidence can never read as ready
+   * and can never outrank genuinely cited evidence.
+   */
+  uncitedEvidenceCap: 45,
   /** Per critical gap, capped — unknowns in critical areas erode trust fastest. */
   criticalGapPenalty: 8,
   criticalGapPenaltyMax: 30,
@@ -281,20 +305,27 @@ function evidenceSectionCoverage(
 }
 
 /**
- * Evidence signal in 0–1: half from how many evidence sources exist (saturating
- * at `EVIDENCE_SOURCE_TARGET`), half from how broadly those citations actually
- * reach across the questionnaire's sections. Both halves are required — listing
- * sources without citing them, or citing one section only, each score at most a
- * half signal.
+ * Evidence signal in 0–1.
+ *
+ * When any evidence is actually cited, the signal is half source count
+ * (saturating at `EVIDENCE_SOURCE_TARGET`) and half citation breadth across the
+ * questionnaire's sections.
+ *
+ * When **nothing is cited**, source count earns only `UNCITED_PRESENCE_FACTOR`
+ * of its usual credit. A list of sources nobody ever pointed an answer at is a
+ * claim, not evidence — without this, adding uncited sources would be the
+ * cheapest way to raise confidence, and a profile citing nothing could outrank
+ * one that cites properly.
  */
-function evidenceSignal(
-  profile: BusinessDiscoveryProfile,
-  questionnaire: BusinessDiscoveryQuestionnaire,
-): number {
-  const presence =
-    Math.min(profile.evidenceSources.length, EVIDENCE_SOURCE_TARGET) / EVIDENCE_SOURCE_TARGET;
-  return presence * 0.5 + evidenceSectionCoverage(profile, questionnaire) * 0.5;
+function evidenceSignal(presence: number, coverage: number): number {
+  if (coverage === 0) {
+    return presence * UNCITED_PRESENCE_FACTOR;
+  }
+  return presence * 0.5 + coverage * 0.5;
 }
+
+/** Fraction of the usual presence credit earned when no evidence is ever cited. */
+const UNCITED_PRESENCE_FACTOR = 0.15;
 
 /** Weight of one question within its section. */
 function questionWeight(question: BusinessDiscoveryQuestionnaireQuestion): number {
@@ -397,9 +428,13 @@ export function calculateBusinessDiscoveryCompleteness(
     (assumption) => assumption.confidence === 'low',
   ).length;
 
+  const evidencePresence =
+    Math.min(profile.evidenceSources.length, EVIDENCE_SOURCE_TARGET) / EVIDENCE_SOURCE_TARGET;
+  const evidenceCoverage = evidenceSectionCoverage(profile, questionnaire);
+
   // No baseline: nothing is earned for merely being a schema-valid profile.
   const confidenceRaw =
-    evidenceSignal(profile, questionnaire) * CONFIDENCE.evidenceMax +
+    evidenceSignal(evidencePresence, evidenceCoverage) * CONFIDENCE.evidenceMax +
     requiredCoverage * CONFIDENCE.requiredCoverageMax +
     structuredCoverage * CONFIDENCE.structuredMax +
     (profile.assumptions.length > 0 ? CONFIDENCE.assumptionTransparencyMax : 0) -
@@ -412,12 +447,25 @@ export function calculateBusinessDiscoveryCompleteness(
       CONFIDENCE.lowConfidenceAssumptionPenaltyMax,
     );
 
-  // Hard ceiling with no evidence at all: however complete the capture looks,
-  // unevidenced input cannot be called confident.
-  const discoveryConfidenceScore =
+  // Hard ceilings on thin evidence. However complete the capture looks, input
+  // that is unevidenced — or whose sources are listed but never cited — cannot
+  // be called confident, and cannot outrank properly cited input.
+  const uncappedConfidence = clampScore(confidenceRaw);
+  const confidenceCeiling =
     profile.evidenceSources.length === 0
-      ? Math.min(clampScore(confidenceRaw), CONFIDENCE.noEvidenceCap)
-      : clampScore(confidenceRaw);
+      ? CONFIDENCE.noEvidenceCap
+      : evidenceCoverage === 0
+        ? CONFIDENCE.uncitedEvidenceCap
+        : 100;
+  const discoveryConfidenceScore = Math.min(uncappedConfidence, confidenceCeiling);
+
+  /** Which ceiling actually bound the score — reported as a limiting reason. */
+  const bindingCap: 'no-evidence' | 'uncited-evidence' | undefined =
+    uncappedConfidence <= confidenceCeiling
+      ? undefined
+      : profile.evidenceSources.length === 0
+        ? 'no-evidence'
+        : 'uncited-evidence';
 
   const readinessBand = deriveReadinessBand(
     completenessScore,
@@ -450,6 +498,7 @@ export function calculateBusinessDiscoveryCompleteness(
       profile,
       validation.criticalGaps.length,
       lowConfidenceAssumptions,
+      bindingCap,
     ),
   };
 }
@@ -520,8 +569,15 @@ function buildReasons(
   profile: BusinessDiscoveryProfile,
   criticalGapCount: number,
   lowConfidenceAssumptions: number,
+  bindingCap: 'no-evidence' | 'uncited-evidence' | undefined,
 ): readonly string[] {
   const reasons: string[] = [];
+
+  // Report a binding ceiling first: it is the single most important limiting
+  // fact about the score, not a footnote.
+  if (bindingCap !== undefined) {
+    reasons.push(`confidence-capped:${bindingCap}`);
+  }
 
   if (criticalGapCount > 0) {
     reasons.push('critical-gaps-present');
