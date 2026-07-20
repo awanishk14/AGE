@@ -127,6 +127,22 @@ export type {
   DanglingAnswerEvidenceReference,
 } from './field-provenance';
 
+// Discovery -> BIF draft mapper (ADR-0025 slice 2). Consumes @age/bif; never
+// modifies it. Requires caller-supplied constructedAt / changedBy — the mapper
+// reads no clock and invents no actor.
+export {
+  BUSINESS_DISCOVERY_TO_BIF_MAPPING_VERSION,
+  PROVISIONAL_BIF_CONFIDENCE_SCORE,
+  mapBusinessDiscoveryToBifDraft,
+} from './business-discovery-to-bif';
+export type {
+  BusinessDiscoveryToBifOptions,
+  BusinessDiscoveryToBifResult,
+  BusinessDiscoveryBifMetadata,
+  UnmappedDiscoveryField,
+  ProvenanceSummary,
+} from './business-discovery-to-bif';
+
 // Completeness / discovery-input-confidence scoring (pure, deterministic).
 // `discoveryConfidenceScore` means confidence in the captured discovery input,
 // NOT strategic confidence — see the module note in `completeness-scoring.ts`.

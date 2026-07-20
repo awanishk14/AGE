@@ -196,6 +196,9 @@ importers:
 
   packages/business-discovery-contracts:
     dependencies:
+      '@age/bif':
+        specifier: workspace:*
+        version: link:../bif
       zod:
         specifier: ^3.23.8
         version: 3.25.76
