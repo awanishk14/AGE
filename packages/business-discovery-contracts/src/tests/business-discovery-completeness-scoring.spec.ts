@@ -9,6 +9,7 @@ import {
 import { DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE } from '../default-questionnaire';
 import { SAMPLE_BUSINESS_DISCOVERY_PROFILE } from '../sample-profile';
 import { DISCOVERY_SECTION_IDS } from '../enums';
+import { EVIDENCEABLE_FIELD_PATHS } from '../field-provenance';
 import type { BusinessDiscoveryProfile } from '../business-discovery-profile';
 import type { BusinessDiscoveryQuestionnaire } from '../questionnaire';
 
@@ -272,6 +273,95 @@ describe('Business Discovery completeness scoring', () => {
         assumptions: [{ id: 'a1', statement: 'Stated assumption', confidence: 'low' }],
       });
       expect(low.discoveryConfidenceScore).toBeLessThan(high.discoveryConfidenceScore);
+    });
+  });
+
+  describe('field-level evidence (ADR-0025)', () => {
+    const SOURCE_IDS: readonly string[] = SAMPLE_BUSINESS_DISCOVERY_PROFILE.evidenceSources.map(
+      (source) => source.id,
+    );
+
+    /** Fail loudly if the fixture stops providing the sources these tests assume. */
+    function sourceId(index: number): string {
+      const id = SOURCE_IDS[index];
+      if (id === undefined) {
+        throw new Error(`sample profile has no evidence source at index ${index}`);
+      }
+      return id;
+    }
+
+    /** Sample content captured purely as structured fields — no answers at all. */
+    const STRUCTURED_ONLY: BusinessDiscoveryProfile = {
+      ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
+      sections: [],
+    };
+
+    it('still caps a structured-only profile that cites nothing', () => {
+      const result = calculateBusinessDiscoveryCompleteness(STRUCTURED_ONLY);
+      expect(result.discoveryConfidenceScore).toBe(45);
+      expect(result.readinessBand).toBe('usable');
+      expect(result.reasons).toContain('confidence-capped:uncited-evidence');
+    });
+
+    it('lets field-level evidence satisfy coverage with no answer-level evidence', () => {
+      // This is the v2.1.0 limitation being lifted: previously unreachable.
+      const result = calculateBusinessDiscoveryCompleteness({
+        ...STRUCTURED_ONLY,
+        fieldEvidence: { industry: [sourceId(0)] },
+      });
+      expect(result.discoveryConfidenceScore).toBe(63);
+      expect(result.readinessBand).toBe('strong');
+      expect(result.reasons).toContain('evidence-backed');
+      expect(result.reasons).not.toContain('confidence-capped:uncited-evidence');
+    });
+
+    it('rewards broader field-level evidence coverage', () => {
+      const everyField = Object.fromEntries(
+        EVIDENCEABLE_FIELD_PATHS.map((path) => [path, [sourceId(0)]]),
+      );
+      const result = calculateBusinessDiscoveryCompleteness({
+        ...STRUCTURED_ONLY,
+        fieldEvidence: everyField,
+      });
+      expect(result.discoveryConfidenceScore).toBe(84);
+      expect(result.readinessBand).toBe('strong');
+    });
+
+    it('adds field evidence on top of answer-level evidence', () => {
+      const base = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
+      const withFieldEvidence = calculateBusinessDiscoveryCompleteness({
+        ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
+        fieldEvidence: { offerings: [sourceId(0)], segments: [sourceId(1)] },
+      });
+      expect(base.discoveryConfidenceScore).toBe(63);
+      expect(withFieldEvidence.discoveryConfidenceScore).toBe(69);
+    });
+
+    it('gives dangling field evidence no credit and keeps the uncited cap', () => {
+      const result = calculateBusinessDiscoveryCompleteness({
+        ...STRUCTURED_ONLY,
+        fieldEvidence: { industry: ['ev-does-not-exist'] },
+      });
+      expect(result.discoveryConfidenceScore).toBe(45);
+      expect(result.readinessBand).toBe('usable');
+      expect(result.reasons).toContain('confidence-capped:uncited-evidence');
+    });
+
+    it('keeps the zero-evidence cap even when field evidence is declared', () => {
+      const result = calculateBusinessDiscoveryCompleteness({
+        ...ZERO_EVIDENCE_COMPLETE_PROFILE,
+        fieldEvidence: { industry: ['ev-does-not-exist'] },
+      });
+      expect(result.discoveryConfidenceScore).toBe(35);
+      expect(result.readinessBand).toBe('partial');
+      expect(result.reasons).toContain('confidence-capped:no-evidence');
+    });
+
+    it('leaves answer-level-only scoring exactly as before', () => {
+      const result = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
+      expect(result.completenessScore).toBe(97);
+      expect(result.discoveryConfidenceScore).toBe(63);
+      expect(result.readinessBand).toBe('strong');
     });
   });
 

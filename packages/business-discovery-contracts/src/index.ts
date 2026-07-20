@@ -106,6 +106,27 @@ export { mapBusinessDiscoveryToBifContext } from './business-discovery-bif-mappi
 // Representative sample fixture (generic fictional data, no side effects).
 export { SAMPLE_BUSINESS_DISCOVERY_PROFILE } from './sample-profile';
 
+// Field-level provenance (ADR-0025 prerequisite for Discovery -> BIF wiring).
+// Optional: profiles without `fieldEvidence` remain valid and unchanged.
+export {
+  EVIDENCEABLE_FIELD_PATHS,
+  PROFILE_SIGNAL_TO_FIELD_PATH,
+  evidenceableFieldPathSchema,
+  businessDiscoveryFieldEvidenceSchema,
+  businessDiscoveryFieldEvidenceValidationSchema,
+  danglingFieldEvidenceReferenceSchema,
+  danglingAnswerEvidenceReferenceSchema,
+  validateBusinessDiscoveryFieldEvidence,
+  getEvidencedFieldPaths,
+} from './field-provenance';
+export type {
+  EvidenceableFieldPath,
+  BusinessDiscoveryFieldEvidence,
+  BusinessDiscoveryFieldEvidenceValidation,
+  DanglingFieldEvidenceReference,
+  DanglingAnswerEvidenceReference,
+} from './field-provenance';
+
 // Completeness / discovery-input-confidence scoring (pure, deterministic).
 // `discoveryConfidenceScore` means confidence in the captured discovery input,
 // NOT strategic confidence — see the module note in `completeness-scoring.ts`.
