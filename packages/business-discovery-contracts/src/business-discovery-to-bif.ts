@@ -10,17 +10,7 @@ import {
   type BusinessIntelligenceFramework,
   type FieldVersion,
 } from '@age/bif';
-import {
-  ASSETS_SECTION,
-  BRAND_SYSTEM_SECTION,
-  CONSTRAINTS_SECTION,
-  GTM_SYSTEM_SECTION,
-  ICP_PERSONAS_SECTION,
-  MARKET_COMPETITION_SECTION,
-  ORGANIZATION_IDENTITY_SECTION,
-  PRODUCTS_SERVICES_SECTION,
-  VISION_STRATEGY_SECTION,
-} from '@age/bif';
+import { BIF_SECTIONS } from '@age/bif';
 import type { BusinessDiscoveryProfile } from './business-discovery-profile';
 import { businessDiscoveryProfileSchema } from './business-discovery-profile';
 import type { BusinessDiscoveryQuestionnaire } from './questionnaire';
@@ -49,9 +39,18 @@ import type { DiscoverySectionId } from './enums';
  *    `USER` / `USER_CONFIRMED` otherwise, which is accurate for client-stated
  *    intake. `AI_INFERRED` is never emitted — discovery performs no inference.
  *    `changedBy` comes from `options.changedBy` and is never invented.
- * 3. **Score mapping** — discovery completeness maps to BIF completeness.
- *    `discoveryConfidenceScore` is **never** written into any BIF confidence
- *    field; it travels in the mapper metadata. BIF confidence stays a
+ * 3. **Score mapping** — ADR-0025 Decision 3 says discovery completeness maps to
+ *    BIF completeness. Implementing it showed the two names denote different
+ *    quantities: discovery completeness measures how completely the *intake* was
+ *    captured, while `bif.completenessScore` is read as how populated the *BIF*
+ *    is. Mapping directly would let a well-captured interview present a sparse
+ *    BIF as near-complete. So `bif.completenessScore` (root and sections) is
+ *    computed from the fields actually emitted against BIF's own definitions,
+ *    and `discoveryCompletenessScore` is preserved unchanged in metadata. Both
+ *    are reported, labelled, and never substituted for one another.
+ *
+ *    Likewise `discoveryConfidenceScore` is **never** written into any BIF
+ *    confidence field; it travels in the mapper metadata. BIF confidence stays a
  *    provisional constant pending a dedicated BIF scoring layer.
  * 4. **Partial Draft** — only sections discovery can honestly populate are
  *    emitted. Absent sections are omitted, never placeholder-filled.
@@ -115,11 +114,58 @@ export interface ProvenanceSummary {
   readonly evidencedDiscoveryFieldPaths: readonly EvidenceableFieldPath[];
 }
 
-/** Everything the BIF root cannot itself carry about how it was built. */
+/**
+ * How fully one BIF section is populated, alongside the discovery capture score
+ * for the intake section that fed it. The two are deliberately reported side by
+ * side because they measure different things (see `BusinessDiscoveryBifMetadata`).
+ */
+export interface BifSectionPopulation {
+  readonly sectionType: SectionType;
+  readonly populatedFieldCount: number;
+  readonly definedFieldCount: number;
+  readonly populatedRequiredFieldCount: number;
+  readonly requiredFieldCount: number;
+  /** `populatedFieldCount / definedFieldCount`, as a whole percentage. */
+  readonly populationCompletenessScore: number;
+  /**
+   * Discovery capture completeness for the intake section that supplied this
+   * BIF section, or `undefined` when no discovery section maps to it. Reported
+   * for traceability only — it is not a BIF population measure.
+   */
+  readonly discoveryCaptureCompletenessScore?: number;
+}
+
+/**
+ * Everything the BIF root cannot itself carry about how it was built.
+ *
+ * **Two distinct completeness metrics live here, and they must not be
+ * conflated:**
+ *
+ * - `discoveryCompletenessScore` — how completely the *intake* was captured
+ *   against the discovery questionnaire. A property of the interview.
+ * - `bifPopulationCompletenessScore` — what proportion of the canonical BIF's
+ *   defined fields this draft actually populates. A property of the BIF.
+ *
+ * A thoroughly captured discovery (high `discoveryCompletenessScore`) still
+ * yields a sparse BIF, because discovery covers only part of the BIF surface.
+ * The BIF root's own `completenessScore` carries the *population* metric.
+ */
 export interface BusinessDiscoveryBifMetadata {
   readonly mappingVersion: string;
   readonly sourceProfileId: string;
+  /** Intake capture completeness. **Never** written to `bif.completenessScore`. */
   readonly discoveryCompletenessScore: number;
+  /** `populatedFieldCount / totalBifFieldCount`, whole percent. Equals `bif.completenessScore`. */
+  readonly bifPopulationCompletenessScore: number;
+  readonly mappedSectionCount: number;
+  readonly totalBifSectionCount: number;
+  readonly populatedFieldCount: number;
+  /** Every field key defined across all twelve canonical BIF sections. */
+  readonly totalBifFieldCount: number;
+  readonly populatedRequiredFieldCount: number;
+  /** Field keys BIF marks `required: true`, across all twelve sections. */
+  readonly totalRequiredBifFieldCount: number;
+  readonly sectionPopulation: readonly BifSectionPopulation[];
   /** Discovery **input** confidence. Never written into BIF confidence fields. */
   readonly discoveryConfidenceScore: number;
   readonly discoveryReadinessBand: string;
@@ -152,18 +198,12 @@ const SECTION_SOURCE: Readonly<Partial<Record<SectionType, DiscoverySectionId>>>
   [SectionType.GtmSystem]: 'channels',
 };
 
-/** Static BIF definitions, so emitted fields reuse canonical keys and `required`. */
-const SECTION_DEFINITIONS = [
-  ORGANIZATION_IDENTITY_SECTION,
-  VISION_STRATEGY_SECTION,
-  PRODUCTS_SERVICES_SECTION,
-  ICP_PERSONAS_SECTION,
-  MARKET_COMPETITION_SECTION,
-  BRAND_SYSTEM_SECTION,
-  GTM_SYSTEM_SECTION,
-  ASSETS_SECTION,
-  CONSTRAINTS_SECTION,
-] as const;
+/**
+ * Static BIF definitions — the canonical twelve, straight from `@age/bif`, so
+ * emitted fields reuse canonical keys and `required`, and the population
+ * denominators below are BIF's own numbers rather than a local restatement.
+ */
+const SECTION_DEFINITIONS = BIF_SECTIONS;
 
 /**
  * Discovery data with no honest BIF destination. Recorded rather than forced:
@@ -226,6 +266,18 @@ function hasValue(value: unknown): boolean {
     return value.length > 0;
   }
   return true;
+}
+
+/**
+ * Whole-percent share, rounded half-up. Deterministic and integer-valued: BIF
+ * completeness scores are percentages, and reporting extra decimals here would
+ * imply a precision that counting populated fields does not have.
+ *
+ * An empty denominator yields `0` — no fields defined means none populated, and
+ * claiming 100% for a section BIF defines nothing for would be an overstatement.
+ */
+function percentage(numerator: number, denominator: number): number {
+  return denominator === 0 ? 0 : Math.round((numerator / denominator) * 100);
 }
 
 /**
@@ -388,6 +440,11 @@ export function mapBusinessDiscoveryToBifDraft(
   const sections: BIFSection[] = [];
   const mappedSections: SectionType[] = [];
   const omittedSections: SectionType[] = [];
+  const sectionPopulation: BifSectionPopulation[] = [];
+  let totalBifFieldCount = 0;
+  let totalRequiredBifFieldCount = 0;
+  let populatedFieldCount = 0;
+  let populatedRequiredFieldCount = 0;
   let evidenceVerifiedFieldCount = 0;
   let userConfirmedFieldCount = 0;
   const evidencedDiscoveryFieldPaths = new Set<EvidenceableFieldPath>();
@@ -447,15 +504,41 @@ export function mapBusinessDiscoveryToBifDraft(
       });
     }
 
+    // Denominators come from BIF's own definition, and are accumulated for every
+    // canonical section — including omitted ones, which populate zero fields.
+    // An omitted section must still count against BIF population completeness;
+    // excluding it would flatter the score.
+    const definedFieldCount = definition.fields.length;
+    const requiredFieldCount = definition.fields.filter((field) => field.required).length;
+    const populatedRequired = fields.filter((field) => field.required).length;
+    totalBifFieldCount += definedFieldCount;
+    totalRequiredBifFieldCount += requiredFieldCount;
+    populatedFieldCount += fields.length;
+    populatedRequiredFieldCount += populatedRequired;
+
+    const discoverySectionId = SECTION_SOURCE[definition.type];
+    const discoveryCaptureCompletenessScore =
+      discoverySectionId === undefined
+        ? undefined
+        : sectionCompletenessById.get(discoverySectionId);
+
+    sectionPopulation.push({
+      sectionType: definition.type,
+      populatedFieldCount: fields.length,
+      definedFieldCount,
+      populatedRequiredFieldCount: populatedRequired,
+      requiredFieldCount,
+      populationCompletenessScore: percentage(fields.length, definedFieldCount),
+      ...(discoveryCaptureCompletenessScore === undefined
+        ? {}
+        : { discoveryCaptureCompletenessScore }),
+    });
+
     if (fields.length === 0) {
       // Omitted, never placeholder-filled.
       omittedSections.push(definition.type);
       continue;
     }
-
-    const discoverySectionId = SECTION_SOURCE[definition.type];
-    const completenessScore =
-      discoverySectionId === undefined ? 0 : (sectionCompletenessById.get(discoverySectionId) ?? 0);
 
     sections.push({
       id: `${bifId}-${definition.type}`,
@@ -463,18 +546,16 @@ export function mapBusinessDiscoveryToBifDraft(
       name: definition.name,
       fields,
       confidenceScore: PROVISIONAL_BIF_CONFIDENCE_SCORE,
-      completenessScore,
+      // Population completeness for this section — the same metric the root
+      // carries, so root and sections mean the same thing. The discovery capture
+      // score for the intake section that fed it is in metadata.sectionPopulation.
+      completenessScore: percentage(fields.length, definedFieldCount),
       lastVerifiedAt: timestamp,
     });
     mappedSections.push(definition.type);
   }
 
-  // Canonical sections with no discovery source at all.
-  for (const sectionType of Object.values(SectionType)) {
-    if (!mappedSections.includes(sectionType) && !omittedSections.includes(sectionType)) {
-      omittedSections.push(sectionType);
-    }
-  }
+  const bifPopulationCompletenessScore = percentage(populatedFieldCount, totalBifFieldCount);
 
   const unmappedDiscoveryFields: UnmappedDiscoveryField[] = [...STRUCTURALLY_UNMAPPABLE];
   const nonLongGoals = profile.goals.filter((goal) => goal.horizon !== 'long');
@@ -489,7 +570,9 @@ export function mapBusinessDiscoveryToBifDraft(
   const warnings: string[] = [
     `BIF confidence (root and sections) is the provisional constant ${PROVISIONAL_BIF_CONFIDENCE_SCORE}; it is NOT a computed score and NOT discoveryConfidenceScore. A BIF scoring layer must replace it (ADR-0025 Decision 3).`,
     'Status is Draft: only sections discovery can populate are present, and populated sections carry a small subset of their defined BIF fields.',
-    'completenessScore reflects discovery capture completeness against the questionnaire, not the proportion of BIF fields populated.',
+    `Discovery completeness and BIF population completeness are SEPARATE metrics and are not interchangeable. bif.completenessScore (${bifPopulationCompletenessScore}) is BIF population completeness: ${populatedFieldCount} of ${totalBifFieldCount} defined BIF fields populated across ${mappedSections.length} of ${SECTION_DEFINITIONS.length} sections. metadata.discoveryCompletenessScore (${scoring.completenessScore}) is intake capture completeness against the discovery questionnaire — it describes the interview, not the BIF, and is never written into any BIF completeness field.`,
+    `Section completenessScore is population completeness for that section (populated fields / fields BIF defines for it), the same metric as the root. Per-section discovery capture scores are in metadata.sectionPopulation[].discoveryCaptureCompletenessScore.`,
+    `BIF population completeness counts omitted sections as zero, so it is bounded by the whole canonical BIF surface rather than only the mapped part. It measures field presence, not field quality or depth.`,
   ];
   if (
     mappedSections.includes(SectionType.IcpPersonas) ||
@@ -507,7 +590,10 @@ export function mapBusinessDiscoveryToBifDraft(
     status: BIFStatus.Draft,
     sections,
     confidenceScore: PROVISIONAL_BIF_CONFIDENCE_SCORE,
-    completenessScore: scoring.completenessScore,
+    // BIF population completeness — computed from the fields actually emitted
+    // against BIF's own definitions. NOT discovery capture completeness, which
+    // measures the intake and would overstate how populated this BIF is.
+    completenessScore: bifPopulationCompletenessScore,
     createdAt: timestamp,
     updatedAt: timestamp,
     lastSyncedAt: timestamp,
@@ -519,6 +605,14 @@ export function mapBusinessDiscoveryToBifDraft(
       mappingVersion: BUSINESS_DISCOVERY_TO_BIF_MAPPING_VERSION,
       sourceProfileId: profile.id,
       discoveryCompletenessScore: scoring.completenessScore,
+      bifPopulationCompletenessScore,
+      mappedSectionCount: mappedSections.length,
+      totalBifSectionCount: SECTION_DEFINITIONS.length,
+      populatedFieldCount,
+      totalBifFieldCount,
+      populatedRequiredFieldCount,
+      totalRequiredBifFieldCount,
+      sectionPopulation,
       discoveryConfidenceScore: scoring.discoveryConfidenceScore,
       discoveryReadinessBand: scoring.readinessBand,
       mappedSections,

@@ -141,6 +141,7 @@ export type {
   BusinessDiscoveryBifMetadata,
   UnmappedDiscoveryField,
   ProvenanceSummary,
+  BifSectionPopulation,
 } from './business-discovery-to-bif';
 
 // Completeness / discovery-input-confidence scoring (pure, deterministic).
