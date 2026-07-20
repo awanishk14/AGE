@@ -10,12 +10,15 @@ import { DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE } from '../default-questionnai
 import { SAMPLE_BUSINESS_DISCOVERY_PROFILE } from '../sample-profile';
 import { DISCOVERY_SECTION_IDS } from '../enums';
 import type { BusinessDiscoveryProfile } from '../business-discovery-profile';
+import type { BusinessDiscoveryQuestionnaire } from '../questionnaire';
 
 /**
- * A minimal profile that still satisfies `businessDiscoveryProfileSchema`: only
- * the two required core fields carry content, every list is empty. This is the
- * "we have barely started discovery" floor case.
+ * Scores are pinned to exact expected values, not ranges. Ranges pass whether or
+ * not the absolute numbers mean anything; pinning forces any model change to be
+ * a deliberate, reviewed edit to this file.
  */
+
+/** Minimal schema-valid profile: only the required core fields carry content. */
 const MINIMAL_PROFILE: BusinessDiscoveryProfile = {
   id: 'minimal-profile',
   businessName: 'Minimal Co',
@@ -34,20 +37,64 @@ const MINIMAL_PROFILE: BusinessDiscoveryProfile = {
   capturedAt: '2026-07-01T00:00:00.000Z',
 };
 
+/**
+ * Fully-populated profile stripped of every evidence signal: no evidence
+ * sources, no evidence-linked answers, no declared assumptions. This is the case
+ * that must NOT read as confident or ready.
+ */
+const ZERO_EVIDENCE_COMPLETE_PROFILE: BusinessDiscoveryProfile = {
+  ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
+  evidenceSources: [],
+  sections: [],
+  assumptions: [],
+};
+
+/** Sample profile with a critical area (goals) removed. */
+const MISSING_CRITICAL_PROFILE: BusinessDiscoveryProfile = {
+  ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
+  goals: [],
+};
+
 describe('Business Discovery completeness scoring', () => {
-  describe('completeness score', () => {
-    it('gives the fully-populated sample profile a high score', () => {
+  describe('pinned score examples', () => {
+    it('scores the fully-populated sample profile', () => {
       const result = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
-      expect(result.completenessScore).toBeGreaterThanOrEqual(90);
+      expect(result.completenessScore).toBe(97);
+      expect(result.discoveryConfidenceScore).toBe(63);
       expect(result.readinessBand).toBe('strong');
+      expect(result.missingRequiredCount).toBe(0);
+      expect(result.criticalGapCount).toBe(0);
     });
 
-    it('gives a minimal valid profile a low score', () => {
+    it('scores a minimal valid profile at the floor', () => {
       const result = calculateBusinessDiscoveryCompleteness(MINIMAL_PROFILE);
-      expect(result.completenessScore).toBeLessThan(20);
+      expect(result.completenessScore).toBe(6);
+      expect(result.discoveryConfidenceScore).toBe(0);
       expect(result.readinessBand).toBe('incomplete');
     });
 
+    it('scores a complete but entirely unevidenced profile', () => {
+      const result = calculateBusinessDiscoveryCompleteness(ZERO_EVIDENCE_COMPLETE_PROFILE);
+      // Nearly complete capture...
+      expect(result.completenessScore).toBe(93);
+      // ...but confidence is capped, because none of it is evidenced.
+      expect(result.discoveryConfidenceScore).toBe(35);
+      // ...so it is emphatically not "strong".
+      expect(result.readinessBand).toBe('partial');
+      expect(result.reasons).toContain('no-evidence-sources');
+    });
+
+    it('scores a profile with a missing required/critical area', () => {
+      const result = calculateBusinessDiscoveryCompleteness(MISSING_CRITICAL_PROFILE);
+      expect(result.completenessScore).toBe(87);
+      expect(result.discoveryConfidenceScore).toBe(51);
+      expect(result.readinessBand).toBe('partial');
+      expect(result.criticalGapCount).toBe(1);
+      expect(result.missingRequiredCount).toBe(1);
+    });
+  });
+
+  describe('completeness score', () => {
     it('reduces the score when a critical field is removed', () => {
       const full = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
       const withoutOfferings = calculateBusinessDiscoveryCompleteness({
@@ -69,43 +116,75 @@ describe('Business Discovery completeness scoring', () => {
         assets: [],
         constraints: [],
       });
-      expect(one.completenessScore).toBeLessThan(base.completenessScore);
-      expect(two.completenessScore).toBeLessThan(one.completenessScore);
+      expect(base.completenessScore).toBe(97);
+      expect(one.completenessScore).toBe(92);
+      expect(two.completenessScore).toBe(87);
     });
   });
 
-  describe('discovery input confidence score', () => {
+  describe('discovery input confidence', () => {
+    it('does not simply mirror the completeness score', () => {
+      const result = calculateBusinessDiscoveryCompleteness(ZERO_EVIDENCE_COMPLETE_PROFILE);
+      // 93 vs 35 — the two numbers measure genuinely different things.
+      expect(result.completenessScore - result.discoveryConfidenceScore).toBeGreaterThanOrEqual(50);
+    });
+
+    it('caps confidence when there are no evidence sources at all', () => {
+      const result = calculateBusinessDiscoveryCompleteness(ZERO_EVIDENCE_COMPLETE_PROFILE);
+      expect(result.discoveryConfidenceScore).toBeLessThanOrEqual(35);
+      expect(result.readinessBand).not.toBe('strong');
+      expect(result.readinessBand).not.toBe('usable');
+    });
+
+    it('rises materially once evidence signals exist', () => {
+      const unevidenced = calculateBusinessDiscoveryCompleteness(ZERO_EVIDENCE_COMPLETE_PROFILE);
+      const evidenced = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
+      // Same structured content; the sample's advantage is its evidence.
+      expect(evidenced.discoveryConfidenceScore).toBe(63);
+      expect(unevidenced.discoveryConfidenceScore).toBe(35);
+      expect(
+        evidenced.discoveryConfidenceScore - unevidenced.discoveryConfidenceScore,
+      ).toBeGreaterThanOrEqual(25);
+    });
+
+    it('rewards evidence that is actually cited over evidence merely listed', () => {
+      const listedOnly = calculateBusinessDiscoveryCompleteness({
+        ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
+        sections: [],
+      });
+      const cited = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
+      expect(listedOnly.reasons).toContain('evidence-sources-unlinked');
+      expect(cited.reasons).toContain('evidence-backed');
+      expect(cited.discoveryConfidenceScore).toBeGreaterThan(listedOnly.discoveryConfidenceScore);
+    });
+
     it('drops when critical gaps are present', () => {
       const full = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
-      const gapped = calculateBusinessDiscoveryCompleteness({
-        ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
-        goals: [],
-      });
-      expect(gapped.criticalGapCount).toBeGreaterThan(0);
+      const gapped = calculateBusinessDiscoveryCompleteness(MISSING_CRITICAL_PROFILE);
+      expect(gapped.criticalGapCount).toBe(1);
       expect(gapped.discoveryConfidenceScore).toBeLessThan(full.discoveryConfidenceScore);
     });
 
-    it('improves when evidence references are present', () => {
-      const withoutEvidence = calculateBusinessDiscoveryCompleteness({
-        ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
-        evidenceSources: [],
-        sections: [],
+    it('gives assumptions alone no confidence whatsoever', () => {
+      const assumptionsOnly = calculateBusinessDiscoveryCompleteness({
+        ...MINIMAL_PROFILE,
+        assumptions: Array.from({ length: 25 }, (_, index) => ({
+          id: `assumption-${index}`,
+          statement: `Unverified statement ${index}`,
+          confidence: 'high' as const,
+        })),
       });
-      const withEvidence = calculateBusinessDiscoveryCompleteness(
-        SAMPLE_BUSINESS_DISCOVERY_PROFILE,
-      );
-      expect(withEvidence.discoveryConfidenceScore).toBeGreaterThan(
-        withoutEvidence.discoveryConfidenceScore,
-      );
-      expect(withEvidence.evidenceReferenceCount).toBeGreaterThan(0);
+      expect(assumptionsOnly.assumptionCount).toBe(25);
+      expect(assumptionsOnly.discoveryConfidenceScore).toBe(0);
+      expect(assumptionsOnly.readinessBand).toBe('incomplete');
     });
 
-    it('counts assumptions without letting them inflate confidence materially', () => {
-      const base = calculateBusinessDiscoveryCompleteness({
+    it('caps the assumption transparency credit so assumptions cannot inflate', () => {
+      const none = calculateBusinessDiscoveryCompleteness({
         ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
         assumptions: [],
       });
-      const manyAssumptions = calculateBusinessDiscoveryCompleteness({
+      const many = calculateBusinessDiscoveryCompleteness({
         ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
         assumptions: Array.from({ length: 40 }, (_, index) => ({
           id: `assumption-${index}`,
@@ -113,31 +192,121 @@ describe('Business Discovery completeness scoring', () => {
           confidence: 'high' as const,
         })),
       });
-
-      expect(manyAssumptions.assumptionCount).toBe(40);
-      // Assumptions are unverified content: declaring 40 of them must not buy
-      // more than the small, capped transparency credit.
-      const gain = manyAssumptions.discoveryConfidenceScore - base.discoveryConfidenceScore;
-      expect(gain).toBeLessThanOrEqual(5);
+      expect(many.assumptionCount).toBe(40);
+      expect(many.discoveryConfidenceScore - none.discoveryConfidenceScore).toBeLessThanOrEqual(5);
     });
 
     it('penalises low-confidence assumptions rather than rewarding them', () => {
-      const highConfidence = calculateBusinessDiscoveryCompleteness({
+      const high = calculateBusinessDiscoveryCompleteness({
         ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
         assumptions: [{ id: 'a1', statement: 'Stated assumption', confidence: 'high' }],
       });
-      const lowConfidence = calculateBusinessDiscoveryCompleteness({
+      const low = calculateBusinessDiscoveryCompleteness({
         ...SAMPLE_BUSINESS_DISCOVERY_PROFILE,
         assumptions: [{ id: 'a1', statement: 'Stated assumption', confidence: 'low' }],
       });
-      expect(lowConfidence.discoveryConfidenceScore).toBeLessThan(
-        highConfidence.discoveryConfidenceScore,
+      expect(low.discoveryConfidenceScore).toBeLessThan(high.discoveryConfidenceScore);
+    });
+  });
+
+  describe('readiness band transitions', () => {
+    it('bands a complete, evidenced, gap-free profile as strong', () => {
+      expect(
+        calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE).readinessBand,
+      ).toBe('strong');
+    });
+
+    it('demotes to partial on an open critical gap despite high completeness', () => {
+      const result = calculateBusinessDiscoveryCompleteness(MISSING_CRITICAL_PROFILE);
+      expect(result.completenessScore).toBe(87); // would band `usable` on completeness alone
+      expect(result.readinessBand).toBe('partial');
+    });
+
+    it('demotes on low input confidence despite high completeness', () => {
+      const result = calculateBusinessDiscoveryCompleteness(ZERO_EVIDENCE_COMPLETE_PROFILE);
+      expect(result.completenessScore).toBe(93); // would band `strong` on completeness alone
+      expect(result.discoveryConfidenceScore).toBe(35); // below the 40 floor
+      expect(result.readinessBand).toBe('partial');
+    });
+
+    it('bands an empty profile as incomplete', () => {
+      expect(calculateBusinessDiscoveryCompleteness(MINIMAL_PROFILE).readinessBand).toBe(
+        'incomplete',
+      );
+    });
+  });
+
+  describe('section weights and totalWeight', () => {
+    it('declares a weight for every discovery section id, summing to 100', () => {
+      const total = DISCOVERY_SECTION_IDS.reduce(
+        (sum, id) => sum + DISCOVERY_SECTION_WEIGHTS[id],
+        0,
+      );
+      expect(total).toBe(100);
+      for (const id of DISCOVERY_SECTION_IDS) {
+        expect(DISCOVERY_SECTION_WEIGHTS[id]).toBeGreaterThan(0);
+      }
+    });
+
+    it('reports totalWeight as exactly 100 for the full default questionnaire', () => {
+      const result = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
+      expect(result.breakdown.totalWeight).toBe(100);
+      expect(result.breakdown.sections).toHaveLength(
+        DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE.sections.length,
       );
     });
 
-    it('is low for a minimal profile with no evidence and critical gaps', () => {
-      const result = calculateBusinessDiscoveryCompleteness(MINIMAL_PROFILE);
-      expect(result.discoveryConfidenceScore).toBeLessThan(40);
+    it('computes totalWeight from the reported weights, never asserting 100', () => {
+      // Rounding each normalized weight to two decimals means some subsets do
+      // not land on exactly 100. The reported total must tell the truth.
+      const expectedBySectionCount: Readonly<Record<number, number>> = {
+        4: 99.99,
+        7: 100.01,
+        8: 99.99,
+      };
+
+      for (
+        let count = 1;
+        count <= DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE.sections.length;
+        count++
+      ) {
+        const subset: BusinessDiscoveryQuestionnaire = {
+          ...DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
+          sections: DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE.sections.slice(0, count),
+        };
+        const result = calculateBusinessDiscoveryCompleteness(
+          SAMPLE_BUSINESS_DISCOVERY_PROFILE,
+          subset,
+        );
+        const actualSum =
+          Math.round(result.breakdown.sections.reduce((sum, s) => sum + s.weight, 0) * 100) / 100;
+
+        expect(result.breakdown.sections).toHaveLength(count);
+        expect(result.breakdown.totalWeight, `totalWeight for ${count} section(s)`).toBe(actualSum);
+        expect(result.breakdown.totalWeight).toBe(expectedBySectionCount[count] ?? 100);
+      }
+    });
+
+    it('normalizes a subset questionnaire so a fully-answered subset still scores 100', () => {
+      const subset: BusinessDiscoveryQuestionnaire = {
+        ...DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
+        sections: DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE.sections.slice(0, 3),
+      };
+      const result = calculateBusinessDiscoveryCompleteness(
+        SAMPLE_BUSINESS_DISCOVERY_PROFILE,
+        subset,
+      );
+      expect(result.completenessScore).toBe(100);
+      expect(result.breakdown.totalWeight).toBe(100);
+    });
+
+    it('rejects a questionnaire with no sections at the schema boundary', () => {
+      // The zero-applicable-section case cannot reach the scorer: the
+      // questionnaire schema requires at least one section.
+      const empty = { ...DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE, sections: [] };
+      expect(() =>
+        calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE, empty),
+      ).toThrow(/questionnaire/i);
     });
   });
 
@@ -146,6 +315,7 @@ describe('Business Discovery completeness scoring', () => {
       const profiles: readonly BusinessDiscoveryProfile[] = [
         SAMPLE_BUSINESS_DISCOVERY_PROFILE,
         MINIMAL_PROFILE,
+        ZERO_EVIDENCE_COMPLETE_PROFILE,
         { ...SAMPLE_BUSINESS_DISCOVERY_PROFILE, offerings: [], goals: [], segments: [] },
         {
           ...MINIMAL_PROFILE,
@@ -167,9 +337,6 @@ describe('Business Discovery completeness scoring', () => {
 
     it('produces a section breakdown covering every questionnaire section', () => {
       const result = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
-      expect(result.breakdown.sections).toHaveLength(
-        DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE.sections.length,
-      );
       expect(result.breakdown.sections.map((s) => s.sectionId)).toEqual(
         DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE.sections.map((s) => s.id),
       );
@@ -188,27 +355,13 @@ describe('Business Discovery completeness scoring', () => {
     it('reports counts, scoring version and machine-readable reasons', () => {
       const result = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
       expect(result.scoringVersion).toBe(BUSINESS_DISCOVERY_SCORING_VERSION);
-      expect(result.missingRequiredCount).toBe(0);
-      expect(result.criticalGapCount).toBe(0);
       expect(result.evidenceReferenceCount).toBe(
         SAMPLE_BUSINESS_DISCOVERY_PROFILE.evidenceSources.length,
       );
       expect(result.assumptionCount).toBe(SAMPLE_BUSINESS_DISCOVERY_PROFILE.assumptions.length);
       expect(result.reasons.length).toBeGreaterThan(0);
       for (const reason of result.reasons) {
-        // kebab-case machine-readable codes, optionally `code:detail`.
         expect(reason).toMatch(/^[a-z0-9-]+(:[a-z0-9-]+)?$/);
-      }
-    });
-
-    it('declares a weight for every discovery section id, summing to 100', () => {
-      const total = DISCOVERY_SECTION_IDS.reduce(
-        (sum, id) => sum + DISCOVERY_SECTION_WEIGHTS[id],
-        0,
-      );
-      expect(total).toBe(100);
-      for (const id of DISCOVERY_SECTION_IDS) {
-        expect(DISCOVERY_SECTION_WEIGHTS[id]).toBeGreaterThan(0);
       }
     });
   });
@@ -261,6 +414,7 @@ describe('Business Discovery completeness scoring', () => {
       expect(packageEntrypoint.DISCOVERY_SECTION_WEIGHTS).toEqual(DISCOVERY_SECTION_WEIGHTS);
       expect(packageEntrypoint.businessDiscoveryCompletenessScoreSchema).toBeDefined();
       expect(packageEntrypoint.READINESS_BANDS).toBeDefined();
+      expect(packageEntrypoint.readinessBandSchema).toBeDefined();
     });
   });
 });

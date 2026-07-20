@@ -35,13 +35,12 @@ import { validateProfileAgainstQuestionnaire } from './questionnaire-validation'
  * BOUNDARY NOTE — this module does not import `@age/bif` and performs no BIF
  * wiring. It only produces the numbers such a wiring slice would need.
  *
- * KNOWN LIMITATION (v1.0.0) — the evidence signal's "backed answer ratio" is
- * relative to the answers a profile actually captures, so a profile with one
- * evidence-linked answer scores the same on that half of the signal as one with
- * fifty. It measures evidence *discipline*, not evidence *volume*. Making it
- * volume-sensitive needs a defensible target answer count, which the current
- * questionnaire does not define; revisit when explicit answer capture grows
- * beyond the sample fixture.
+ * The two scores are deliberately independent. `completenessScore` asks "how
+ * much was captured?"; `discoveryConfidenceScore` asks "how well-sourced is what
+ * was captured?". A profile can be complete and unevidenced — that combination
+ * scores high completeness and low confidence, and `readinessBand` reflects the
+ * weaker of the two. Keeping them independent is what makes them useful to a
+ * later BIF wiring slice, which needs both numbers to mean different things.
  */
 
 /**
@@ -49,7 +48,7 @@ import { validateProfileAgainstQuestionnaire } from './questionnaire-validation'
  * be traced to the model that produced it. Not a timestamp — deliberately no
  * wall-clock anywhere in this module.
  */
-export const BUSINESS_DISCOVERY_SCORING_VERSION = '1.0.0';
+export const BUSINESS_DISCOVERY_SCORING_VERSION = '2.0.0';
 
 /**
  * Explicit per-section weights, summing to 100 across every
@@ -60,7 +59,8 @@ export const BUSINESS_DISCOVERY_SCORING_VERSION = '1.0.0';
  * business is, what it sells, who it sells to) carry the most weight.
  *
  * When a questionnaire omits sections, the weights of the sections it *does*
- * contain are normalized to 100 — so any questionnaire yields a 0–100 score.
+ * contain are normalized to total 100 (subject to two-decimal rounding), so any
+ * questionnaire yields a 0–100 score.
  */
 export const DISCOVERY_SECTION_WEIGHTS: Readonly<Record<DiscoverySectionId, number>> = {
   'business-identity': 18,
@@ -94,20 +94,29 @@ const BAND_THRESHOLDS: readonly (readonly [ReadinessBand, number])[] = [
 ];
 
 /**
- * Discovery-input-confidence model. Credits and penalties are fixed constants so
- * a score can be explained arithmetically. Baseline + maximum credits = 100.
+ * Discovery-input-confidence model (v2 — evidence-dominant).
+ *
+ * There is deliberately **no baseline**: an unevidenced profile earns nothing
+ * for merely existing. Evidence is the single largest term (55 of 100) so the
+ * score cannot simply mirror `completenessScore`; structured coverage
+ * contributes but cannot dominate; and `noEvidenceCap` hard-caps the result when
+ * a profile carries no evidence sources at all, so "complete but unevidenced"
+ * can never read as confident. Credits and penalties are fixed constants, so any
+ * score can be explained arithmetically. Maximum credits sum to exactly 100.
  */
 const CONFIDENCE = {
-  /** A schema-valid profile with nothing else going for it starts here. */
-  baseline: 40,
-  /** Scaled by the fraction of required questions satisfied. */
+  /** Dominant term. Scaled by `evidenceSignal` (sources present + section coverage). */
+  evidenceMax: 55,
+  /** Scaled by the fraction of required questions satisfied — this is how
+   *  missing required answers reduce confidence, proportionally. */
   requiredCoverageMax: 25,
-  /** Scaled by how much of the profile is backed by evidence references. */
-  evidenceMax: 20,
-  /** Scaled by how many optional structured areas carry content. */
-  structuredMax: 10,
-  /** Capped credit for explicitly declaring assumptions (transparency). */
+  /** Scaled by optional structured areas present. Contributes, never dominates. */
+  structuredMax: 15,
+  /** Flat, small credit for declaring assumptions at all (transparency). Capped
+   *  so that declaring many assumptions can never inflate confidence. */
   assumptionTransparencyMax: 5,
+  /** Hard ceiling applied when the profile has zero evidence sources. */
+  noEvidenceCap: 35,
   /** Per critical gap, capped — unknowns in critical areas erode trust fastest. */
   criticalGapPenalty: 8,
   criticalGapPenaltyMax: 30,
@@ -115,6 +124,17 @@ const CONFIDENCE = {
   lowConfidenceAssumptionPenalty: 2,
   lowConfidenceAssumptionPenaltyMax: 8,
 } as const;
+
+/**
+ * Confidence floors that cap the readiness band. A profile cannot be called
+ * `strong` on thin input, however complete it looks — this is what stops a
+ * fully-populated but unevidenced profile from reading as ready.
+ */
+const CONFIDENCE_BAND_CAPS: readonly (readonly [minConfidence: number, cap: ReadinessBand])[] = [
+  [60, 'strong'],
+  [40, 'usable'],
+  [0, 'partial'],
+];
 
 /** Per-section completeness detail. Pure data. */
 export interface BusinessDiscoverySectionCompleteness {
@@ -143,7 +163,11 @@ export const businessDiscoverySectionCompletenessSchema = z.object({
 /** Section-by-section breakdown behind the headline completeness score. */
 export interface BusinessDiscoveryCompletenessBreakdown {
   readonly sections: readonly BusinessDiscoverySectionCompleteness[];
-  /** Sum of normalized section weights — 100 for any non-empty questionnaire. */
+  /**
+   * The actual sum of the `weight` values reported above — computed, never
+   * asserted. Normalization targets 100, but because each section weight is
+   * rounded to two decimals some subsets legitimately total 99.99 or 100.01.
+   */
   readonly totalWeight: number;
 }
 
@@ -221,28 +245,55 @@ const STRUCTURED_SIGNALS: readonly ((profile: BusinessDiscoveryProfile) => boole
   (p) => p.segments.length > 0,
 ];
 
-/** How much of the captured answer set carries at least one evidence reference. */
-function evidenceBackedAnswerRatio(profile: BusinessDiscoveryProfile): number {
-  let total = 0;
-  let backed = 0;
-  for (const section of profile.sections) {
-    for (const answer of section.answers) {
-      total += 1;
-      if ((answer.evidenceSourceIds?.length ?? 0) > 0) {
-        backed += 1;
-      }
-    }
-  }
-  return total === 0 ? 0 : backed / total;
+/** Evidence sources needed before the "sources present" half of the signal saturates. */
+const EVIDENCE_SOURCE_TARGET = 5;
+
+/** True when any captured answer in this profile section cites an evidence source. */
+function hasEvidenceLinkedAnswer(section: BusinessDiscoveryProfile['sections'][number]): boolean {
+  return section.answers.some((answer) => (answer.evidenceSourceIds?.length ?? 0) > 0);
 }
 
 /**
- * Evidence signal in 0–1: half from having evidence sources at all (saturating
- * at three), half from how much of the answer set is actually backed by them.
+ * Fraction of the questionnaire's sections for which the profile captures at
+ * least one evidence-linked answer.
+ *
+ * Measured against the *questionnaire's* section count, not the profile's own
+ * answers — otherwise a profile answering one question with one citation would
+ * score a perfect ratio, which is the saturation flaw this replaces. Evidence
+ * breadth across the discovery surface is what actually indicates a
+ * well-sourced profile.
  */
-function evidenceSignal(profile: BusinessDiscoveryProfile): number {
-  const presence = Math.min(profile.evidenceSources.length, 3) / 3;
-  return presence * 0.5 + evidenceBackedAnswerRatio(profile) * 0.5;
+function evidenceSectionCoverage(
+  profile: BusinessDiscoveryProfile,
+  questionnaire: BusinessDiscoveryQuestionnaire,
+): number {
+  if (questionnaire.sections.length === 0) {
+    return 0;
+  }
+  const covered = new Set<DiscoverySectionId>();
+  for (const section of profile.sections) {
+    if (hasEvidenceLinkedAnswer(section)) {
+      covered.add(section.id);
+    }
+  }
+  const relevant = questionnaire.sections.filter((section) => covered.has(section.id)).length;
+  return relevant / questionnaire.sections.length;
+}
+
+/**
+ * Evidence signal in 0–1: half from how many evidence sources exist (saturating
+ * at `EVIDENCE_SOURCE_TARGET`), half from how broadly those citations actually
+ * reach across the questionnaire's sections. Both halves are required — listing
+ * sources without citing them, or citing one section only, each score at most a
+ * half signal.
+ */
+function evidenceSignal(
+  profile: BusinessDiscoveryProfile,
+  questionnaire: BusinessDiscoveryQuestionnaire,
+): number {
+  const presence =
+    Math.min(profile.evidenceSources.length, EVIDENCE_SOURCE_TARGET) / EVIDENCE_SOURCE_TARGET;
+  return presence * 0.5 + evidenceSectionCoverage(profile, questionnaire) * 0.5;
 }
 
 /** Weight of one question within its section. */
@@ -346,10 +397,10 @@ export function calculateBusinessDiscoveryCompleteness(
     (assumption) => assumption.confidence === 'low',
   ).length;
 
+  // No baseline: nothing is earned for merely being a schema-valid profile.
   const confidenceRaw =
-    CONFIDENCE.baseline +
+    evidenceSignal(profile, questionnaire) * CONFIDENCE.evidenceMax +
     requiredCoverage * CONFIDENCE.requiredCoverageMax +
-    evidenceSignal(profile) * CONFIDENCE.evidenceMax +
     structuredCoverage * CONFIDENCE.structuredMax +
     (profile.assumptions.length > 0 ? CONFIDENCE.assumptionTransparencyMax : 0) -
     Math.min(
@@ -361,7 +412,12 @@ export function calculateBusinessDiscoveryCompleteness(
       CONFIDENCE.lowConfidenceAssumptionPenaltyMax,
     );
 
-  const discoveryConfidenceScore = clampScore(confidenceRaw);
+  // Hard ceiling with no evidence at all: however complete the capture looks,
+  // unevidenced input cannot be called confident.
+  const discoveryConfidenceScore =
+    profile.evidenceSources.length === 0
+      ? Math.min(clampScore(confidenceRaw), CONFIDENCE.noEvidenceCap)
+      : clampScore(confidenceRaw);
 
   const readinessBand = deriveReadinessBand(
     completenessScore,
@@ -378,7 +434,13 @@ export function calculateBusinessDiscoveryCompleteness(
     completenessScore,
     discoveryConfidenceScore,
     readinessBand,
-    breakdown: { sections, totalWeight: round2(declaredWeightTotal === 0 ? 0 : 100) },
+    breakdown: {
+      sections,
+      // Computed from the weights actually reported, never asserted. Rounding
+      // each section to two decimals means this can land a hundredth off 100
+      // for some section subsets; reporting the real sum is the honest choice.
+      totalWeight: round2(sections.reduce((sum, section) => sum + section.weight, 0)),
+    },
     missingRequiredCount: validation.missingRequiredQuestionIds.length,
     criticalGapCount: validation.criticalGaps.length,
     evidenceReferenceCount: profile.evidenceSources.length,
@@ -417,10 +479,19 @@ function isOptionalQuestionSatisfied(
   );
 }
 
+/** The weaker of two bands, by declaration order in `READINESS_BANDS`. */
+function lowerBand(a: ReadinessBand, b: ReadinessBand): ReadinessBand {
+  return READINESS_BANDS.indexOf(a) <= READINESS_BANDS.indexOf(b) ? a : b;
+}
+
 /**
- * Band from the completeness score, then demoted while discovery is not
- * trustworthy: outstanding critical gaps or missing required answers cap the
- * band, and weak input confidence prevents claiming `strong`.
+ * Readiness starts from the completeness score and is then capped by two
+ * independent trust checks — a profile is only as ready as its weakest signal:
+ *
+ * 1. Outstanding required answers or critical gaps cap it at `partial`.
+ * 2. Input confidence caps it via `CONFIDENCE_BAND_CAPS` — under 60 it cannot be
+ *    `strong`, under 40 it cannot exceed `partial`. This is what prevents a
+ *    fully-populated but unevidenced profile from reading as ready.
  */
 function deriveReadinessBand(
   completenessScore: number,
@@ -428,17 +499,19 @@ function deriveReadinessBand(
   missingRequiredCount: number,
   criticalGapCount: number,
 ): ReadinessBand {
-  const base =
+  let band =
     BAND_THRESHOLDS.find(([, threshold]) => completenessScore >= threshold)?.[0] ?? 'incomplete';
 
   if (criticalGapCount > 0 || missingRequiredCount > 0) {
-    // Cannot be better than `partial` while required/critical items are open.
-    return base === 'strong' || base === 'usable' ? 'partial' : base;
+    band = lowerBand(band, 'partial');
   }
-  if (base === 'strong' && discoveryConfidenceScore < 60) {
-    return 'usable';
-  }
-  return base;
+
+  const confidenceCap =
+    CONFIDENCE_BAND_CAPS.find(
+      ([minConfidence]) => discoveryConfidenceScore >= minConfidence,
+    )?.[1] ?? 'incomplete';
+
+  return lowerBand(band, confidenceCap);
 }
 
 /** Short, machine-readable explanation codes. Order is deterministic. */
@@ -458,7 +531,7 @@ function buildReasons(
 
   if (profile.evidenceSources.length === 0) {
     reasons.push('no-evidence-sources');
-  } else if (evidenceBackedAnswerRatio(profile) === 0) {
+  } else if (!profile.sections.some(hasEvidenceLinkedAnswer)) {
     reasons.push('evidence-sources-unlinked');
   } else {
     reasons.push('evidence-backed');
