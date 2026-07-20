@@ -1,13 +1,25 @@
-# ADR 0021: Discovery to BIF Wiring Prerequisites
+# ADR 0025: Discovery to BIF Wiring Prerequisites
 
 - Status: Proposed
 - Date: 2026-07-20
 
-> **Note on numbering.** `0021` is the next unused ADR number in `docs/adrs/`. The number was
-> previously held by a "Phase 5 execution foundation" ADR that was reverted along with PR #41–#61
-> (see `docs/reviews/AGE_PR41_61_REVERT_PLAN.md`, which still references the old ADR-0021). That ADR
-> no longer exists in the repository. If reusing the number is undesirable, renumber this file before
-> acceptance — nothing else depends on it.
+> **Note on numbering — ADR-0021 through ADR-0024 are deliberately skipped.**
+>
+> The numerically next free slot is `0021`, but that number, along with `0022`, `0023` and `0024`,
+> belonged to the Phase 5 execution-governance ADRs (execution foundation, execution audit
+> persistence, approval workflow, and the operator/tenant context boundary). That work was reverted
+> with PR #41–#61 and those ADR files no longer exist in the repository — but
+> `docs/reviews/AGE_PR41_61_REVERT_PLAN.md` still refers to ADR-0021 through ADR-0024 by their
+> original meanings, and so does prior project history.
+>
+> Reusing any of those numbers would make a reference like "ADR-0021" ambiguous: it would resolve to
+> this document in the repository while resolving to reverted execution-governance work in the
+> review record. **`0025` is therefore chosen deliberately** as the first number that has never been
+> used, so no ADR reference is ambiguous. The gap at 0021–0024 is intentional and records that the
+> reverted range is retired, not free for reuse.
+>
+> ADR-0020 (Branch Flow Governance) is unaffected — it was explicitly kept during the revert and
+> remains Accepted.
 
 ## Context
 
