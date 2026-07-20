@@ -105,3 +105,23 @@ export { mapBusinessDiscoveryToBifContext } from './business-discovery-bif-mappi
 
 // Representative sample fixture (generic fictional data, no side effects).
 export { SAMPLE_BUSINESS_DISCOVERY_PROFILE } from './sample-profile';
+
+// Completeness / discovery-input-confidence scoring (pure, deterministic).
+// `discoveryConfidenceScore` means confidence in the captured discovery input,
+// NOT strategic confidence — see the module note in `completeness-scoring.ts`.
+export {
+  BUSINESS_DISCOVERY_SCORING_VERSION,
+  DISCOVERY_SECTION_WEIGHTS,
+  READINESS_BANDS,
+  readinessBandSchema,
+  businessDiscoverySectionCompletenessSchema,
+  businessDiscoveryCompletenessBreakdownSchema,
+  businessDiscoveryCompletenessScoreSchema,
+  calculateBusinessDiscoveryCompleteness,
+} from './completeness-scoring';
+export type {
+  ReadinessBand,
+  BusinessDiscoverySectionCompleteness,
+  BusinessDiscoveryCompletenessBreakdown,
+  BusinessDiscoveryCompletenessScore,
+} from './completeness-scoring';
