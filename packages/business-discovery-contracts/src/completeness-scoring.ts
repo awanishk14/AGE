@@ -11,6 +11,7 @@ import {
 } from './questionnaire';
 import { DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE } from './default-questionnaire';
 import { validateProfileAgainstQuestionnaire } from './questionnaire-validation';
+import { getEvidencedFieldPaths, PROFILE_SIGNAL_TO_FIELD_PATH } from './field-provenance';
 
 /**
  * Business Discovery completeness scoring — pure, deterministic, transparent.
@@ -42,22 +43,24 @@ import { validateProfileAgainstQuestionnaire } from './questionnaire-validation'
  * weaker of the two. Keeping them independent is what makes them useful to a
  * later BIF wiring slice, which needs both numbers to mean different things.
  *
- * KNOWN LIMITATION (v2.1.0) — evidence coverage depends on **answer-level**
- * citation via `DiscoveryAnswer.evidenceSourceIds`. That is the only place the
- * current contracts can express provenance. When a structured profile field
- * satisfies a questionnaire signal directly (via `satisfiedBy`) rather than
- * through a captured answer, there is nowhere to attach an evidence reference,
- * so the scorer cannot credit that field as evidence-covered — even if the fact
- * genuinely came from a cited source. Consequence: a profile captured entirely
- * through structured fields is ceilinged by `uncitedEvidenceCap` no matter how
- * well-sourced it really is.
+ * EVIDENCE COVERAGE (v3.0.0) — a questionnaire section counts as evidenced when
+ * either a captured answer in it cites a source (answer-level, unchanged) or a
+ * question in it is satisfied by a structured field carrying valid field-level
+ * evidence (`profile.fieldEvidence`, added per ADR-0025). This lifts the v2.1.0
+ * limitation whereby a profile captured entirely through structured fields could
+ * never escape `uncitedEvidenceCap` however well-sourced it actually was.
  *
- * This is acceptable for now (it errs toward under-claiming confidence, never
- * over-claiming) but it is explicitly called out because a future Discovery →
- * BIF wiring slice needs **field-level provenance**: the canonical BIF requires
- * `source` and `confidence` per field, which this limitation would otherwise
- * silently under-populate. Lifting it means adding field-level evidence
- * references to the discovery contracts — a separate, decided slice.
+ * Only resolvable citations count: a field whose evidence ids are not declared
+ * in `profile.evidenceSources` earns nothing, so dangling references cannot buy
+ * confidence. Both ceilings are unchanged — no evidence sources still caps at
+ * `noEvidenceCap`, and sources listed but never cited by any answer *or* field
+ * still cap at `uncitedEvidenceCap`.
+ *
+ * REMAINING LIMITATION — provenance is field-level, not item-level: an
+ * individual offering or segment cannot be cited separately from its containing
+ * field. Index-based item paths would break under reordering, and nothing needs
+ * that granularity yet. Revisit if BIF wiring turns out to require per-item
+ * provenance.
  */
 
 /**
@@ -65,7 +68,7 @@ import { validateProfileAgainstQuestionnaire } from './questionnaire-validation'
  * be traced to the model that produced it. Not a timestamp — deliberately no
  * wall-clock anywhere in this module.
  */
-export const BUSINESS_DISCOVERY_SCORING_VERSION = '2.1.0';
+export const BUSINESS_DISCOVERY_SCORING_VERSION = '3.0.0';
 
 /**
  * Explicit per-section weights, summing to 100 across every
@@ -278,8 +281,19 @@ function hasEvidenceLinkedAnswer(section: BusinessDiscoveryProfile['sections'][n
 }
 
 /**
- * Fraction of the questionnaire's sections for which the profile captures at
- * least one evidence-linked answer.
+ * Fraction of the questionnaire's sections for which the profile carries at
+ * least one resolvable evidence citation.
+ *
+ * A section counts as evidence-covered when **either**:
+ *
+ * - a captured answer in that section cites an evidence source (answer-level,
+ *   the original mechanism — unchanged), **or**
+ * - a question in that section is satisfied by a structured profile signal whose
+ *   field carries valid field-level evidence (ADR-0025 prerequisite).
+ *
+ * Only *valid* field evidence counts: `getEvidencedFieldPaths` drops any path
+ * whose citations name an evidence source the profile does not declare, so a
+ * dangling reference earns nothing.
  *
  * Measured against the *questionnaire's* section count, not the profile's own
  * answers — otherwise a profile answering one question with one citation would
@@ -298,6 +312,22 @@ function evidenceSectionCoverage(
   for (const section of profile.sections) {
     if (hasEvidenceLinkedAnswer(section)) {
       covered.add(section.id);
+    }
+  }
+
+  const evidencedFieldPaths = new Set(getEvidencedFieldPaths(profile));
+  if (evidencedFieldPaths.size > 0) {
+    for (const section of questionnaire.sections) {
+      const backedByEvidencedField = section.questions.some((question) => {
+        if (question.satisfiedBy === undefined) {
+          return false;
+        }
+        const fieldPath = PROFILE_SIGNAL_TO_FIELD_PATH[question.satisfiedBy];
+        return fieldPath !== undefined && evidencedFieldPaths.has(fieldPath);
+      });
+      if (backedByEvidencedField) {
+        covered.add(section.id);
+      }
     }
   }
   const relevant = questionnaire.sections.filter((section) => covered.has(section.id)).length;
@@ -585,9 +615,12 @@ function buildReasons(
     reasons.push('no-critical-gaps');
   }
 
+  const hasAnyCitation =
+    profile.sections.some(hasEvidenceLinkedAnswer) || getEvidencedFieldPaths(profile).length > 0;
   if (profile.evidenceSources.length === 0) {
     reasons.push('no-evidence-sources');
-  } else if (!profile.sections.some(hasEvidenceLinkedAnswer)) {
+  } else if (!hasAnyCitation) {
+    // Sources declared, but nothing — no answer and no field — cites them.
     reasons.push('evidence-sources-unlinked');
   } else {
     reasons.push('evidence-backed');

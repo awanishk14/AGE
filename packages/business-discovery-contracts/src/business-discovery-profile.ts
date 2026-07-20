@@ -7,6 +7,10 @@ import { businessGoalSchema, type BusinessGoal } from './business-goal';
 import { evidenceSourceRefSchema, type EvidenceSourceRef } from './evidence-source-ref';
 import { businessAssumptionSchema, type BusinessAssumption } from './business-assumption';
 import { discoveryGapSchema, type DiscoveryGap } from './discovery-gap';
+import {
+  businessDiscoveryFieldEvidenceSchema,
+  type BusinessDiscoveryFieldEvidence,
+} from './field-provenance';
 
 /**
  * BusinessDiscoveryProfile — the aggregate produced by Business Discovery: a
@@ -41,6 +45,15 @@ export interface BusinessDiscoveryProfile {
   readonly assumptions: readonly BusinessAssumption[];
   readonly gaps: readonly DiscoveryGap[];
 
+  /**
+   * Optional field-level provenance: evidence source ids cited per structured
+   * field. Omitting it is valid — a profile that cites nothing here is exactly
+   * as valid as before this field existed. Referential integrity against
+   * `evidenceSources` is checked by `validateBusinessDiscoveryFieldEvidence`,
+   * which a schema cannot do from within one field.
+   */
+  readonly fieldEvidence?: BusinessDiscoveryFieldEvidence;
+
   readonly capturedAt: string;
 }
 
@@ -64,6 +77,8 @@ export const businessDiscoveryProfileSchema = z.object({
   evidenceSources: z.array(evidenceSourceRefSchema),
   assumptions: z.array(businessAssumptionSchema),
   gaps: z.array(discoveryGapSchema),
+
+  fieldEvidence: businessDiscoveryFieldEvidenceSchema.optional(),
 
   capturedAt: z.string().datetime(),
 });
