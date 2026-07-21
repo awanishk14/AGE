@@ -53,9 +53,30 @@ cannot currently supply honestly. Each was discovered by reading the actual BIF 
    differs: discovery measures how well-sourced the captured input is, while BIF's confidence
    describes trust in the business intelligence itself.
 
-4. **Missing submodels.** The BIF-compatible projection covers 8 grouping keys. `SectionType` defines
-   **12**: discovery has no source whatsoever for `vision_strategy`, `marketing_intelligence`,
-   `technology_stack` or `kpis`.
+   > **Revised 2026-07-20 (post-PR #75).** This ADR originally assumed only _confidence_ diverged
+   > between the two models, and that _completeness_ meant the same thing in both. Implementing the
+   > mapper (PR #75) showed that assumption was wrong: completeness diverges too. Discovery
+   > completeness measures how completely the **intake questionnaire** was answered; BIF completeness
+   > measures how populated the **canonical BIF** is. See the revised Decision 3 below.
+
+4. **Missing submodels.** `SectionType` defines **12** sections. The delivered mapper (PR #75)
+   currently populates **7** and omits **5**:
+
+   - **Mapped (7):** `organization_identity`, `vision_strategy`, `products_services`, `icp_personas`,
+     `market_competition`, `brand_system`, `gtm_system`.
+   - **Omitted (5):** `marketing_intelligence`, `technology_stack`, `kpis`, `assets`, `constraints`.
+
+   Three distinctions matter within the omitted set:
+
+   - `vision_strategy` is **partially** mapped — only from **long-horizon discovery goals**
+     (`goals` filtered to `horizon === 'long'` → `longTermGoals`). Short- and medium-horizon goals
+     have no exact BIF key and are reported unmapped rather than guessed into annual/quarterly
+     buckets. So `vision_strategy` counts among the 7 mapped, but its coverage is partial.
+   - `assets` and `constraints` are **intentionally omitted**: Discovery captures them as
+     unclassified free text, whereas BIF requires typed buckets. Mapping them would require inference,
+     which discovery does not perform — so they are left absent rather than fabricated.
+   - `marketing_intelligence`, `technology_stack` and `kpis` still have **no Discovery source at
+     all** — AGE does not collect this at intake, and later capabilities are meant to supply it.
 
 Deciding these ad hoc during implementation is exactly the "silently reinterpret a missing
 architectural decision" failure the working conventions forbid. Hence this ADR.
@@ -129,25 +150,66 @@ defaulted to a fabricated string.
 
 ## Decision 3 — Confidence and completeness mapping
 
+> **This decision was revised on 2026-07-20**, after PR #75 implemented the mapper. The original text
+> chose "map completeness directly" on the assumption that completeness means the same thing in both
+> models. Implementation showed it does not. The revision below replaces that framing. The
+> _confidence_ half of the original decision is unchanged and is restated here in full.
+>
+> The ADR remains **Proposed**. This revision reconciles the proposal with implementation findings so
+> that what is eventually accepted matches what was actually built — rather than ratifying a decision
+> already known to be wrong and amending it afterwards.
+
 ### Options considered
 
-| Option                                                                               | Assessment                                                                                                                                                                                                                                               |
-| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A. Map both discovery scores directly into BIF root scores                           | Conflates two different meanings. `discoveryConfidenceScore` measures sourcing quality of _intake_; BIF `confidenceScore` describes trust in the _intelligence_. PR #72 deliberately named the field `discoveryConfidenceScore` to prevent exactly this. |
-| **B. Map completeness directly; keep discovery confidence as input confidence only** | `completenessScore` means the same thing in both models ("how much is populated"), so it transfers honestly. Confidence does not, and is withheld.                                                                                                       |
-| C. Create separate BIF metadata for discovery input confidence                       | Requires modifying `@age/bif`, against the consumed-not-modified driver, and pre-commits the canonical model to an intake-specific concept.                                                                                                              |
-| D. Require a later BIF scoring layer                                                 | Right for confidence, insufficient alone — it says nothing about completeness, which is ready today.                                                                                                                                                     |
+| Option                                                                        | Assessment                                                                                                                                                                                                                                                             |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A. Map both discovery scores directly into BIF root scores                    | Conflates two different meanings. `discoveryConfidenceScore` measures sourcing quality of _intake_; BIF `confidenceScore` describes trust in the _intelligence_. PR #72 deliberately named the field `discoveryConfidenceScore` to prevent exactly this.               |
+| ~~B. Map completeness directly; keep discovery confidence as input only~~     | **Superseded by E.** Rested on "`completenessScore` means the same thing in both models". It does not: discovery completeness scores the _questionnaire_, BIF completeness scores the _framework_. Mapping directly would publish a sparse Draft BIF as near-complete. |
+| C. Create separate BIF metadata for discovery input confidence                | Requires modifying `@age/bif`, against the consumed-not-modified driver, and pre-commits the canonical model to an intake-specific concept.                                                                                                                            |
+| D. Require a later BIF scoring layer                                          | Right for confidence, insufficient alone — it says nothing about completeness.                                                                                                                                                                                         |
+| **E. Two distinct completeness metrics; confidence withheld pending scoring** | Each score keeps one meaning. BIF completeness is computed from BIF population; discovery completeness is preserved as metadata. Confidence stays withheld as in the original decision. Matches what PR #75 implemented.                                               |
 
 ### Proposed decision
 
-**Option B, with D as its sequenced follow-up.** `completenessScore` maps directly to BIF root and
-section completeness. `discoveryConfidenceScore` is **not** written into any BIF confidence field; it
-travels alongside the BIF as intake metadata in the wiring result, retaining its name.
+**Option E, with D as its sequenced follow-up.**
+
+#### Completeness — two metrics, never conflated
+
+Discovery completeness and BIF completeness are **separate metrics measuring different things**, and
+must not be conflated or used interchangeably:
+
+- **Discovery completeness** measures how complete the **intake capture** is against the discovery
+  questionnaire. It describes the interview.
+- **BIF completeness** measures how populated the **canonical BIF** is against BIF section and field
+  definitions. It describes the framework.
+
+The rules that follow:
+
+- `discoveryCompletenessScore` **remains in mapper metadata**, unchanged, retaining its name. It is
+  never written into any BIF completeness field.
+- `bif.completenessScore` **is computed from BIF population completeness** — populated fields over
+  fields BIF defines — not carried over from discovery.
+- **Section `completenessScore` likewise means BIF section population completeness**: populated
+  fields over the fields BIF defines for that section, the same metric as the root.
+- Discovery capture completeness **for source sections may be preserved in metadata** (per-section),
+  but must not be written into any BIF completeness field.
+
+#### Confidence — unchanged from the original decision
+
+`discoveryConfidenceScore` is **not** written into any BIF confidence field; it travels alongside the
+BIF as intake metadata in the wiring result, retaining its name. Clarifying what each measures:
+
+- `discoveryConfidenceScore` measures **input/source quality of the discovery profile** — how
+  well-sourced the captured intake is.
+- BIF `confidenceScore` must measure **confidence in the produced business intelligence**.
 
 Because BIF's root `confidenceScore` is a required number, and no honest value for it exists before a
-BIF scoring layer: the first wiring emits `BIFStatus.Draft` and a documented conservative value, and
-**must not** derive that value from `discoveryConfidenceScore`. Populating it properly is the job of
-a dedicated BIF scoring layer — a distinct, later slice with its own ADR if the rule is non-obvious.
+BIF scoring layer: the first wiring emits `BIFStatus.Draft` and a documented conservative value.
+**Until a dedicated BIF scoring layer exists, BIF confidence may remain provisional.**
+
+That scoring layer must compute BIF root and section confidence **deterministically from BIF
+content** — provenance, field-level confidence, section coverage and warnings — and **must not copy
+`discoveryConfidenceScore`** into it under any circumstance.
 
 ## Decision 4 — Partial BIF construction
 
@@ -179,6 +241,29 @@ finished one — consumers must handle omitted sections. BIF root `confidenceSco
 until a BIF scoring layer exists. The prerequisite slice is a breaking-ish contract addition to
 `@age/business-discovery-contracts` (additive and optional if designed carefully).
 
+### Implementation alignment — the two-metric model already exists (PR #75)
+
+The revised Decision 3 is not speculative. **PR #75 already implements the two-metric completeness
+model**, and its pinned sample values make the divergence concrete:
+
+| Value                                 | Sample       | Meaning                                     |
+| ------------------------------------- | ------------ | ------------------------------------------- |
+| `metadata.discoveryCompletenessScore` | **97**       | Intake capture completeness (the interview) |
+| `bif.completenessScore`               | **12**       | BIF population completeness (the framework) |
+| Populated fields                      | **10 of 84** | Fields populated / fields BIF defines       |
+| Mapped sections                       | **7 of 12**  | Sections populated / `SectionType` members  |
+
+The 97-versus-12 gap is **intentional and correct, not a defect**. A thoroughly captured Discovery
+profile can still produce a sparse Draft BIF: the questionnaire was answered almost fully, but the
+canonical BIF defines far more fields than intake collects, and 5 of 12 section types are left
+unmapped. Had the original Decision 3 been implemented literally, this BIF would have
+published `completenessScore: 97` — advertising a 12%-populated framework as near-complete, and
+misleading every downstream consumer that reads completeness to decide whether the BIF is usable.
+
+**Accepted consequence.** Consumers must read the two scores as answering different questions. A high
+`discoveryCompletenessScore` says the interview went well; it says nothing about whether the BIF is
+populated enough to act on. Only `bif.completenessScore` answers that.
+
 **If this ADR is rejected**, the alternative is fabricating provenance and confidence at wiring time —
 which would silently corrupt an append-only, versioned model.
 
@@ -208,18 +293,33 @@ For the slices this ADR enables:
 
 Sequenced; each needs explicit authorization before starting:
 
-1. **Field-level evidence references in `@age/business-discovery-contracts`** (Decision 2) — additive
-   contract change plus scoring update, so structured fields can carry provenance. Lifts the KNOWN
-   LIMITATION recorded in `completeness-scoring.ts`.
-2. **Discovery → BIF mapper** (Decisions 1, 3, 4) — pure, caller-supplied timestamp and actor,
-   producing a `Draft` partial BIF with completeness mapped and confidence withheld.
-3. **BIF scoring layer** (Decision 3 follow-up) — computes root and section `confidenceScore` from
-   field-level provenance, replacing the provisional value.
+1. ~~**Field-level evidence references in `@age/business-discovery-contracts`**~~ (Decision 2) —
+   **delivered (PR #74).** Additive contract change plus scoring update, so structured fields can
+   carry provenance. Lifted the KNOWN LIMITATION recorded in `completeness-scoring.ts`.
+2. ~~**Discovery → BIF mapper**~~ (Decisions 1, 3, 4) — **delivered (PR #75).** Pure, caller-supplied
+   timestamp and actor, producing a `Draft` partial BIF with **BIF population completeness computed**
+   (per revised Decision 3, not mapped from discovery) and confidence withheld.
+3. **BIF scoring layer** (Decision 3 follow-up) — **the next slice.** Scope:
+   - **Consumes a Draft BIF** and computes **section `confidenceScore`** and **root
+     `confidenceScore`**, replacing the provisional value.
+   - Produces **reasons, warnings and metadata** explaining how each score was reached.
+   - Stays **deterministic and package-level** — no wall-clock, no randomness, no I/O.
+   - **Must not use `discoveryConfidenceScore` as BIF confidence**, directly or as an input term.
+   - **Must not change BIF status promotion rules** (e.g. Draft → Active) unless that is decided
+     separately; a high confidence score does not by itself imply a promotable BIF.
+   - **Adds no API, Web, DB or persistence surface.**
 4. **Capability consumption of a real BIF** — the point of the whole exercise: capabilities read
    captured business context instead of fixtures.
 
 ---
 
-**This document is a proposal only.** No code, package, API, Web, DB, persistence or ADR-status
-changes are made by it, no other ADR's status is altered, and no implementation is started — pending
-Product Owner acceptance before slice 1 begins.
+**This document is a proposal only.** Its status remains `Proposed`. No code, package, API, Web, DB,
+persistence or ADR-status changes are made by it, no other ADR's status is altered, and no
+implementation is started.
+
+**On the 2026-07-20 revision.** Decision 3 was revised to reconcile this proposal with implementation
+findings from PR #75, which is already merged. Slices 1 and 2 shipped ahead of formal acceptance;
+this revision brings the written proposal back in line with what was built, so that what is
+eventually accepted describes reality. **This revision does not change the ADR's status** — a later
+PR may put ADR-0025 forward for acceptance after review. Slice 3 (BIF scoring layer) has not
+started.
