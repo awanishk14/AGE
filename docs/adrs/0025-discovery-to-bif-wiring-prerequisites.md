@@ -59,16 +59,24 @@ cannot currently supply honestly. Each was discovered by reading the actual BIF 
    > completeness measures how completely the **intake questionnaire** was answered; BIF completeness
    > measures how populated the **canonical BIF** is. See the revised Decision 3 below.
 
-4. **Missing submodels.** The BIF-compatible projection covers 8 grouping keys. `SectionType` defines
-   **12**: discovery has no source whatsoever for `vision_strategy`, `marketing_intelligence`,
-   `technology_stack` or `kpis`.
+4. **Missing submodels.** `SectionType` defines **12** sections. The delivered mapper (PR #75)
+   currently populates **7** and omits **5**:
 
-   > **Noted 2026-07-20 (post-PR #75).** The delivered mapper maps **7** section types, including
-   > `vision_strategy` (from the `goals-constraints` grouping) — so that one _does_ have a usable
-   > source, contrary to this paragraph. It leaves **5** unmapped. This paragraph is left as
-   > originally written for the record; the delivered counts above are authoritative. Reconciling
-   > this text is a documentation matter, not a decision, and is deliberately not bundled into this
-   > revision, which is scoped to Decision 3.
+   - **Mapped (7):** `organization_identity`, `vision_strategy`, `products_services`, `icp_personas`,
+     `market_competition`, `brand_system`, `gtm_system`.
+   - **Omitted (5):** `marketing_intelligence`, `technology_stack`, `kpis`, `assets`, `constraints`.
+
+   Three distinctions matter within the omitted set:
+
+   - `vision_strategy` is **partially** mapped — only from **long-horizon discovery goals**
+     (`goals` filtered to `horizon === 'long'` → `longTermGoals`). Short- and medium-horizon goals
+     have no exact BIF key and are reported unmapped rather than guessed into annual/quarterly
+     buckets. So `vision_strategy` counts among the 7 mapped, but its coverage is partial.
+   - `assets` and `constraints` are **intentionally omitted**: Discovery captures them as
+     unclassified free text, whereas BIF requires typed buckets. Mapping them would require inference,
+     which discovery does not perform — so they are left absent rather than fabricated.
+   - `marketing_intelligence`, `technology_stack` and `kpis` still have **no Discovery source at
+     all** — AGE does not collect this at intake, and later capabilities are meant to supply it.
 
 Deciding these ad hoc during implementation is exactly the "silently reinterpret a missing
 architectural decision" failure the working conventions forbid. Hence this ADR.
