@@ -1,7 +1,25 @@
 # ADR 0025: Discovery to BIF Wiring Prerequisites
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-20
+
+> **Acceptance note (2026-07-21).** ADR-0025 was accepted after PR #77 reconciled Decision 3 with the
+> delivered mapper, removing the last internal inconsistency between the written proposal and what
+> was built. The accepted decision ratifies:
+>
+> - **Deterministic timestamps and actor identity** — caller-supplied, never read from the wall clock.
+> - **Field-level provenance before BIF wiring** — evidence references carried on structured fields.
+> - **Two separate completeness metrics, never conflated** —
+>   `metadata.discoveryCompletenessScore` measures intake capture completeness (the questionnaire),
+>   while `bif.completenessScore` measures BIF population completeness (the framework).
+> - **`discoveryConfidenceScore` is not BIF confidence** — it measures discovery input/source quality
+>   and is never written into any BIF confidence field.
+> - **Partial `Draft` BIF construction** — unmappable sections are omitted rather than filled with
+>   placeholder or inferred values.
+>
+> The **BIF scoring layer remains a future implementation slice** (Decision 3's sequenced follow-up);
+> it has not been started. The PR recording this acceptance changes the ADR status and adds this note
+> only — no other content, decision or ADR status is altered.
 
 > **Note on numbering — ADR-0021 through ADR-0024 are deliberately skipped.**
 >
