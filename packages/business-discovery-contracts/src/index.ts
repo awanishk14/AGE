@@ -144,6 +144,23 @@ export type {
   BifSectionPopulation,
 } from './business-discovery-to-bif';
 
+// BIF scoring layer (ADR-0025 Decision 3 follow-up, slice 3). Computes BIF
+// root/section confidence from the BIF itself. Takes only a BIF — no discovery
+// score is in scope, so `discoveryConfidenceScore` cannot leak into BIF
+// confidence. Pure, deterministic, non-mutating; never promotes status.
+export {
+  BIF_CONFIDENCE_SCORING_VERSION,
+  bifSectionConfidenceScoreSchema,
+  bifConfidenceScoringMetadataSchema,
+  scoreBusinessIntelligenceFramework,
+} from './bif-confidence-scoring';
+export type {
+  BifSectionConfidenceScore,
+  BifConfidenceScoringMetadata,
+  BifConfidenceScoringResult,
+  BifConfidenceScoringOptions,
+} from './bif-confidence-scoring';
+
 // Completeness / discovery-input-confidence scoring (pure, deterministic).
 // `discoveryConfidenceScore` means confidence in the captured discovery input,
 // NOT strategic confidence — see the module note in `completeness-scoring.ts`.
