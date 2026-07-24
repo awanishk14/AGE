@@ -1,7 +1,13 @@
 import type { ClientContext } from '@age/capability-kit';
 import type { MarketDiscoveryInput } from '@age/market-discovery-contracts';
+import type { ScoredBifContext } from '@age/business-discovery-contracts';
 import type { MarketDiscoveryResult } from './market-discovery-result';
+import type { MarketContextReadinessResult } from './market-context-readiness-result';
 import { processMarketDiscovery } from './processing/process-market-discovery';
+import {
+  assessMarketContextReadiness,
+  type AssessMarketContextReadinessOptions,
+} from './processing/assess-market-context-readiness';
 
 /**
  * MarketDiscoveryCapability — identifies and scores market opportunity
@@ -22,5 +28,27 @@ import { processMarketDiscovery } from './processing/process-market-discovery';
 export class MarketDiscoveryCapability {
   async run(context: ClientContext, input: MarketDiscoveryInput): Promise<MarketDiscoveryResult> {
     return processMarketDiscovery(context, input);
+  }
+
+  /**
+   * Assess whether a caller-assembled `ScoredBifContext` carries enough context
+   * for market discovery work (ADR-0027, Decision 4).
+   *
+   * Read-only and deterministic: reports which of the sections this capability
+   * needs are supported, weak or absent, and carries a first-class sufficiency
+   * state with mandatory reasons. Depends only on the neutral projection contract
+   * — never on `@age/bif` — and `producedAt` is caller-supplied (ADR-0026
+   * Decision 2); nothing here reads the wall clock.
+   *
+   * This is NOT a gate. `run` above does not consult it, is not blocked by it,
+   * and is unchanged by it (ADR-0027 Decision 1). It derives, ranks, names and
+   * hints at no market opportunity whatsoever: its result carries no items.
+   */
+  assessMarketContext(
+    context: ClientContext,
+    scoredBifContext: ScoredBifContext,
+    options: AssessMarketContextReadinessOptions,
+  ): MarketContextReadinessResult {
+    return assessMarketContextReadiness(context, scoredBifContext, options);
   }
 }
