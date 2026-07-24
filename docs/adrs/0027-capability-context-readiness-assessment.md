@@ -1,7 +1,25 @@
 # ADR 0027: Capability Context Readiness Assessment
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-24
+
+## Acceptance note
+
+ADR-0027 was accepted after PR #88 documented the missing architectural decision blocking a second
+`ScoredBifContext` consumer. The accepted decision ratifies:
+
+- a capability other than Intelligence may read a `ScoredBifContext` **solely** to report whether that
+  context is sufficient for its own work;
+- such an assessment must use the shared `CapabilityResult` / `CapabilityOutput` envelope with a
+  sufficiency state and mandatory reasons, via a separate, explicitly named entry point;
+- readiness is **not** a gate — a capability's `run` must never consult, require or be blocked by it;
+- no plan, opportunity, action or recommendation may be derived, ranked, named or hinted at;
+- the pattern is permitted, not rolled out — each adopting capability is its own slice and its own proof;
+- sufficiency thresholds stay per-capability and published in the capability's summary output;
+- `CapabilityRegistryEntry.consumes` is not changed, and advertising context consumption needs its own ADR;
+- the next implementation slice is exactly one capability adopting the pattern.
+
+This PR only changes the ADR status and records acceptance. No implementation is started.
 
 ## Context
 
