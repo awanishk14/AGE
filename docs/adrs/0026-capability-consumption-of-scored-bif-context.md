@@ -1,7 +1,23 @@
 # ADR 0026: Capability Consumption of Scored BIF Context
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-21
+
+## Acceptance note
+
+ADR-0026 was accepted after PR #81 documented the missing architectural decision for capability
+consumption of scored BIF context. The accepted decision ratifies:
+
+- capabilities must not import `@age/bif` or consume the live `BusinessIntelligenceFramework` directly;
+- scored BIF context reaches capabilities through a neutral read-only `ScoredBifContext` projection;
+- the caller/adapter assembles `ScoredBifContext`;
+- the capability output/result contract must support caller-supplied `producedAt` for deterministic flows;
+- no separate deterministic result type;
+- capability sufficiency/readiness is first-class: `ready`, `partial`, `insufficient`, `blocked`;
+- missing sections/fields are limitations, not negative evidence;
+- the first implementation slice after acceptance is one existing pure capability consuming `ScoredBifContext`.
+
+This PR only changes the ADR status and records acceptance. No implementation is started.
 
 ## Context
 
