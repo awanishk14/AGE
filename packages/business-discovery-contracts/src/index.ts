@@ -180,3 +180,26 @@ export type {
   BusinessDiscoveryCompletenessBreakdown,
   BusinessDiscoveryCompletenessScore,
 } from './completeness-scoring';
+
+// ScoredBifContext — neutral read-only projection of a scored Draft BIF for
+// capability consumption (ADR-0026, Accepted). Capabilities depend on this
+// projection, never on `@age/bif`. Pure, deterministic, non-mutating; never
+// promotes status, never creates placeholder sections, never infers missing
+// data — absent sections are reported as limitations only.
+export {
+  SCORED_BIF_CONTEXT_VERSION,
+  scoredBifContextFieldSchema,
+  scoredBifContextSectionSchema,
+  scoredBifContextOmittedSectionSchema,
+  scoredBifContextMetadataSchema,
+  scoredBifContextSchema,
+  projectScoredBifContext,
+} from './scored-bif-context';
+export type {
+  ScoredBifContext,
+  ScoredBifContextField,
+  ScoredBifContextSection,
+  ScoredBifContextOmittedSection,
+  ScoredBifContextMetadata,
+  ScoredBifContextProjectionOptions,
+} from './scored-bif-context';
