@@ -1,7 +1,13 @@
 import type { ClientContext } from '@age/capability-kit';
 import type { RevenueInput } from '@age/revenue-contracts';
+import type { ScoredBifContext } from '@age/business-discovery-contracts';
 import type { RevenueResult } from './revenue-result';
+import type { RevenueContextReadinessResult } from './revenue-context-readiness-result';
 import { processRevenue } from './processing/process-revenue';
+import {
+  assessRevenueContextReadiness,
+  type AssessRevenueContextReadinessOptions,
+} from './processing/assess-revenue-context-readiness';
 
 /**
  * RevenueCapability — produces revenue plan candidates (upsell, cross-sell,
@@ -27,5 +33,27 @@ import { processRevenue } from './processing/process-revenue';
 export class RevenueCapability {
   async run(context: ClientContext, input: RevenueInput): Promise<RevenueResult> {
     return processRevenue(context, input);
+  }
+
+  /**
+   * Assess whether a caller-assembled `ScoredBifContext` carries enough context
+   * for revenue work (ADR-0027, Decision 1; third adopter of the pattern).
+   *
+   * Read-only and deterministic: reports which of the sections this capability
+   * needs are supported, weak or absent, and carries a first-class sufficiency
+   * state with mandatory reasons. Depends only on the neutral projection contract
+   * — never on `@age/bif` — and `producedAt` is caller-supplied (ADR-0026
+   * Decision 2); nothing here reads the wall clock.
+   *
+   * This is NOT a gate. `run` above does not consult it, is not blocked by it,
+   * and is unchanged by it (ADR-0027 Decision 1). It derives, ranks, names and
+   * hints at no revenue plan whatsoever: its result carries no items.
+   */
+  assessRevenueContext(
+    context: ClientContext,
+    scoredBifContext: ScoredBifContext,
+    options: AssessRevenueContextReadinessOptions,
+  ): RevenueContextReadinessResult {
+    return assessRevenueContextReadiness(context, scoredBifContext, options);
   }
 }
