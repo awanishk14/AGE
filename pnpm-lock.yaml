@@ -245,6 +245,9 @@ importers:
 
   packages/capabilities/intelligence:
     dependencies:
+      '@age/business-discovery-contracts':
+        specifier: workspace:*
+        version: link:../../business-discovery-contracts
       '@age/capability-kit':
         specifier: workspace:*
         version: link:../../capability-kit

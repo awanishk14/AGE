@@ -16,3 +16,22 @@ export {
   detectContradictions,
   processEvidencePackage,
 } from './processing';
+// Scored BIF context consumption (ADR-0026, Decision 5). Read-only assessment of
+// a caller-assembled ScoredBifContext — no @age/bif dependency, no strategy.
+export {
+  assessScoredBifContext,
+  BUSINESS_CONTEXT_ASSESSMENT_VERSION,
+  BUSINESS_CONTEXT_SUPPORT_THRESHOLDS,
+} from './processing';
+export type { AssessScoredBifContextOptions } from './processing';
+export type {
+  BusinessContextSupportItem,
+  BusinessContextSupportedField,
+} from './business-context-support-item';
+export type {
+  BusinessContextAssessmentSummary,
+  BusinessContextSupportThresholds,
+  UnsupportedContextSection,
+  MissingContextSection,
+} from './business-context-assessment-summary';
+export type { BusinessContextAssessmentResult } from './business-context-assessment-result';

@@ -18,7 +18,8 @@
   },
   "dependencies": {
     "@age/capability-kit": "workspace:*",
-    "@age/evidence-contracts": "workspace:*"
+    "@age/evidence-contracts": "workspace:*",
+    "@age/business-discovery-contracts": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^2.1.1"
