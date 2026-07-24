@@ -1,6 +1,7 @@
 import type { Capability } from '../enums/capability.enum';
 import type { ExecutionDomain } from '../enums/execution-domain.enum';
 import type { CapabilityOutputItem } from './capability-output-item';
+import type { CapabilitySufficiency } from './capability-sufficiency';
 
 interface CapabilityOutputProps<T extends CapabilityOutputItem> {
   clientId: string;
@@ -17,6 +18,19 @@ interface CapabilityOutputProps<T extends CapabilityOutputItem> {
    * unchanged. New deterministic flows should pass this explicitly.
    */
   producedAt?: Date;
+  /**
+   * How far the context available to this capability actually carried it
+   * (ADR-0026, Decision 3). Optional and caller-supplied: the capability decides
+   * the state and states its reasons; this envelope only carries the record.
+   *
+   * When omitted, `sufficiency` stays `undefined` — existing callers keep their
+   * exact prior behaviour. It deliberately does NOT default to `ready`: an
+   * envelope that was never told anything about context sufficiency has no basis
+   * to claim readiness, and inventing one would be exactly the fabrication
+   * ADR-0026 Decision 4 forbids. `undefined` means "not reported", which is
+   * honest; `ready` would be a claim.
+   */
+  sufficiency?: CapabilitySufficiency;
 }
 
 export class CapabilityOutput<T extends CapabilityOutputItem> {
@@ -26,6 +40,7 @@ export class CapabilityOutput<T extends CapabilityOutputItem> {
   readonly executionDomains: ReadonlyArray<ExecutionDomain>;
   readonly items: ReadonlyArray<T>;
   readonly producedAt: Date;
+  readonly sufficiency?: CapabilitySufficiency;
 
   constructor(props: CapabilityOutputProps<T>) {
     this.clientId = props.clientId;
@@ -37,5 +52,8 @@ export class CapabilityOutput<T extends CapabilityOutputItem> {
     // back to the wall clock for backward compatibility. `??` (not `||`) so a
     // caller's timestamp is never second-guessed.
     this.producedAt = props.producedAt ?? new Date();
+    // Carried through exactly as given, including "not reported" (undefined).
+    // The envelope never derives, upgrades or downgrades a sufficiency state.
+    this.sufficiency = props.sufficiency;
   }
 }
