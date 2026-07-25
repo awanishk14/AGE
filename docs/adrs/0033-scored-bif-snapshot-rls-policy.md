@@ -1,11 +1,7 @@
 # ADR 0033: Scored BIF Snapshot Row-Level Security Policy
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-25
-
-> This ADR is a **decision request**. It must not be self-accepted, and it authorizes no
-> implementation until its status is flipped to `Accepted` in a separate pull request. No RLS policy,
-> role, grant or test described here has been built.
 
 ## Amendment note — 2026-07-25 (pre-acceptance)
 
@@ -21,6 +17,21 @@ non-owner application role, `NOSUPERUSER`, `NOBYPASSRLS`, `SELECT`/`INSERT` gran
 `DELETE`, `FORCE ROW LEVEL SECURITY`, fail-closed behaviour, roles kept out of committed migration SQL,
 and the rule that RLS implementation stays separate until this ADR is `Accepted`. No API or Web
 exposure and no `Draft → Active` promotion is authorized by this amendment.
+
+## Acceptance note — 2026-07-25
+
+ADR-0033 is accepted as the governing decision for scored BIF snapshot row-level security. It ratifies
+RLS on `scored_bif_snapshots`, a non-owner non-superuser application role with no `BYPASSRLS`, `INSERT`
+and `SELECT` grants only, no `UPDATE` or `DELETE` grants, transaction-local client and organization
+scope using `age.client_id` and `age.organization_id`, fail-closed behavior when either setting is
+missing, `SELECT` and `INSERT` policies enforcing both `client_id` and `organization_id`, and live
+PostgreSQL tests using the non-owner application role. It does not authorize API/Web exposure,
+`Draft → Active` promotion, workspace implementation, erasure/retention policy, or any non-snapshot RLS
+work.
+
+Accepted as amended — that is, with the client-scoped boundary of the amendment note above, not the
+organization-only boundary originally proposed. The "Implementation constraints" and "First
+implementation slice after acceptance" sections are binding on the slice that follows.
 
 ## Context
 
