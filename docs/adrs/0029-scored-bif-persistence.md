@@ -1,7 +1,34 @@
 # ADR 0029: Persistence of a Scored Business Intelligence Framework
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-25
+
+## Acceptance note
+
+ADR-0029 was accepted as written after PR #96 recorded the proposal. The accepted decision is
+**Option C**, in the four parts stated under "Recommended decision":
+
+1. Persistence is **staged, not built in one slice**: pure snapshot contract → port plus in-memory
+   adapter → durable adapter. The hard boundary **"no DB/persistence writes" remains in force** and is
+   not amended by this ADR.
+2. The next slice is **stage 1 only** — a pure, versioned scored-BIF snapshot contract with round-trip
+   tests, including explicit proof that omitted sections stay omitted and that no score, section or
+   provenance value is fabricated, defaulted or lost.
+3. **Stage 3 requires its own Accepted ADR.** Storage technology, schema, migration policy, the demo
+   forbidden-import guard, and whether `@age/persistence` is extended or bypassed are decided there,
+   not here. This ADR authorizes no database write.
+4. `@age/persistence` is **not presumed to be the host** for the BIF port; that is decided in stage 2
+   on evidence.
+
+Option B (end-to-end Prisma now) is rejected as committing a schema before the serialization format,
+port shape and lifecycle semantics exist. Option A (defer with no trigger) and Option D (snapshot
+format only, never store) are declined.
+
+The five questions under "Deliberately not decided here" — snapshot-vs-mutable record, identity and
+keying, interaction with `Draft → Active` status promotion, re-scoring history, and whether the demo
+track ever reads persisted data — stay open by design. They must be answered before stage 3, and the
+first two before stage 2. This PR only changes the ADR status and records acceptance; implementation
+is a separate slice.
 
 ## Context
 
