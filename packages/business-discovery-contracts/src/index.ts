@@ -216,3 +216,28 @@ export {
   serializeScoredBifSnapshot,
 } from './scored-bif-snapshot';
 export type { ScoredBifSnapshot } from './scored-bif-snapshot';
+
+// ScoredBifSnapshotRepository — storage-neutral append-only port for scored BIF
+// snapshots, plus the in-memory adapter (ADR-0029 stage 2, ADR-0030 Accepted).
+// Append and read only: no update, no delete, no clock, no durable write. Scope
+// (`clientId`, `organizationId`) comes from the caller's ClientContext and is
+// authoritative; `snapshotId` and `capturedAt` are caller-supplied. A durable
+// adapter remains out of scope pending its own Accepted ADR.
+export {
+  SCORED_BIF_SNAPSHOT_RECORD_VERSION,
+  scoredBifSnapshotScopeSchema,
+  scoredBifSnapshotSeriesKeySchema,
+  scoredBifSnapshotKeySchema,
+  scoredBifSnapshotRecordSchema,
+  scoredBifSnapshotSeriesKeyOf,
+  normalizeScoredBifSnapshotRecord,
+} from './scored-bif-snapshot-repository';
+export type {
+  ScoredBifSnapshotScope,
+  ScoredBifSnapshotSeriesKey,
+  ScoredBifSnapshotKey,
+  ScoredBifSnapshotRecord,
+  ScoredBifSnapshotRepository,
+} from './scored-bif-snapshot-repository';
+
+export { InMemoryScoredBifSnapshotRepository } from './in-memory-scored-bif-snapshot-repository';
