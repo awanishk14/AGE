@@ -6,5 +6,10 @@
     "rootDir": "src"
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+  // `*.db.spec.ts` is excluded here because it imports `@prisma/client`, whose
+  // model delegates do not exist until `prisma generate` has run. Typechecking
+  // it in the default target would make `pnpm typecheck` depend on a generation
+  // step. It is typechecked instead by `tsconfig.db.json` via `typecheck:db`,
+  // which the live-database CI job runs after generating (ADR-0032 D13).
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.db.spec.ts"]
 }

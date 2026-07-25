@@ -438,6 +438,15 @@ importers:
         specifier: workspace:*
         version: link:../shared
     devDependencies:
+      '@age/business-discovery-contracts':
+        specifier: workspace:*
+        version: link:../business-discovery-contracts
+      '@age/scored-bif-snapshot-persistence':
+        specifier: workspace:*
+        version: link:../scored-bif-snapshot-persistence
+      '@prisma/client':
+        specifier: ^5.20.0
+        version: 5.22.0(prisma@5.22.0)
       prisma:
         specifier: ^5.20.0
         version: 5.22.0

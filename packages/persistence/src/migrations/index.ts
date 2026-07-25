@@ -1,5 +1,8 @@
 /**
- * Migrations surface. Placeholder — Prisma migrations are generated here once
- * real models exist. No migrations are defined in this task.
+ * Migrations surface — a TypeScript module, NOT the Prisma migrations directory.
+ *
+ * Prisma migrations live beside the schema of record, at `src/prisma/migrations/`,
+ * because Prisma resolves them relative to the schema file (ADR-0032 D2).
+ * See `./README.md`.
  */
 export {};

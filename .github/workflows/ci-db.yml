@@ -1,0 +1,101 @@
+name: CI (live database)
+
+# Live PostgreSQL tests for the durable scored BIF snapshot adapter
+# (ADR-0032 Decisions 9, 10, 13, 15).
+#
+# WHY A SEPARATE WORKFLOW FILE RATHER THAN A SECOND JOB IN ci.yml.
+# ADR-0032 D15 requires this run to be path-gated so that documentation-only and
+# pure-code pull requests do not provision a database or spend Actions minutes on
+# one. GitHub Actions supports `paths` filters only at the workflow level — there
+# is no job-level equivalent — so a second job inside ci.yml would run on every
+# push and every pull request regardless of what changed. Splitting the file is
+# what makes the gate real.
+#
+# The existing `Lint, Typecheck, Test, Build` workflow is UNCHANGED and stays
+# database-free (ADR-0032 D10). Nothing here is a dependency of it.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/persistence/**'
+      - 'packages/scored-bif-snapshot-persistence/**'
+      - '.github/workflows/ci-db.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/persistence/**'
+      - 'packages/scored-bif-snapshot-persistence/**'
+      - '.github/workflows/ci-db.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  database:
+    name: Migration and live PostgreSQL tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        # Throwaway credentials, inline and deliberate. This database is created
+        # for one job, is reachable only from that job's containers, holds
+        # nothing but test fixtures, and is destroyed when the job ends. No
+        # repository secret is required, and introducing one would imply this
+        # database is worth protecting — it is not (ADR-0032 D9).
+        env:
+          POSTGRES_USER: age
+          POSTGRES_PASSWORD: age
+          POSTGRES_DB: age_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U age -d age_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgresql://age:age@localhost:5432/age_test?schema=public
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate the schema of record
+        run: pnpm --filter @age/persistence prisma:validate
+
+      - name: Generate the Prisma client
+        run: pnpm --filter @age/persistence prisma:generate
+
+      # Applies the COMMITTED migration SQL to an empty database. This is the
+      # step that proves the reviewed SQL is the SQL that runs (ADR-0032 D8).
+      - name: Apply committed migrations
+        run: pnpm --filter @age/persistence prisma:migrate:deploy
+
+      # Drift check (ADR-0032 D8). Diffs the database the committed migrations
+      # just produced against the schema of record. `--exit-code` returns 2 when
+      # they differ, so editing the schema without writing a migration fails
+      # here instead of surfacing as a confusing runtime error much later.
+      - name: Check for schema drift
+        run: pnpm --filter @age/persistence prisma:migrate:drift
+
+      - name: Typecheck live database specs
+        run: pnpm --filter @age/persistence typecheck:db
+
+      - name: Live PostgreSQL tests
+        run: pnpm --filter @age/persistence test:db

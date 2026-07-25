@@ -12,8 +12,8 @@
     "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test",
     "smoke:demo": "node scripts/smoke-demo.mjs",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
+    "prisma:generate": "prisma generate --schema prisma/schema.prisma",
+    "prisma:migrate:scaffold": "prisma migrate dev --schema prisma/schema.prisma",
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
