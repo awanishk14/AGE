@@ -1,0 +1,14 @@
+{
+  // Typecheck for the live-database specs only.
+  //
+  // Split from `tsconfig.json` because these files import `@prisma/client`,
+  // which exposes no model delegates until `prisma generate` has run. Keeping
+  // them here means the default `typecheck` target — and therefore the pure CI
+  // job — never depends on a generation step, while the coverage is not lost:
+  // the live-database CI job runs `prisma:generate` and then `typecheck:db`.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/**/*.db.spec.ts"]
+}
