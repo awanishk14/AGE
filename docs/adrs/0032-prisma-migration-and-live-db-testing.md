@@ -22,6 +22,18 @@ implementation slice after acceptance" below — and the implementation constrai
 binding on it. RLS policies and `INSERT`/`SELECT`-only grants remain ADR-0031 stage 3b and stay
 gated.
 
+## Amendment note — 2026-07-25
+
+ADR-0032 was amended after PR #109 revealed that `migrate diff --from-migrations` is not an offline
+command because it requires a shadow database. Offline migration authoring is limited to
+`--from-empty` datamodel diffs or reviewed hand-written SQL deltas. This amendment is factual and does
+not change the accepted schema of record, migration location, committed migration requirement,
+`db push` prohibition, explicit `--schema` requirement, or live DB CI strategy.
+
+The passages corrected are D5 (the authoring command), D6 (what "offline" guarantees), D8 (the CI
+drift check) and the corresponding paragraph in the Rationale. The correction narrows one claim about
+a tool; it does not reopen any decision.
+
 ## Context
 
 PR #106 delivered ADR-0031 stage 3a: the durable scored BIF snapshot persistence foundation. It
@@ -137,20 +149,39 @@ grants, that is the only review surface that exists.
 
 ### D5 — The allowed generation commands
 
+> **Amended 2026-07-25.** As first written, this decision named
+> `migrate diff --from-migrations` as the offline authoring path. That was factually wrong.
+> `--from-migrations` replays the committed migration history into a **shadow database** in order to
+> compute the starting state, so it needs a reachable PostgreSQL like any other command that touches
+> one. The offline paths are `--from-empty` and reviewed hand-written deltas, as stated below.
+
 Two commands are sanctioned, for two different situations:
 
 - **Offline, no database required** — the authoring path:
 
   ```
   prisma migrate diff \
-    --from-migrations src/prisma/migrations \
+    --from-empty \
     --to-schema-datamodel src/prisma/schema.prisma \
     --script
   ```
 
-  This computes the SQL from the committed migration history and the schema, with no database
-  contacted. The output is written by hand into a new timestamped directory under
-  `src/prisma/migrations/` following Prisma's own naming (`<timestamp>_<name>/migration.sql`).
+  `--from-empty` computes the SQL that would build the schema of record from nothing, contacting no
+  database. This is exact for the **first** migration and was how PR #109's migration was in fact
+  produced.
+
+  For a **subsequent** migration, `--from-empty` describes the whole schema rather than the delta, so
+  offline authoring means writing the delta by hand — reading the full-schema output for the intended
+  shape and committing only the `ALTER`/`CREATE` statements that express the change. Such a delta is
+  ordinary reviewed SQL under D4 and D7; nothing about it is special except that no tool generated it,
+  which raises the bar on the review rather than lowering it.
+
+  Either way the result is written into a new timestamped directory under `src/prisma/migrations/`
+  following Prisma's own naming (`<timestamp>_<name>/migration.sql`).
+
+  `migrate diff --from-migrations` is **not** an offline command and must not be described as one. It
+  needs a shadow database. It remains usable when a database is available; it is simply not the
+  offline path.
 
 - **With a local database available** — the ergonomic path:
 
@@ -170,13 +201,23 @@ migration file, which contradicts D4 directly.
 
 ### D6 — A live local database is recommended for authoring, not required
 
-Authoring a migration must remain possible offline via D5's `migrate diff` path. Requiring a running
-PostgreSQL to write a migration would make the persistence path undevelopable on a machine without
-Docker, and PR #106 demonstrated that meaningful persistence work can be done offline.
+Authoring a migration must remain possible offline via D5's `--from-empty` diff or a reviewed
+hand-written delta. Requiring a running PostgreSQL to write a migration would make the persistence
+path undevelopable on a machine without Docker, and PR #106 demonstrated that meaningful persistence
+work can be done offline.
 
-But "not required" is not "not recommended". A migration authored offline has been _computed_, not
-_executed_. The reviewer of such a migration is reading SQL that has never run. D7 and D8 exist
-because of that gap.
+**Amended 2026-07-25:** this guarantee is narrower than first stated, because `--from-migrations` —
+originally named here as the offline path — needs a shadow database. What survives is the guarantee
+that matters: a migration can still be authored with no database, using `--from-empty` or a
+hand-written delta. What is lost is the convenience of having a tool compute an incremental delta
+offline. An author without a database writes the delta themselves; an author with one uses
+`migrate dev` or `--from-migrations` and gets it computed.
+
+But "not required" is not "not recommended", and the amendment sharpens why. A migration authored
+offline has been _computed_ or _typed_, not _executed_. The reviewer of such a migration is reading
+SQL that has never run, and in the hand-written case, SQL that no tool has even checked. D7 and D8
+exist because of that gap, and D8 is now the only mechanical check standing behind an offline-authored
+delta.
 
 ### D7 — Migration files are reviewed as SQL, in the pull request
 
@@ -196,9 +237,14 @@ migration.
 
 ### D8 — CI validates migrations by applying them to a real, empty database
 
-CI validation is `prisma migrate deploy` against a freshly created, empty PostgreSQL, followed by
-`prisma migrate diff --from-migrations … --to-schema-datamodel … --exit-code` to assert the migration
-history and the schema of record have not drifted apart.
+CI validation is `prisma migrate deploy` against a freshly created, empty PostgreSQL, followed by a
+`prisma migrate diff … --exit-code` drift check asserting that the migration history and the schema of
+record have not drifted apart.
+
+**Amended 2026-07-25:** the drift check is expressed as `--from-url $DATABASE_URL --to-schema-datamodel
+… --exit-code`, diffing the database the committed migrations just produced against the schema of
+record — not `--from-migrations`, which would need a shadow database in addition to the one CI already
+has. This is what PR #109 implemented. The check is unchanged in intent and strictly cheaper.
 
 This is the check that catches the failure mode PR #106 could not: a migration that is syntactically
 plausible, review-approved, and does not actually apply. It requires a database, which is D9.
@@ -315,8 +361,10 @@ forgets creates a silent second history. The tool's convention costs nothing and
 mistake.
 
 **Why offline authoring stays possible.** PR #106 was written and fully tested with no database
-running. Making a migration require Docker would regress that, and `migrate diff --from-migrations`
-makes the requirement unnecessary.
+running. Making a migration require Docker would regress that, and `migrate diff --from-empty` — or,
+for an incremental change, a reviewed hand-written delta — makes the requirement unnecessary.
+(Amended 2026-07-25: this paragraph originally credited `--from-migrations`, which needs a shadow
+database. The conclusion holds; the command named was wrong.)
 
 **Why a separate, path-gated CI job.** The honest tension is between a budget near its cap and the
 fact that a table double cannot prove a migration applies. A separate job resolves it without
