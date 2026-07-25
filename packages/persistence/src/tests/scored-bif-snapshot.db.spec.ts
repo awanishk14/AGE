@@ -238,14 +238,38 @@ describe('scored_bif_snapshots — live PostgreSQL', () => {
       expect(found?.bifId).toBe(CONTEXT.bifId);
     });
 
-    it('round-trips the context through jsonb byte-for-byte', async () => {
+    it('round-trips the context through jsonb with every value intact', async () => {
       const repository = newRepository();
       const record = makeRecord();
 
       await repository.append(record);
       const found = await repository.findBySnapshotId(keyOf(record));
 
-      expect(JSON.stringify(found?.snapshot.context)).toBe(JSON.stringify(record.snapshot.context));
+      // Deep equality, deliberately — not string equality. See below.
+      expect(found?.snapshot.context).toEqual(record.snapshot.context);
+      expect(found?.snapshot.snapshotVersion).toBe(record.snapshot.snapshotVersion);
+    });
+
+    it('does NOT preserve key order, because jsonb stores a value and not a document', async () => {
+      const repository = newRepository();
+      const record = makeRecord();
+
+      await repository.append(record);
+      const found = await repository.findBySnapshotId(keyOf(record));
+
+      // This is the first thing a live database taught us that the table
+      // double could not: `jsonb` parses, normalises and re-serialises. Keys
+      // come back reordered (PostgreSQL orders them by length then bytes), so a
+      // stored context is byte-identical in VALUE and not in TEXT. `json` would
+      // have preserved the text; ADR-0031 D7 chose `jsonb` for indexing and
+      // containment, and this is the price.
+      //
+      // Nothing downstream depends on the stored byte order —
+      // `serializeScoredBifSnapshot` produces the byte-stable form by sorting
+      // keys itself, precisely so byte-stability never depends on storage.
+      expect(JSON.stringify(found?.snapshot.context)).not.toBe(
+        JSON.stringify(record.snapshot.context),
+      );
     });
 
     it('reads a row back through the same validation an append passes', async () => {
