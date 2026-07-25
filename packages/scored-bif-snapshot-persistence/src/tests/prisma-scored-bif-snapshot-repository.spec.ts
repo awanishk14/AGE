@@ -310,6 +310,9 @@ describe('PrismaScoredBifSnapshotRepository', () => {
       );
       expect(Object.keys(packageEntrypoint).sort()).toEqual([
         'PrismaScoredBifSnapshotRepository',
+        // The RLS-scoped wrapper (ADR-0033 D7). Still a repository, still the
+        // same port — no fake, no mutation surface.
+        'ScopedScoredBifSnapshotRepository',
         'fromScoredBifSnapshotRow',
         'isUniqueConstraintViolation',
         'toScoredBifSnapshotRow',
