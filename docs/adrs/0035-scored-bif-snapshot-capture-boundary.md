@@ -1,9 +1,17 @@
 # ADR 0035: Scored BIF Snapshot Capture Boundary
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-26
 
-> This ADR is a **decision request**. It must not be self-accepted or implemented before ratification.
+## Acceptance note
+
+ADR-0035 is accepted as the governing decision for scored BIF snapshot capture. It ratifies a
+package-level capture service as the first real caller of ClientContext-bound scored BIF snapshot
+access, requires ClientContext as the only source of clientId and organizationId, requires
+caller-supplied snapshotId and capturedAt, requires writes through the ClientContext-bound
+repository/facade, forbids scope inference from BIF or snapshot payloads, and does not authorize
+API/Web exposure, workspace implementation, Draft → Active promotion, execution, or strategy
+generation.
 
 ## Context
 
