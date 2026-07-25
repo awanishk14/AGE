@@ -24,6 +24,13 @@ describe('MarketDiscoveryCapability entry', () => {
     expect(MARKET_DISCOVERY_CAPABILITY_ENTRY.produces).toContain('MarketOpportunitySet');
   });
 
+  it('advertises assessed context via assessesContext, never via consumes (ADR-0028)', () => {
+    expect(MARKET_DISCOVERY_CAPABILITY_ENTRY.assessesContext).toEqual(['ScoredBifContext']);
+    // `consumes` is `run`'s required inputs only; ScoredBifContext is optional
+    // and never seen by `run`, so it must not appear there.
+    expect(MARKET_DISCOVERY_CAPABILITY_ENTRY.consumes).not.toContain('ScoredBifContext');
+  });
+
   it('can be registered in the CapabilityRegistry without error', () => {
     const registry = new CapabilityRegistry();
     expect(() => registry.register(MARKET_DISCOVERY_CAPABILITY_ENTRY)).not.toThrow();

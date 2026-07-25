@@ -22,6 +22,7 @@ import {
   assessRevenueContextReadiness,
 } from '../../processing/assess-revenue-context-readiness';
 import { RevenueCapability } from '../../revenue-capability';
+import { REVENUE_CAPABILITY_ENTRY } from '../../revenue-capability.entry';
 import * as packageEntrypoint from '../../index';
 
 const CONTEXT = new ClientContext('client-northwind', 'org-northwind');
@@ -595,11 +596,16 @@ describe('assessRevenueContextReadiness (ADR-0027, third adopter)', () => {
       ]);
     });
 
-    it('leaves the capability registry entry unchanged (ADR-0027 Decision 3)', () => {
+    it('advertises ScoredBifContext only via assessesContext, never consumes (ADR-0028)', () => {
       const entry = readFileSync(join(CAPABILITY_SRC, 'revenue-capability.entry.ts'), 'utf8');
 
-      expect(entry).not.toContain('ScoredBifContext');
+      // `consumes` — the inputs `run` requires — is unchanged.
       expect(entry).toContain("consumes: ['RevenueInput']");
+      // ScoredBifContext is the assessed (optional, non-gating) context, so it
+      // rides assessesContext and must never leak into the required-input list.
+      expect(entry).toContain("assessesContext: ['ScoredBifContext']");
+      expect(REVENUE_CAPABILITY_ENTRY.consumes).not.toContain('ScoredBifContext');
+      expect(REVENUE_CAPABILITY_ENTRY.assessesContext).toEqual(['ScoredBifContext']);
     });
   });
 });

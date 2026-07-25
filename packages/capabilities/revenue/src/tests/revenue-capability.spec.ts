@@ -39,6 +39,13 @@ describe('RevenueCapability entry', () => {
     expect(REVENUE_CAPABILITY_ENTRY.produces).toContain('RevenuePlanSet');
   });
 
+  it('advertises assessed context via assessesContext, never via consumes (ADR-0028)', () => {
+    expect(REVENUE_CAPABILITY_ENTRY.assessesContext).toEqual(['ScoredBifContext']);
+    // `consumes` is `run`'s required inputs only; ScoredBifContext is optional
+    // and never seen by `run`, so it must not appear there.
+    expect(REVENUE_CAPABILITY_ENTRY.consumes).not.toContain('ScoredBifContext');
+  });
+
   it('declares no execution-domain triggers and no capability dependencies', () => {
     expect(REVENUE_CAPABILITY_ENTRY.executionDomains).toEqual([]);
     expect(REVENUE_CAPABILITY_ENTRY.dependencies).toEqual([]);

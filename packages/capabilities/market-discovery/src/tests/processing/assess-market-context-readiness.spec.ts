@@ -22,6 +22,7 @@ import {
   assessMarketContextReadiness,
 } from '../../processing/assess-market-context-readiness';
 import { MarketDiscoveryCapability } from '../../market-discovery-capability';
+import { MARKET_DISCOVERY_CAPABILITY_ENTRY } from '../../market-discovery-capability.entry';
 import * as packageEntrypoint from '../../index';
 
 const CONTEXT = new ClientContext('client-northwind', 'org-northwind');
@@ -609,14 +610,19 @@ describe('assessMarketContextReadiness (ADR-0027 Decision 4)', () => {
       ]);
     });
 
-    it('leaves the capability registry entry unchanged (ADR-0027 Decision 3)', () => {
+    it('advertises ScoredBifContext only via assessesContext, never consumes (ADR-0028)', () => {
       const entry = readFileSync(
         join(CAPABILITY_SRC, 'market-discovery-capability.entry.ts'),
         'utf8',
       );
 
-      expect(entry).not.toContain('ScoredBifContext');
+      // `consumes` — the inputs `run` requires — is unchanged.
       expect(entry).toContain("consumes: ['MarketDiscoveryInput']");
+      // ScoredBifContext is the assessed (optional, non-gating) context, so it
+      // rides assessesContext and must never leak into the required-input list.
+      expect(entry).toContain("assessesContext: ['ScoredBifContext']");
+      expect(MARKET_DISCOVERY_CAPABILITY_ENTRY.consumes).not.toContain('ScoredBifContext');
+      expect(MARKET_DISCOVERY_CAPABILITY_ENTRY.assessesContext).toEqual(['ScoredBifContext']);
     });
   });
 });

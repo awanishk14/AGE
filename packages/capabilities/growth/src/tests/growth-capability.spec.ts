@@ -24,6 +24,11 @@ describe('GrowthCapability entry', () => {
     expect(GROWTH_CAPABILITY_ENTRY.produces).toContain('GrowthPlanSet');
   });
 
+  it('advertises no assessed context — it has not adopted the readiness pattern (ADR-0028)', () => {
+    expect(GROWTH_CAPABILITY_ENTRY.assessesContext).toBeUndefined();
+    expect(GROWTH_CAPABILITY_ENTRY.consumes).not.toContain('ScoredBifContext');
+  });
+
   it('can be registered in the CapabilityRegistry without error', () => {
     const registry = new CapabilityRegistry();
     expect(() => registry.register(GROWTH_CAPABILITY_ENTRY)).not.toThrow();
