@@ -58,7 +58,15 @@ jobs:
           --health-retries 20
 
     env:
+      # Owner / migration connection. `age` created the database and owns every
+      # object in it, and in this service container it is also the superuser —
+      # so it bypasses row-level security. That is exactly why it must not be
+      # the connection the RLS suite uses (ADR-0033 D5, D10).
       DATABASE_URL: postgresql://age:age@localhost:5432/age_test?schema=public
+      # Application connection. Non-owner, non-superuser, NOBYPASSRLS, granted
+      # SELECT and INSERT only. Throwaway credentials, inline and deliberate,
+      # exactly like the owner's: no repository secret (ADR-0033 D11).
+      DATABASE_URL_APP: postgresql://age_app:age_app@localhost:5432/age_test?schema=public
 
     steps:
       - name: Checkout
@@ -75,6 +83,20 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # Roles are environment identities, not schema, so they are created here
+      # and never in committed migration SQL (ADR-0033 D11). This runs BEFORE
+      # `migrate deploy` so the migration's guarded grant finds the role and
+      # applies. The application role is created with the attributes the RLS
+      # tests then assert for themselves rather than assume.
+      - name: Create the non-owner application role
+        env:
+          PGPASSWORD: age
+        run: |
+          psql -h localhost -U age -d age_test -v ON_ERROR_STOP=1 -c "
+            CREATE ROLE age_app LOGIN PASSWORD 'age_app'
+              NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+          "
 
       - name: Validate the schema of record
         run: pnpm --filter @age/persistence prisma:validate
