@@ -1,10 +1,22 @@
 # ADR 0034: ClientContext-Bound Scored BIF Snapshot Access
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-26
 
-> This is a decision request. It must not be self-accepted, and no implementation may begin before it
-> reaches `Status: Accepted`.
+## Acceptance note — 2026-07-26
+
+ADR-0034 is accepted as the governing decision for `ClientContext`-bound scored BIF snapshot access. It
+ratifies `ClientContext` as the only authoritative source for `clientId` and `organizationId` at
+snapshot call sites, forbids callers from providing scope directly, requires application-facing helpers
+to derive scope from `ClientContext`, permits lower-level composite-key repositories internally, and
+requires RLS settings to be sourced from `ClientContext`-derived scope only. It does not authorize
+API/Web exposure, workspace implementation, `Draft → Active` promotion, or broader persistence
+refactoring.
+
+The "Implementation constraints" and "First implementation slice after acceptance" sections are binding
+on the slice that follows. The factual correction recorded in the Context — that `scoringVersion` is
+not a caller input, because it already travels inside `ScoredBifContext.metadata` — is accepted with
+the rest.
 
 ## Context
 
