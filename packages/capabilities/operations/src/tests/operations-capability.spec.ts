@@ -38,6 +38,11 @@ describe('OperationsCapability entry', () => {
     expect(OPERATIONS_CAPABILITY_ENTRY.produces).toContain('OperationsPlanSet');
   });
 
+  it('advertises no assessed context — it has not adopted the readiness pattern (ADR-0028)', () => {
+    expect(OPERATIONS_CAPABILITY_ENTRY.assessesContext).toBeUndefined();
+    expect(OPERATIONS_CAPABILITY_ENTRY.consumes).not.toContain('ScoredBifContext');
+  });
+
   it('declares no execution-domain triggers and no capability dependencies', () => {
     expect(OPERATIONS_CAPABILITY_ENTRY.executionDomains).toEqual([]);
     expect(OPERATIONS_CAPABILITY_ENTRY.dependencies).toEqual([]);

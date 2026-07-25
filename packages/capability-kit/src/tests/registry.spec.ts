@@ -42,4 +42,26 @@ describe('CapabilityRegistry', () => {
       'Capability Intelligence is already registered',
     );
   });
+
+  it('treats assessesContext as optional — an entry without it is valid (ADR-0028)', () => {
+    expect(intelligenceEntry.assessesContext).toBeUndefined();
+    registry.register(intelligenceEntry);
+    expect(registry.resolve(Capability.Intelligence).assessesContext).toBeUndefined();
+  });
+
+  it('round-trips assessesContext without touching consumes (ADR-0028)', () => {
+    const entry: CapabilityRegistryEntry = {
+      name: Capability.Revenue,
+      consumes: ['RevenueInput'],
+      assessesContext: ['ScoredBifContext'],
+      produces: ['RevenuePlanSet'],
+      executionDomains: [],
+      dependencies: [],
+    };
+    registry.register(entry);
+    const resolved = registry.resolve(Capability.Revenue);
+    expect(resolved.assessesContext).toEqual(['ScoredBifContext']);
+    // The optional field never leaks into the required-input list.
+    expect(resolved.consumes).toEqual(['RevenueInput']);
+  });
 });
