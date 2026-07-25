@@ -1,10 +1,30 @@
 # ADR 0031: Durable Scored BIF Snapshot Persistence
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-25
 
-> This is a **decision request**. It proposes; it does not implement, and it must not be
-> self-accepted. ADR-0029 stage 3 stays gated until this ADR (or a revision of it) is Accepted.
+## Acceptance note
+
+ADR-0031 is accepted as the governing decision for durable scored BIF snapshot persistence. It
+ratifies PostgreSQL via Prisma, a new durable adapter package rather than generalising
+`@age/persistence`, a single Prisma schema of record, immutable append-only storage,
+`ClientContext`-derived authoritative scope, composite identity using `clientId`, `organizationId`,
+`bifId` and `snapshotId`, caller-supplied `snapshotId` and `capturedAt`, `scoringVersion` as an
+attribute, `jsonb` snapshot context storage, and derived latest/current reads. It does not authorize
+`Draft → Active` promotion, API/Web exposure, workspace implementation, mutable updates, deletes, or
+erasure/retention implementation.
+
+`@age/persistence` is **not** generalised by this decision. Its current shape assumes mutable,
+soft-delete persistence (`save`/`softDelete` over a `PersistedBase` carrying `updatedAt`, `version`
+and `deletedAt`), which conflicts with the append-only scored BIF snapshots ADR-0030 ratified. The
+package is left as it stands; its longer-term fate remains undecided.
+
+The Prisma schema named in D3 is the **single source of truth** for this path. Two active schema
+sources for scored BIF snapshot persistence are not permitted.
+
+This acceptance unblocks **ADR-0029 stage 3**, beginning with slice 3a as scoped below. It authorizes
+no implementation beyond that slice, and the implementation constraints in this ADR are binding on
+it.
 
 ## Context
 
