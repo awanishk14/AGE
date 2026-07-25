@@ -14,6 +14,12 @@
  * no schema of its own. There is no second source of truth for this table.
  */
 
+export { ClientContextBoundScoredBifSnapshotRepository } from './client-context-bound-scored-bif-snapshot-repository';
+export type {
+  AppendScoredBifSnapshotInput,
+  ScoredBifSnapshotQuery,
+  ScoredBifSnapshotSeriesQuery,
+} from './client-context-bound-scored-bif-snapshot-repository';
 export { PrismaScoredBifSnapshotRepository } from './prisma-scored-bif-snapshot-repository';
 export { isUniqueConstraintViolation } from './scored-bif-snapshot-delegate';
 export type { ScoredBifSnapshotDelegate } from './scored-bif-snapshot-delegate';

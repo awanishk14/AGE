@@ -183,18 +183,27 @@ describe('PrismaScoredBifSnapshotRepository', () => {
     });
 
     it('never imports @age/capability-kit or @age/bif', () => {
+      // The ADAPTER still takes scope as two ids, structurally. ADR-0034 added
+      // `@age/capability-kit` to the package for the ClientContext-bound facade
+      // ONLY; the adapter layer itself must stay ignorant of `ClientContext`,
+      // or the facade would stop being the single place scope is decided.
       for (const source of [ADAPTER_SOURCE, ROW_SOURCE, DELEGATE_SOURCE]) {
         const specifiers = importSpecifiers(source);
         expect(specifiers).not.toContain('@age/capability-kit');
         expect(specifiers).not.toContain('@age/bif');
       }
 
-      // Nor as a declared dependency — scope arrives as two ids, structurally.
       const manifest = JSON.parse(PACKAGE_JSON) as {
         dependencies: Record<string, string>;
         devDependencies: Record<string, string>;
       };
-      expect(Object.keys(manifest.dependencies)).toEqual(['@age/business-discovery-contracts']);
+      expect(Object.keys(manifest.dependencies).sort()).toEqual([
+        '@age/business-discovery-contracts',
+        // ADR-0034 D5. It depends on nothing itself, so this adds no cycle.
+        '@age/capability-kit',
+      ]);
+      // `@age/bif` is reached only transitively, through the contracts package.
+      expect(manifest.dependencies).not.toHaveProperty('@age/bif');
       expect(Object.keys(manifest.devDependencies)).toEqual(['vitest']);
     });
 
@@ -309,6 +318,9 @@ describe('PrismaScoredBifSnapshotRepository', () => {
         PrismaScoredBifSnapshotRepository,
       );
       expect(Object.keys(packageEntrypoint).sort()).toEqual([
+        // The ClientContext-bound facade (ADR-0034 D3/D5): the application-facing
+        // way in, through which no scope id can be supplied.
+        'ClientContextBoundScoredBifSnapshotRepository',
         'PrismaScoredBifSnapshotRepository',
         // The RLS-scoped wrapper (ADR-0033 D7). Still a repository, still the
         // same port — no fake, no mutation surface.
