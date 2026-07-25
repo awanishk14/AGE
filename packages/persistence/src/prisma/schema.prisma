@@ -1,8 +1,12 @@
-// AGE persistence — Prisma schema (Task 005)
+// AGE persistence — Prisma schema.
 //
-// Datasource + generator configuration ONLY.
-// No models, no tables, no migrations are defined yet — the canonical model is
-// the Business Knowledge Graph; PostgreSQL persists it in a later task.
+// This file is the SINGLE SCHEMA OF RECORD for the scored BIF snapshot path
+// (ADR-0031 Decision 3). A second active schema source for this path is not
+// permitted. The `HealthCheck` placeholder under `apps/api` is not a second
+// source of truth and gains nothing from this file.
+//
+// The Business Knowledge Graph is still unmodelled here; the only table below
+// is the scored BIF snapshot store.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,4 +15,60 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+/// ScoredBifSnapshot — the durable, IMMUTABLE, APPEND-ONLY store for scored BIF
+/// snapshots (ADR-0029 stage 3, ADR-0030 identity and lifecycle, ADR-0031
+/// Decisions 4, 6, 7, 9, 10, 11).
+///
+/// APPEND-ONLY IS ENFORCED BY WHAT IS ABSENT. There is deliberately no
+/// `updatedAt`, no `version`, and no `deletedAt` column, and no mutable
+/// `current`/`isCurrent` flag. A row carrying an `updatedAt` invites an update;
+/// a row that cannot express "when it was changed" cannot be changed without
+/// the change being obvious. Grant-level enforcement (INSERT/SELECT only, no
+/// UPDATE, no DELETE) and RLS on `organizationId` are authored in a later
+/// slice — they are additional locks on this door, not the design of it.
+///
+/// IDENTITY IS COMPOSITE AND CALLER-SUPPLIED. The primary key is
+/// (clientId, organizationId, bifId, snapshotId). There is no surrogate id:
+/// the logical identity IS the key. `clientId` and `organizationId` are the
+/// scope, taken from the caller's `ClientContext` (ADR-0009) and never inferred
+/// from the snapshot payload; `bifId` is the subject; `snapshotId` names one
+/// member of the series. Re-using a `snapshotId` within a series is rejected by
+/// the primary key itself, not merely by adapter code.
+///
+/// `scoringVersion` is an ATTRIBUTE, never part of the key — keying on it would
+/// forbid re-scoring a BIF twice under one scoring version, which is normal.
+/// It is nullable because `ScoredBifContext.scoringVersion` is optional; a
+/// snapshot projected without scoring metadata is not invalid.
+///
+/// TIME IS A STRING, ON PURPOSE (ADR-0031 D10). `capturedAt` is stored as the
+/// exact canonical ISO-8601 UTC instant the caller supplied
+/// (`YYYY-MM-DDTHH:mm:ss.sssZ`). A `timestamptz` round trip would be permitted
+/// only if it returned that byte-identical string; `text` guarantees it, and
+/// because the format is fixed-width UTC, lexicographic order already agrees
+/// with chronological order — so "latest" is an ORDER BY, not a parse.
+///
+/// `context` is ONE jsonb column, not shredded into section tables: shredding
+/// would make every projection change a migration, and would tempt someone to
+/// materialise omitted sections as null rows — which ADR-0026 Decision 4
+/// forbids, since absence is a limitation and never negative evidence.
+///
+/// NOT STORED: the live BIF, BIF `status` as a queryable column, recomputed
+/// scores, server-generated time (there is no `DEFAULT now()` anywhere here),
+/// and no foreign key to clients or organizations — this table is owned by the
+/// snapshot boundary alone.
+model ScoredBifSnapshot {
+  clientId        String  @map("client_id")
+  organizationId  String  @map("organization_id")
+  bifId           String  @map("bif_id")
+  snapshotId      String  @map("snapshot_id")
+  capturedAt      String  @map("captured_at")
+  snapshotVersion String  @map("snapshot_version")
+  scoringVersion  String? @map("scoring_version")
+  context         Json
+
+  @@id([clientId, organizationId, bifId, snapshotId])
+  @@index([clientId, organizationId, bifId, capturedAt(sort: Desc), snapshotId(sort: Desc)], map: "scored_bif_snapshots_series_latest_idx")
+  @@map("scored_bif_snapshots")
 }
