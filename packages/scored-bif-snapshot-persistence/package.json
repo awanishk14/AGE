@@ -17,7 +17,8 @@
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@age/business-discovery-contracts": "workspace:*"
+    "@age/business-discovery-contracts": "workspace:*",
+    "@age/capability-kit": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^2.1.1"
