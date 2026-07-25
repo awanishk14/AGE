@@ -1,7 +1,31 @@
 # ADR 0028: Registry Metadata for Context Consumption
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-25
+
+## Acceptance note
+
+ADR-0028 was accepted after PR #93 recorded the proposal against the three-consumer evidence ADR-0027
+Decision 3 required. The accepted decision is **Option C**, in the three parts stated under
+"Recommended decision":
+
+1. `consumes` keeps its established meaning — "the input contracts a capability's `run` requires" — and
+   no entry's `consumes` value changes. `ScoredBifContext` is never added to it.
+2. `CapabilityRegistryEntry` gains an additive, optional `assessesContext?: ReadonlyArray<string>`
+   field: contracts a capability reads **only** through a non-gating readiness assessment (ADR-0027),
+   never through `run`. Absence (`undefined`) means the capability assesses no external context — the
+   correct default for every non-adopter.
+3. Adopting entries advertise `assessesContext: ['ScoredBifContext']`; populating it is part of each
+   capability's own slice, not a blanket rollout.
+
+Option B (flattening `ScoredBifContext` into `consumes`) is rejected as semantically wrong; Option A
+(advertise nothing) and Option D (defer) are declined because the evidence bar is met.
+
+Deliberately still open for the implementation slice: the exact field name may be reconsidered in
+review, but the **principle** — required and optional inputs are distinct facts and must not share one
+array — is settled. Whether the registry is ever wired into runtime output stays a separate question
+(the field is latent metadata today; see the corrected premise below). This PR only changes the ADR
+status and records acceptance; implementation is a separate slice.
 
 ## Context
 
