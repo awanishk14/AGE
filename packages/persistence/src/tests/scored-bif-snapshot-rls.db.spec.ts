@@ -267,15 +267,46 @@ describe('scored_bif_snapshots — row-level security, as the application role',
       expect(Number(visible[0]?.count ?? -1)).toBe(0);
     });
 
-    it('cannot read another client’s snapshot through the adapter either', async () => {
+    // A MEASURED FINDING, NOT AN ASSUMPTION. The first version of this test also
+    // asserted that `findBySnapshotId(keyOf(planted))` — the foreign row's OWN
+    // key — returns null. It does not, and it should not: the adapter derives
+    // the transaction scope from the key it is handed (ADR-0033 D7), so asking
+    // for client-b's key opens a client-b-scoped transaction, and the policy
+    // correctly admits the row. The scope and the key can never disagree by
+    // construction, which means "a wrong client SETTING through the adapter" is
+    // not a state this adapter can even be put into.
+    //
+    // So the adapter is not the boundary against a caller that fabricates a key.
+    // What holds that line is that the key's ids come from the caller's
+    // `ClientContext` (ADR-0009, ADR-0031 D5) — a caller scoped to client-a
+    // cannot construct a client-b key without lying about its own identity. The
+    // database's job is narrower and is what the raw-SQL test above proves: no
+    // transaction can read or write a row outside the scope it declared.
+    //
+    // Wiring `ClientContext` to the call site is a later slice; this records the
+    // limit rather than papering over it with a test that reads as more
+    // protection than exists.
+    it('reaches nothing outside the scope its key declares', async () => {
       const planted = recordFor(OTHER_CLIENT);
       await plant(planted);
 
       const repository = repositoryFor();
-      const asIfMine = { ...keyOf(planted), clientId: SCOPE_A.clientId };
 
-      expect(await repository.findBySnapshotId(keyOf(planted))).toBeNull();
+      // Scoped to client-a — the foreign row is unreachable, and the query is
+      // not filtering it out: the key names client-a, so client-b's row is
+      // outside the policy, not outside the WHERE clause.
+      const asIfMine = { ...keyOf(planted), clientId: SCOPE_A.clientId };
       expect(await repository.findBySnapshotId(asIfMine)).toBeNull();
+      expect(
+        await repository.listSeries({ ...seriesKeyOf(planted), clientId: SCOPE_A.clientId }),
+      ).toHaveLength(0);
+      expect(
+        await repository.findLatest({ ...seriesKeyOf(planted), clientId: SCOPE_A.clientId }),
+      ).toBeNull();
+
+      // The row is genuinely there — the emptiness above is the policy at work,
+      // not a missing fixture.
+      expect(await countAsOwner()).toBe(1);
     });
 
     it('cannot insert a row attributed to another client', async () => {
