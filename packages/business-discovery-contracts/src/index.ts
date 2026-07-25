@@ -203,3 +203,16 @@ export type {
   ScoredBifContextMetadata,
   ScoredBifContextProjectionOptions,
 } from './scored-bif-context';
+
+// ScoredBifSnapshot — versioned, storage-neutral serialized form of a scored BIF
+// context (ADR-0029 stage 1). A pure codec only: no I/O, no clock, no store.
+// The hard boundary "no DB/persistence writes" stays in force — a repository
+// port is stage 2 and a durable adapter needs its own Accepted ADR.
+export {
+  SCORED_BIF_SNAPSHOT_VERSION,
+  scoredBifSnapshotSchema,
+  toScoredBifSnapshot,
+  fromScoredBifSnapshot,
+  serializeScoredBifSnapshot,
+} from './scored-bif-snapshot';
+export type { ScoredBifSnapshot } from './scored-bif-snapshot';
