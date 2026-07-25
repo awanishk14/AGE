@@ -1,10 +1,26 @@
 # ADR 0032: Prisma Migration Convention and Live PostgreSQL Testing
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-25
 
-> This ADR is a **decision request**. It must not be self-accepted and authorizes no implementation
-> until its status is flipped to `Accepted` in a separate pull request. Nothing in it has been built.
+## Acceptance note
+
+ADR-0032 is accepted as the governing decision for Prisma migration convention and live PostgreSQL
+testing. It ratifies `packages/persistence/src/prisma/schema.prisma` as the schema of record,
+`packages/persistence/src/prisma/migrations/` as the migration location, committed migration SQL as
+reviewed source, explicit `--schema` usage for Prisma scripts, prohibition of `prisma db push` for
+this path, a separate path-gated CI PostgreSQL job for live database tests, `*.db.spec.ts` live test
+naming, a dedicated `test:db` command, and loud failure when `DATABASE_URL` is absent for live DB
+test commands. **It does not authorize RLS implementation.**
+
+The existing `Lint, Typecheck, Test, Build` job stays database-free. The `apps/api` `prisma:migrate`
+script must no longer be able to silently target the placeholder `apps/api` schema for this path.
+Table doubles are not replaced by live database tests; both are kept.
+
+This acceptance authorizes exactly one implementation slice — the one named under "First
+implementation slice after acceptance" below — and the implementation constraints in this ADR are
+binding on it. RLS policies and `INSERT`/`SELECT`-only grants remain ADR-0031 stage 3b and stay
+gated.
 
 ## Context
 
