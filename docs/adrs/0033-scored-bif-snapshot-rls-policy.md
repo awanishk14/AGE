@@ -7,6 +7,21 @@
 > implementation until its status is flipped to `Accepted` in a separate pull request. No RLS policy,
 > role, grant or test described here has been built.
 
+## Amendment note — 2026-07-25 (pre-acceptance)
+
+ADR-0033 was amended before acceptance to make both `client_id` and `organization_id` part of the
+database-enforced RLS boundary. This aligns RLS with ADR-0030 and ADR-0031, where `ClientContext` is
+authoritative and scored BIF snapshot identity is scoped by `clientId` and `organizationId`.
+Organization-only RLS was rejected because it would protect cross-organization access but still rely on
+adapter predicates for cross-client isolation.
+
+The passages changed are D2, D6, D7, D8, D10, the Rationale, the scope-boundary options table, and the
+security, RLS-policy, CI-test, consequences and first-slice sections. Everything else is unchanged: the
+non-owner application role, `NOSUPERUSER`, `NOBYPASSRLS`, `SELECT`/`INSERT` grants only, no `UPDATE` or
+`DELETE`, `FORCE ROW LEVEL SECURITY`, fail-closed behaviour, roles kept out of committed migration SQL,
+and the rule that RLS implementation stays separate until this ADR is `Accepted`. No API or Web
+exposure and no `Draft → Active` promotion is authorized by this amendment.
+
 ## Context
 
 ADR-0031 stage 3a (PR #106) put a durable scored BIF snapshot adapter behind the existing port, and
@@ -72,26 +87,28 @@ This ADR governs exactly one table: `scored_bif_snapshots`, the only table in th
 Whether RLS becomes a general convention for future tenant-scoped tables is deliberately left open. One
 table with a tested policy is worth more than a convention applied to a table nobody has queried.
 
-### D2 — `organization_id` is the database-enforced tenant boundary; `client_id` stays application identity
+### D2 — `client_id` **and** `organization_id` are both the database-enforced boundary
 
-The RLS predicate is written on **`organization_id` alone**.
+The RLS predicate is written on **both `client_id` and `organization_id`**. A row is visible, and a row
+may be written, only when both match the active scope.
 
-`client_id` remains part of the composite primary key, part of the port's key type, part of every
-adapter query, and part of the live test suite. It is not removed, weakened, or made optional. It is
-simply not what the database-level tenant boundary is built on.
+`client_id` therefore has two roles, not one. It remains part of the composite primary key, the port's
+key type, every adapter query and the live test suite — **and** it is part of the database-enforced RLS
+boundary. It is not merely an application predicate.
 
-The reasoning is that these two identifiers are not the same kind of thing. ADR-0030 recorded that
-`clientId` is in the key because snapshot persistence is client-scoped platform data, while the BIF
-payload primarily carries `organizationId`; ADR-0009 names `ClientContext` authoritative for data
-scoping. A tenant boundary should be the smallest predicate that is unambiguously true, checkable in
-one place, and impossible to satisfy accidentally. Adding a second scoping variable doubles the surface
-on which a session can be misconfigured, and a policy that is subtly wrong is worse than a policy that
-is absent, because it looks like protection.
+This follows from what ADR-0030 and ADR-0031 already decided. ADR-0030 defined snapshot identity as
+`(clientId, organizationId, bifId, snapshotId)` and made `ClientContext` — which carries exactly
+`clientId` and `organizationId` — authoritative for scope, never the payload. ADR-0009 named the same
+context authoritative for RLS-based data scoping. A database boundary that enforced only one of the two
+ids would enforce half of an identity that three ADRs treat as indivisible, and would leave
+cross-client isolation resting on adapter predicates alone — precisely the single-layer arrangement
+this ADR exists to replace.
 
-An alternative — putting both ids in the policy — is considered and rejected below, but the ADR records
-explicitly that this is the decision most worth arguing with. If the reviewer believes a client
-boundary must also be enforced by PostgreSQL, this is the point to say so, and the shape below extends
-to it cleanly.
+The cost is real and is accepted deliberately: two settings must be established per transaction rather
+than one, so there is more that a caller can fail to configure. D7's fail-closed rule is what makes
+that cost safe. A session that sets one setting and forgets the other does not get a half-open
+boundary; it gets no rows and rejected inserts, because a missing setting satisfies neither conjunct.
+Misconfiguration is loud, not partial.
 
 ### D3 — Three roles, with distinct privileges
 
@@ -135,13 +152,13 @@ test step. That is the concrete change to `ci-db.yml` this ADR implies, describe
 
 Two policies, not one:
 
-- a `SELECT` policy (`USING`) so a row is visible only when its `organization_id` matches the active
-  organization scope;
-- an `INSERT` policy (`WITH CHECK`) so a row can be written only when its `organization_id` matches the
-  active organization scope.
+- a `SELECT` policy (`USING`) so a row is visible only when **both** its `client_id` and its
+  `organization_id` match the active scope;
+- an `INSERT` policy (`WITH CHECK`) so a row can be written only when **both** its `client_id` and its
+  `organization_id` match the active scope.
 
-Protecting reads alone would leave a tenant able to write rows attributed to another organization —
-rows it could not then see, which makes the corruption silent. Since the only two operations granted
+Protecting reads alone would leave a tenant able to write rows attributed to another client or
+organization — rows it could not then see, which makes the corruption silent. Since the only two operations granted
 are `SELECT` and `INSERT` (D4), covering both means every permitted operation is covered, and no
 `UPDATE`/`DELETE` policy needs to exist because no `UPDATE`/`DELETE` privilege does.
 
@@ -149,15 +166,21 @@ are `SELECT` and `INSERT` (D4), covering both means every permitted operation is
 which would mean the policy behaves differently for the role that runs migrations than for the role
 that runs the application — a difference that is invisible until it matters.
 
-### D7 — Scope is supplied by a transaction-local setting, and its absence fails closed
+### D7 — Scope is supplied by two transaction-local settings, and a missing one fails closed
 
-The active organization scope is provided as a transaction-local PostgreSQL setting:
+The active scope is provided as **two** transaction-local PostgreSQL settings, both taken from
+`ClientContext`:
 
 ```sql
-SET LOCAL age.organization_id = '<organization id>';
+SET LOCAL age.client_id = '<ClientContext.clientId>';
+SET LOCAL age.organization_id = '<ClientContext.organizationId>';
 ```
 
-and the policies read it via `current_setting('age.organization_id', true)`.
+and the policies read them via `current_setting('age.client_id', true)` and
+`current_setting('age.organization_id', true)`.
+
+Neither value may be derived from `ScoredBifContext`, from the snapshot payload, or from anything else
+the caller supplies as data. `ClientContext` is the only source (ADR-0009, ADR-0030).
 
 **`SET LOCAL`, not `SET`.** A session-level setting outlives the work it was set for, and with a
 connection pool the next borrower of that connection would inherit another tenant's scope. Transaction
@@ -165,32 +188,36 @@ scope means the setting cannot outlive its transaction, which also means **every
 run inside an explicit transaction** — a real constraint on the implementation slice, named here rather
 than discovered later.
 
-**Missing setting fails closed.** The second argument to `current_setting` (`true`) makes it return
-`NULL` instead of raising when the setting is absent. The policies must be written so that `NULL`
-matches nothing:
+**A missing setting fails closed — either one of them, independently.** The second argument to
+`current_setting` (`true`) makes it return `NULL` instead of raising when the setting is absent. The
+policies must be written so that `NULL` matches nothing:
 
 - no rows are visible to a `SELECT`;
 - every `INSERT` is rejected by the `WITH CHECK`.
 
-An unconfigured session must be useless, not permissive. The failure of an unset scope has to look like
-a broken query — not like an empty result that reads as "this organization has no snapshots", and
-never like a successful read of everything. The live tests must pin all three behaviours (D10).
+This holds when `age.client_id` is missing, when `age.organization_id` is missing, and when both are.
+There is no configuration in which one supplied setting grants partial access. An unconfigured session
+must be useless, not permissive, and a half-configured session must be exactly as useless as an
+unconfigured one. The failure has to look like a broken query — not like an empty result that reads as
+"this client has no snapshots", and never like a successful read of everything. The live tests must pin
+each of these cases separately (D10).
 
 The exact predicate shape — a direct comparison against `current_setting`, versus a `SECURITY DEFINER`
 helper function — is left to the implementation slice, with one requirement: whatever is chosen must be
 `NULL`-safe, so that a missing setting can never satisfy the predicate.
 
-### D8 — `client_id` is not in the RLS predicate, and is not in the setting
+### D8 — `client_id` is in the RLS predicate and in its own setting
 
-Following D2: one setting, one predicate, one boundary. `client_id` continues to be enforced by the
-composite primary key and by every adapter query, and PR #109's wrong-client test continues to prove
-that a wrong `client_id` returns nothing.
+Following D2: two settings, two conjuncts, one boundary that is only satisfied when both hold.
+`client_id` keeps everything it already had — it stays in the composite primary key, in the port's key
+type, in every adapter query and in the existing live tests — and it gains database enforcement on top.
+The two mechanisms are complementary, not alternatives: the primary key makes an identity unforgeable,
+and the policy makes another client's identity unreachable.
 
-The ADR records the residual honestly: **with this decision, a caller that supplies the correct
-`organization_id` but the wrong `client_id` is stopped by the application, not by the database.** If a
-reviewer considers that unacceptable, D2 and D8 should be amended together to add
-`age.client_id` and a second conjunct to both policies. The mechanism is identical; only the number of
-settings changes.
+There is no residual of the kind the pre-amendment version recorded. **A caller that supplies the
+correct `organization_id` but the wrong `client_id` is now stopped by the database, not only by the
+application** — and the converse holds too. D10 requires the two isolations to be proved
+independently, so neither can be silently satisfied by the other.
 
 ### D9 — Append-only and duplicate inserts under RLS
 
@@ -201,32 +228,37 @@ A duplicate composite identity is still rejected by the primary key, still surfa
 and the adapter still recognises the database's own answer rather than pre-checking (PR #106, confirmed
 live in PR #109). One interaction is worth stating because it is counter-intuitive and must be pinned
 by a test: **a unique-violation error is itself an information leak.** Attempting to insert a row whose
-key already exists — under a _different_ organization the session cannot see — reveals that the key is
-taken. The implementation slice must determine what PostgreSQL actually does here and record it; this
-ADR does not guess. The blast radius is small (the key contains the organization id, so a cross-tenant
-collision requires already knowing the other tenant's id), but "small" is a finding to be measured, not
-assumed.
+key already exists — under a _different_ client or organization the session cannot see — reveals that
+the key is taken. The implementation slice must determine what PostgreSQL actually does here and record
+it; this ADR does not guess. The blast radius is small (the key contains both scope ids, so a
+cross-tenant collision requires already knowing the other tenant's client _and_ organization ids), but
+"small" is a finding to be measured, not assumed.
 
 ### D10 — Live RLS tests run as a non-owner, non-superuser role, and nothing else counts as proof
 
 New live specs, in the existing `*.db.spec.ts` convention, connecting as `age_app` (or `age_rls_test`,
 per D3) — **never** as `age_owner`. At minimum:
 
-1. A wrong-organization read returns nothing **with the policy doing the work** — the query must carry
-   no `organization_id` filter of its own, so that a passing test cannot be explained by the `WHERE`
-   clause. This is the single most important test in the suite, and the one the existing wrong-org test
-   does not perform, because it filters by key.
-2. A wrong-organization insert is **rejected**, not silently accepted-and-invisible.
-3. An unset `age.organization_id` yields zero rows and a rejected insert (D7's fail-closed behaviour),
-   asserted separately from the wrong-org cases.
-4. A correct-scope read and insert both succeed — the policy must not be vacuously restrictive.
-5. The connected role is **verified to be non-superuser, non-`BYPASSRLS`, and not the table owner**, by
+1. A wrong-**organization** read returns nothing **with the policy doing the work** — the query must
+   carry no `organization_id` filter of its own, so that a passing test cannot be explained by the
+   `WHERE` clause.
+2. A wrong-**client** read returns nothing, on the same terms: no `client_id` filter in the query, so
+   the policy is the only thing that can produce the empty result. **This and the previous test must be
+   independent** — the wrong-client case must hold the organization scope correct, and the wrong-org
+   case must hold the client scope correct. Otherwise one conjunct could be missing from the policy
+   entirely and both tests would still pass.
+3. A wrong-organization insert and a wrong-client insert are each **rejected**, not silently
+   accepted-and-invisible, and each with the other id correct.
+4. An unset `age.organization_id`, an unset `age.client_id`, and both unset each yield zero rows and a
+   rejected insert (D7's fail-closed behaviour), asserted separately from the wrong-scope cases.
+5. A correct-scope read and insert both succeed — the policy must not be vacuously restrictive.
+6. The connected role is **verified to be non-superuser, non-`BYPASSRLS`, and not the table owner**, by
    querying `pg_roles`/`pg_class` — asserted, not assumed. This is what stops the suite from silently
    becoming meaningless if a future change alters how CI connects.
-6. `UPDATE` and `DELETE` are **rejected as privilege errors** for this role.
-7. A wrong-client read still returns nothing (the application-level boundary, D8) — retained so the
-   distinction between the two boundaries stays visible in the tests.
-8. The scope setting does not leak across transactions (D7's `SET LOCAL` guarantee).
+7. `UPDATE` and `DELETE` are **rejected as privilege errors** for this role.
+8. `findLatest` and the series read respect the policy — the scoped read is not a special case that
+   bypasses it.
+9. Neither scope setting leaks across transactions (D7's `SET LOCAL` guarantee).
 
 The existing 26 owner-connected tests keep running. They test the schema, the adapter and append-only,
 all of which are orthogonal to RLS, and re-pointing them at the app role would weaken them (the app
@@ -259,13 +291,24 @@ silent, it is green, and it survives review — because reviewing a policy tells
 whether it ran. ADR-0032 D16 anticipated this; PR #109 then built a CI job that connects as the owner,
 so the trap is currently armed.
 
-**Why `organization_id` alone.** A tenant boundary earns its keep by being obviously correct. One
-column, one setting, one predicate can be verified by reading it. The moment a second variable is
-added, every session must configure both correctly, and a session that sets one and forgets the other
-produces a partially-enforced boundary — which is the worst outcome, because it is indistinguishable
-from a working one until a specific pair of ids collides. `client_id` loses nothing by remaining an
-application-level key: it is in the primary key, so it cannot be dropped, forgotten, or bypassed by the
-adapter.
+**Why both `client_id` and `organization_id`.** The boundary should be the identity the rest of the
+system already treats as authoritative, and that identity is a pair. ADR-0030 scoped a snapshot by
+`clientId` _and_ `organizationId`; ADR-0009 made `ClientContext`, which is exactly that pair,
+authoritative for data scoping. Enforcing only the organization would mean the database protects one
+half of a scope and the adapter protects the other — and the adapter half would be the only layer
+standing between two clients, which is the arrangement ADR-0031 D5 committed to replacing.
+
+The obvious objection to a two-variable predicate is that a session can now be half-configured. That
+objection is answered by D7 rather than by dropping a conjunct: a missing setting is `NULL`, `NULL`
+satisfies neither conjunct, and a half-configured session therefore reads nothing and writes nothing.
+There is no state in which forgetting one setting yields partial access. The failure mode a single
+predicate was meant to avoid does not exist here, so the simplicity it bought is not worth the
+enforcement it gave up.
+
+_(Amended 2026-07-25, pre-acceptance: this paragraph originally argued for `organization_id` alone.
+The argument was that a single predicate is harder to misconfigure; the correction is that under
+fail-closed semantics misconfiguration is loud rather than partial, and that an organization-only
+boundary contradicts the identity ADR-0030 and ADR-0031 established.)_
 
 **Why fail closed, and why that is not paranoia.** The alternative — treating a missing setting as "no
 restriction" — turns every unconfigured code path into a full table scan across all tenants. The
@@ -294,12 +337,12 @@ security model. It deserves its own reviewable document.
 
 ### The scope boundary
 
-| Option                                          | Verdict                                                                                                                                                                                                                           |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A. `organization_id` only** (recommended, D2) | One predicate, one setting, verifiable by reading it. `client_id` keeps its full role in the key and the adapter. Residual: a wrong `client_id` is caught by the application, not the database.                                   |
-| **B. `organization_id` + `client_id`**          | Rejected for now, but the strongest alternative. Strictly more enforcement; strictly more ways for a session to be half-configured. Mechanism is identical — one more setting, one more conjunct — so adopting it later is cheap. |
-| **C. `client_id` only**                         | Rejected. Inverts ADR-0009 and ADR-0031 D5, both of which name the organization as the scoping boundary, and would leave the BIF payload's own primary scope unenforced.                                                          |
-| **D. No RLS; rely on the adapter**              | Rejected. This is the status quo, and it is a single layer of defence in application code. It is exactly what ADR-0031 D5 committed to replacing.                                                                                 |
+| Option                                                   | Verdict                                                                                                                                                                                                                                                                                  |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A. `client_id` + `organization_id`** (recommended, D2) | Enforces the whole of the identity ADR-0030 defined and ADR-0009 made authoritative. Two settings per transaction; under D7's fail-closed rule a half-configured session gets nothing rather than partial access.                                                                        |
+| **B. `organization_id` only**                            | **Rejected on amendment.** Protects cross-organization access but leaves cross-client isolation resting on adapter predicates alone — a single application-code layer for half the scope. Its case rested on avoiding half-configuration, which fail-closed semantics already rules out. |
+| **C. `client_id` only**                                  | Rejected. The mirror image of B, with the same defect, and it would leave the scope the BIF payload primarily carries unenforced.                                                                                                                                                        |
+| **D. No RLS; rely on the adapter**                       | Rejected. This is the status quo, and it is a single layer of defence in application code. It is exactly what ADR-0031 D5 committed to replacing.                                                                                                                                        |
 
 ### How scope reaches the policy
 
@@ -315,7 +358,7 @@ security model. It deserves its own reviewable document.
 | Option                                          | Verdict                                                                                                                                                                                                 |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **A. `SELECT` + `INSERT`** (recommended, D6)    | Covers every operation the app role is granted.                                                                                                                                                         |
-| **B. `SELECT` only**                            | Rejected. Permits writing rows attributed to another organization — invisible to the writer, therefore silent.                                                                                          |
+| **B. `SELECT` only**                            | Rejected. Permits writing rows attributed to another client or organization — invisible to the writer, therefore silent.                                                                                |
 | **C. All commands including `UPDATE`/`DELETE`** | Rejected as unnecessary, and mildly harmful: writing policies for privileges that are deliberately not granted implies they might be, and would need deleting the day someone reads them as permission. |
 
 ### Who the tests connect as
@@ -328,8 +371,9 @@ security model. It deserves its own reviewable document.
 
 ## Security model
 
-The boundary is: **a session that has not declared an organization scope can read nothing and write
-nothing; a session that has declared one can read and append only within it.**
+The boundary is: **a session that has not declared both a client scope and an organization scope can
+read nothing and write nothing; a session that has declared both can read and append only within that
+pair.**
 
 Trust is layered deliberately:
 
@@ -338,8 +382,8 @@ Trust is layered deliberately:
 2. **Schema** — the composite primary key makes identity unforgeable and duplicates impossible; absent
    columns make mutation unexpressible.
 3. **Privilege** — `age_app` holds `SELECT` and `INSERT` only. Prevents mutation even via raw SQL.
-4. **Policy** — RLS restricts both to the active organization. Prevents cross-tenant access even by
-   correctly-privileged raw SQL.
+4. **Policy** — RLS restricts both to the active client **and** organization. Prevents cross-client and
+   cross-organization access even by correctly-privileged raw SQL.
 
 Layers 3 and 4 are what this ADR adds. Their value is precisely that they do not depend on the
 application being correct.
@@ -375,14 +419,16 @@ ALTER TABLE scored_bif_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE scored_bif_snapshots FORCE ROW LEVEL SECURITY;
 ```
 
-- **`SELECT` policy** — `USING`: the row's `organization_id` equals the active organization scope.
-- **`INSERT` policy** — `WITH CHECK`: the new row's `organization_id` equals the active organization
-  scope.
-- Both must be **`NULL`-safe**, so an unset scope satisfies neither.
+- **`SELECT` policy** — `USING`: the row's `client_id` equals `current_setting('age.client_id', true)`
+  **and** the row's `organization_id` equals `current_setting('age.organization_id', true)`.
+- **`INSERT` policy** — `WITH CHECK`: the new row's `client_id` and `organization_id` equal those same
+  two settings.
+- Both must be **`NULL`-safe**, so an unset — or half-set — scope satisfies neither.
 - No `UPDATE` or `DELETE` policy exists, because no such privilege is granted.
 
-Active scope is `current_setting('age.organization_id', true)`, established per transaction with
-`SET LOCAL`.
+Active scope is the pair `current_setting('age.client_id', true)` and
+`current_setting('age.organization_id', true)`, both established per transaction with `SET LOCAL` from
+`ClientContext`.
 
 ## CI / live database test model
 
@@ -398,17 +444,19 @@ Active scope is `current_setting('age.organization_id', true)`, established per 
 
 ## Consequences
 
-- Cross-tenant access becomes impossible at the database level, not merely unlikely at the application
-  level. ADR-0009's scoping intent gains its database half.
-- **Every adapter operation must run inside a transaction** that sets the scope. This is the largest
-  practical consequence and it changes how the adapter is called — the current adapter issues bare
-  queries.
+- Cross-client and cross-organization access both become impossible at the database level, not merely
+  unlikely at the application level. ADR-0009's scoping intent gains its database half, for the whole
+  of the scope rather than half of it.
+- **Every adapter operation must run inside a transaction** that sets **both** scope values. This is
+  the largest practical consequence and it changes how the adapter is called — the current adapter
+  issues bare queries.
 - The composition root gains a responsibility it does not have today: translating a `ClientContext`
-  into a transaction-local setting. Getting this wrong fails closed, which is the point, but it will
+  into two transaction-local settings. Getting this wrong fails closed, which is the point, but it will
   fail visibly and often during development.
 - CI grows a role-bootstrap step and a second connection string. Modest, and gated to persistence paths.
-- Debugging changes character: a query that returns nothing may now mean "wrong scope" rather than "no
-  data". D10's fail-closed tests exist partly so this failure mode is documented in executable form.
+- Debugging changes character: a query that returns nothing may now mean "wrong or missing scope"
+  rather than "no data", and with two settings there are more ways to land there. D10's fail-closed
+  tests exist partly so this failure mode is documented in executable form.
 - A future migration that adds `UPDATE`/`DELETE` grants, drops `FORCE`, or adds a `BYPASSRLS` role
   silently removes protection. ADR-0032 D7's review checklist must be extended to cover it.
 
@@ -459,23 +507,26 @@ One PR, containing:
 2. One migration adding `ENABLE`/`FORCE ROW LEVEL SECURITY`, the `SELECT` and `INSERT` policies, and
    the `SELECT, INSERT` grant. Nothing else.
 3. Transaction-scoped scope handling sufficient for the adapter to operate under the policy — the
-   minimum that makes `SET LOCAL` reach the same transaction as the query.
+   minimum that makes both `SET LOCAL` statements reach the same transaction as the query, with the
+   values taken from `ClientContext` and from nowhere else.
 4. New `*.db.spec.ts` RLS specs per D10, connecting as the app role, including the role-attribute
-   assertions.
+   assertions and the independent wrong-client and wrong-organization cases.
 5. A recorded finding on the D9 duplicate-insert question — what PostgreSQL actually does when a key
-   collides across an invisible organization.
+   collides across an invisible client or organization.
 
 **Not in it:** any caller, any wiring, any composition root, any API/Web/demo-runtime change, RLS for
 any other table, production role provisioning, erasure/retention, `Draft → Active` promotion.
 
 ## Relationship to ADR-0030, ADR-0031, ADR-0032, PR #106 and PR #109
 
-- **ADR-0030** supplies the identity this policy is written against and the append-only lifecycle D4
-  and D9 protect. Unchanged.
+- **ADR-0030** supplies the identity this policy is written against — `(clientId, organizationId,
+bifId, snapshotId)`, scoped from `ClientContext` — and the append-only lifecycle D4 and D9 protect.
+  Unchanged. After the amendment, D2's predicate matches that identity's scope exactly rather than half
+  of it.
 - **ADR-0031** D5 and D6 committed to RLS on `organizationId` and `INSERT`/`SELECT`-only grants and
-  deferred them to stage 3b. **This ADR is stage 3b's decision**; it specifies them and does not
-  contradict them. D2's decision to omit `client_id` from the predicate is consistent with D5, which
-  named the organization as the boundary.
+  deferred them to stage 3b. **This ADR is stage 3b's decision.** D2 goes **further** than D5 by adding
+  `client_id` to the predicate; it does not contradict it, since D5 required the organization boundary
+  and D2 enforces it alongside the client boundary. Nothing D5 asked for is dropped.
 - **ADR-0032** supplies the migration convention that gives a policy a reviewable home, and D16
   supplies the rule this ADR is largely an answer to: RLS is tested only against live PostgreSQL as a
   non-superuser, non-owner role. Its CI constraints (no secret, path-gate, DB-free `ci.yml`, no manual
