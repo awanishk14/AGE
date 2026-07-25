@@ -1,7 +1,21 @@
 # ADR 0030: Scored BIF Snapshot Identity and Lifecycle
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-25
+
+## Acceptance note
+
+ADR-0030 is accepted as the governing decision for scored BIF snapshot identity and lifecycle. It
+ratifies immutable append-only snapshots, `ClientContext`-derived authoritative scope, composite
+identity using `clientId`, `organizationId`, `bifId` and `snapshotId`, caller-supplied `snapshotId`
+and `capturedAt`, and `scoringVersion` as an attribute rather than a key component. It authorizes
+only stage 2 port and in-memory adapter work; durable persistence remains out of scope pending a
+later accepted ADR.
+
+`clientId` belongs in the key because snapshot persistence is client-scoped platform data, even
+though the current BIF payload primarily carries `organizationId`. Scope is never inferred from the
+BIF payload. Content-addressed identity remains a future stage-3 option and is not part of this
+work.
 
 ## Context
 
