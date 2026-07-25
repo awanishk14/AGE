@@ -24,6 +24,11 @@ export { PrismaScoredBifSnapshotRepository } from './prisma-scored-bif-snapshot-
 export { isUniqueConstraintViolation } from './scored-bif-snapshot-delegate';
 export type { ScoredBifSnapshotDelegate } from './scored-bif-snapshot-delegate';
 export { ScopedScoredBifSnapshotRepository } from './scoped-scored-bif-snapshot-repository';
+export { ScoredBifSnapshotCapture } from './scored-bif-snapshot-capture';
+export type {
+  CaptureScoredBifSnapshotInput,
+  ScoredBifSnapshotCaptureReceipt,
+} from './scored-bif-snapshot-capture';
 export type {
   ScoredBifSnapshotScope,
   ScoredBifSnapshotScopeRunner,

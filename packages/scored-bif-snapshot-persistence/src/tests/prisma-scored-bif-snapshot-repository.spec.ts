@@ -325,6 +325,9 @@ describe('PrismaScoredBifSnapshotRepository', () => {
         // The RLS-scoped wrapper (ADR-0033 D7). Still a repository, still the
         // same port — no fake, no mutation surface.
         'ScopedScoredBifSnapshotRepository',
+        // The first real package-level caller (ADR-0035 D1): writes only through
+        // the bound facade, and cannot express a scope id of its own.
+        'ScoredBifSnapshotCapture',
         'fromScoredBifSnapshotRow',
         'isUniqueConstraintViolation',
         'toScoredBifSnapshotRow',
