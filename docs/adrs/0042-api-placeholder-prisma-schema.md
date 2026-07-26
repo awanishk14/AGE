@@ -1,10 +1,17 @@
 # ADR-0042 — API Placeholder Prisma Schema Disposition
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-26
 - Related: ADR-0002, ADR-0029, ADR-0031 (D3), ADR-0032 (D1, D3), ADR-0033, PR #106, PR #109
 
-> This is a decision request. It must not be self-accepted or implemented before ratification.
+## Acceptance note
+
+ADR-0042 is accepted as the governing decision for the apps/api placeholder Prisma schema. It
+ratifies packages/persistence/src/prisma/schema.prisma as the active schema of record for current
+persistence work, rejects apps/api as a default schema owner, and authorizes removal of the
+placeholder apps/api Prisma schema if inspection confirms it has no legitimate live dependency. It
+does not authorize schema relocation, migration changes, API/Web behavior changes, workspace
+implementation, Draft → Active promotion, runtime caller wiring, or new persistence functionality.
 
 ## Context
 
