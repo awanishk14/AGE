@@ -214,7 +214,7 @@ export {
   fromScoredBifSnapshot,
   serializeScoredBifSnapshot,
 } from './scored-bif-snapshot';
-export type { ScoredBifSnapshot } from './scored-bif-snapshot';
+export type { JsonObject, JsonValue, ScoredBifSnapshot } from './scored-bif-snapshot';
 
 // ScoredBifSnapshotRepository — storage-neutral append-only port for scored BIF
 // snapshots, plus the in-memory adapter (ADR-0029 stage 2, ADR-0030 Accepted).

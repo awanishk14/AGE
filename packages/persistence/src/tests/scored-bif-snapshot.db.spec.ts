@@ -51,30 +51,26 @@ if (!DATABASE_URL) {
 const prisma = new PrismaClient({ datasources: { db: { url: DATABASE_URL } } });
 
 /**
- * The load-bearing wiring of this whole slice — and a CORRECTION to PR #106.
+ * The load-bearing wiring of this whole slice — and the resolution of PR #109
+ * finding 2 (ADR-0041).
  *
  * PR #106 typed the adapter against a minimal STRUCTURAL delegate rather than
  * generated Prisma types, and claimed a real `PrismaClient.scoredBifSnapshot`
- * "satisfies it structurally at a future composition root". Generating the
- * client and trying the assignment — the first time anyone has — shows that
- * claim is very nearly true, and not exactly true. `tsc` accepts `findUnique`
- * and `findMany`; it rejects `create` on exactly one point:
+ * "satisfies it structurally at a future composition root". PR #109 generated
+ * the client, found the claim very nearly true, and left an
+ * `as unknown as ScoredBifSnapshotDelegate` behind. Two things were in the way,
+ * not one: `context` was `unknown`, wider than the JSON Prisma accepts as input;
+ * and `findMany`'s `orderBy` was a `ReadonlyArray`, which is not assignable to
+ * Prisma's mutable `orderBy` input.
  *
- *     Type 'unknown' is not assignable to type 'JsonNull | InputJsonValue'
- *
- * `ScoredBifSnapshotRow.context` is `unknown`, which is WIDER than the JSON
- * values Prisma will accept as input. The port is not wrong — a stored context
- * genuinely is untrusted `unknown` on the way back out — but a caller must
- * narrow it on the way in.
- *
- * That narrowing belongs at the composition root, which is what this file is
- * standing in for. Doing it by changing the port's `context` type would be an
- * adapter API change, which this slice is explicitly not authorized to make
- * (ADR-0032, first implementation slice). It is recorded as follow-up work
- * instead. Runtime behaviour is unaffected: this is purely an input-type
- * variance, and every assertion below exercises the real delegate.
+ * ADR-0041 fixed both. The assignment below is now a plain typed declaration
+ * with NO cast of any kind, which is the point: an `as unknown as` over a whole
+ * delegate suppresses every structural disagreement, including a future one in
+ * the interface whose entire job is to withhold `update`, `delete` and `upsert`.
+ * If the generated delegate and the port ever diverge again, this line fails to
+ * compile instead of quietly succeeding.
  */
-const delegate = prisma.scoredBifSnapshot as unknown as ScoredBifSnapshotDelegate;
+const delegate: ScoredBifSnapshotDelegate = prisma.scoredBifSnapshot;
 
 const MAPPER_OPTIONS = {
   organizationId: 'org-northwind',

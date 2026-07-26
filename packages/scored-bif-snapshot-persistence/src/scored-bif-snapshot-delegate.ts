@@ -1,4 +1,4 @@
-import type { ScoredBifSnapshotRow } from './scored-bif-snapshot-row';
+import type { ScoredBifSnapshotRow, StoredScoredBifSnapshotRow } from './scored-bif-snapshot-row';
 
 /**
  * The narrowest possible view of the Prisma model delegate for
@@ -32,7 +32,7 @@ export interface ScoredBifSnapshotDelegate {
         readonly snapshotId: string;
       };
     };
-  }): Promise<ScoredBifSnapshotRow | null>;
+  }): Promise<StoredScoredBifSnapshotRow | null>;
 
   findMany(args: {
     readonly where: {
@@ -40,11 +40,20 @@ export interface ScoredBifSnapshotDelegate {
       readonly organizationId: string;
       readonly bifId: string;
     };
-    readonly orderBy: ReadonlyArray<
+    /**
+     * A MUTABLE array, deliberately (ADR-0041 D4). Prisma's generated `orderBy`
+     * input is a mutable array type, and a `ReadonlyArray` is not assignable to
+     * it — so a `readonly` declaration here was a second, independent reason the
+     * generated delegate did not satisfy this interface. PR #109 reported
+     * `create` as the single point of rejection; that was true of `create` in
+     * isolation and incomplete for the interface as a whole. This is a variance
+     * fix, not a capability change: no method is added.
+     */
+    readonly orderBy: Array<
       { readonly capturedAt: 'asc' | 'desc' } | { readonly snapshotId: 'asc' | 'desc' }
     >;
     readonly take?: number;
-  }): Promise<ScoredBifSnapshotRow[]>;
+  }): Promise<StoredScoredBifSnapshotRow[]>;
 }
 
 /**
