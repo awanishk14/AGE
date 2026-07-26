@@ -328,6 +328,9 @@ describe('PrismaScoredBifSnapshotRepository', () => {
         // The first real package-level caller (ADR-0035 D1): writes only through
         // the bound facade, and cannot express a scope id of its own.
         'ScoredBifSnapshotCapture',
+        // The first caller of the capture service (ADR-0036 D1): the one place
+        // that holds the raw port, and hands it only to the bound facade.
+        'ScoredBifSnapshotCaptureOrchestrator',
         'fromScoredBifSnapshotRow',
         'isUniqueConstraintViolation',
         'toScoredBifSnapshotRow',
