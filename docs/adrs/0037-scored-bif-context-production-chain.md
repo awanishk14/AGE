@@ -1,9 +1,30 @@
 # ADR 0037: Scored BIF Context Production Chain
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-26
 
-> This is a decision request. It must not be self-accepted or implemented before ratification.
+## Acceptance note
+
+ADR-0037 is accepted as the governing decision for producing a `ScoredBifContext`. It ratifies one
+pure chaining function in `@age/business-discovery-contracts`, beside the three functions it chains;
+requires it to stay pure and to pass every mapper input through unchanged; requires scoring metadata
+to be threaded into the projector rather than recomputed; requires both metadata sets to be returned;
+and keeps it ignorant of persistence.
+
+It is accepted because it introduces no new architectural direction. It adds no dependency, creates no
+package, crosses no boundary, changes no existing function, and restates decisions already made:
+purity as a source-scanned property, caller-supplied values instead of ambient ones (ADR-0026 D2,
+ADR-0030 D4), and persistence kept out of pure logic (ADR-0031, ADR-0035). The anticipated
+package-boundary question turned out not to exist, so no genuine architectural fork remained to
+choose between.
+
+It does **not** authorize any runtime caller, any migration of the existing hand-rolled test chains,
+any change to the demo's mapping path or to `mapBusinessDiscoveryToBifContext`, API/Web exposure,
+workspace implementation, `Draft → Active` promotion, execution, or any schema, migration, RLS or CI
+change.
+
+The two open questions it records — the relationship between the two mapping paths, and the first
+runtime caller and its real input source — stay open and each need their own decision.
 
 ## Context
 
