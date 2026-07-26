@@ -1,9 +1,24 @@
 # ADR 0036: Scored BIF Snapshot Capture Orchestration
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-26
 
-> This ADR is a **decision request**. It must not be self-accepted or implemented before ratification.
+## Acceptance note
+
+ADR-0036 is accepted as the governing decision for scored BIF snapshot capture orchestration. It
+ratifies a package-level orchestrator as the first caller of `ScoredBifSnapshotCapture`, requires
+`ClientContext` to be supplied per call as the only source of `clientId` and `organizationId`,
+requires caller-supplied `snapshotId` and `capturedAt`, keeps production of the `ScoredBifContext`
+upstream and pure, makes capture explicitly invoked rather than automatic, and requires capture
+failure to be returned as an explicit outcome rather than thrown.
+
+It does **not** authorize the produce-side chain, any error classification, API/Web exposure,
+workspace implementation, `Draft → Active` promotion, execution, or strategy generation.
+
+Accepted because it ratifies the architecture ADR-0009, ADR-0026, ADR-0030, ADR-0034 and ADR-0035
+already established, and introduces no conflicting decision: scope stays authoritative from
+`ClientContext`, identity stays caller-supplied, the pure layer stays free of persistence, and the
+persistence package still never sees a `BusinessIntelligenceFramework`.
 
 ## Context
 
