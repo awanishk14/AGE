@@ -29,6 +29,13 @@ export type {
   CaptureScoredBifSnapshotInput,
   ScoredBifSnapshotCaptureReceipt,
 } from './scored-bif-snapshot-capture';
+export { ScoredBifSnapshotCaptureOrchestrator } from './scored-bif-snapshot-capture-orchestrator';
+export type {
+  OrchestratedScoredBifSnapshotCaptureInput,
+  ScoredBifSnapshotCaptureFailed,
+  ScoredBifSnapshotCaptureOutcome,
+  ScoredBifSnapshotCaptured,
+} from './scored-bif-snapshot-capture-orchestrator';
 export type {
   ScoredBifSnapshotScope,
   ScoredBifSnapshotScopeRunner,
