@@ -194,6 +194,22 @@ importers:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
 
+  packages/business-discovery-capture:
+    dependencies:
+      '@age/business-discovery-contracts':
+        specifier: workspace:*
+        version: link:../business-discovery-contracts
+      '@age/capability-kit':
+        specifier: workspace:*
+        version: link:../capability-kit
+      '@age/scored-bif-snapshot-persistence':
+        specifier: workspace:*
+        version: link:../scored-bif-snapshot-persistence
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(terser@5.48.0)
+
   packages/business-discovery-contracts:
     dependencies:
       '@age/bif':
