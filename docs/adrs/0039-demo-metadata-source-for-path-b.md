@@ -1,14 +1,21 @@
 # ADR-0039 — Demo Metadata Source for Path B Mapping
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-26
 - Supersedes: none
 - Related: ADR-0025 (Discovery → BIF prerequisites), ADR-0030 (`ClientContext` authoritative for
   scope), ADR-0037 (`produceScoredBifContext`), ADR-0038 (two mapping paths; D6 forbids invented demo
   metadata)
 
-> This is a decision request. It must not be self-accepted and nothing in it may be implemented
-> before it is Accepted.
+## Acceptance note (2026-07-26)
+
+> ADR-0039 is accepted as the governing decision for demo metadata required by canonical Path B
+> mapping. It ratifies an explicit demo-runtime-owned scenario metadata source for organizationId,
+> constructedAt and changedBy, requires that metadata to be passed explicitly into the demo pipeline,
+> forbids mapper-level constants, optional demo-only Path B variants and third mapping paths, and
+> authorizes demo migration from legacy Path A to canonical produceScoredBifContext. It does not
+> authorize production workspace implementation, API/Web exposure, Draft → Active promotion,
+> ClientContext runtime wiring, or execution behavior.
 
 ## Context
 
