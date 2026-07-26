@@ -352,6 +352,9 @@ describe('ScoredBifSnapshotCaptureOrchestrator', () => {
       expect(executable).not.toMatch(/mapBusinessDiscoveryToBifDraft/);
       expect(executable).not.toMatch(/scoreBusinessIntelligenceFramework/);
       expect(executable).not.toMatch(/projectScoredBifContext/);
+      // Now that the chain has a single name (ADR-0037), that name is the one
+      // most likely to be reached for here. It must stay just as absent.
+      expect(executable).not.toMatch(/produceScoredBifContext/);
       expect(executable).not.toMatch(/BusinessIntelligenceFramework/);
     });
   });

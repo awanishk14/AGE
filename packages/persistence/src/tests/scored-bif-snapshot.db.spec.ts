@@ -1,10 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import {
-  mapBusinessDiscoveryToBifDraft,
   normalizeScoredBifSnapshotRecord,
-  projectScoredBifContext,
+  produceScoredBifContext,
   SAMPLE_BUSINESS_DISCOVERY_PROFILE,
-  scoreBusinessIntelligenceFramework,
   toScoredBifSnapshot,
   type ScoredBifContext,
   type ScoredBifSnapshotRecord,
@@ -91,9 +89,7 @@ const SCOPE = {
 } as const;
 
 function sampleContext(): ScoredBifContext {
-  const { bif } = mapBusinessDiscoveryToBifDraft(SAMPLE_BUSINESS_DISCOVERY_PROFILE, MAPPER_OPTIONS);
-  const { bif: scored, metadata } = scoreBusinessIntelligenceFramework(bif);
-  return projectScoredBifContext(scored, { scoringMetadata: metadata });
+  return produceScoredBifContext(SAMPLE_BUSINESS_DISCOVERY_PROFILE, MAPPER_OPTIONS).context;
 }
 
 const CONTEXT = sampleContext();

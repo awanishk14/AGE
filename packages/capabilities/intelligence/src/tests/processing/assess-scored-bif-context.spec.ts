@@ -10,9 +10,7 @@ import {
 } from '@age/capability-kit';
 import {
   SAMPLE_BUSINESS_DISCOVERY_PROFILE,
-  mapBusinessDiscoveryToBifDraft,
-  projectScoredBifContext,
-  scoreBusinessIntelligenceFramework,
+  produceScoredBifContext,
   type ScoredBifContext,
 } from '@age/business-discovery-contracts';
 import {
@@ -39,13 +37,11 @@ const MODULE_PATH = join(CAPABILITY_SRC, 'processing', 'assess-scored-bif-contex
  * requires the CALLER to — and hands the capability the neutral contract only.
  */
 function sampleContext(): ScoredBifContext {
-  const { bif } = mapBusinessDiscoveryToBifDraft(SAMPLE_BUSINESS_DISCOVERY_PROFILE, {
+  return produceScoredBifContext(SAMPLE_BUSINESS_DISCOVERY_PROFILE, {
     organizationId: 'org-northwind',
     constructedAt: CONSTRUCTED_AT,
     changedBy: 'analyst@example.com',
-  });
-  const scored = scoreBusinessIntelligenceFramework(bif);
-  return projectScoredBifContext(scored.bif, { scoringMetadata: scored.metadata });
+  }).context;
 }
 
 /** Immutable structural override, so synthetic cases keep real enum values. */
