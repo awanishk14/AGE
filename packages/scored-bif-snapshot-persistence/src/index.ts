@@ -41,4 +41,4 @@ export type {
   ScoredBifSnapshotScopeRunner,
 } from './scored-bif-snapshot-scope-runner';
 export { fromScoredBifSnapshotRow, toScoredBifSnapshotRow } from './scored-bif-snapshot-row';
-export type { ScoredBifSnapshotRow } from './scored-bif-snapshot-row';
+export type { ScoredBifSnapshotRow, StoredScoredBifSnapshotRow } from './scored-bif-snapshot-row';

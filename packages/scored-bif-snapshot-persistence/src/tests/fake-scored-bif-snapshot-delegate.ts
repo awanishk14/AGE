@@ -1,5 +1,5 @@
 import type { ScoredBifSnapshotDelegate } from '../scored-bif-snapshot-delegate';
-import type { ScoredBifSnapshotRow } from '../scored-bif-snapshot-row';
+import type { ScoredBifSnapshotRow, StoredScoredBifSnapshotRow } from '../scored-bif-snapshot-row';
 
 /**
  * A test double for the `scored_bif_snapshots` table.
@@ -13,7 +13,7 @@ import type { ScoredBifSnapshotRow } from '../scored-bif-snapshot-row';
  */
 export class FakeScoredBifSnapshotDelegate implements ScoredBifSnapshotDelegate {
   /** Insert order, deliberately unsorted — every ordering must come from a query. */
-  private readonly rows: ScoredBifSnapshotRow[] = [];
+  private readonly rows: StoredScoredBifSnapshotRow[] = [];
 
   /** Every call the adapter made, so a test can assert what it did NOT ask for. */
   readonly calls: Array<{ readonly method: string; readonly args: unknown }> = [];
@@ -40,7 +40,10 @@ export class FakeScoredBifSnapshotDelegate implements ScoredBifSnapshotDelegate 
     }
 
     // Stored by value: the table does not hold the caller's object.
-    this.rows.push({ ...data, context: JSON.parse(JSON.stringify(data.context)) as unknown });
+    this.rows.push({
+      ...data,
+      context: JSON.parse(JSON.stringify(data.context)) as StoredScoredBifSnapshotRow['context'],
+    });
 
     return { count: 1 };
   }
@@ -54,7 +57,7 @@ export class FakeScoredBifSnapshotDelegate implements ScoredBifSnapshotDelegate 
         readonly snapshotId: string;
       };
     };
-  }): Promise<ScoredBifSnapshotRow | null> {
+  }): Promise<StoredScoredBifSnapshotRow | null> {
     this.calls.push({ method: 'findUnique', args });
 
     const key = args.where.clientId_organizationId_bifId_snapshotId;
@@ -76,11 +79,11 @@ export class FakeScoredBifSnapshotDelegate implements ScoredBifSnapshotDelegate 
       readonly organizationId: string;
       readonly bifId: string;
     };
-    readonly orderBy: ReadonlyArray<
+    readonly orderBy: Array<
       { readonly capturedAt: 'asc' | 'desc' } | { readonly snapshotId: 'asc' | 'desc' }
     >;
     readonly take?: number;
-  }): Promise<ScoredBifSnapshotRow[]> {
+  }): Promise<StoredScoredBifSnapshotRow[]> {
     this.calls.push({ method: 'findMany', args });
 
     const { where, orderBy, take } = args;

@@ -77,7 +77,11 @@ function scopeRunner(
         if (omit !== 'organization') {
           await tx.$executeRaw`SELECT set_config('age.organization_id', ${scope.organizationId}, true)`;
         }
-        return operation(tx.scoredBifSnapshot as unknown as ScoredBifSnapshotDelegate);
+        // No cast: the generated delegate satisfies the narrow port outright
+        // (ADR-0041). See scored-bif-snapshot.db.spec.ts for why that matters.
+        const delegate: ScoredBifSnapshotDelegate = tx.scoredBifSnapshot;
+
+        return operation(delegate);
       });
     },
   };

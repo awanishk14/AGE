@@ -64,8 +64,41 @@ export const scoredBifSnapshotSchema = z.object({
   context: scoredBifContextSchema,
 });
 
-/** The subset of JSON values a snapshot may contain. */
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+/**
+ * The subset of JSON values a snapshot may contain (ADR-0041 D3).
+ *
+ * This is the repository's single definition of "JSON". It was private while it
+ * only served `assertJsonSafe`; it is exported because the persistence row type
+ * needs the same vocabulary, and two competing definitions of JSON is exactly
+ * what ADR-0041 D3 forbids.
+ *
+ * It is structurally compatible with Prisma's `InputJsonValue` and `JsonValue`
+ * without naming either. No generated Prisma type is imported here — this
+ * package's purity guard forbids the generated client outright, and finding 2 of
+ * ADR-0041 proved the compatibility is structural, so importing it would buy
+ * nothing. (That guard is a substring scan over this file's own source, which is
+ * why the package specifier is described here rather than spelled.)
+ */
+export type JsonValue = string | number | boolean | null | readonly JsonValue[] | JsonObject;
+
+/**
+ * A JSON **object** — the write-side shape (ADR-0041 D2).
+ *
+ * Deliberately narrower than `JsonValue`: at the top level an object is accepted
+ * and arrays, strings, numbers, booleans and `null` are rejected. Two reasons,
+ * and the second is concrete rather than aesthetic. A snapshot context is always
+ * an object, so nothing else is a `ScoredBifContext`; and a top-level `null` is
+ * not assignable to Prisma's `InputJsonValue` at all — Prisma requires its own
+ * `JsonNull` sentinel — so admitting one would reintroduce the very
+ * assignability failure ADR-0041 exists to remove.
+ *
+ * Nested values are unrestricted JSON, `null` and arrays included. The
+ * `| undefined` on the index signature is what makes an object with optional
+ * members (such as `metadata.scoringVersion?`) assignable.
+ */
+export interface JsonObject {
+  readonly [key: string]: JsonValue | undefined;
+}
 
 /**
  * Reject anything that cannot survive a JSON round trip *before* it is written,
@@ -222,9 +255,12 @@ function withSortedKeys(value: JsonValue): JsonValue {
   if (value === null || typeof value !== 'object') {
     return value;
   }
+  // `Array.isArray` does not narrow a `readonly` array arm out of the union, so
+  // the object arm is named explicitly rather than indexed through the union.
+  const object = value as JsonObject;
   const sorted: { [key: string]: JsonValue } = {};
-  for (const key of Object.keys(value).sort()) {
-    sorted[key] = withSortedKeys(value[key] as JsonValue);
+  for (const key of Object.keys(object).sort()) {
+    sorted[key] = withSortedKeys(object[key] as JsonValue);
   }
   return sorted;
 }
