@@ -1,10 +1,17 @@
 # ADR-0041 — Scored BIF Snapshot Context JSON Type Boundary
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-26
 - Related: ADR-0029, ADR-0030, ADR-0031, ADR-0032, ADR-0034, ADR-0035, ADR-0040, PR #109 finding 2
 
-> This is a decision request. It must not be self-accepted or implemented before ratification.
+## Acceptance note
+
+ADR-0041 is accepted as the governing decision for the scored BIF snapshot context JSON type
+boundary. It ratifies a Prisma-compatible JSON value type for ScoredBifSnapshotRow.context without
+importing generated Prisma types into pure contracts, preserves JSONB single-column context storage,
+preserves serializer behavior, and authorizes only the type-boundary cleanup needed to remove unsafe
+durable adapter casts where possible. It does not authorize schema or migration changes, RLS changes,
+API/Web exposure, workspace implementation, Draft → Active promotion, or runtime caller wiring.
 
 ## Context
 
