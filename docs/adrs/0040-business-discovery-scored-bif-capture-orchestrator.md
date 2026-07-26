@@ -1,6 +1,6 @@
 # ADR-0040 — Business Discovery Scored BIF Capture Orchestrator
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-26
 - Supersedes: none
 - Related: ADR-0009 (`ClientContext` authoritative for scoping) · ADR-0026 (neutral `ScoredBifContext`)
@@ -8,7 +8,15 @@
   (`ClientContext`-bound snapshot access) · ADR-0035 (capture boundary) · ADR-0036 (capture
   orchestration) · ADR-0037 (`produceScoredBifContext`) · ADR-0038/0039 (single mapping path)
 
-> This is a decision request. It must not be self-accepted or implemented before ratification.
+## Acceptance note
+
+ADR-0040 is accepted as the governing decision for the Business Discovery scored BIF capture
+orchestrator. It ratifies a package-level use-case boundary that composes canonical
+produceScoredBifContext with ScoredBifSnapshotCapture, requires ClientContext as the only source of
+clientId and organizationId, requires caller-supplied snapshotId and capturedAt, keeps capture
+explicit rather than hidden inside mapping or scoring, returns capture success or failure explicitly,
+and does not authorize API/Web exposure, workspace implementation, Draft → Active promotion, demo
+side effects, capability execution, strategy generation, or schema/RLS changes.
 
 ## Context
 
