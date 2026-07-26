@@ -190,11 +190,11 @@ describe('ADR-0039 — demo scenario metadata is explicit and demo-owned', () =>
     expect(source).toMatch(/scenario\.changedBy/);
   });
 
-  it('uses canonical Path B and no longer calls legacy Path A', () => {
-    const source = withoutComments(INTAKE_SOURCE);
-    expect(source).toMatch(/produceScoredBifContext/);
-    expect(source).not.toMatch(/mapBusinessDiscoveryToBifContext/);
-    expect(source).not.toMatch(/BifCompatibleBusinessContext/);
+  it('uses canonical Path B', () => {
+    // The legacy Path A mapper was retired outright (ADR-0039 D7), and its
+    // absence is now asserted repository-wide in
+    // `@age/business-discovery-contracts` rather than restated here.
+    expect(withoutComments(INTAKE_SOURCE)).toMatch(/produceScoredBifContext/);
   });
 
   it('changing the scenario changes only what the scenario owns', () => {
