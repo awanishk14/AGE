@@ -12,8 +12,6 @@
     "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test",
     "smoke:demo": "node scripts/smoke-demo.mjs",
-    "prisma:generate": "prisma generate --schema prisma/schema.prisma",
-    "prisma:migrate:scaffold": "prisma migrate dev --schema prisma/schema.prisma",
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
@@ -26,7 +24,6 @@
     "@nestjs/config": "^3.2.3",
     "@nestjs/core": "^10.4.4",
     "@nestjs/platform-express": "^10.4.4",
-    "@prisma/client": "^5.20.0",
     "ioredis": "^5.4.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
@@ -37,7 +34,6 @@
     "@nestjs/schematics": "^10.1.4",
     "@playwright/test": "^1.47.2",
     "@types/express": "^5.0.0",
-    "prisma": "^5.20.0",
     "ts-loader": "^9.5.1",
     "vitest": "^2.1.1"
   }

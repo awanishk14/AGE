@@ -18,9 +18,14 @@ migration helper. It carries no SQL and no Prisma state.
 
 ## Working with migrations
 
-All Prisma commands in this package pass `--schema` explicitly (ADR-0032 D3), because the repository
-contains a second, placeholder Prisma schema under `apps/api/prisma/` and a command relying on
-Prisma's default resolution can silently target the wrong one.
+All Prisma commands in this package pass `--schema` explicitly (ADR-0032 D3). The rule does not
+depend on a competing schema existing: Prisma resolves a schema by searching the working directory,
+so a command without `--schema` says nothing about which schema it means and is correct only by
+accident of where it was run from. Naming the file is what makes the target a fact.
+
+This paragraph previously justified the rule by the presence of a second, placeholder Prisma schema
+under `apps/api/prisma/`. That schema was removed (ADR-0042 D1) and the rule is unchanged — it was
+never the reason, only the sharpest illustration of it.
 
 ```bash
 pnpm --filter @age/persistence prisma:validate         # offline, no database
