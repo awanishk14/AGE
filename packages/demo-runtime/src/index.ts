@@ -15,4 +15,8 @@ export {
   runBusinessDiscoveryIntake,
   type BusinessDiscoveryIntakeSummary,
 } from './business-discovery';
+// Demo scenario metadata (ADR-0039). The demo's own declared organizationId /
+// constructedAt / changedBy for canonical Path B mapping. Scenario framing only
+// — never production tenant identity, never scope.
+export { DEMO_SCENARIO_METADATA, type DemoScenarioMetadata } from './demo-scenario-metadata';
 export * from './fixtures';
