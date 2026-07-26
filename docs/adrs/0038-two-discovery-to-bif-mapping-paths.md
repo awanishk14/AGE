@@ -1,13 +1,21 @@
 # ADR-0038 — The two Discovery → BIF mapping paths
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-26
 - Supersedes: none
 - Related: ADR-0025 (Discovery → BIF prerequisites), ADR-0026 (capability consumption of
   `ScoredBifContext`), ADR-0035/0036 (snapshot capture), ADR-0037 (produce-side chain, open question 2)
 
-> This is a decision request. It must not be self-accepted and nothing in it may be implemented
-> before it is Accepted.
+## Acceptance note (2026-07-26)
+
+ADR-0038 is accepted as the governing decision for Discovery → BIF mapping paths. It ratifies
+`produceScoredBifContext` as the single sanctioned mapping path, treats the older mapping path as a
+temporary legacy demo bridge only, forbids a third mapping path, and defers demo migration until
+`organizationId`, `constructedAt` and `changedBy` have a legitimate metadata source. It does not
+authorize fake demo constants, fixture-only provenance, API/Web exposure, `Draft → Active` promotion,
+workspace implementation, or execution behavior.
+
+Accepted after the amendment below, which was made while the ADR was still Proposed.
 
 ## Amendment note (2026-07-26, before acceptance)
 
@@ -79,7 +87,7 @@ But they are not interchangeable today:
 it is allowed to read. Moving the demo onto Path B means the demo must supply those three values from
 somewhere — and inventing them is exactly the fabrication these ADRs exist to prevent.
 
-## Decision requested
+## Decisions
 
 **D1. Name Path A as superseded-in-principle, and Path B as the single sanctioned Discovery → BIF
 mapping**, with Path A retained only until the demo can be moved.
