@@ -101,6 +101,10 @@ export type {
 } from './bif-compatible-context';
 
 // Discovery -> BIF-compatible projection (pure, deterministic mapper).
+// LEGACY — TEMPORARY DEMO BRIDGE (ADR-0038). This is Path A. New code must use
+// `produceScoredBifContext` (Path B, exported below). Path A remains only
+// because the demo calls it and cannot yet supply organizationId /
+// constructedAt / changedBy; inventing them is forbidden (ADR-0038 D6).
 export { mapBusinessDiscoveryToBifContext } from './business-discovery-bif-mapping';
 
 // Representative sample fixture (generic fictional data, no side effects).
