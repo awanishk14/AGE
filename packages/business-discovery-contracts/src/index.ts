@@ -86,26 +86,10 @@ export {
 } from './questionnaire-validation';
 export type { QuestionnaireValidationResult } from './questionnaire-validation';
 
-// BIF-compatible projection shape (local; not wired into @age/bif — see file note).
-export {
-  BIF_COMPATIBLE_SECTION_KEYS,
-  bifOrganizationIdentitySchema,
-  bifMarketCompetitionSchema,
-  bifCompatibleBusinessContextSchema,
-} from './bif-compatible-context';
-export type {
-  BifCompatibleSectionKey,
-  BifOrganizationIdentity,
-  BifMarketCompetition,
-  BifCompatibleBusinessContext,
-} from './bif-compatible-context';
-
-// Discovery -> BIF-compatible projection (pure, deterministic mapper).
-// LEGACY — TEMPORARY DEMO BRIDGE (ADR-0038). This is Path A. New code must use
-// `produceScoredBifContext` (Path B, exported below). Path A remains only
-// because the demo calls it and cannot yet supply organizationId /
-// constructedAt / changedBy; inventing them is forbidden (ADR-0038 D6).
-export { mapBusinessDiscoveryToBifContext } from './business-discovery-bif-mapping';
+// Legacy Path A (`mapBusinessDiscoveryToBifContext` -> `BifCompatibleBusinessContext`)
+// was RETIRED here (ADR-0039 D7) once the demo migrated to canonical Path B and
+// it had no caller left. `produceScoredBifContext` is the single sanctioned
+// Discovery -> BIF mapping (ADR-0038). Do not reintroduce a second path.
 
 // Representative sample fixture (generic fictional data, no side effects).
 export { SAMPLE_BUSINESS_DISCOVERY_PROFILE } from './sample-profile';
