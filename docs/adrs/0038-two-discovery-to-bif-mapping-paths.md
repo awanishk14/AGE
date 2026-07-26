@@ -9,6 +9,17 @@
 > This is a decision request. It must not be self-accepted and nothing in it may be implemented
 > before it is Accepted.
 
+## Amendment note (2026-07-26, before acceptance)
+
+ADR-0038 was amended before acceptance to reject fake demo metadata. Path B remains the single
+sanctioned Discovery → BIF mapping path, but the demo must not be migrated by inventing
+`organizationId`, `constructedAt` or `changedBy` values. Path A may remain only as a temporary legacy
+demo bridge until a legitimate demo metadata source is approved.
+
+The amendment changes no decision below; it closes the ADR's open question 1 in the restrictive
+direction and makes the block on demo migration explicit rather than merely sequenced. See
+**D6** and the revised open questions.
+
 ## Context
 
 ADR-0037 recorded, as an open question, that the repository contains **two disjoint mappings from a
@@ -85,7 +96,28 @@ changes demo output, which every smoke check pins.
 extend Path B or be argued for in its own ADR.
 
 **D5. Mark the demo's `mappedSectionKeys` output as the thing that will change** when D3 is
-eventually decided, so the change is expected rather than discovered.
+eventually decided, so the change is expected rather than discovered. That output may change **only**
+once the demo has an explicit, legitimate metadata source — never as a side effect of inventing one.
+
+**D6 (amendment). The demo must not be migrated by inventing its metadata.** Specifically, and
+without exception until a later ADR or slice decides otherwise:
+
+- **Hardcoded demo constants for `organizationId`, `constructedAt` or `changedBy` are rejected.** A
+  fixed constant is not a weaker source than a real one; it is a _false_ one. It would put a
+  fabricated organization, a fabricated authorship and a fabricated construction time into a Draft
+  BIF and from there into every score, projection and snapshot derived from it — the precise
+  fabrication ADR-0025 forbids, wearing the costume of a default.
+- **Fixture-only fake metadata added solely to preserve smoke output is rejected.** Choosing the
+  values that keep an existing assertion green is fitting the evidence to the answer.
+- **A third mapping path is rejected** (restating D4) — including any "demo-only" variant of Path B
+  that makes the three inputs optional. Making them optional is inventing them with extra steps.
+- **The demo is not migrated until it has a legitimate metadata source**, and what that source is
+  remains a **future decision**, to be taken in its own ADR or slice.
+- **Path A may remain only as a temporary legacy demo bridge**, and must be labelled as such.
+
+**This amendment authorizes no implementation.** It records a boundary; it does not commission the
+deprecation labelling, a guard test, or any other change. Those are separate slices under the
+Accepted ADR.
 
 ## Options considered
 
@@ -115,7 +147,10 @@ change to any of the four functions involved. No demo change.
 
 ## Open questions
 
-1. Where do the demo's `organizationId`, `constructedAt` and `changedBy` come from? (Blocks D3.)
+1. Where do the demo's `organizationId`, `constructedAt` and `changedBy` come from? Still open, and
+   now **narrowed by D6**: the answer may not be a hardcoded constant, fixture-only fake metadata, or
+   an optional-input variant of Path B. It must be a legitimate source, decided in its own ADR or
+   slice. Until then the demo migration is **blocked**, not merely deferred.
 2. Once the demo is on Path B, does the intake summary keep reporting mapped section keys, or does it
    report the scored context's sections and omissions instead? The second is more informative and is
    a visible output change.
