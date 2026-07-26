@@ -13,9 +13,8 @@ import {
 } from '../scored-bif-snapshot-repository';
 import { InMemoryScoredBifSnapshotRepository } from '../in-memory-scored-bif-snapshot-repository';
 import { toScoredBifSnapshot } from '../scored-bif-snapshot';
-import { projectScoredBifContext, type ScoredBifContext } from '../scored-bif-context';
-import { scoreBusinessIntelligenceFramework } from '../bif-confidence-scoring';
-import { mapBusinessDiscoveryToBifDraft } from '../business-discovery-to-bif';
+import type { ScoredBifContext } from '../scored-bif-context';
+import { produceScoredBifContext } from '../produce-scored-bif-context';
 import { SAMPLE_BUSINESS_DISCOVERY_PROFILE } from '../sample-profile';
 
 const CONSTRUCTED_AT = new Date('2026-07-15T09:30:00.000Z');
@@ -34,9 +33,7 @@ const SCOPE = {
 
 /** The real scored sample context, built from the delivered pipeline. */
 function sampleContext(): ScoredBifContext {
-  const { bif } = mapBusinessDiscoveryToBifDraft(SAMPLE_BUSINESS_DISCOVERY_PROFILE, MAPPER_OPTIONS);
-  const { bif: scored, metadata } = scoreBusinessIntelligenceFramework(bif);
-  return projectScoredBifContext(scored, { scoringMetadata: metadata });
+  return produceScoredBifContext(SAMPLE_BUSINESS_DISCOVERY_PROFILE, MAPPER_OPTIONS).context;
 }
 
 function record(

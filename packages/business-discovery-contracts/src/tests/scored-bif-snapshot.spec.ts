@@ -12,9 +12,8 @@ import {
   toScoredBifSnapshot,
   type ScoredBifSnapshot,
 } from '../scored-bif-snapshot';
-import { projectScoredBifContext, type ScoredBifContext } from '../scored-bif-context';
-import { scoreBusinessIntelligenceFramework } from '../bif-confidence-scoring';
-import { mapBusinessDiscoveryToBifDraft } from '../business-discovery-to-bif';
+import type { ScoredBifContext } from '../scored-bif-context';
+import { produceScoredBifContext } from '../produce-scored-bif-context';
 import { SAMPLE_BUSINESS_DISCOVERY_PROFILE } from '../sample-profile';
 
 const CONSTRUCTED_AT = new Date('2026-07-15T09:30:00.000Z');
@@ -25,16 +24,9 @@ const MAPPER_OPTIONS = {
   changedBy: 'analyst@example.com',
 } as const;
 
-/** The real scored sample Draft BIF, built from the delivered pipeline. */
-function scoredSample() {
-  const { bif } = mapBusinessDiscoveryToBifDraft(SAMPLE_BUSINESS_DISCOVERY_PROFILE, MAPPER_OPTIONS);
-  return scoreBusinessIntelligenceFramework(bif);
-}
-
 /** The projected context under test — the thing a snapshot preserves. */
 function sampleContext(): ScoredBifContext {
-  const { bif, metadata } = scoredSample();
-  return projectScoredBifContext(bif, { scoringMetadata: metadata });
+  return produceScoredBifContext(SAMPLE_BUSINESS_DISCOVERY_PROFILE, MAPPER_OPTIONS).context;
 }
 
 /** A full round trip through the serialized form, exactly as a store would do it. */
