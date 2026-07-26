@@ -33,8 +33,12 @@ const SOURCE_EXTENSIONS = ['.ts', '.tsx'];
 /** Path A's two exported names. Either one is a use of the path. */
 const PATH_A_SYMBOLS = ['mapBusinessDiscoveryToBifContext', 'BifCompatibleBusinessContext'];
 
-/** The one caller ADR-0038 D2 sanctions, for as long as D3 blocks the migration. */
-const SANCTIONED_CALLER = join('packages', 'demo-runtime', 'src', 'business-discovery.ts');
+/**
+ * The demo — Path A's last caller until ADR-0039 gave it a legitimate metadata
+ * source and it migrated to `produceScoredBifContext`. Kept named here so the
+ * test states which file stopped calling Path A, not merely that none do.
+ */
+const FORMER_CALLER = join('packages', 'demo-runtime', 'src', 'business-discovery.ts');
 
 function isTestFile(relativePath: string): boolean {
   const segments = relativePath.split(sep);
@@ -90,8 +94,20 @@ describe('ADR-0038 — Path A is a temporary legacy demo bridge', () => {
     expect(files.some((file) => file.endsWith(join('src', 'business-discovery.ts')))).toBe(true);
   });
 
-  it('has exactly one non-test caller outside its own package: the demo', () => {
-    expect(pathAReferences()).toEqual([SANCTIONED_CALLER]);
+  it('has no non-test caller left outside its own package', () => {
+    // ADR-0039: the demo migrated to Path B, so Path A is now dead weight rather
+    // than a bridge. A new name appearing here is a regression, not a caller.
+    expect(pathAReferences()).toEqual([]);
+  });
+
+  it('is no longer called by the demo — the migration actually happened', () => {
+    const demoSource = readFileSync(join(REPO_ROOT, FORMER_CALLER), 'utf8');
+    const executable = demoSource.replace(/\/\*\*[\s\S]*?\*\/|\/\/.*$/gm, '');
+
+    for (const symbol of PATH_A_SYMBOLS) {
+      expect(executable).not.toContain(symbol);
+    }
+    expect(executable).toContain('produceScoredBifContext');
   });
 
   it('is not reached for by any capability package', () => {

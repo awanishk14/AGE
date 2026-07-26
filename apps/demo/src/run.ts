@@ -1,4 +1,5 @@
 import {
+  DEMO_SCENARIO_METADATA,
   runAllCapabilities,
   runBusinessDiscoveryIntake,
   type BusinessDiscoveryIntakeSummary,
@@ -40,10 +41,14 @@ function printDiscovery(summary: BusinessDiscoveryIntakeSummary): void {
   );
 
   console.log('');
-  console.log('BIF-compatible projection:');
-  console.log(`  mapped sections (${summary.mappedSectionKeys.length}):`);
-  for (const key of summary.mappedSectionKeys) {
-    console.log(`    - ${key}`);
+  console.log('Scored BIF context projection:');
+  console.log(`  populated sections (${summary.presentSectionTypes.length}):`);
+  for (const type of summary.presentSectionTypes) {
+    console.log(`    - ${type}`);
+  }
+  console.log(`  omitted sections (${summary.omittedSectionTypes.length}):`);
+  for (const type of summary.omittedSectionTypes) {
+    console.log(`    - ${type}`);
   }
   console.log(
     `  segments=${summary.customerSegmentCount}  offerings=${summary.offeringCount}  ` +
@@ -127,7 +132,9 @@ async function main(): Promise<void> {
   console.log('No external side effects are performed by this demo.');
   console.log(line('#'));
 
-  const discovery = runBusinessDiscoveryIntake();
+  // The demo scenario metadata is passed explicitly (ADR-0039 D3) — the three
+  // values canonical Path B mapping needs are visible here, not hidden inside it.
+  const discovery = runBusinessDiscoveryIntake(DEMO_SCENARIO_METADATA);
   printDiscovery(discovery);
 
   const reports = await runAllCapabilities();
@@ -144,7 +151,8 @@ async function main(): Promise<void> {
   console.log(line('#'));
   console.log(
     `SUMMARY: Business Discovery intake loaded (profile ${discovery.profileId}, ` +
-      `${discovery.mappedSectionKeys.length} mapped section(s)); ` +
+      `${discovery.presentSectionTypes.length} populated / ` +
+      `${discovery.omittedSectionTypes.length} omitted section(s)); ` +
       `${reports.length} capabilities ran; ` +
       `${totalPending} decision object(s) pending human approval.`,
   );

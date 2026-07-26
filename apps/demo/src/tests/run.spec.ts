@@ -2,7 +2,11 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, extname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { runAllCapabilities, runBusinessDiscoveryIntake } from '@age/demo-runtime';
+import {
+  DEMO_SCENARIO_METADATA,
+  runAllCapabilities,
+  runBusinessDiscoveryIntake,
+} from '@age/demo-runtime';
 
 /**
  * The CLI app is now a thin shell over `@age/demo-runtime`. These tests assert
@@ -37,14 +41,22 @@ describe('AGE demo CLI app', () => {
   });
 
   it('runs the upstream Business Discovery intake via the shared runtime', () => {
-    const summary = runBusinessDiscoveryIntake();
+    const summary = runBusinessDiscoveryIntake(DEMO_SCENARIO_METADATA);
     expect(summary.profileSchemaValid).toBe(true);
     expect(summary.questionnaireValid).toBe(true);
-    expect(summary.mappedSectionKeys.length).toBeGreaterThan(0);
+    // Canonical Path B output: populated sections plus first-class omissions.
+    expect(summary.presentSectionTypes.length).toBeGreaterThan(0);
+    expect(summary.presentSectionTypes.length + summary.omittedSectionTypes.length).toBe(12);
+  });
+
+  it('passes the demo scenario metadata explicitly at the CLI call site', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const source = readFileSync(join(here, '..', 'run.ts'), 'utf8');
+    expect(source).toMatch(/runBusinessDiscoveryIntake\(DEMO_SCENARIO_METADATA\)/);
   });
 
   it('keeps discovery out of the approval model (pending count unchanged)', async () => {
-    runBusinessDiscoveryIntake();
+    runBusinessDiscoveryIntake(DEMO_SCENARIO_METADATA);
     const reports = await runAllCapabilities();
     const pending = reports.reduce((sum, r) => sum + r.acceptedItems.length, 0);
     expect(pending).toBe(6);
