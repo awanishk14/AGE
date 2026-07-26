@@ -204,6 +204,17 @@ export type {
   ScoredBifContextProjectionOptions,
 } from './scored-bif-context';
 
+// The produce side, written once (ADR-0037). Chains the three functions above —
+// mapper -> scorer -> projector — in the one correct order, threading the
+// scorer's metadata into the projector rather than letting it be recomputed.
+// Adds no step, replaces nothing, and all three stay independently callable.
+// Pure: no clock, no id, no randomness. Knows nothing about persistence.
+export { produceScoredBifContext } from './produce-scored-bif-context';
+export type {
+  ProduceScoredBifContextOptions,
+  ProduceScoredBifContextResult,
+} from './produce-scored-bif-context';
+
 // ScoredBifSnapshot — versioned, storage-neutral serialized form of a scored BIF
 // context (ADR-0029 stage 1). A pure codec only: no I/O, no clock, no store.
 // The hard boundary "no DB/persistence writes" stays in force — a repository
