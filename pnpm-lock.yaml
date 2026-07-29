@@ -114,9 +114,21 @@ importers:
 
   apps/capture:
     dependencies:
+      '@age/business-discovery-capture':
+        specifier: workspace:*
+        version: link:../../packages/business-discovery-capture
       '@age/business-discovery-contracts':
         specifier: workspace:*
         version: link:../../packages/business-discovery-contracts
+      '@age/capability-kit':
+        specifier: workspace:*
+        version: link:../../packages/capability-kit
+      '@age/scored-bif-snapshot-persistence':
+        specifier: workspace:*
+        version: link:../../packages/scored-bif-snapshot-persistence
+      '@prisma/client':
+        specifier: ^5.20.0
+        version: 5.22.0(prisma@5.22.0)
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -464,6 +476,9 @@ importers:
       '@age/business-discovery-contracts':
         specifier: workspace:*
         version: link:../business-discovery-contracts
+      '@age/capture':
+        specifier: workspace:*
+        version: link:../../apps/capture
       '@age/scored-bif-snapshot-persistence':
         specifier: workspace:*
         version: link:../scored-bif-snapshot-persistence

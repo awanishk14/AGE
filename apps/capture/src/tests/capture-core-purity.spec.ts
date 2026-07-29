@@ -74,3 +74,82 @@ describe('the capture CLI core is pure', () => {
     expect(code(moduleFile).includes("'Active'")).toBe(false);
   });
 });
+
+/**
+ * `capture-runner.ts` is held to a deliberately different standard (Slice B2).
+ *
+ * It is not in `CORE_MODULES` because it legitimately NAMES the persistence
+ * package — `CaptureConnection.orchestrator` is a
+ * `ScoredBifSnapshotCaptureOrchestrator`, and a run that could not say so would
+ * have to type its own collaborator as `unknown`. That is a type import, which
+ * costs nothing at runtime and drags in no client.
+ *
+ * What still binds is everything that would make the run untestable or
+ * non-deterministic: it must read no clock, mint no id, open no file, touch no
+ * `process`, and construct no `PrismaClient`. All of those arrive through the
+ * injected `CaptureRuntime`, which is the entire reason the seam exists.
+ */
+describe('the capture run logic performs no effects of its own', () => {
+  const RUNNER = 'capture-runner.ts';
+
+  it('was read', () => {
+    expect(code(RUNNER).length).toBeGreaterThan(0);
+  });
+
+  it.each([
+    'new Date(',
+    'Date.now(',
+    'Math.random(',
+    'performance.now(',
+    'randomUUID',
+    'fetch(',
+    'node:fs',
+    'node:crypto',
+    'process.',
+    'console.',
+    'new PrismaClient(',
+    '@prisma/client',
+  ])('does not contain %s', (forbidden) => {
+    expect(code(RUNNER).includes(forbidden), `${RUNNER} must not contain ${forbidden}`).toBe(false);
+  });
+
+  it('never promotes a BIF status', () => {
+    expect(code(RUNNER).includes("'Active'")).toBe(false);
+  });
+});
+
+/**
+ * The other half of the same claim, and the one that actually keeps ADR-0043 D5
+ * true: the effects are not merely absent from the core, they are concentrated
+ * in ONE module. A guard that only checks absence passes just as happily when a
+ * second entry point quietly grows its own clock.
+ */
+describe('the entry point is the sole owner of the effects', () => {
+  const SOURCE_FILES = [...CORE_MODULES, 'capture-runner.ts', 'capture-composition.ts', 'main.ts'];
+
+  it.each(['process.argv', 'node:fs', 'node:crypto', 'process.exitCode'])(
+    '%s appears only in main.ts',
+    (effect) => {
+      const owners = SOURCE_FILES.filter((moduleFile) => code(moduleFile).includes(effect));
+
+      expect(owners).toEqual(['main.ts']);
+    },
+  );
+
+  it('constructs a PrismaClient only in the composition root', () => {
+    const owners = SOURCE_FILES.filter((moduleFile) =>
+      code(moduleFile).includes('new PrismaClient('),
+    );
+
+    expect(owners).toEqual(['capture-composition.ts']);
+  });
+
+  it('leaves the composition root free of the clock, the id source and the filesystem', () => {
+    for (const forbidden of ['new Date(', 'Date.now(', 'randomUUID', 'node:fs', 'process.argv']) {
+      expect(
+        code('capture-composition.ts').includes(forbidden),
+        `capture-composition.ts must not contain ${forbidden}`,
+      ).toBe(false);
+    }
+  });
+});

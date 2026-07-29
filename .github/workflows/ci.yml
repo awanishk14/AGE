@@ -32,6 +32,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # ADR-0043 D6. The capture CLI's composition root imports `@prisma/client`,
+      # and an ungenerated client's stub type has no `PrismaClient` — so typecheck
+      # and build would fail on a missing symbol rather than on anything real.
+      # Generation needs the schema only, never a database: this workflow stays
+      # database-free (ADR-0032 D10) and the live run remains ci-db.yml's job.
+      - name: Generate Prisma client
+        env:
+          # Prisma resolves `env(...)` in the datasource block at generation
+          # time. Nothing connects, so the value only has to parse — and a
+          # placeholder here is what keeps a real connection string out of this
+          # database-free workflow entirely.
+          DATABASE_URL: postgresql://unused:unused@localhost:5432/unused
+        run: pnpm --filter @age/persistence prisma:generate
+
       - name: Lint
         run: pnpm lint
 
