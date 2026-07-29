@@ -21,6 +21,11 @@ export type {
   ScoredBifSnapshotSeriesQuery,
 } from './client-context-bound-scored-bif-snapshot-repository';
 export { PrismaScoredBifSnapshotRepository } from './prisma-scored-bif-snapshot-repository';
+export { PrismaScoredBifSnapshotScopeRunner } from './prisma-scored-bif-snapshot-scope-runner';
+export type {
+  ScoredBifSnapshotScopeTransaction,
+  ScoredBifSnapshotTransactionSource,
+} from './prisma-scored-bif-snapshot-scope-runner';
 export { isUniqueConstraintViolation } from './scored-bif-snapshot-delegate';
 export type { ScoredBifSnapshotDelegate } from './scored-bif-snapshot-delegate';
 export { ScopedScoredBifSnapshotRepository } from './scoped-scored-bif-snapshot-repository';

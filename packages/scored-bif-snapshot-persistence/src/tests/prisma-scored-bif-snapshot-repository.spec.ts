@@ -322,6 +322,11 @@ describe('PrismaScoredBifSnapshotRepository', () => {
         // way in, through which no scope id can be supplied.
         'ClientContextBoundScoredBifSnapshotRepository',
         'PrismaScoredBifSnapshotRepository',
+        // The first production implementation of the scope port (ADR-0043 D6,
+        // Slice A). Without it `ScopedScoredBifSnapshotRepository` cannot be
+        // constructed, so the durable path could not run at all under
+        // FORCE ROW LEVEL SECURITY.
+        'PrismaScoredBifSnapshotScopeRunner',
         // The RLS-scoped wrapper (ADR-0033 D7). Still a repository, still the
         // same port — no fake, no mutation surface.
         'ScopedScoredBifSnapshotRepository',

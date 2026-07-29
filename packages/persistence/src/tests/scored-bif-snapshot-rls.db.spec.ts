@@ -7,6 +7,7 @@ import {
   type ScoredBifSnapshotRecord,
 } from '@age/business-discovery-contracts';
 import {
+  PrismaScoredBifSnapshotScopeRunner,
   ScopedScoredBifSnapshotRepository,
   type ScoredBifSnapshotDelegate,
   type ScoredBifSnapshotScope,
@@ -52,25 +53,48 @@ const owner = new PrismaClient({ datasources: { db: { url: DATABASE_URL } } });
 const app = new PrismaClient({ datasources: { db: { url: DATABASE_URL_APP } } });
 
 /**
- * The composition root ADR-0033 D7 describes, in its smallest honest form: open
- * one transaction, apply both scope settings to it, and hand the operation a
- * delegate bound to that same transaction.
+ * THE PRODUCTION RUNNER, NOT A COPY OF IT (ADR-0043 D9, Slice A).
  *
- * `set_config(name, value, true)` is `SET LOCAL` in function form — identical
- * lifetime, transaction-local — and it takes the value as a bound parameter, so
- * a scope id can never be concatenated into SQL. A setting omitted here is
- * omitted for real: nothing else in this file sets one.
+ * This suite used to carry its own inline scope runner — "the composition root
+ * ADR-0033 D7 describes, in its smallest honest form". It was correct, and it
+ * proved nothing about production, because production had no implementation at
+ * all: `ScoredBifSnapshotScopeRunner` was an interface no shipped code
+ * satisfied. A test that builds its own subject can only prove the test.
+ *
+ * `PrismaScoredBifSnapshotScopeRunner` is now that implementation, and this
+ * assignment is load-bearing in two ways at once. It exercises the real thing
+ * against real PostgreSQL as the non-owner role, and — because the runner
+ * declares its transaction source structurally rather than importing
+ * `@prisma/client` — the assignment itself is the proof that a generated
+ * `PrismaClient` satisfies those interfaces. No cast, no `as`. If Prisma's
+ * shape ever drifts, this line stops compiling, which is precisely how PR #109
+ * discovered the generated delegate did NOT satisfy its port.
  */
-function scopeRunner(
-  client: PrismaClient,
-  omit?: 'client' | 'organization',
-): ScoredBifSnapshotScopeRunner {
-  return {
+function repositoryFor(): ScopedScoredBifSnapshotRepository {
+  return new ScopedScoredBifSnapshotRepository(new PrismaScoredBifSnapshotScopeRunner(app));
+}
+
+/**
+ * A deliberately broken runner, kept for the fail-closed cases only.
+ *
+ * The production runner offers no way to omit a setting — that was a decision,
+ * not an oversight: a partially-scoped transaction is not a degraded mode, and
+ * making it reachable from production code would be the bug. But the policies'
+ * most important property is what happens when a setting is *missing*
+ * (`NULLIF(current_setting(...), '')` is NULL, NULL is not TRUE, so the row is
+ * refused), and proving that still requires producing the broken state.
+ *
+ * So it is produced here, in the test, where it belongs.
+ */
+function partiallyScopedRepositoryFor(
+  omit: 'client' | 'organization',
+): ScopedScoredBifSnapshotRepository {
+  const runner: ScoredBifSnapshotScopeRunner = {
     async runInScope<T>(
       scope: ScoredBifSnapshotScope,
       operation: (snapshots: ScoredBifSnapshotDelegate) => Promise<T>,
     ): Promise<T> {
-      return client.$transaction(async (tx) => {
+      return app.$transaction(async (tx) => {
         if (omit !== 'client') {
           await tx.$executeRaw`SELECT set_config('age.client_id', ${scope.clientId}, true)`;
         }
@@ -85,10 +109,8 @@ function scopeRunner(
       });
     },
   };
-}
 
-function repositoryFor(omit?: 'client' | 'organization'): ScopedScoredBifSnapshotRepository {
-  return new ScopedScoredBifSnapshotRepository(scopeRunner(app, omit));
+  return new ScopedScoredBifSnapshotRepository(runner);
 }
 
 const MAPPER_OPTIONS = {
@@ -369,7 +391,7 @@ describe('scored_bif_snapshots — row-level security, as the application role',
     it('sees nothing when the client setting is missing', async () => {
       await plant(recordFor(SCOPE_A));
 
-      const repository = repositoryFor('client');
+      const repository = partiallyScopedRepositoryFor('client');
 
       expect(await repository.findBySnapshotId(keyOf(recordFor(SCOPE_A)))).toBeNull();
       expect(await repository.listSeries(seriesKeyOf(recordFor(SCOPE_A)))).toEqual([]);
@@ -378,7 +400,7 @@ describe('scored_bif_snapshots — row-level security, as the application role',
     it('sees nothing when the organization setting is missing', async () => {
       await plant(recordFor(SCOPE_A));
 
-      const repository = repositoryFor('organization');
+      const repository = partiallyScopedRepositoryFor('organization');
 
       expect(await repository.findLatest(seriesKeyOf(recordFor(SCOPE_A)))).toBeNull();
     });
@@ -386,16 +408,16 @@ describe('scored_bif_snapshots — row-level security, as the application role',
     it('rejects an insert when the client setting is missing', async () => {
       // Prisma wraps the driver error; match the database's own wording either
       // way rather than pinning a Prisma error class.
-      await expect(repositoryFor('client').append(recordFor(SCOPE_A))).rejects.toThrow(
-        /row-level security|42501/i,
-      );
+      await expect(
+        partiallyScopedRepositoryFor('client').append(recordFor(SCOPE_A)),
+      ).rejects.toThrow(/row-level security|42501/i);
       expect(await countAsOwner()).toBe(0);
     });
 
     it('rejects an insert when the organization setting is missing', async () => {
-      await expect(repositoryFor('organization').append(recordFor(SCOPE_A))).rejects.toThrow(
-        /row-level security|42501/i,
-      );
+      await expect(
+        partiallyScopedRepositoryFor('organization').append(recordFor(SCOPE_A)),
+      ).rejects.toThrow(/row-level security|42501/i);
       expect(await countAsOwner()).toBe(0);
     });
 
