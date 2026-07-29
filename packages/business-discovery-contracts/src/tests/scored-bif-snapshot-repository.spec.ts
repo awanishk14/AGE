@@ -396,3 +396,64 @@ describe('package entrypoint', () => {
     expect(packageEntrypoint.scoredBifSnapshotRecordSchema).toBeDefined();
   });
 });
+
+/**
+ * ADR-0044 D4 — the read-path major-version gate.
+ *
+ * `fromScoredBifSnapshot` has always refused a `snapshotVersion` whose major it
+ * does not implement, because reading a future major by guessing means inventing
+ * the meaning of fields it has never seen. The read path did **not** go through
+ * that codec: `fromScoredBifSnapshotRow` routes through
+ * `normalizeScoredBifSnapshotRecord`, which validated `snapshotVersion` as a bare
+ * `z.string()`. A row written under a future `2.x` was therefore read back,
+ * validated, and handed to a caller with the gate silently bypassed — on a table
+ * that is append-only and can never be migrated in place.
+ */
+describe('normalizeScoredBifSnapshotRecord — snapshot major-version gate (ADR-0044 D4)', () => {
+  it('rejects a record whose snapshot major this reader does not implement', () => {
+    expect(() =>
+      normalizeScoredBifSnapshotRecord(
+        record({ snapshot: { snapshotVersion: '2.0.0', context: sampleContext() } }),
+      ),
+    ).toThrow(/snapshotVersion '2\.0\.0'/);
+  });
+
+  it('rejects a far-future major rather than guessing at its meaning', () => {
+    expect(() =>
+      normalizeScoredBifSnapshotRecord(
+        record({ snapshot: { snapshotVersion: '7.3.1', context: sampleContext() } }),
+      ),
+    ).toThrow(/major 1/);
+  });
+
+  it('rejects a snapshotVersion with no parseable major', () => {
+    expect(() =>
+      normalizeScoredBifSnapshotRecord(
+        record({ snapshot: { snapshotVersion: 'not-a-version', context: sampleContext() } }),
+      ),
+    ).toThrow(/snapshotVersion/);
+  });
+
+  it('accepts a later minor and patch of the implemented major', () => {
+    expect(() =>
+      normalizeScoredBifSnapshotRecord(
+        record({ snapshot: { snapshotVersion: '1.9.4', context: sampleContext() } }),
+      ),
+    ).not.toThrow();
+  });
+
+  it('accepts the current snapshot version', () => {
+    expect(() =>
+      normalizeScoredBifSnapshotRecord(
+        record({ snapshot: { snapshotVersion: '1.0.0', context: sampleContext() } }),
+      ),
+    ).not.toThrow();
+  });
+
+  it('states the same refusal the codec states, so the two gates cannot drift apart in wording', () => {
+    const future = record({ snapshot: { snapshotVersion: '2.0.0', context: sampleContext() } });
+    expect(() => normalizeScoredBifSnapshotRecord(future)).toThrow(
+      /this reader implements major 1/,
+    );
+  });
+});

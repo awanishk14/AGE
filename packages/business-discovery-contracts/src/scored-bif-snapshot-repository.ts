@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  assertReadableSnapshotVersion,
   scoredBifSnapshotSchema,
   toScoredBifSnapshot,
   type ScoredBifSnapshot,
@@ -235,6 +236,16 @@ export function normalizeScoredBifSnapshotRecord(
         .join('; ')}`,
     );
   }
+
+  // ADR-0044 D4. This function is the gate on BOTH directions: an adapter calls
+  // it before a write, and `fromScoredBifSnapshotRow` calls it on every read.
+  // Schema validation accepts `snapshotVersion` as any string, so without this
+  // a row stored under a future major would be read back and handed to a caller
+  // as though this build understood it.
+  assertReadableSnapshotVersion(
+    record.snapshot.snapshotVersion,
+    'normalizeScoredBifSnapshotRecord',
+  );
 
   // Re-runs the stage-1 JSON-safety assertions over every field value.
   const snapshot = toScoredBifSnapshot(record.snapshot.context);
