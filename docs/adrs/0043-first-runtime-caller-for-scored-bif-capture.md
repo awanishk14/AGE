@@ -1,8 +1,9 @@
 # ADR-0043: First Runtime Caller for Scored BIF Capture
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-07-29
-- **Amended:** 2026-07-29 (still `Proposed`; see §0)
+- **Amended:** 2026-07-29 (amended once while `Proposed`; see §0)
+- **Accepted:** 2026-07-29 (decision delegated to the architect by the user; see §0.1)
 - **Supersedes:** none
 - **Related:** ADR-0009 (Client aggregate / `ClientContext`), ADR-0025 (Discovery→BIF prerequisites),
   ADR-0030 (snapshot identity and lifecycle), ADR-0031 (durable snapshot persistence),
@@ -10,9 +11,62 @@
   ADR-0035/0036 (capture boundary and orchestration), ADR-0037 (produce-side chain),
   ADR-0039 (demo metadata source), ADR-0040 (capture orchestrator), ADR-0042 (single Prisma schema)
 
-> **This is a decision request. It must not be self-accepted and must not be implemented before the
-> user ratifies it.** It exists because the remaining work needs answers this repository cannot
-> supply from evidence: where production code starts, what a real input is, and who owns a clock.
+> **This ADR is now Accepted.** It began as a decision request, was amended once while `Proposed`
+> (§0), and was accepted under an explicit delegation from the user (§0.1). It exists because the
+> remaining work needed answers this repository could not supply from evidence: where production code
+> starts, what a real input is, and who owns a clock.
+
+---
+
+## Acceptance note
+
+ADR-0043 is accepted as the governing decision for the first runtime caller of the scored BIF capture
+path. It ratifies the **capture** caller as the sole scope (D1); a dedicated CLI entry point rather
+than an HTTP endpoint, the demo, or a wiring-only package (D2); a validated JSON file on disk as the
+input source (D3); `ClientContext` constructed from explicit CLI arguments with format validation and
+an echo-and-confirm gate, never from the payload or the environment (D4); the clock and id source
+confined to the entry point so every existing purity guard stays intact (D5); the corrected
+composition chain through `ScoredBifSnapshotScopeRunner` and `ScopedScoredBifSnapshotRepository`,
+together with the one `prisma generate` step in `ci.yml` and the `apps/capture/**` addition to
+`ci-db.yml`'s `paths:` filter (D6); explicitly opt-in capture with no confidence threshold (D7); live
+testing as the non-owner `age_app` role, failing loudly when `DATABASE_URL` is absent (D8); and
+delivery in two ordered slices, the scope runner first (D9).
+
+It does **not** authorize API or Web exposure, authentication or request-derived tenancy, changes to
+`apps/api`, `apps/web`, `apps/demo` or `packages/demo-runtime`, changes to the schema, migrations,
+RLS policies, grants or roles, reads of persisted snapshots, `Draft → Active` promotion, capability
+invocation, retention or erasure, or changes to the produce-side chain. It resolves neither the
+operator-trust residual recorded in D4 nor the write-path-with-no-reader objection recorded in D10;
+both stand as recorded limitations, not as settled questions.
+
+---
+
+## 0.1 How this was accepted
+
+Standing project governance is that a `Status: Proposed` ADR is a decision request and must never be
+self-accepted: the user accepts, then a separate PR flips the status. That rule was followed for
+#88→#89, #93→#94, #99→#100, #104→#105, #111→#113, #124→#125, #132→#133, #136→#137 and #143→#144.
+
+This ADR is the documented exception, and the reason is recorded here rather than assumed. Presented
+with the two contested decisions (D6's CI change and D4's operator trust), the user declined to
+adjudicate them and delegated the decision, in these words:
+
+> "i have no idea of what it should be, its somethig that you need to recommend me, you are the
+> architect of this project and if in doubt , i told you to deploy council"
+
+and, after the council review and the resulting amendment:
+
+> "i told you you are an architect and you need to take the right decision to ultimately deliver a
+> bug free software"
+
+The delegation is explicit and was reaffirmed after the concern was put to the user a second time.
+**The acceptance is therefore the architect's, exercised under a stated grant of authority — it is
+not a claim that the user reviewed and approved the eight decisions individually.** Anyone revisiting
+this ADR should weigh it accordingly: the technical reasoning stands on its own merits and on the
+four-perspective review recorded in §0, not on user ratification of the details.
+
+This exception does not generalize. The governance rule remains in force for every subsequent ADR
+unless the user delegates again as explicitly.
 
 ---
 
@@ -20,7 +74,9 @@
 
 The first draft of this ADR was reviewed before acceptance under the ADR-0033 / PR #112 precedent —
 amend while `Proposed` rather than accept-then-correct. Review found one defect that made the ADR
-**not implementable as written**, plus four gaps. All are corrected below; the status is unchanged.
+**not implementable as written**, plus four gaps. All were corrected before acceptance. The reviewers
+were four independent perspectives — architecture, security/tenancy, CI and build mechanics, and an
+adversarial pass instructed to argue for rejection.
 
 | #   | Change                                                                                                                                                                                                                  | Where        |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
@@ -373,7 +429,8 @@ answered by whoever happens to write the next slice.
 
 ## 3. What acceptance does and does not authorize
 
-**Authorizes exactly two implementation slices, in the order set by D9.**
+**Authorizes exactly two implementation slices, in the order set by D9.** Slice A may begin; Slice B
+must not begin until Slice A is merged and green.
 
 _Slice A:_ the first production `ScoredBifSnapshotScopeRunner` in
 `@age/scored-bif-snapshot-persistence`, its unit tests, and one live `*.db.spec.ts` run as `age_app`.
