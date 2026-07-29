@@ -1,7 +1,8 @@
 # ADR-0043 — Capture CLI Track Checkpoint
 
 > Scope: the first runtime caller for scored BIF capture. Covers ADR-0043 (Accepted),
-> ADR-0044 (Accepted), Slice A (PR #151) and Slice B1 (PR #154).
+> ADR-0044 (Accepted), Slice A (PR #151), Slice B1 (PR #154) and Slice B2 (PR #156).
+> **The track is complete: both slices of D9 are merged and green.**
 > This document exists so the working-memory handover does not have to carry the detail.
 
 ---
@@ -17,6 +18,8 @@
 | #152 | Options report for ADR-0043 open question 5 (docs-only)           | → `3ad7711`           |
 | #153 | ADR-0044 + the D4 read-path version gate                          | `0022212` → `9c0a673` |
 | #154 | **Slice B1** — the capture CLI pure core                          | `c94f294` → `fcac81e` |
+| #155 | This checkpoint document (docs-only)                              | → `85262a7`           |
+| #156 | **Slice B2** — entry point + composition root; ADR-0043 COMPLETE  | `acc16bb` → `63c75bd` |
 
 ---
 
@@ -200,21 +203,73 @@ pure; adding the entry point would make it unsatisfiable by design.
 
 ---
 
-## 7. Slice B2 — what remains
+## 7. Slice B2 — what shipped (PR #156, `acc16bb` → `63c75bd`, 13 files, +982/−21)
 
-1. **The entry point** (`apps/capture/src/main.ts` + a `bin` entry). It owns every impure thing:
-   `process.argv.slice(2)`, the `node:fs` profile read, **the clock and the id source (D5 — here and
-   nowhere else)**, the scope echo for `--confirm`, printing, and exit codes.
-2. **The composition root** — the corrected chain in §3. Adds `@age/business-discovery-capture`,
-   `@age/scored-bif-snapshot-persistence`, `@age/capability-kit` and `@prisma/client` to the app's
-   dependencies. In `produceOnly` mode **no `PrismaClient` may be constructed at all** — the
-   orchestrator's capture dependency is optional precisely so that path never touches a database.
-3. **CI** — `prisma generate` in `ci.yml`, and `apps/capture/**` added to `ci-db.yml`'s `paths:`.
-   Without the latter the live gate silently never runs for this app.
-4. ⚠️ **Host the live `*.db.spec.ts` in `packages/persistence`, not in `apps/capture`.**
-   `packages/persistence/vitest.db.config.ts` includes only `src/**/*.db.spec.ts` relative to that
-   package, so a spec under `apps/capture` would be collected by **nothing** and its green would be
-   a lie. Run it as the non-owner `age_app` role (D8).
+PR checks: `Lint, Typecheck, Test, Build` pass 3m13s (30489535821); `Migration and live PostgreSQL
+tests` pass 54s (30489535840), whose log shows `capture-cli.db.spec.ts (5 tests)`, `Test Files 3
+passed`, `Tests 54 passed` — **executed, not skipped**. Post-merge on `63c75bd`: `CI` run
+30489793007 SUCCESS and `CI (live database)` run 30489793005 SUCCESS.
+
+### 7.1 Three modules, one responsibility each
+
+| Module                   | Owns                                                                    |
+| ------------------------ | ----------------------------------------------------------------------- |
+| `capture-runner.ts`      | every **decision**, as a pure function of `argv` + an injected runtime  |
+| `capture-composition.ts` | the **chain** — the only production `new PrismaClient(` in the repo     |
+| `main.ts`                | every **effect** — `process`, `node:fs`, the clock, the id, the streams |
+
+The seam is `CaptureRuntime`: `readProfileText`, `now`, `newSnapshotId`, `openCaptureOrchestrator`.
+D5 is satisfied structurally rather than by discipline — the core cannot read a clock because it
+has none. `runtime.now()` is called **exactly once** per run, and both the mapping `constructedAt`
+and the snapshot `capturedAt` derive from that single instant, so the two can never disagree.
+
+Exit codes are a published contract: `0` ok · `2` invalid arguments · `3` profile unreadable ·
+`4` invalid profile · `5` capture failed. `3` and `4` are deliberately distinct — "I could not read
+your file" and "your file is not a discovery profile" call for different operator actions.
+
+### 7.2 `produceOnly` never constructs a `PrismaClient`
+
+`openCaptureOrchestrator` is a _function_ on the runtime, and `main.ts` imports the composition root
+via a **dynamic** `import()`. A static import would load `@prisma/client` — and fail on an
+ungenerated client — before the run had read its arguments. The safe mode therefore needs no
+database, no credentials, and no `prisma generate` at all. The composition root is likewise kept out
+of the barrel and exposed at `@age/capture/composition`, so importing the package never drags in
+Prisma.
+
+### 7.3 The purity guard grew a second half
+
+It no longer only asserts _the core lacks effects_; it now asserts **the effects live in exactly one
+module**. `process.argv`, `node:fs`, `node:crypto` and `process.exitCode` are each asserted to
+appear in `main.ts` **and nowhere else**, and `new PrismaClient(` only in `capture-composition.ts`.
+The first form would have passed while a second module quietly grew its own clock. 10 → 30 tests.
+
+### 7.4 The ADR-0042 schema-of-record guard, narrowed not weakened
+
+`apps/capture` legitimately depends on `@prisma/client`, which the guard banned from `apps/`
+outright — it failed the build, correctly, and was then narrowed along the distinction ADR-0042 D3
+actually draws (**schema ownership**): the `prisma` CLI, which resolves a schema, stays banned from
+`apps/` with no allowlist; `@prisma/client`, a generated client owning no schema, is allowlisted to
+`apps/capture` alone; and a third test pins the allowlist to exactly that one app and requires the
+app to exist, so the exception **fails rather than rots**. 8 → 10 tests.
+
+### 7.5 The live spec is hosted in `packages/persistence`, and that mattered
+
+`packages/persistence/vitest.db.config.ts` includes only `src/**/*.db.spec.ts` relative to that
+package, so the same file under `apps/capture` would have been collected by **nothing** and its
+absence would have read as a pass. It injects a fake `readProfileText` but the **real** composition
+root, pointed at `DATABASE_URL_APP` (the non-owner `age_app` role, D8), and verifies through a
+separate owner connection. It throws rather than skipping when either URL is absent. Five tests:
+`produceOnly` writes nothing · one correctly-scoped row lands through the production chain · a
+pinned snapshot id and instant are honoured · a second write under the same identity is **refused
+and reported (exit 5), never an overwrite**, with still exactly one row · two clients stay in
+separate series.
+
+### 7.6 CI
+
+`prisma generate` added to `ci.yml` before `Lint`, with a dummy `DATABASE_URL` — generation reads
+the schema only, so that job stays database-free (ADR-0032 D10). `apps/capture/**` added to **both**
+the `push` and `pull_request` `paths:` lists in `ci-db.yml`; without it the live gate would silently
+never run for this app.
 
 ---
 
@@ -225,6 +280,16 @@ pure; adding the entry point would make it unsatisfiable by design.
   the fat-finger case; only an authenticated caller closes the gap.
 - **D10 still stands.** Nothing reads snapshots — `findLatest`, `listSeries` and `findBySnapshotId`
   have zero non-test callers. Acceptance authorizes a write path with no reader.
-- **The whole persistence half is still reached by nothing but tests.** Slice A supplied the missing
-  scope-establishing layer, not a caller; Slice B1 supplied a pure core that cannot be executed.
-  `@age/business-discovery-capture` is still referenced by nothing at all.
+- **The "reached by nothing but tests" residual is CLOSED by #156** — and only that one.
+  `apps/capture` is a real runtime caller: it constructs the client, assembles the chain and writes.
+  Two distinct claims that were previously bundled together must now be kept apart:
+  - _"nothing calls the capture path"_ — **no longer true.**
+  - _"nothing **reads** snapshots"_ — **still true.** `findLatest`, `listSeries` and
+    `findBySnapshotId` retain zero non-test callers, exactly as D10 and ADR-0044 D1 (answer **D**,
+    no consumer authorized) leave them.
+- **ADR-0044 §4's revisit trigger has NOT fired.** It requires _a production writer run against a
+  real database producing ≥2 snapshots for one `(clientId, organizationId, bifId)`_. #156 built the
+  writer and it does run against real PostgreSQL, but only in CI and only ever one snapshot per
+  identity — the second write under the same identity is the refusal test. What changed is that
+  firing the trigger is now **possible**; reading #156 as having fired it would be precisely the
+  self-confirming inference ADR-0044 §0.1's council-reliability finding warns against.
