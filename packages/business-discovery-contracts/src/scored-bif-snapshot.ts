@@ -206,6 +206,38 @@ function majorVersion(version: string): number | null {
 }
 
 /**
+ * assertReadableSnapshotVersion — the single major-version gate (ADR-0044 D4).
+ *
+ * Reading a snapshot whose major this build does not implement would mean
+ * inventing the meaning of fields it has never seen. That refusal must hold on
+ * **every** path that returns a stored snapshot to a caller, not only in
+ * `fromScoredBifSnapshot`.
+ *
+ * WHY THIS IS SHARED RATHER THAN DUPLICATED. It was duplicated in effect and
+ * absent in fact: `fromScoredBifSnapshot` enforced the gate, but the repository
+ * read path (`fromScoredBifSnapshotRow` → `normalizeScoredBifSnapshotRecord`)
+ * validated `snapshotVersion` as a bare `z.string()` and never checked the
+ * major, so a future `2.x` row was read back with the gate silently bypassed.
+ * On an append-only table that can never be migrated in place, that is the
+ * failure the codec's own doc comment says it exists to prevent. One function,
+ * called from both paths, is what stops the two from drifting apart again.
+ *
+ * `caller` names the function in the message so a rejection points at the path
+ * that hit it, not at a shared helper the reader has to go find.
+ *
+ * @throws if the major is missing, unparseable, or not the implemented one.
+ */
+export function assertReadableSnapshotVersion(snapshotVersion: string, caller: string): void {
+  const expected = majorVersion(SCORED_BIF_SNAPSHOT_VERSION);
+  const actual = majorVersion(snapshotVersion);
+  if (actual === null || actual !== expected) {
+    throw new Error(
+      `${caller} cannot read snapshotVersion '${snapshotVersion}': this reader implements major ${expected}.`,
+    );
+  }
+}
+
+/**
  * fromScoredBifSnapshot — validate a snapshot from storage and return the scored
  * BIF context it holds.
  *
@@ -229,13 +261,7 @@ export function fromScoredBifSnapshot(value: unknown): ScoredBifContext {
   }
 
   const snapshot = value as ScoredBifSnapshot;
-  const expected = majorVersion(SCORED_BIF_SNAPSHOT_VERSION);
-  const actual = majorVersion(snapshot.snapshotVersion);
-  if (actual === null || actual !== expected) {
-    throw new Error(
-      `fromScoredBifSnapshot cannot read snapshotVersion '${snapshot.snapshotVersion}': this reader implements major ${expected}.`,
-    );
-  }
+  assertReadableSnapshotVersion(snapshot.snapshotVersion, 'fromScoredBifSnapshot');
 
   // The validated snapshot's own context is returned, not the schema's parsed
   // output: Zod strips unknown keys and would rebuild optionals, and the point
