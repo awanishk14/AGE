@@ -2,6 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-07-29
+- **Amended:** 2026-07-29 (still `Proposed`; see §0)
 - **Supersedes:** none
 - **Related:** ADR-0009 (Client aggregate / `ClientContext`), ADR-0025 (Discovery→BIF prerequisites),
   ADR-0030 (snapshot identity and lifecycle), ADR-0031 (durable snapshot persistence),
@@ -12,6 +13,25 @@
 > **This is a decision request. It must not be self-accepted and must not be implemented before the
 > user ratifies it.** It exists because the remaining work needs answers this repository cannot
 > supply from evidence: where production code starts, what a real input is, and who owns a clock.
+
+---
+
+## 0. Amendment record (2026-07-29)
+
+The first draft of this ADR was reviewed before acceptance under the ADR-0033 / PR #112 precedent —
+amend while `Proposed` rather than accept-then-correct. Review found one defect that made the ADR
+**not implementable as written**, plus four gaps. All are corrected below; the status is unchanged.
+
+| #   | Change                                                                                                                                                                                                                  | Where        |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| A1  | **D6's layering was wrong and unimplementable.** It omitted the RLS scope layer, so D6 and D8 could not both hold. Corrected, and the first `ScoredBifSnapshotScopeRunner` implementation is now explicitly authorized. | §1.4, D6, §3 |
+| A2  | **Split into two slices.** The scope runner ships first, on its own, with no new app and no `ci.yml` change.                                                                                                            | D9           |
+| A3  | **D4 gains id validation and an echo-and-confirm gate** before any capturing write.                                                                                                                                     | D4           |
+| A4  | **`ci-db.yml`'s `paths:` filter must gain `apps/capture/**`,** or the CLI's live test never runs.                                                                                                                       | D6, §3       |
+| A5  | **Former open question 3 was a decision in disguise** and is recorded as one.                                                                                                                                           | D7, §4       |
+
+The original D1, D2, D3, D5 and D7 stand. The reasoning that survived review unchanged is left as
+written; nothing below has been retro-fitted to look prescient.
 
 ---
 
@@ -88,6 +108,34 @@ avoidable by cleverness — the composition root is precisely the place where th
 finally be named. This ADR must decide how, and the answer is a CI change, which is otherwise a
 standing stop condition.
 
+### 1.4 The layer the first draft missed (A1)
+
+The first draft named the composition chain as `PrismaScoredBifSnapshotRepository` →
+`ScoredBifSnapshotCaptureOrchestrator` → `BusinessDiscoveryScoredBifCaptureOrchestrator`. **That chain
+cannot work**, and the omission is the single most important thing this amendment corrects.
+
+Verified against the merged tree at `9c4e243`:
+
+- `ScopedScoredBifSnapshotRepository` (`scoped-scored-bif-snapshot-repository.ts:35`) is the **only**
+  `ScoredBifSnapshotRepository` implementation that establishes the transaction-local settings
+  ADR-0033 D7 requires. It delegates that to an injected `ScoredBifSnapshotScopeRunner`.
+- `ScoredBifSnapshotScopeRunner` (`scored-bif-snapshot-scope-runner.ts:38`) is an **interface with no
+  production implementation anywhere in the repository.** The only code in the repo that actually
+  issues `set_config('age.client_id', …, true)` is raw SQL inside
+  `packages/persistence/src/tests/scored-bif-snapshot-rls.db.spec.ts`.
+- `PrismaScoredBifSnapshotRepository` issues bare queries and sets no GUCs.
+
+ADR-0033 D6 specifies `FORCE ROW LEVEL SECURITY` with policies that read
+`NULLIF(current_setting('age.<id>', true), '')` and therefore **fail closed** when unset. So the
+draft's chain, connected as the non-owner `age_app` role that D8 correctly mandates, would have every
+`INSERT` rejected by the `WITH CHECK` predicate. D6 and D8 as first written were mutually
+unsatisfiable.
+
+This also falsifies the first draft's claim in §3 that the slice requires "no change to the capture
+packages themselves." It requires the first production implementation of a port that has never had
+one — which is real, non-trivial work (`$transaction`, two `set_config` calls, and binding the
+delegate handed to the operation to that same transaction), not wiring.
+
 ---
 
 ## 2. Decisions proposed
@@ -158,6 +206,28 @@ object, because scope and key agree by construction. That is the same residual t
 record, relocated rather than removed. Closing it requires an authenticated caller, which is D2's
 rejected option and a later decision.
 
+**Two mitigations are nonetheless required (A3),** because "we cannot close it fully" is not a reason
+to leave it wholly unguarded, and because the cost asymmetry here is severe:
+
+1. **Format validation.** Both ids must be non-empty and must match the id shape the snapshot schema
+   already uses. This rejects malformed and copy-paste-mangled input before anything reaches Postgres.
+   It is not tenant validation and must not be described as such — there is nothing to validate
+   against (open question 2).
+2. **Echo and confirm.** Before any `produceAndCapture` write, the CLI prints the resolved
+   `clientId`/`organizationId` and requires an explicit `--confirm` flag. This targets the dominant
+   realistic failure mode, which is a mistyped argument by a trusted operator, not an attacker — the
+   CLI already presupposes shell access and `DATABASE_URL`.
+
+**Why this is worth the friction:** the table is append-only by design — `GRANT SELECT, INSERT` only,
+no `UPDATE`, no `DELETE` (ADR-0031). A mis-scoped row therefore **cannot be corrected or removed
+through the application at all**; it would need direct owner/superuser intervention, off the audited
+path. Worse, because `FORCE ROW LEVEL SECURITY` also scopes `SELECT`, the wrong row is not readily
+discoverable afterwards under the scope that should have received it. A rejected write costs nothing;
+a wrong well-formed write is permanent and quiet. Prevention is the only available remedy.
+
+D8 must include a test that a malformed id, or a capture requested without `--confirm`, aborts with
+no write attempted.
+
 ### D5 — The clock and the id source live **only in the entry point**
 
 `capturedAt` = `new Date().toISOString()`. `snapshotId` = `randomUUID()` from `node:crypto`.
@@ -178,10 +248,24 @@ rejects (`P2002`), so the failure mode is a rejected write, not a corrupted one.
 
 ### D6 — The composition root constructs the `PrismaClient`, and `ci.yml` gains a `prisma generate` step
 
-The CLI reads `DATABASE_URL`, constructs `new PrismaClient(...)`, wraps it per the existing
-`@age/scored-bif-snapshot-persistence` layering — `PrismaScoredBifSnapshotRepository` →
-`ScoredBifSnapshotCaptureOrchestrator` → `BusinessDiscoveryScoredBifCaptureOrchestrator` — and
-disconnects in a `finally`.
+The CLI reads `DATABASE_URL`, constructs `new PrismaClient(...)`, wraps it per the
+`@age/scored-bif-snapshot-persistence` layering, and disconnects in a `finally`.
+
+**The corrected chain (A1)** — every layer is required, and the third one does not exist yet:
+
+```
+PrismaClient
+  → ScoredBifSnapshotScopeRunner        ← FIRST PRODUCTION IMPLEMENTATION, authorized here
+  → ScopedScoredBifSnapshotRepository   ← establishes the ADR-0033 transaction-local settings
+  → ScoredBifSnapshotCaptureOrchestrator
+  → BusinessDiscoveryScoredBifCaptureOrchestrator
+```
+
+**The runner implementation lives in `@age/scored-bif-snapshot-persistence`, not in `apps/capture`.**
+It is persistence mechanics — a `$transaction` plus two `set_config(..., true)` calls, handing the
+transaction-bound delegate to the operation — and it belongs beside the port it satisfies. It is
+independent of which caller arrives, so putting it in an app would guarantee rewriting it when the
+next caller does. See D9: it ships as its own slice, first.
 
 It must **not** reach past that layering. `ScoredBifSnapshotCaptureOrchestrator` remains the only
 thing that constructs the bound facade (ADR-0036), and the CLI never touches
@@ -190,8 +274,24 @@ thing that constructs the bound facade (ADR-0036), and the CLI never touches
 **The consequence, named up front because it is a stop condition being deliberately crossed:** this is
 the first production `@prisma/client` import, so `ci.yml` must run `pnpm --filter @age/persistence
 prisma:generate` before `typecheck` and `build`. That is a CI change, and this ADR is the
-authorization for that specific change and nothing else. `prisma generate` needs no database — only
-the schema — so `ci.yml` stays DB-free and `ci-db.yml` is untouched.
+authorization for that specific change and nothing else. `prisma generate` needs no database and no
+secret — only the schema — so `ci.yml` stays DB-free.
+
+Review confirmed this is genuinely unavoidable rather than a shortcut. The alternatives all fail:
+excluding the CLI's own `main.ts` from typecheck and build the way `*.db.spec.ts` files are excluded
+would mean not building the artifact that is the point of the slice; committing generated Prisma
+output fights the tool, is engine/platform-specific, and goes stale with no CI signal; and casting
+`new PrismaClient()` through `unknown` at the one call site disables precisely the check D6 exists to
+force into the open. The reason `ci.yml` had no `prisma generate` was never "codegen is unwelcome" —
+it was that a **live database** must stay out of the per-PR workflow. Generation is schema-to-types
+with no I/O, so adding it does not erode that.
+
+**`ci-db.yml`'s `paths:` filter must also gain `apps/capture/**` (A4).** That workflow is currently
+gated on `packages/persistence/**` and `packages/scored-bif-snapshot-persistence/**`. Without the
+addition, a PR touching only the CLI would run the DB-free workflow alone, and the live
+`*.db.spec.ts` that D8 requires would silently never execute — a green build that proved nothing. It
+is a one-line workflow diff and a direct consequence of the same new import, so it is authorized here
+rather than left to be noticed later.
 
 The structural `ScoredBifSnapshotDelegate` in the adapter **stays as it is.** It is not made redundant
 by this: it is what keeps the adapter package itself independent of generated code, and PR #109 proved
@@ -211,6 +311,14 @@ produced but capture failed (non-zero, with the unclassified error reported verb
 only. A capture failure must not discard the produced context — ADR-0040 D9 already settled that, and
 the CLI prints the context summary either way.
 
+**No confidence threshold gates capture (A5).** The first draft listed this as an open question while
+simultaneously stating its answer, which is a decision wearing a disguise. It is decided here: the
+CLI captures whatever was produced, at any score. The sample fixture scores 17, and that is not a
+reason to refuse it — a snapshot records what was known at a moment, and ADR-0025 is explicit that
+absence is never a conclusion. Refusing to record low-confidence knowledge would make the stored
+series a biased sample of itself. If a quality gate is ever wanted it belongs to whatever _consumes_
+snapshots, not to the writer.
+
 ### D8 — Testing: unit-test the CLI's own logic; exercise the real path in `ci-db.yml`
 
 The CLI's argument parsing, validation, exit codes and outcome reporting are ordinary pure logic and
@@ -222,19 +330,67 @@ The end-to-end path — real `PrismaClient`, real Postgres, real RLS — belongs
 attributes first, per ADR-0033 D10 — a suite that passes as the owner is a failed suite, because the
 owner bypasses RLS.
 
+### D9 — This ships as **two slices**, in this order (A2)
+
+The corrected D6 makes the work larger than one slice, and the two halves have genuinely different
+risk profiles and different lifetimes. Splitting them is not ceremony.
+
+**Slice A — the scope runner.** The first production `ScoredBifSnapshotScopeRunner` in
+`@age/scored-bif-snapshot-persistence`, plus its unit tests and one live `*.db.spec.ts` proving that
+an `INSERT` through `ScopedScoredBifSnapshotRepository` **succeeds** as the non-owner `age_app` role
+and that the same operation without the settings **fails closed**. No new app. No `ci.yml` change.
+No `PrismaClient` in production code — the runner takes its transaction source as a dependency.
+
+**Slice B — the composition root and CLI.** Everything else in D2–D8, including the `ci.yml`
+`prisma generate` step and the `ci-db.yml` path addition.
+
+**Why this order.** Slice A is the piece that is certainly correct to build: it is required by any
+caller whatsoever — CLI, HTTP, batch — and is discarded by none of them. It also converts the RLS
+policy from something proven only by hand-written raw SQL in a test into something proven through the
+adapter that production will actually use, which is the more valuable of the two proofs. Slice B is
+the piece the ADR itself concedes may be scaffolding (open question 1). Building the durable half
+first means that if the CLI is later replaced, nothing load-bearing is thrown away with it.
+
+If only one slice is ever authorized, it should be A.
+
+### D10 — Recorded objection: this authorizes a write path with no reader
+
+Review raised, and this ADR accepts as a genuine cost: `findBySnapshotId`, `listSeries` and
+`findLatest` exist on every adapter and have **zero non-test callers**, and D1 explicitly excludes
+reads. Acceptance therefore authorizes writing rows that no production code can observe.
+
+That is recorded rather than resolved, for two reasons. Building the read path first would not close
+the residual — reads have exactly the same absence of a caller, and would prove less, because a
+reader cannot demonstrate that the RLS write path works. And the write path is what every accepted
+ADR from 0030 onward was built toward; stopping short of it indefinitely does not make the system
+more honest, only less finished.
+
+**What follows from accepting the objection:** the question "what consumes a snapshot series, and for
+what" is the next real decision after this one, and it is a product decision. It should not be
+answered by whoever happens to write the next slice.
+
 ---
 
 ## 3. What acceptance does and does not authorize
 
-**Authorizes exactly one implementation slice:** a new `apps/capture` CLI with the composition root
-described in D6, the input handling in D3/D4, the impure values in D5, the mode handling in D7, its
-own unit tests, one live `*.db.spec.ts`, and the single `prisma generate` step added to `ci.yml`.
+**Authorizes exactly two implementation slices, in the order set by D9.**
+
+_Slice A:_ the first production `ScoredBifSnapshotScopeRunner` in
+`@age/scored-bif-snapshot-persistence`, its unit tests, and one live `*.db.spec.ts` run as `age_app`.
+
+_Slice B:_ a new `apps/capture` CLI with the composition root of the corrected D6, the input handling
+of D3, the scope handling and guards of D4, the impure values of D5, the mode handling of D7, its own
+unit tests, one live `*.db.spec.ts`, the single `prisma generate` step added to `ci.yml`, and the
+addition of `apps/capture/**` to `ci-db.yml`'s `paths:` filter.
+
+**Corrects the first draft (A1):** that draft said the slice required "no change to the capture
+packages themselves." That was false — Slice A is exactly such a change, and it is authorized.
 
 **Does not authorize:** any HTTP endpoint or Web change · authentication or request-derived tenancy ·
 any change to `apps/api`, `apps/web`, `apps/demo` or `packages/demo-runtime` · any change to the
-schema, migrations, RLS policies, grants or roles · any change to `ci-db.yml` beyond adding the new
-spec · reads of persisted snapshots · `Draft → Active` promotion · capability invocation · retention
-or erasure · any change to the produce-side chain or the capture packages themselves.
+schema, migrations, RLS policies, grants or roles · any change to `ci-db.yml` beyond the new specs and
+the one `paths:` addition · reads of persisted snapshots · `Draft → Active` promotion · capability
+invocation · retention or erasure · any change to the produce-side chain.
 
 **The demo baseline must stay byte-identical:** 6 capabilities, 6 pending approvals, accounting
 invariant OK, no side effects, 7 populated and 5 omitted sections.
@@ -250,10 +406,9 @@ invariant OK, no side effects, 7 populated and 5 omitted sections.
    registry, no tenant table, and no ADR-0009 `Client` aggregate implementation. D4 trusts the
    operator because there is currently nothing to validate against. Whether scope ids should be
    verified before a write — and against what — is a real question with no evidence in the repo yet.
-3. **Should the CLI refuse to capture a context below some confidence threshold?** The sample fixture
-   scores 17. Capturing a low-confidence snapshot is not obviously wrong — a snapshot records what was
-   known, and ADR-0025 is explicit that absence is never a conclusion — but nobody has decided whether
-   a quality gate belongs here. Defaulting to "capture whatever was produced" is the recommendation,
-   and it is a decision, not an absence of one.
+3. _(Withdrawn — A5.)_ "Should the CLI refuse to capture below a confidence threshold?" was never
+   open: the draft stated its own answer. It is now **decided in D7** — no threshold.
 4. **Is a single-shot CLI the right shape at all,** versus a batch or watched-directory ingest? D2
    picks the smallest thing that runs; it does not claim it is the right long-term ingest design.
+5. **What consumes a snapshot series, and for what?** Raised by D10. This is the next real decision
+   after this ADR, and it is a product decision, not an implementation one.
