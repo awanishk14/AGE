@@ -138,18 +138,57 @@ describe('Prisma schema of record (ADR-0042)', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('keeps Prisma out of apps/ dependencies, which own no schema (ADR-0042 D3, D5)', () => {
+  /**
+   * The one app permitted to depend on the GENERATED CLIENT (ADR-0043 D6).
+   *
+   * `apps/capture` is the capture CLI, and its composition root is the only
+   * production code in the repository that constructs a `PrismaClient` — that
+   * was the decision: `@age/scored-bif-snapshot-persistence` takes its client as
+   * a constructor parameter precisely so the dependency lands at the top, in an
+   * app, rather than in a library.
+   */
+  const CLIENT_ALLOWED_APPS = [join('apps', 'capture', 'package.json')];
+
+  it('keeps the Prisma CLI out of apps/ entirely, because no app owns a schema (ADR-0042 D3, D5)', () => {
+    // `prisma` is the toolchain that RESOLVES A SCHEMA. `@prisma/client` is a
+    // generated client that owns none — that distinction is the whole of
+    // ADR-0042 D3, and conflating the two would either forbid ADR-0043 D6 or
+    // license a second schema. So the CLI is banned from apps/ outright, with no
+    // allowlist and no exception.
     const offenders: string[] = [];
 
     for (const file of packageJsonFiles.filter((f) => f.startsWith(`apps${sep}`))) {
-      for (const dependency of readDependencyNames(file)) {
-        if (dependency === 'prisma' || dependency === '@prisma/client') {
-          offenders.push(`${file} → ${dependency}`);
-        }
+      if (readDependencyNames(file).includes('prisma')) {
+        offenders.push(`${file} → prisma`);
       }
     }
 
     expect(offenders).toEqual([]);
+  });
+
+  it('lets only the named app depend on the generated client (ADR-0043 D6)', () => {
+    const offenders: string[] = [];
+
+    for (const file of packageJsonFiles.filter((f) => f.startsWith(`apps${sep}`))) {
+      if (CLIENT_ALLOWED_APPS.includes(file)) {
+        continue;
+      }
+      if (readDependencyNames(file).includes('@prisma/client')) {
+        offenders.push(`${file} → @prisma/client`);
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  it('holds the allowlist to exactly the app the ADR named, and no other', () => {
+    // An allowlist nobody checks is a door left open. If `apps/capture` is ever
+    // renamed or removed, this fails rather than silently permitting an entry
+    // that now matches nothing — and growing the list requires a new decision.
+    expect(CLIENT_ALLOWED_APPS).toEqual([join('apps', 'capture', 'package.json')]);
+    for (const file of CLIENT_ALLOWED_APPS) {
+      expect(packageJsonFiles, `${file} should exist`).toContain(file);
+    }
   });
 
   it('still lets the persistence package depend on Prisma, which legitimately uses it', () => {

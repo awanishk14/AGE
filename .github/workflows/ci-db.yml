@@ -20,12 +20,14 @@ on:
     paths:
       - 'packages/persistence/**'
       - 'packages/scored-bif-snapshot-persistence/**'
+      - 'apps/capture/**'
       - '.github/workflows/ci-db.yml'
   pull_request:
     branches: [main]
     paths:
       - 'packages/persistence/**'
       - 'packages/scored-bif-snapshot-persistence/**'
+      - 'apps/capture/**'
       - '.github/workflows/ci-db.yml'
 
 concurrency:

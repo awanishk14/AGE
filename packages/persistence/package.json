@@ -31,6 +31,7 @@
   },
   "devDependencies": {
     "@age/business-discovery-contracts": "workspace:*",
+    "@age/capture": "workspace:*",
     "@age/scored-bif-snapshot-persistence": "workspace:*",
     "@prisma/client": "^5.20.0",
     "prisma": "^5.20.0",
