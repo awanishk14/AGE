@@ -76,12 +76,81 @@ second half of it by omission.
 
 ---
 
-## §2 — Remaining slices
+## §2 — Slice 2a: the capture connection identity (PR #164)
 
-| #   | Slice                                                                                                               | Gated by                                 |
-| --- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| 2   | Make `age-capture --mode produceOnly` invokable (G3); close ADR-0046 D4's connection defect at the composition root | nothing                                  |
-| 3   | Wire the context-readiness bridge (G1)                                                                              | **its own `Status: Proposed` ADR first** |
+**ADR-0046 D4, discharged.** `openPrismaCaptureConnection` constructed a bare `PrismaClient`, which
+resolves `DATABASE_URL` through the schema's `datasource` block. Repo-wide that is the **owner**
+connection — `ci-db.yml` creates the non-owner application role under a separate `DATABASE_URL_APP`
+— and `DATABASE_URL_APP` was named nowhere in `apps/capture`. The one production chain that exists
+to write correctly-scoped rows asserted nothing about the role it would write them as.
+
+### Why it matters exactly as much as it does — and no more
+
+Connecting as the owner does not merely weaken the row-level policies: **they stop applying**, and
+the single mechanism that makes a mis-scoped `INSERT` impossible is gone.
+
+⚠️ Stated precisely against the stronger phrasing, because both halves must survive summarizing:
+RLS here is a **coherence** constraint, not an authorization boundary (ADR-0046 D5). Even as
+`age_app` it buys **zero** isolation between two tenants on the same role against a caller that
+simply declares the other's id. Neither half is a reason to have left the defect in place, and the
+fix must never be described as having closed the tenancy gap.
+
+⚠️ Also carried forward: the superuser property was **CI's service container**, not a proven
+deployment fact. The old defect must never be restated as "capture ran as superuser".
+
+### The shape of the fix
+
+- `capture-connection-target.ts` is **pure** — `resolveCaptureDatasourceUrl(environment)` takes an
+  environment and reads none, so every branch is testable without mutating `process.env`.
+- **Fails closed.** A missing `DATABASE_URL_APP` is an error, never a fallback: a CLI that quietly
+  downgrades to the owner connection when its application credentials are missing loses the guard on
+  precisely the run that had lost it. A `DATABASE_URL_APP` that merely _equals_ `DATABASE_URL` is
+  refused too — that satisfies the variable while discarding the guarantee.
+- The refusal happens **above `new PrismaClient(`**, so a misconfigured environment opens no
+  connection at all.
+- **No credential ever reaches an error message.** Errors name the variables, never their values.
+  Pinned by a test.
+- Two new purity clauses: `process.env` has **exactly one owner** (the composition root), and the
+  root may not contain a `DATABASE_URL` literal — it wires, it does not choose.
+- `datasourceUrl` still overrides everything, so `capture-cli.db.spec.ts` keeps pointing this same
+  root at `age_app` (ADR-0043 D8). `CI (live database)` triggered and passed, which is the real proof.
+
+⚠️ ADR-0043's text says "the CLI reads `DATABASE_URL`" (§307, D8). That is now **historical**;
+ADR-0046 D4 authorized the change. Do not "restore" it, and do not add a default for convenience.
+
+---
+
+## §3 — Slice 2b: `age-capture` is not merely uninvoked, it is not executable
+
+Split out of slice 2 once the cause was understood, because it is a different risk surface.
+
+`bin` points at `dist/main.js`, and **`node dist/main.js` fails with `ERR_MODULE_NOT_FOUND`**: `tsc`
+emits the repo's extensionless imports verbatim, and every `@age/*` dependency is bundler-targeted
+TypeScript **source**. No arrangement of `tsc` fixes this — the CLI has never been runnable by
+anyone, which sharpens (and does not contradict) the standing "capture has never executed" residual.
+
+**The repo already answers this.** `apps/api` bundles with webpack + `ts-loader` +
+`webpack-node-externals` (allowlist `/^@age\//`), and `apps/api/webpack.config.js` states this exact
+reasoning in its header. Slice 2b copies that precedent rather than introducing a second toolchain;
+`tsx` and `esbuild` are not installed and should not be added for this.
+
+Requirements: `@prisma/client` stays **external** · the `await import('./capture-composition')` must
+remain a genuine lazy chunk, so `produceOnly` still constructs no client and needs no
+`prisma generate` · the bundle must not collide with the existing `tsc` `dist/*.js` · the slice ships
+a committed example profile generated from `SAMPLE_BUSINESS_DISCOVERY_PROFILE` with a spec pinning it
+to that constant, since `--profile` takes a path and the repo contained no such document.
+
+⚠️ **A green build is not evidence the bin runs.** The slice is done when `--mode produceOnly` has
+actually been executed and its output recorded.
+
+---
+
+## §4 — Remaining slices
+
+| #   | Slice                                                                    | Gated by                                 |
+| --- | ------------------------------------------------------------------------ | ---------------------------------------- |
+| 2b  | Make `age-capture --mode produceOnly` genuinely executable (G3) — see §3 | nothing                                  |
+| 3   | Wire the context-readiness bridge (G1)                                   | **its own `Status: Proposed` ADR first** |
 
 ⚠️ Slice 3 is the highest-value **and** highest-hazard work in the repo: it hands a
 `ScoredBifContext` toward the capability runner for the first time — the coupling ADR-0026/0027 built
@@ -89,6 +158,6 @@ a separate entry point to prevent. Preconditions are mandatory: own ADR · an in
 and **failing before** the wiring exists · the test scans emitted string **content**, never
 `items.length` · `run` is never gated on context.
 
-⚠️ Slice 2 carries ADR-0046 **D7**: never run `--mode produceAndCapture` against any durable database
+⚠️ Slice 2b carries ADR-0046 **D7**: never run `--mode produceAndCapture` against any durable database
 until an authenticated principal exists. `produceOnly` opens no connection and constructs no
 `PrismaClient`, which is precisely why it is not gated by ADR-0043 open question 2.
