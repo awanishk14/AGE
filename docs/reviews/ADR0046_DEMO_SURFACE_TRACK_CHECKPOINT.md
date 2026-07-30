@@ -120,7 +120,7 @@ ADR-0046 D4 authorized the change. Do not "restore" it, and do not add a default
 
 ---
 
-## §3 — Slice 2b: `age-capture` is not merely uninvoked, it is not executable
+## §3 — Slice 2b: `age-capture` is not merely uninvoked, it is not executable (PR #166)
 
 Split out of slice 2 once the cause was understood, because it is a different risk surface.
 
@@ -140,17 +140,69 @@ remain a genuine lazy chunk, so `produceOnly` still constructs no client and nee
 a committed example profile generated from `SAMPLE_BUSINESS_DISCOVERY_PROFILE` with a spec pinning it
 to that constant, since `--profile` takes a path and the repo contained no such document.
 
-⚠️ **A green build is not evidence the bin runs.** The slice is done when `--mode produceOnly` has
+⚠️ **A green build is not evidence the bin runs.** The slice is done when `produceOnly` has
 actually been executed and its output recorded.
+
+### What shipped
+
+`webpack.config.cjs` + `scripts/bundle.mjs` (webpack's Node API, so no `webpack-cli` dependency);
+output `dist/bin/age-capture.cjs`; `build` = `tsc && bundle`, so a normal build produces the bin and
+CI enforces the assertion below on every PR. `tsc`'s `dist/*.js` is still emitted for type consumers
+and does not collide.
+
+### The split point is ASSERTED, not trusted — the part most at risk of being undone
+
+`produceOnly` constructs no `PrismaClient` and needs no generated client **only while `main.ts`'s
+`await import('./capture-composition')` stays a genuine lazy chunk**, and _nothing about that is
+visible in a passing build_: a static import still compiles, still runs, and quietly loads Prisma on
+every invocation. So `scripts/bundle.mjs` fails the build if the entry bundle contains
+`new PrismaClient(`, **and equally if no lazy chunk does** — absence alone would also be satisfied by
+a build that dropped the capture path entirely.
+
+⚠️ Verified in **both** directions before merge: converting the dynamic import to a static one leaves
+webpack reporting `compiled successfully` while the assertion fails and the build exits 1. **Do not
+"simplify" this to the one-sided check**, and do not remove it as a build-speed optimisation — it is
+the only thing standing between a refactor and a `produceOnly` that opens a database connection.
+
+### Proof the bin runs
+
+Executed against the committed example under a `Module._load` tripwire that exits non-zero if
+`'@prisma/client'` is ever requested. Run **from the repo**, so `zod` and the other legitimate
+externals still resolved and the tripwire tested only what it claims to. Exit 0, tripwire silent,
+`bifStatus Draft`, completeness **12**, confidence **17**, **7 present / 5 omitted** — matching the
+demo baseline exactly.
+
+⚠️ An earlier attempt — copying the bundle somewhere with no `node_modules` — was **unsound**: it made
+_every_ external unresolvable, so it died on `zod` and could not distinguish lazy from eager. Do not
+repeat it.
+
+### Corrections this slice forced
+
+⚠️ **There is no `--mode` flag.** Earlier text here and in the handover said "make
+`--mode produceOnly` invokable". The real surface is: required `--profile`, `--client-id`,
+`--organization-id`, `--changed-by`; optional `--bif-id`, `--snapshot-id`, `--captured-at`; boolean
+`--capture`, `--confirm`. **`produceOnly` is the default; `--capture` opts into `produceAndCapture`.**
+
+`eslint.config.mjs`'s CommonJS build-tool override gained `webpack.config.cjs` — the same case as
+`webpack.config.js` in a package declaring `type: module`.
+
+### Boundaries held
+
+No source behaviour changed: `main.ts`, `capture-runner.ts` and `capture-composition.ts` are
+untouched. No database was contacted; ADR-0046 **D7 is untouched**, and `produceOnly` remains the
+mode that opens no connection at all.
+
+⚠️ The standing residual is now **sharper, not closed**: `age-capture` is executable and has been
+executed **in `produceOnly` only**. It is still invoked by no workflow, no package script and no other
+package, and **`produceAndCapture` has still never run** and must not (D7).
 
 ---
 
 ## §4 — Remaining slices
 
-| #   | Slice                                                                    | Gated by                                 |
-| --- | ------------------------------------------------------------------------ | ---------------------------------------- |
-| 2b  | Make `age-capture --mode produceOnly` genuinely executable (G3) — see §3 | nothing                                  |
-| 3   | Wire the context-readiness bridge (G1)                                   | **its own `Status: Proposed` ADR first** |
+| #   | Slice                                  | Gated by                                 |
+| --- | -------------------------------------- | ---------------------------------------- |
+| 3   | Wire the context-readiness bridge (G1) | **its own `Status: Proposed` ADR first** |
 
 ⚠️ Slice 3 is the highest-value **and** highest-hazard work in the repo: it hands a
 `ScoredBifContext` toward the capability runner for the first time — the coupling ADR-0026/0027 built
