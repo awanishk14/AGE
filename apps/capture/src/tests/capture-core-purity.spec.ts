@@ -18,7 +18,12 @@ import { describe, expect, it } from 'vitest';
  * previous guard tests in this repo.
  */
 
-const CORE_MODULES = ['capture-arguments.ts', 'capture-profile-input.ts', 'index.ts'] as const;
+const CORE_MODULES = [
+  'capture-arguments.ts',
+  'capture-connection-target.ts',
+  'capture-profile-input.ts',
+  'index.ts',
+] as const;
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -142,6 +147,24 @@ describe('the entry point is the sole owner of the effects', () => {
     );
 
     expect(owners).toEqual(['capture-composition.ts']);
+  });
+
+  /**
+   * ADR-0046 D4, Slice 2. Reading the environment is an effect, and it now has
+   * exactly one owner too. The decision it feeds — which identity may be
+   * connected as — is a pure function in `capture-connection-target.ts`, so the
+   * root reads `process.env` and decides nothing.
+   */
+  it('reads process.env only in the composition root', () => {
+    const owners = SOURCE_FILES.filter((moduleFile) => code(moduleFile).includes('process.env'));
+
+    expect(owners).toEqual(['capture-composition.ts']);
+  });
+
+  it('keeps the connection-target decision out of the composition root', () => {
+    // The root wires; it does not choose. A literal env var name here would
+    // mean the rule had started living in two places.
+    expect(code('capture-composition.ts').includes('DATABASE_URL')).toBe(false);
   });
 
   it('leaves the composition root free of the clock, the id source and the filesystem', () => {

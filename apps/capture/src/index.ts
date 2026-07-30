@@ -22,6 +22,16 @@
 export { parseCaptureArguments } from './capture-arguments';
 export type { CaptureCommand, ParsedCaptureArguments } from './capture-arguments';
 
+export {
+  CAPTURE_DATASOURCE_ENV_VAR,
+  OWNER_DATASOURCE_ENV_VAR,
+  resolveCaptureDatasourceUrl,
+} from './capture-connection-target';
+export type {
+  CaptureConnectionEnvironment,
+  ResolvedCaptureDatasource,
+} from './capture-connection-target';
+
 export { parseBusinessDiscoveryProfileDocument } from './capture-profile-input';
 export type { ParsedBusinessDiscoveryProfileDocument } from './capture-profile-input';
 

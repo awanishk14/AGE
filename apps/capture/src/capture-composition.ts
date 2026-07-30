@@ -5,6 +5,10 @@ import {
   ScoredBifSnapshotCaptureOrchestrator,
 } from '@age/scored-bif-snapshot-persistence';
 
+import {
+  resolveCaptureDatasourceUrl,
+  type CaptureConnectionEnvironment,
+} from './capture-connection-target';
 import type { CaptureConnection } from './capture-runner';
 
 /**
@@ -35,27 +39,63 @@ import type { CaptureConnection } from './capture-runner';
  * non-owner `age_app` role would have been refused. The runner is not an
  * optimisation; without it this CLI cannot write at all.
  *
- * NO CREDENTIALS ARE READ HERE. `PrismaClient` resolves `DATABASE_URL` from the
- * environment through the schema's `datasource` block, exactly as every other
- * consumer in this repository does, and `datasourceUrl` exists only so the live
- * test can point the very same composition root at the non-owner role
- * (ADR-0043 D8). No connection string is ever logged or echoed.
+ * WHICH IDENTITY IT CONNECTS AS — ADR-0046 D4, closed in Slice 2. This used to
+ * construct a bare `PrismaClient`, which resolves `DATABASE_URL`: repo-wide the
+ * **owner** connection, for which the table's row-level policies do not apply
+ * at all. The chain that exists to write correctly-scoped rows therefore
+ * asserted nothing about the role it wrote them as. It now resolves
+ * `DATABASE_URL_APP` — the non-owner application role — through the pure
+ * `resolveCaptureDatasourceUrl`, and **throws before constructing a client** when
+ * that is missing or is merely the owner connection under another name. There
+ * is deliberately no fallback: a silent downgrade would remove the guard on
+ * exactly the run that had lost it.
+ *
+ * NO CREDENTIALS ARE READ HERE BEYOND THAT ONE VARIABLE, and none is ever
+ * logged, echoed or included in an error message — a connection string carries
+ * a password. `datasourceUrl` exists only so the live test can point this very
+ * same composition root at `age_app` explicitly (ADR-0043 D8).
  */
+/**
+ * Refuses the run rather than returning a usable-looking connection.
+ *
+ * A throw, not a returned outcome: the caller is the CLI's injected
+ * `openCaptureOrchestrator`, and `main.ts` already maps an unmodelled throw to
+ * exit code 1 with the message on stderr. Every *anticipated* operator mistake
+ * is still a named exit code from `runCapture`; this one is a deployment
+ * mistake that must stop the process before it can connect.
+ */
+const resolveConnectionUrl = (environment: CaptureConnectionEnvironment): string => {
+  const resolved = resolveCaptureDatasourceUrl(environment);
+
+  if (!resolved.ok) {
+    throw new Error(
+      `The capture CLI cannot open a database connection: ${resolved.errors.join(' ')}`,
+    );
+  }
+
+  return resolved.url;
+};
+
 export interface CaptureConnectionOptions {
   /**
-   * Overrides the connection the schema's `datasource` block would resolve.
+   * Overrides the resolved connection entirely.
    * Used by the live test to run this chain as `age_app`; unset in normal use.
    */
   readonly datasourceUrl?: string;
+  /**
+   * The environment to resolve `DATABASE_URL_APP` from. Injectable so the
+   * resolution can be exercised without mutating the real process environment;
+   * defaults to it.
+   */
+  readonly environment?: CaptureConnectionEnvironment;
 }
 
 export function openPrismaCaptureConnection(
   options: CaptureConnectionOptions = {},
 ): CaptureConnection {
-  const client =
-    options.datasourceUrl === undefined
-      ? new PrismaClient()
-      : new PrismaClient({ datasources: { db: { url: options.datasourceUrl } } });
+  const url = options.datasourceUrl ?? resolveConnectionUrl(options.environment ?? process.env);
+
+  const client = new PrismaClient({ datasources: { db: { url } } });
 
   // No cast. A generated `PrismaClient` satisfies the runner's structural
   // transaction source outright; if Prisma's shape ever drifts, this line stops
