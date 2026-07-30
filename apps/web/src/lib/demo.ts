@@ -27,12 +27,45 @@ export interface CapabilityDemoReport {
   readonly extra?: Readonly<Record<string, number>>;
 }
 
+/**
+ * The upstream Business Discovery intake, as returned by the API.
+ *
+ * Not a capability: it produces no decision objects and never enters the
+ * approval model. The four scores are two distinct pairs — `discovery*`
+ * describes the interview, `bif*` describes the produced Draft BIF — and must
+ * never be presented as interchangeable.
+ */
+export interface BusinessDiscoveryDemoSummary {
+  readonly profileId: string;
+  readonly businessName: string;
+  readonly questionnaireId: string;
+  readonly questionnaireVersion: string;
+  readonly profileSchemaValid: boolean;
+  readonly questionnaireValid: boolean;
+  readonly missingRequiredCount: number;
+  readonly criticalGapCount: number;
+  readonly discoveryCompletenessScore: number;
+  readonly discoveryConfidenceScore: number;
+  readonly bifCompletenessScore: number;
+  readonly bifConfidenceScore: number;
+  readonly bifStatus: string;
+  readonly presentSectionTypes: readonly string[];
+  readonly omittedSectionTypes: readonly string[];
+  readonly evidenceReferenceCount: number;
+  readonly assumptionCount: number;
+  readonly goalCount: number;
+  readonly offeringCount: number;
+  readonly customerSegmentCount: number;
+  readonly competitorCount: number;
+}
+
 /** Top-level response envelope for the capability demo endpoint. */
 export interface CapabilityDemoResponse {
   readonly title: string;
   readonly description: string;
   readonly humanApprovedExecution: boolean;
   readonly sideEffectsPerformed: boolean;
+  readonly businessDiscovery: BusinessDiscoveryDemoSummary;
   readonly reports: readonly CapabilityDemoReport[];
   readonly summary: {
     readonly capabilitiesRun: number;

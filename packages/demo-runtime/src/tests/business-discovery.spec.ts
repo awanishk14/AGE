@@ -81,6 +81,44 @@ describe('Business Discovery demo intake', () => {
     }
   });
 
+  it('reports the intake and BIF score pairs separately, and never conflates them', () => {
+    const summary = runBusinessDiscoveryIntake(DEMO_SCENARIO_METADATA);
+
+    // The honesty proof, pinned. A thoroughly captured interview (97/63) still
+    // yields a sparse Draft BIF (12/17), because discovery covers only part of
+    // the BIF surface. If a future change makes either pair drift toward the
+    // other, this fails rather than quietly flattering the result.
+    expect(summary.discoveryCompletenessScore).toBe(97);
+    expect(summary.discoveryConfidenceScore).toBe(63);
+    expect(summary.bifCompletenessScore).toBe(12);
+    expect(summary.bifConfidenceScore).toBe(17);
+
+    // The two metrics in each pair are distinct measurements, never copies.
+    expect(summary.bifCompletenessScore).not.toBe(summary.discoveryCompletenessScore);
+    expect(summary.bifConfidenceScore).not.toBe(summary.discoveryConfidenceScore);
+
+    // Reported, never acted on: status stays Draft.
+    expect(summary.bifStatus).toBe('Draft');
+  });
+
+  it('reads its four scores straight from the mapper — the demo computes no score of its own', () => {
+    const summary = runBusinessDiscoveryIntake(DEMO_SCENARIO_METADATA);
+    const { context, mappingMetadata } = produceScoredBifContext(
+      SAMPLE_BUSINESS_DISCOVERY_PROFILE,
+      {
+        organizationId: DEMO_SCENARIO_METADATA.organizationId,
+        constructedAt: DEMO_SCENARIO_METADATA.constructedAt,
+        changedBy: DEMO_SCENARIO_METADATA.changedBy,
+      },
+    );
+
+    expect(summary.discoveryCompletenessScore).toBe(mappingMetadata.discoveryCompletenessScore);
+    expect(summary.discoveryConfidenceScore).toBe(mappingMetadata.discoveryConfidenceScore);
+    expect(summary.bifCompletenessScore).toBe(context.bifCompletenessScore);
+    expect(summary.bifConfidenceScore).toBe(context.bifConfidenceScore);
+    expect(summary.bifStatus).toBe(String(context.bifStatus));
+  });
+
   it('matches produceScoredBifContext called directly — the demo adds no mapping of its own', () => {
     const summary = runBusinessDiscoveryIntake(DEMO_SCENARIO_METADATA);
     const { context } = produceScoredBifContext(SAMPLE_BUSINESS_DISCOVERY_PROFILE, {

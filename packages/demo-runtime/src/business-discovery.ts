@@ -47,6 +47,32 @@ export interface BusinessDiscoveryIntakeSummary {
   readonly missingRequiredCount: number;
   readonly criticalGapCount: number;
   /**
+   * Intake capture completeness — a property of the *interview*, against the
+   * discovery questionnaire. **Never** interchangeable with
+   * `bifCompletenessScore` (ADR-0025). Read straight off the mapping metadata;
+   * nothing here recomputes it.
+   */
+  readonly discoveryCompletenessScore: number;
+  /**
+   * How well-sourced the intake was. Discovery **input** confidence, and never
+   * an input to BIF confidence. **Never** interchangeable with
+   * `bifConfidenceScore`.
+   */
+  readonly discoveryConfidenceScore: number;
+  /**
+   * BIF **population** completeness: what proportion of the canonical BIF's
+   * defined fields this draft actually populates. A property of the BIF.
+   */
+  readonly bifCompletenessScore: number;
+  /** Trust in the produced business intelligence, from the scoring layer. */
+  readonly bifConfidenceScore: number;
+  /**
+   * Always `Draft` here. Surfaced so a reader can see the status was not
+   * promoted, rather than having to take it on trust — this stage never
+   * promotes a BIF.
+   */
+  readonly bifStatus: string;
+  /**
    * Canonical BIF section types the mapping actually populated, in projection
    * order. Replaces the legacy Path A `mappedSectionKeys`, which reported eight
    * locally-invented grouping keys rather than canonical sections.
@@ -91,7 +117,7 @@ export function runBusinessDiscoveryIntake(
     profile,
     DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
   );
-  const { context } = produceScoredBifContext(profile, {
+  const { context, mappingMetadata } = produceScoredBifContext(profile, {
     organizationId: scenario.organizationId,
     constructedAt: scenario.constructedAt,
     changedBy: scenario.changedBy,
@@ -106,6 +132,17 @@ export function runBusinessDiscoveryIntake(
     questionnaireValid: validation.valid,
     missingRequiredCount: validation.missingRequiredQuestionIds.length,
     criticalGapCount: validation.criticalGaps.length,
+    // All four scores are READ, never derived here. The two pairs deliberately
+    // sit side by side so the gap between them is visible rather than
+    // averaged away: a thoroughly captured interview still yields a sparse
+    // Draft BIF, and reporting only the intake pair would overstate what AGE
+    // actually knows.
+    discoveryCompletenessScore: mappingMetadata.discoveryCompletenessScore,
+    discoveryConfidenceScore: mappingMetadata.discoveryConfidenceScore,
+    bifCompletenessScore: context.bifCompletenessScore,
+    bifConfidenceScore: context.bifConfidenceScore,
+    // `String(...)` keeps the BIF enum out of demo-runtime's own types.
+    bifStatus: String(context.bifStatus),
     // `String(...)` keeps the BIF enum out of demo-runtime's own types.
     presentSectionTypes: context.sections.map((section) => String(section.type)),
     omittedSectionTypes: context.omittedSections.map((section) => String(section.type)),

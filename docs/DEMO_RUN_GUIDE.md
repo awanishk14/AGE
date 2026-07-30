@@ -27,6 +27,14 @@ pnpm demo
 
 What it shows:
 
+- the upstream **Business Discovery intake** — not a capability, so nothing in
+  it is ever approved or executed. It reports four scores that are deliberately
+  never combined: intake completeness/confidence describe the _interview_, BIF
+  completeness/confidence describe the produced **Draft** BIF. On the sample
+  profile a thoroughly captured interview (97/63) still yields a sparse BIF
+  (12/17), because discovery covers only part of the BIF surface. It also lists
+  the canonical sections discovery could not populate — those are limitations of
+  the intake, never findings about the business.
 - all **six capabilities** (Intelligence, Market Discovery, Growth, Authority,
   Operations, Revenue)
 - **accepted / rejected / duplicate** accounting per capability, with the
@@ -58,7 +66,8 @@ curl http://localhost:4000/demo/capabilities
 
 - Route: **`GET /demo/capabilities`**
 - Returns the six capability reports plus a summary (capabilities run, total
-  pending approvals, accounting invariant) as JSON.
+  pending approvals, accounting invariant) as JSON, and a `businessDiscovery`
+  block carrying the intake context described above.
 - Read-only — nothing is persisted or executed.
 
 ---
@@ -75,8 +84,8 @@ Then open:
 
 - **`http://localhost:3000/demo`**
 
-The page fetches `GET /demo/capabilities` and renders the six reports with a
-summary and the Human-Approved Execution notice.
+The page fetches `GET /demo/capabilities` and renders the Business Discovery
+intake card, the six reports, a summary and the Human-Approved Execution notice.
 
 ### API URL configuration
 

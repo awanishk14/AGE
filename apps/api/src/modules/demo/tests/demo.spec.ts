@@ -85,6 +85,56 @@ describe('DemoController GET /demo/capabilities', () => {
     }
   });
 
+  it('surfaces the upstream Business Discovery intake as context, not as a capability', async () => {
+    const response = await controller.getCapabilities();
+    const discovery = response.businessDiscovery;
+
+    expect(discovery.presentSectionTypes).toHaveLength(7);
+    expect(discovery.omittedSectionTypes).toHaveLength(5);
+    expect(discovery.profileSchemaValid).toBe(true);
+    expect(discovery.questionnaireValid).toBe(true);
+
+    // Intake is not a capability: it never enters the approval model, and
+    // surfacing it must not change the six-capability accounting.
+    expect(discovery).not.toHaveProperty('pendingApproval');
+    expect(discovery).not.toHaveProperty('acceptedItems');
+    expect(response.reports).toHaveLength(6);
+    expect(response.summary.totalPendingApprovals).toBe(6);
+    expect(response.reports.map((r) => r.capability)).not.toContain('Business Discovery');
+  });
+
+  it('reports the intake and BIF score pairs separately and never promotes the BIF', async () => {
+    const response = await controller.getCapabilities();
+    const discovery = response.businessDiscovery;
+
+    // The honesty proof: a well-captured interview still yields a sparse Draft
+    // BIF. Pinned so the endpoint cannot start flattering the result.
+    expect(discovery.discoveryCompletenessScore).toBe(97);
+    expect(discovery.discoveryConfidenceScore).toBe(63);
+    expect(discovery.bifCompletenessScore).toBe(12);
+    expect(discovery.bifConfidenceScore).toBe(17);
+    expect(discovery.bifStatus).toBe('Draft');
+
+    // The pairs are distinct measurements — never copies of each other.
+    expect(discovery.bifCompletenessScore).not.toBe(discovery.discoveryCompletenessScore);
+    expect(discovery.bifConfidenceScore).not.toBe(discovery.discoveryConfidenceScore);
+  });
+
+  it('exposes no raw profile payload through the discovery projection', async () => {
+    const response = await controller.getCapabilities();
+    const discovery = response.businessDiscovery;
+
+    // Compact scalars and string lists only — no evidence URLs, no answers,
+    // no nested segment/offering bodies.
+    expect(JSON.stringify(discovery)).not.toContain('http');
+    for (const [key, value] of Object.entries(discovery)) {
+      const isScalar =
+        typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
+      const isStringList = Array.isArray(value) && value.every((v) => typeof v === 'string');
+      expect(isScalar || isStringList, `businessDiscovery.${key} must stay compact`).toBe(true);
+    }
+  });
+
   it('imports no persistence/integration/side-effecting modules in the demo module', () => {
     const moduleDir = join(__dirname, '..');
     const files = collectTsFiles(moduleDir).filter((f) => f !== __filename);

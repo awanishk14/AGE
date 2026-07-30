@@ -6,6 +6,7 @@ import {
   fetchCapabilityDemo,
   formatDecisionItem,
   getApiBaseUrl,
+  type BusinessDiscoveryDemoSummary,
   type CapabilityDemoReport,
   type CapabilityDemoResponse,
 } from '@/lib/demo';
@@ -94,6 +95,118 @@ function CapabilityCard({ report }: { report: CapabilityDemoReport }) {
   );
 }
 
+/**
+ * The upstream Business Discovery intake, rendered as context.
+ *
+ * Deliberately NOT styled as a capability card: there is no approval row and no
+ * accepted/rejected accounting, because intake produces no decision objects.
+ *
+ * Two rules govern the presentation. First, the intake pair and the BIF pair are
+ * labelled as separate measurements and never summed, averaged or shown as one
+ * headline number. Second, omitted sections are rendered as neutral limitations
+ * — never as warnings, never as negative evidence about the business.
+ */
+function DiscoveryCard({ discovery }: { discovery: BusinessDiscoveryDemoSummary }) {
+  return (
+    <section className="rounded-lg border border-neutral-200 p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">
+          Business Discovery — intake{' '}
+          <span className="font-normal text-neutral-500">(upstream, not a capability)</span>
+        </h2>
+        <span className="inline-flex items-center rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-700">
+          BIF status: {discovery.bifStatus}
+        </span>
+      </div>
+
+      <p className="mt-2 text-sm text-neutral-600">
+        {discovery.businessName} · profile <code>{discovery.profileId}</code> · questionnaire{' '}
+        <code>
+          {discovery.questionnaireId} v{discovery.questionnaireVersion}
+        </code>
+      </p>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="rounded border border-neutral-200 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Intake — properties of the interview
+          </p>
+          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+            <Stat label="completeness" value={discovery.discoveryCompletenessScore} />
+            <Stat label="confidence" value={discovery.discoveryConfidenceScore} />
+          </dl>
+        </div>
+        <div className="rounded border border-neutral-200 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Draft BIF — properties of what was produced
+          </p>
+          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+            <Stat label="completeness" value={discovery.bifCompletenessScore} />
+            <Stat label="confidence" value={discovery.bifConfidenceScore} />
+          </dl>
+        </div>
+      </div>
+
+      <p className="mt-2 text-xs text-neutral-500">
+        Four distinct measurements — never interchangeable. A well-captured interview still yields a
+        sparse Draft BIF, because discovery covers only part of the BIF surface. These scores are
+        reported, never acted on.
+      </p>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <SectionList
+          label={`Populated canonical sections (${discovery.presentSectionTypes.length})`}
+          types={discovery.presentSectionTypes}
+        />
+        <SectionList
+          label={`Sections discovery could not populate (${discovery.omittedSectionTypes.length})`}
+          types={discovery.omittedSectionTypes}
+          note="Limitations of the intake — not findings about the business."
+        />
+      </div>
+
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
+        <Stat label="segments" value={discovery.customerSegmentCount} />
+        <Stat label="offerings" value={discovery.offeringCount} />
+        <Stat label="competitors" value={discovery.competitorCount} />
+        <Stat label="goals" value={discovery.goalCount} />
+        <Stat label="evidence refs" value={discovery.evidenceReferenceCount} />
+        <Stat label="assumptions" value={discovery.assumptionCount} />
+        <Stat label="missing required" value={discovery.missingRequiredCount} />
+        <Stat label="critical gaps" value={discovery.criticalGapCount} />
+      </dl>
+    </section>
+  );
+}
+
+function SectionList({
+  label,
+  types,
+  note,
+}: {
+  label: string;
+  types: readonly string[];
+  note?: string;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{label}</p>
+      {types.length === 0 ? (
+        <p className="mt-1 text-sm text-neutral-400">(none)</p>
+      ) : (
+        <ul className="mt-1 space-y-1">
+          {types.map((type) => (
+            <li key={type} className="font-mono text-xs text-neutral-700">
+              {type}
+            </li>
+          ))}
+        </ul>
+      )}
+      {note && <p className="mt-1 text-xs text-neutral-400">{note}</p>}
+    </div>
+  );
+}
+
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div>
@@ -167,6 +280,8 @@ export default function DemoPage() {
               </div>
             </dl>
           </section>
+
+          <DiscoveryCard discovery={state.data.businessDiscovery} />
 
           <div className="space-y-4">
             {state.data.reports.map((report) => (

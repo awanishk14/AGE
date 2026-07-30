@@ -92,6 +92,32 @@ function validate(body) {
       `report "${report.capability}" must not contain an executionResult field`,
     );
   }
+
+  // The upstream intake travels over the wire as context, never as a capability.
+  const discovery = body.businessDiscovery;
+  assert(discovery !== undefined, 'response has no `businessDiscovery` block');
+  assert(
+    discovery.presentSectionTypes?.length === 7 && discovery.omittedSectionTypes?.length === 5,
+    `expected 7 populated / 5 omitted sections, got ${discovery.presentSectionTypes?.length} / ${discovery.omittedSectionTypes?.length}`,
+  );
+  assert(discovery.bifStatus === 'Draft', `expected bifStatus "Draft", got ${discovery.bifStatus}`);
+  assert(
+    !('pendingApproval' in discovery),
+    'businessDiscovery must never enter the approval model',
+  );
+  // Both score pairs must survive serialization — reporting only the intake
+  // pair would overstate what the produced Draft BIF actually contains.
+  for (const field of [
+    'discoveryCompletenessScore',
+    'discoveryConfidenceScore',
+    'bifCompletenessScore',
+    'bifConfidenceScore',
+  ]) {
+    assert(
+      typeof discovery[field] === 'number',
+      `businessDiscovery.${field} must be a number, got ${typeof discovery[field]}`,
+    );
+  }
 }
 
 async function main() {
