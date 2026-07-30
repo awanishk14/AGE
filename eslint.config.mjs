@@ -30,8 +30,9 @@ export default tseslint.config(
   },
   {
     // CommonJS build-tool config files (e.g. the Nest CLI requires
-    // webpack.config.js to be CommonJS).
-    files: ['**/webpack.config.js'],
+    // webpack.config.js to be CommonJS). `.cjs` is the same case in a package
+    // that declares `type: module`, where a plain `.js` would be read as ESM.
+    files: ['**/webpack.config.js', '**/webpack.config.cjs'],
     languageOptions: {
       sourceType: 'commonjs',
       globals: {
