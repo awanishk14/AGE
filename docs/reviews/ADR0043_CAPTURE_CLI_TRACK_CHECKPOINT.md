@@ -287,9 +287,65 @@ never run for this app.
   - _"nothing **reads** snapshots"_ — **still true.** `findLatest`, `listSeries` and
     `findBySnapshotId` retain zero non-test callers, exactly as D10 and ADR-0044 D1 (answer **D**,
     no consumer authorized) leave them.
-- **ADR-0044 §4's revisit trigger has NOT fired.** It requires _a production writer run against a
-  real database producing ≥2 snapshots for one `(clientId, organizationId, bifId)`_. #156 built the
-  writer and it does run against real PostgreSQL, but only in CI and only ever one snapshot per
-  identity — the second write under the same identity is the refusal test. What changed is that
-  firing the trigger is now **possible**; reading #156 as having fired it would be precisely the
-  self-confirming inference ADR-0044 §0.1's council-reliability finding warns against.
+- **ADR-0044 §4's revisit trigger has NOT fired**, and **ADR-0045 D2 settles that it never can from
+  inside this repository.** ⚠️ The reason recorded here before #158 was **wrong** and must not be
+  restated: it said "only ever one snapshot per identity", which is true of the capture CLI live spec
+  and false of the repository as a whole — `scored-bif-snapshot.db.spec.ts` writes a **three-member**
+  live series for one identity, and proves ordering, the `capturedAt` tie-break and `findLatest` over
+  it (ADR-0045 §1 C1). The unfired element is the **writer**, not the row count: CI has no operator
+  and no trusted wall clock, so a series it authors is a series the architect chose to author. §4 is
+  amended accordingly (ADR-0045 D2) to exclude test-suite-authored series.
+
+---
+
+## 9. ADR-0045 — the terminus (PR #158, `99d136e` → `45057e1`, 2 files, +372/−4)
+
+ADR-0045 is not a slice. It is the decision that **closes this track**: it asks whether ADR-0044 §4's
+revisit trigger fired now that #156 exists, and answers that the authorization set is **empty**.
+
+Read the ADR itself — `docs/adrs/0045-capture-track-terminus-and-the-unfireable-trigger.md` — for the
+reasoning. What belongs here is the ledger and the three things a future session would otherwise
+re-derive or get wrong.
+
+### 9.1 What the live suite already proves about a snapshot series
+
+Do **not** rebuild any of this; it exists and runs in `CI (live database)`:
+
+| Property                                                           | Where                                          |
+| ------------------------------------------------------------------ | ---------------------------------------------- |
+| A three-member series for one identity                             | `scored-bif-snapshot.db.spec.ts` (~`:440`)     |
+| `capturedAt DESC` ordering across that series                      | same file (~`:386`)                            |
+| The `snapshotId DESC` tie-break on equal instants                  | same file (~`:406`)                            |
+| A multi-member series through the **production** scoped repository | `scored-bif-snapshot-rls.db.spec.ts` (~`:261`) |
+
+The council's architecture lens asserted "the maximum ever observed for one identity, anywhere, is
+**1**." That is **false**. It was checked against the code before being used, and was not written into
+the ADR — the concrete instance of the §6.7 prose-laundering finding, caught in the act.
+
+### 9.2 The one code change (D4) and why the old test name was a trap
+
+`capture-cli.db.spec.ts`'s second-write test was named _"refuses a second write under the same
+identity"_. Its runtime pins `newSnapshotId` to the constant `'snap-minted'`, so the collision is on
+the **full primary key**, `snapshotId` included. It proves **append idempotence under replay** — never
+a prohibition on a series. Under the real `main.ts` runtime `newSnapshotId` is `randomUUID()`, so two
+genuine captures do not collide at all. The test is now named for what it does and carries a comment
+stating what it does **not** prove. Assertions unchanged; behaviour unchanged.
+
+### 9.3 Why nothing further was authorized
+
+- A **two-capture live spec was rejected** (D3): a trigger the architect can satisfy on demand is not
+  a gate, and on top of §9.1 the added coverage is near-empty.
+- `apps/capture` has **never executed anywhere** (C3) — zero invocations, zero importers outside its
+  own tests — and `main.ts` self-invokes at module scope, so it is untestable by import (D5).
+  **Recorded, not fixed.**
+- `listSeries` stays (D7).
+- The real blocker is **ADR-0043 open question 2** — where a legitimate `clientId`/`organizationId`
+  comes from. That is a **product** decision and is **referred to the user** (D6). It is the one thing
+  on this track the standing architect grant does not cover.
+
+### 9.4 Ledger
+
+| PR   | What                                                       | Commit → merge        |
+| ---- | ---------------------------------------------------------- | --------------------- |
+| #157 | Slice B2 checkpoint (docs-only)                            | → `4c0e628`           |
+| #158 | **ADR-0045** — track terminus + the D4 test-honesty repair | `99d136e` → `45057e1` |
