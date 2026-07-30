@@ -5,6 +5,38 @@ No external side effects are performed by this demo.
 ########################################################################
 
 ========================================================================
+DISCOVERY / INTAKE: Business Discovery (upstream — not a capability)
+========================================================================
+profile: sample-business-discovery-profile  |  business: Northwind Ledger
+questionnaire: age-business-discovery v2026.1  |  profile schema: VALID  |  questionnaire: VALID
+missingRequired=0  criticalGaps=0
+
+Scores (four distinct measurements — never interchangeable):
+  intake: completeness=97  confidence=63   (properties of the interview)
+  BIF:    completeness=12  confidence=17   (properties of the produced Draft BIF)
+  A well-captured interview still yields a sparse BIF: discovery covers only part of the BIF surface.
+
+Scored BIF context projection (status: Draft — never promoted):
+  populated sections (7):
+    - organization_identity
+    - vision_strategy
+    - products_services
+    - icp_personas
+    - market_competition
+    - brand_system
+    - gtm_system
+  omitted sections (5):
+    - marketing_intelligence
+    - technology_stack
+    - assets
+    - kpis
+    - constraints
+  segments=2  offerings=2  competitors=2  goals=3
+  evidenceRefs=3  assumptions=2
+
+Discovery captures context only — no strategy, no approval required. The scores above are reported, never acted on: nothing is ranked, planned or promoted from them. Evidence references are counted, never fetched.
+
+========================================================================
 CAPABILITY: Intelligence
 ========================================================================
 accepted=1  rejected=1  duplicate=1  derived=3  |  contradictionCount=0
@@ -113,7 +145,7 @@ PENDING HUMAN APPROVAL:
   [ ] approve  Revenue  rp-001
 
 ########################################################################
-SUMMARY: 6 capabilities ran; 6 decision object(s) pending human approval.
+SUMMARY: Business Discovery intake loaded (profile sample-business-discovery-profile, 7 populated / 5 omitted section(s)); 6 capabilities ran; 6 decision object(s) pending human approval.
 Accounting invariant across all capabilities: OK
 Human approval is required before any execution. No side effects were performed.
 ########################################################################

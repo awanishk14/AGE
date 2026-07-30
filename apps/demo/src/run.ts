@@ -41,7 +41,22 @@ function printDiscovery(summary: BusinessDiscoveryIntakeSummary): void {
   );
 
   console.log('');
-  console.log('Scored BIF context projection:');
+  console.log('Scores (four distinct measurements — never interchangeable):');
+  console.log(
+    `  intake: completeness=${summary.discoveryCompletenessScore}  ` +
+      `confidence=${summary.discoveryConfidenceScore}   (properties of the interview)`,
+  );
+  console.log(
+    `  BIF:    completeness=${summary.bifCompletenessScore}  ` +
+      `confidence=${summary.bifConfidenceScore}   (properties of the produced Draft BIF)`,
+  );
+  console.log(
+    '  A well-captured interview still yields a sparse BIF: discovery covers ' +
+      'only part of the BIF surface.',
+  );
+
+  console.log('');
+  console.log(`Scored BIF context projection (status: ${summary.bifStatus} — never promoted):`);
   console.log(`  populated sections (${summary.presentSectionTypes.length}):`);
   for (const type of summary.presentSectionTypes) {
     console.log(`    - ${type}`);
@@ -60,8 +75,9 @@ function printDiscovery(summary: BusinessDiscoveryIntakeSummary): void {
 
   console.log('');
   console.log(
-    'Discovery captures context only — no strategy, no scoring, no approval required. ' +
-      'Evidence references are counted, never fetched.',
+    'Discovery captures context only — no strategy, no approval required. The ' +
+      'scores above are reported, never acted on: nothing is ranked, planned or ' +
+      'promoted from them. Evidence references are counted, never fetched.',
   );
 }
 

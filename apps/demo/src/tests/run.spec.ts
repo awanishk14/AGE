@@ -55,6 +55,24 @@ describe('AGE demo CLI app', () => {
     expect(source).toMatch(/runBusinessDiscoveryIntake\(DEMO_SCENARIO_METADATA\)/);
   });
 
+  it('prints all four scores, so neither pair can stand in for the other', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const source = readFileSync(join(here, '..', 'run.ts'), 'utf8');
+
+    // The intake pair and the BIF pair must both reach the operator. Printing
+    // only the intake pair (97/63 on the sample profile) would read as a
+    // strong result while the produced Draft BIF is sparse (12/17).
+    for (const field of [
+      'discoveryCompletenessScore',
+      'discoveryConfidenceScore',
+      'bifCompletenessScore',
+      'bifConfidenceScore',
+      'bifStatus',
+    ]) {
+      expect(source.includes(`summary.${field}`), `run.ts must print ${field}`).toBe(true);
+    }
+  });
+
   it('keeps discovery out of the approval model (pending count unchanged)', async () => {
     runBusinessDiscoveryIntake(DEMO_SCENARIO_METADATA);
     const reports = await runAllCapabilities();
