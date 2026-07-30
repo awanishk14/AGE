@@ -143,13 +143,24 @@ describe('the capture CLI, wired to real PostgreSQL as the application role', ()
     expect(rows[0]?.captured_at).toBe('2026-01-02T03:04:05.006Z');
   });
 
-  it('refuses a second write under the same identity, and reports it rather than overwriting', async () => {
+  it('refuses a replayed write of the SAME pinned snapshotId rather than overwriting it', async () => {
     const first = await runCapture([...ARGS, '--capture', '--confirm'], runtimeFor());
     expect(first.exitCode).toBe(CAPTURE_EXIT_CODES.ok);
 
-    // The primary key IS the logical identity (ADR-0030). The table is
-    // append-only and holds no UPDATE grant, so the only correct outcome is a
-    // refusal — never a silent replacement of the first snapshot.
+    // WHAT THIS DOES AND DOES NOT PROVE (ADR-0045 C2/D4). `runtimeFor()` pins
+    // `newSnapshotId` to the constant 'snap-minted', so the second run collides
+    // on the FULL primary key — `snapshotId` included. What is proven is append
+    // idempotence: a replay of an already-written snapshot is refused, never
+    // silently replaced, because the table is append-only and holds no UPDATE
+    // grant (ADR-0030).
+    //
+    // It is NOT a prohibition on a second snapshot for the same
+    // (clientId, organizationId, bifId). That series is expressly allowed and
+    // is what `listSeries` reads; `scored-bif-snapshot.db.spec.ts` writes a
+    // three-member one live. Under the real `main.ts` runtime `newSnapshotId`
+    // is `randomUUID()`, so two genuine captures do not collide at all — only
+    // this suite's fixed id makes them collide. Do not read this test as
+    // evidence that a snapshot series is impossible.
     const second = await runCapture([...ARGS, '--capture', '--confirm'], runtimeFor());
 
     expect(second.exitCode).toBe(CAPTURE_EXIT_CODES.captureFailed);
