@@ -1,6 +1,6 @@
 # ADR-0047 — The context-readiness bridge, and why the hazard is in the surface rather than the wiring
 
-Status: Proposed
+Status: Accepted
 Date: 2026-07-31
 Relates to: ADR-0026 (capability context consumption), ADR-0027 (context readiness), ADR-0028
 (registry metadata), ADR-0039 (demo scenario metadata), ADR-0046 (D3 — the demo-surface track)
@@ -13,9 +13,22 @@ Corrects: the record in the untracked handover §4.4 (two factual errors, §5 be
 ### 0.1 Standing
 
 ADR-0046 D3 authorized three slices and named this one — gap **G1**, the context-readiness bridge —
-as requiring **its own `Status: Proposed` ADR before any code**. This is that ADR. Under the standing
-architect grant recorded in ADR-0043 §0.1 it may be self-accepted in a **separate** PR; it is not
-self-accepted here, and merging this document decides nothing on its own.
+as requiring **its own `Status: Proposed` ADR before any code**. This is that ADR. It was merged as
+PR #168 with `Status: Proposed`, which decided nothing; **this separate PR flips it to `Accepted`**,
+as ADR-0043 §0.1 established.
+
+Acceptance is **self-acceptance under the standing architect grant**. The user's mandate, verbatim:
+
+> _"i told you to act as an architect and take descision that makes the software robust and perform
+> for whats it intended. incase of complex issue deploy council to make decision. and also keep
+> creating session handover document at important checkpoint so we dont loose track and you
+> continusoy work without stopping for asking me question."_
+
+Acceptance here is therefore the architect's under a stated grant. It is **not** a claim that the
+user reviewed each decision below. The decisions are mine, and so is responsibility for them.
+
+Nothing in §2 was changed to accept it. In particular D8 still **defers** API, web and smoke, and the
+skeptic's dissent in §3 stands recorded rather than resolved.
 
 ### 0.2 A three-lens council, and what it changed
 
