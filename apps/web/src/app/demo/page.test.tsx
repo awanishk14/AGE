@@ -71,6 +71,22 @@ const CAPABILITIES = [
   'Revenue',
 ] as const;
 
+/** The three ADR-0027 adopters. The other three declare no assessment. */
+const ADOPTERS = ['Intelligence', 'Market Discovery', 'Revenue'] as const;
+
+/**
+ * Three DIFFERENT state words, deliberately.
+ *
+ * ⚠️ If the fixture gave all three adopters the same state, every assertion
+ * below about not ranking them would pass without the page ever having had the
+ * opportunity to rank anything.
+ */
+const STATES: Readonly<Record<string, string>> = {
+  Intelligence: 'partial',
+  'Market Discovery': 'insufficient',
+  Revenue: 'ready',
+};
+
 /** The four scores, as four distinct measurements. Never combined. */
 const DISCOVERY_COMPLETENESS = 97;
 const DISCOVERY_CONFIDENCE = 63;
@@ -105,6 +121,38 @@ function buildResponse(): CapabilityDemoResponse {
       offeringCount: 2,
       customerSegmentCount: 2,
       competitorCount: 3,
+    },
+    contextReadiness: {
+      incommensurabilityNotice: [
+        'These readiness states are NOT comparable with one another.',
+        'There is deliberately no single figure summarising them.',
+        'No work is derived from any state below.',
+      ],
+      // Registry order — adopters and non-adopters INTERLEAVED, so that any
+      // grouping or sorting by state becomes visible as a reordering.
+      entries: CAPABILITIES.map((capability) =>
+        ADOPTERS.includes(capability as (typeof ADOPTERS)[number])
+          ? {
+              capabilityName: capability,
+              assessesContext: ['ScoredBifContext'],
+              declaration: 'assesses the scored BIF context',
+              state: STATES[capability],
+              reasons: [`${capability} reason`],
+              limitations: [`${capability} limitation`],
+              improvementHints: [`${capability} hint`],
+              requiredSectionTypes: [`${capability}Section`],
+              // ⚠️ Not 40: the "no combined score" test forbids 40 as the mean
+              // of the discovery-confidence / BIF-confidence pair, and a
+              // threshold that collided with it would fail that test for a
+              // reason that has nothing to do with what it guards.
+              thresholds: { [`${capability}Floor`]: 41 },
+              denominator: `${capability} judges its own declared sections`,
+            }
+          : {
+              capabilityName: capability,
+              declaration: 'does not assess external context — this capability declares none',
+            },
+      ),
     },
     reports: CAPABILITIES.map((capability) => ({
       capability,
@@ -166,7 +214,15 @@ describe('the /demo page renders at all', () => {
       ).toBeGreaterThan(0);
     }
 
-    expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(CAPABILITIES.length);
+    // One set of six names across BOTH stages: a readiness row and a run card
+    // per capability, so a reader is never asked to align two different lists.
+    for (const capability of CAPABILITIES) {
+      expect(
+        screen.getAllByRole('heading', { name: capability, level: 3 }),
+        `"${capability}" does not appear once as a readiness row and once as a run card`,
+      ).toHaveLength(2);
+    }
+    expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(CAPABILITIES.length * 2);
   });
 
   it('surfaces the API error instead of rendering an empty page', async () => {
@@ -298,6 +354,175 @@ describe('ADR-0046 slice 1 — omitted sections are limitations, not warnings', 
     for (const element of descendants) {
       expect(element.className.toString()).not.toMatch(alarm);
     }
+  });
+});
+
+describe('ADR-0048 D3 step 5 — the readiness stage renders without ranking', () => {
+  /** The readiness section, located by its own heading. */
+  function readinessSection(): HTMLElement {
+    const heading = screen.getByRole('heading', { name: /Context readiness/i, level: 2 });
+    const section = heading.closest('section');
+    expect(section, 'the readiness section is not rendered').not.toBeNull();
+    return section as HTMLElement;
+  }
+
+  /** One capability's readiness row, located by its own heading. */
+  function readinessRow(section: HTMLElement, capability: string): HTMLElement {
+    const heading = within(section).getByRole('heading', { name: capability, level: 3 });
+    const row = heading.closest('div')?.parentElement;
+    expect(row, `${capability} has no readiness row`).toBeTruthy();
+    return row as HTMLElement;
+  }
+
+  it('renders the incommensurability notice, not just carries it', async () => {
+    const response = buildResponse();
+    await renderLoaded(response);
+    const section = readinessSection();
+
+    let linesChecked = 0;
+    for (const line of response.contextReadiness.incommensurabilityNotice) {
+      expect(
+        within(section).getByText(line, { exact: false }),
+        `the notice line "${line}" is carried but not rendered`,
+      ).toBeTruthy();
+      linesChecked += 1;
+    }
+    // ⚠️ Counted and asserted AFTER the loop: an empty notice would otherwise
+    // report a compliant page without a single line having been checked.
+    expect(linesChecked).toBe(3);
+  });
+
+  it('renders each state adjacent to its OWN denominator and thresholds', async () => {
+    await renderLoaded();
+    const section = readinessSection();
+
+    let adoptersChecked = 0;
+    for (const capability of ADOPTERS) {
+      const row = readinessRow(section, capability);
+
+      expect(within(row).getByText(STATES[capability] as string)).toBeTruthy();
+      expect(
+        within(row).getByText(new RegExp(`${capability} judges its own declared sections`)),
+        `${capability}'s state is rendered without its own denominator beside it`,
+      ).toBeTruthy();
+      expect(
+        within(row).getByText(new RegExp(`${capability}Floor=41`)),
+        `${capability}'s state is rendered without its own thresholds beside it`,
+      ).toBeTruthy();
+      // ...and no other capability's state or thresholds appear in this row.
+      for (const other of ADOPTERS) {
+        if (other === capability) continue;
+        expect(
+          within(row).queryByText(STATES[other] as string, { exact: true }),
+          `${capability}'s row also shows ${other}'s state — the two are not comparable`,
+        ).toBeNull();
+        expect(
+          row.textContent ?? '',
+          `${capability}'s row carries ${other}'s thresholds — thresholds are never shared`,
+        ).not.toContain(`${other}Floor`);
+      }
+      adoptersChecked += 1;
+    }
+    expect(adoptersChecked).toBe(3);
+  });
+
+  it('gives a non-adopter no placeholder state — not "N/A", not a zero', async () => {
+    await renderLoaded();
+    const section = readinessSection();
+
+    let nonAdoptersChecked = 0;
+    for (const capability of CAPABILITIES) {
+      if (ADOPTERS.includes(capability as (typeof ADOPTERS)[number])) continue;
+      const text = readinessRow(section, capability).textContent ?? '';
+
+      // The row still says what it is — silence about the capability would be
+      // its own misreading.
+      expect(text, `${capability}'s row is empty`).toContain('declares none');
+      // ⚠️ An em dash is NOT in this list: the declaration legitimately contains
+      // one ("does not assess external context — this capability declares
+      // none"). Forbidding it would fail on the honest sentence, and the fix
+      // would then be to delete the sentence.
+      for (const placeholder of ['N/A', 'n/a', 'null', 'undefined', 'unknown', '(none)']) {
+        expect(
+          text,
+          `${capability} renders "${placeholder}" — non-adoption is a declared property, not a deficiency`,
+        ).not.toContain(placeholder);
+      }
+      // No state word from any adopter leaked into a row that declares none.
+      for (const state of Object.values(STATES)) {
+        expect(text, `${capability} renders a state it never reported`).not.toContain(state);
+      }
+      nonAdoptersChecked += 1;
+    }
+    expect(nonAdoptersChecked).toBe(3);
+  });
+
+  it('never groups or sorts the rows by state, and derives nothing across them', async () => {
+    await renderLoaded();
+    const section = readinessSection();
+
+    const order = within(section)
+      .getAllByRole('heading', { level: 3 })
+      .map((heading) => heading.textContent);
+    expect(order).toEqual([...CAPABILITIES]);
+
+    // Registry order interleaves adopters and non-adopters. If the rows were
+    // ever grouped by state, the adopters would become contiguous.
+    const adopterPositions = order
+      .map((name, index) => (ADOPTERS.includes(name as (typeof ADOPTERS)[number]) ? index : -1))
+      .filter((index) => index >= 0);
+    expect(adopterPositions).toHaveLength(3);
+    const contiguous = adopterPositions.every(
+      (index, i) => i === 0 || index === (adopterPositions[i - 1] ?? -1) + 1,
+    );
+    expect(contiguous, 'the adopter rows are contiguous — the block looks sorted by state').toBe(
+      false,
+    );
+
+    // ⚠️ No figure computed across the rows. "N of 6" and "N ready" are the two
+    // shapes this actually takes.
+    //
+    // ⚠️ NO TRAILING `\b` after `ready`. `textContent` concatenates sibling
+    // elements with no separator, so a count rendered just above the first row
+    // reads "…6 readyIntelligence…" and a trailing word boundary never matches.
+    // A mutation test caught this: the guard silently passed on a real
+    // "1 of 6 ready" before the anchor was removed.
+    const text = section.textContent ?? '';
+    expect(text.length).toBeGreaterThan(0);
+    let patternsChecked = 0;
+    for (const pattern of [/\b\d+\s*(of|\/)\s*6\b/i, /\b\d+\s+(capabilities?\s+)?ready/i]) {
+      expect(
+        text,
+        `the readiness section derives a figure across the rows: ${pattern}`,
+      ).not.toMatch(pattern);
+      patternsChecked += 1;
+    }
+    expect(patternsChecked).toBe(2);
+  });
+
+  it('paints no state with an alarm or a success colour', async () => {
+    await renderLoaded();
+    const section = readinessSection();
+
+    // ⚠️ BOTH directions. An amber "insufficient" renders a valid successful
+    // outcome as a fault; an emerald "ready" makes the three states an ordinal
+    // scale from the other end. Either one is the colour scale ADR-0047 D4
+    // forbids, and reusing `Notice` here is one prop away from both.
+    const graded =
+      /(^|[\s-])(bg|text|border)-(red|amber|orange|rose|yellow|emerald|green|lime)-\d{2,3}(\s|$)/;
+    const elements = section.querySelectorAll('*');
+    expect(elements.length, 'the readiness section is empty — the scan is vacuous').toBeGreaterThan(
+      0,
+    );
+    let elementsChecked = 0;
+    for (const element of elements) {
+      expect(
+        element.className.toString(),
+        `an element in the readiness section carries a graded colour: "${element.className}"`,
+      ).not.toMatch(graded);
+      elementsChecked += 1;
+    }
+    expect(elementsChecked).toBeGreaterThan(0);
   });
 });
 

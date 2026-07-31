@@ -9,6 +9,8 @@ import {
   type BusinessDiscoveryDemoSummary,
   type CapabilityDemoReport,
   type CapabilityDemoResponse,
+  type ContextReadinessDemoEntry,
+  type ContextReadinessDemoReport,
 } from '@/lib/demo';
 
 type LoadState =
@@ -179,6 +181,136 @@ function DiscoveryCard({ discovery }: { discovery: BusinessDiscoveryDemoSummary 
   );
 }
 
+/**
+ * One capability's readiness row.
+ *
+ * ⚠️ The state is rendered as PLAIN NEUTRAL TEXT, never through `Notice`.
+ * `Notice` renders an emerald/amber pair off a boolean; pointing it at a
+ * readiness state would paint three incommensurable measurements onto one
+ * good/bad axis — the exact ordinal colour scale ADR-0047 D4 forbids, arrived
+ * at by component reuse rather than by anyone deciding to. It would also render
+ * "insufficient context" as a fault, when insufficient context is a valid
+ * successful outcome and a limitation of the intake, never negative evidence
+ * about the business (ADR-0026 D4).
+ *
+ * ⚠️ The state is always rendered ADJACENT to this capability's own denominator
+ * and its own thresholds. A state shown on its own is what invites the
+ * cross-capability comparison the notice denies.
+ *
+ * ⚠️ A non-adopter renders its declaration and NOTHING ELSE — no dash, no
+ * "N/A", no empty state chip, no greyed-out row. Non-adoption is a declared
+ * property of the capability, and any placeholder publishes it as a deficiency
+ * (ADR-0047 D5).
+ */
+function ReadinessRow({ entry }: { entry: ContextReadinessDemoEntry }) {
+  return (
+    <div className="rounded border border-neutral-200 p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="text-sm font-semibold">{entry.capabilityName}</h3>
+        {entry.state !== undefined && (
+          <span className="rounded bg-neutral-100 px-2 py-0.5 font-mono text-xs text-neutral-700">
+            {entry.state}
+          </span>
+        )}
+      </div>
+
+      <p className="mt-1 text-sm text-neutral-600">{entry.declaration}</p>
+
+      {entry.denominator !== undefined && (
+        <p className="mt-2 text-xs text-neutral-500">
+          <span className="font-semibold uppercase tracking-wide">Denominator</span> —{' '}
+          {entry.denominator}
+        </p>
+      )}
+
+      {entry.requiredSectionTypes !== undefined && (
+        <p className="mt-1 font-mono text-xs text-neutral-500">
+          requires: {entry.requiredSectionTypes.join(', ')}
+        </p>
+      )}
+
+      {entry.thresholds !== undefined && (
+        <p className="mt-1 font-mono text-xs text-neutral-500">
+          {/* This capability's OWN thresholds, displayed beside its own state.
+              Never merged with another capability's and never compared. */}
+          own thresholds:{' '}
+          {Object.entries(entry.thresholds)
+            .map(([key, value]) => `${key}=${value}`)
+            .join(' · ')}
+        </p>
+      )}
+
+      <ReasonList label="Reasons" reasons={entry.reasons} />
+      <ReasonList label="Limitations of the context" reasons={entry.limitations} />
+      <ReasonList label="What would raise readiness" reasons={entry.improvementHints} />
+    </div>
+  );
+}
+
+/** A named list of sentences, rendered only when the capability supplied one. */
+function ReasonList({ label, reasons }: { label: string; reasons?: readonly string[] }) {
+  // ⚠️ Absent stays absent — an empty list is not rendered as "(none)" here,
+  // because for a non-adopter there is nothing to report rather than nothing
+  // found, and the two must not look the same.
+  if (reasons === undefined || reasons.length === 0) return null;
+  return (
+    <div className="mt-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{label}</p>
+      <ul className="mt-1 space-y-0.5">
+        {reasons.map((reason) => (
+          <li key={reason} className="text-xs text-neutral-600">
+            {reason}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * Stage two of the pipeline, rendered between intake and the capability runs.
+ *
+ * ⚠️ `entries` is rendered in the order the API supplied — fixed registry
+ * order, the same six names in the same order as the run cards below. It is
+ * never sorted, filtered or grouped by state: grouping the assessing
+ * capabilities together *is* what sorting by state looks like once the labels
+ * are stripped.
+ *
+ * ⚠️ Nothing is computed across the rows. No "3 of 6 ready", no overall state,
+ * no progress bar — the three states differ in what they measure, so any figure
+ * across them would be expressed in a scale that does not exist.
+ *
+ * ⚠️ The incommensurability notice is rendered ABOVE the rows and is not
+ * collapsible: a reader who never opens it is exactly the reader who would read
+ * three states as a ranking.
+ */
+function ContextReadinessSection({ readiness }: { readiness: ContextReadinessDemoReport }) {
+  return (
+    <section className="rounded-lg border border-neutral-200 p-4 shadow-sm">
+      <h2 className="text-lg font-semibold">
+        Context readiness{' '}
+        <span className="font-normal text-neutral-500">
+          (assessed before the runs, and never a gate on them)
+        </span>
+      </h2>
+
+      <div className="mt-3 space-y-1 rounded border border-neutral-200 bg-neutral-50 p-3">
+        {readiness.incommensurabilityNotice.map((line) => (
+          <p key={line} className="text-xs text-neutral-600">
+            {line}
+          </p>
+        ))}
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {readiness.entries.map((entry) => (
+          <ReadinessRow key={entry.capabilityName} entry={entry} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function SectionList({
   label,
   types,
@@ -282,6 +414,10 @@ export default function DemoPage() {
           </section>
 
           <DiscoveryCard discovery={state.data.businessDiscovery} />
+
+          {/* intake → context readiness → capability runs. Rendered between the
+              two stages it sits between, and never as a gate on the runs below. */}
+          <ContextReadinessSection readiness={state.data.contextReadiness} />
 
           <div className="space-y-4">
             {state.data.reports.map((report) => (
