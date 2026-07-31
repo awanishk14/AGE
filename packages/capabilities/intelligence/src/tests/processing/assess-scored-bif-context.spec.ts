@@ -477,4 +477,183 @@ describe('assessScoredBifContext (ADR-0026 Decision 5)', () => {
       ]);
     });
   });
+  /**
+   * ADR-0027 Decision 1 — the forbidden-vocabulary scan.
+   *
+   * ⚠️ THIS CAPABILITY WAS THE LEAST-DEFENDED OF THE THREE ADOPTERS. Market
+   * Discovery and Revenue have carried this scan since they adopted the
+   * pattern; Intelligence did not, and it is the adopter that needs it MOST:
+   * it is the only one that emits a non-empty `items` array, so it is the only
+   * one with somewhere for derived work to hide.
+   *
+   * ⚠️ THE "NO ITEMS" TEST THE OTHER TWO USE DOES NOT TRANSFER. Market Discovery
+   * and Revenue assert `output.items` is `[]` structurally; Intelligence's items
+   * are legitimately non-empty (`assess-scored-bif-context.ts` builds
+   * `BusinessContextSupportItem[]`). Copying that assertion here would fail
+   * against correct code, and — worse — a slice that "fixed" it by checking
+   * emptiness would be asserting the opposite of the real rule. ADR-0027's
+   * constraint is about item **content**, never item count.
+   */
+  describe('no opportunity is derived, ranked, named or hinted at (ADR-0027 Decision 1)', () => {
+    const contexts = (): ScoredBifContext[] => [
+      sampleContext(),
+      fullyScoredContext(),
+      withOverrides(sampleContext(), { contextVersion: '9.9.9' }),
+    ];
+
+    /**
+     * Prose this capability AUTHORS. Deliberately not the whole result.
+     *
+     * ⚠️ Carried-through DATA is excluded on purpose and asserted separately
+     * below: `sectionType` / `sectionName` are canonical BIF section names
+     * restated verbatim from the projection, and one of them is literally
+     * `'Vision & Strategy'`. Scanning them would flag the BIF's own vocabulary
+     * as though this capability had invented it. Restating a section's name is
+     * not deriving strategy — but authoring a sentence about it could be, which
+     * is why the authored text is scanned in full.
+     */
+    function authoredText(result: ReturnType<typeof assessScoredBifContext>): string[] {
+      return [
+        ...(result.output.sufficiency?.reasons ?? []),
+        ...(result.output.sufficiency?.warnings ?? []),
+        ...result.summary.limitations,
+        ...result.summary.improvementHints,
+        ...result.summary.unsupportedSections.map((section) => section.reason),
+        ...result.summary.missingSections.map((section) => section.limitation),
+      ];
+    }
+
+    /**
+     * Neutralize CANONICAL BIF SECTION NAMES as tokens before scanning.
+     *
+     * ⚠️ The authored sentences interpolate the section they are about, and one
+     * canonical name — `'Vision & Strategy'` — collides with the forbidden
+     * vocabulary. Naming the section a sentence concerns is not deriving
+     * strategy; it is restating the BIF's own noun. Exactly the same
+     * neutralization is applied in `packages/demo-runtime/src/tests/
+     * context-readiness.spec.ts` and `apps/demo/src/tests/run.spec.ts`.
+     *
+     * ⚠️ It replaces a TOKEN, so the remainder of every sentence is still
+     * scanned in full — the forbidden pattern is never loosened and no line is
+     * ever skipped. It is driven off the context's own section names rather
+     * than a hard-coded string, so a future canonical rename cannot silently
+     * un-neutralize it or leave a stale exemption behind.
+     */
+    function sectionNameNeutralizer(context: ScoredBifContext): (line: string) => string {
+      const names = [...context.sections, ...context.omittedSections]
+        .map((section) => section.name)
+        .filter((name) => name.length > 0)
+        // Longest first, so a name that contains another is replaced whole.
+        .sort((left, right) => right.length - left.length);
+
+      return (line: string): string =>
+        names.reduce((current, name) => current.split(name).join('<section>'), line);
+    }
+
+    it('never names an opportunity, plan, action or recommendation in authored text', () => {
+      // The same pattern Market Discovery and Revenue apply. ⚠️ Never loosen it
+      // to make a failure go away — a failure here means the capability started
+      // saying something it is not allowed to say.
+      const forbidden =
+        /\b(opportunit(y|ies)|recommend(ed|ation|ations)?|plan|action|strateg(y|ic|ies)|next step|should|priorit)/i;
+
+      let scanned = 0;
+      for (const context of contexts()) {
+        const result = assessScoredBifContext(CONTEXT, context, { producedAt: PRODUCED_AT });
+        const neutralize = sectionNameNeutralizer(context);
+
+        for (const line of authoredText(result)) {
+          scanned += 1;
+          // ⚠️ Canonical section names are neutralized as TOKENS, so the rest of
+          // the sentence is still scanned in full. The pattern itself is never
+          // loosened, and no line is ever skipped wholesale.
+          expect(neutralize(line), line).not.toMatch(forbidden);
+        }
+      }
+
+      // ⚠️ Asserted AFTER the loop, never before it: a scan that examined
+      // nothing would otherwise report perfect compliance.
+      expect(scanned).toBeGreaterThan(0);
+    });
+
+    it('scans the carried warnings and reasons too — they reach a reader verbatim', () => {
+      // These are authored by the scoring/projection layer, not here, and are
+      // carried through UNSUPPRESSED by design. They are still scanned, because
+      // "someone else wrote it" is not a defence when this capability is what
+      // puts the sentence in front of a reader.
+      const forbidden = /\b(opportunit(y|ies)|recommend(ed|ation|ations)?|next step|priorit)/i;
+
+      let scanned = 0;
+      for (const context of contexts()) {
+        const result = assessScoredBifContext(CONTEXT, context, { producedAt: PRODUCED_AT });
+        for (const line of [...result.summary.carriedWarnings, ...result.summary.carriedReasons]) {
+          scanned += 1;
+          expect(line, line).not.toMatch(forbidden);
+        }
+      }
+      expect(scanned).toBeGreaterThan(0);
+    });
+
+    it('emits items that carry no authored prose at all — only carried data', () => {
+      // The structural half, and the reason the content scan above is
+      // sufficient: an item has nowhere to put a sentence. Every field is a
+      // section identifier, a copied score, or field provenance. If an item ever
+      // grows a prose field, this fails and `authoredText` must be widened to
+      // include it — that is the point of pinning the key set.
+      // ⚠️ Counted ACROSS contexts and asserted after the loop, never per
+      // context. `output.items` is NOT uniform — a context whose sections are
+      // all unsupported legitimately emits none. Asserting a per-context floor
+      // tests the fixture, not the rule; asserting nothing at all would let an
+      // empty scan report compliance.
+      let inspected = 0;
+
+      for (const context of contexts()) {
+        const result = assessScoredBifContext(CONTEXT, context, { producedAt: PRODUCED_AT });
+
+        for (const item of result.output.items) {
+          inspected += 1;
+          expect(Object.keys(item).sort()).toEqual(
+            [
+              'capability',
+              'createdAt',
+              'id',
+              'sectionCompletenessScore',
+              'sectionConfidenceScore',
+              'sectionName',
+              'sectionType',
+              'supportedFields',
+            ].sort(),
+          );
+
+          for (const field of item.supportedFields) {
+            expect(Object.keys(field).sort()).toEqual(
+              ['confidence', 'key', 'required', 'source'].sort(),
+            );
+          }
+        }
+      }
+
+      expect(inspected).toBeGreaterThan(0);
+    });
+
+    it('ranks nothing — items stay in projection order, never sorted by score', () => {
+      // ⚠️ "Rank" and "shortlist" are two of ADR-0027 Decision 1's six forbidden
+      // verbs, and neither is visible in a vocabulary scan. An items array
+      // ordered by score IS a shortlist, whatever it is called.
+      for (const context of contexts()) {
+        const result = assessScoredBifContext(CONTEXT, context, { producedAt: PRODUCED_AT });
+        const emitted = result.output.items.map((item) => item.sectionType);
+        const projectionOrder = context.sections
+          .map((section) => String(section.type))
+          .filter((type) => emitted.includes(type));
+
+        expect(emitted).toEqual(projectionOrder);
+      }
+
+      // And the module does not reach for a comparator at all.
+      const source = readFileSync(MODULE_PATH, 'utf8');
+      expect(source).not.toMatch(/\.sort\(/);
+      expect(source).not.toMatch(/\.slice\(0,/);
+    });
+  });
 });
