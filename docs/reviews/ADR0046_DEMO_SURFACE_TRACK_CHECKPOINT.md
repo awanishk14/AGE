@@ -198,18 +198,106 @@ package, and **`produceAndCapture` has still never run** and must not (D7).
 
 ---
 
-## §4 — Remaining slices
+## §4 — Slice 3: the context-readiness bridge (ADR-0047, PR #170)
 
-| #   | Slice                                  | Gated by                                 |
-| --- | -------------------------------------- | ---------------------------------------- |
-| 3   | Wire the context-readiness bridge (G1) | **its own `Status: Proposed` ADR first** |
+**Merged `09a2087`** (commit `30fcb2c`), base `main` @ `6b7b6a5`. CI `Lint, Typecheck, Test, Build`
+green in 3m9s; `ci-db.yml` correctly did **not** trigger — no `apps/capture` or persistence path was
+touched, which is an expected non-trigger, not a skipped gate.
 
-⚠️ Slice 3 is the highest-value **and** highest-hazard work in the repo: it hands a
-`ScoredBifContext` toward the capability runner for the first time — the coupling ADR-0026/0027 built
-a separate entry point to prevent. Preconditions are mandatory: own ADR · an invariant test written
-and **failing before** the wiring exists · the test scans emitted string **content**, never
-`items.length` · `run` is never gated on context.
+Governed by **ADR-0047**, which was `Status: Proposed` in #168 and **Accepted in #169** (`6b7b6a5`,
+post-merge CI success) before any of this code was written.
 
-⚠️ Slice 2b carries ADR-0046 **D7**: never run `--mode produceAndCapture` against any durable database
-until an authenticated principal exists. `produceOnly` opens no connection and constructs no
-`PrismaClient`, which is precisely why it is not gated by ADR-0043 open question 2.
+### What shipped
+
+| File                                                        |                                                                                                          |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `packages/demo-runtime/src/scored-bif-context.ts`           | **new (D2)** — `produceDemoScoredBifContext`, the demo's **single** `ScoredBifContext` production point. |
+| `packages/demo-runtime/src/context-readiness.ts`            | **new (D1/D3/D4/D5/D8/D9)** — `buildContextReadinessReport`.                                             |
+| `packages/demo-runtime/src/tests/context-readiness.spec.ts` | **new** — 12 invariant tests (D7a–e, D8, D3).                                                            |
+| `apps/demo/src/run.ts`                                      | `printContextReadiness`, the third stage.                                                                |
+| `apps/demo/src/tests/run.spec.ts`                           | +2 tests: the D7a **stdout** vocabulary scan and the D4 no-aggregate / fixed-order test.                 |
+| `apps/demo/sample-output.txt`                               | regenerated — **60 insertions, 0 deletions**.                                                            |
+
+The demo pipeline is now **intake → context readiness → capability runs**. This is the **first
+non-test caller** of the ADR-0027 readiness pattern; a pattern written and never read is
+indistinguishable from one that does not work.
+
+### ⚠️ Do not undo — the rules this slice encodes
+
+- **The hazard is the RENDERING, not the wiring.** Three of ADR-0027 D1's six forbidden verbs
+  (**rank, score, shortlist**) are acts of a _presentation_ layer. Every assessor already obeyed D1;
+  what could break it is a surface putting three states in one column. Hence: **fixed registry
+  order** (never sorted/grouped/reordered by state), each state printed **adjacent to its own**
+  `requiredSectionTypes` + `thresholds`, **no aggregate of any kind**, and the incommensurability
+  stated **on the surface** rather than as a skippable footnote (D4).
+- **The three states are incommensurable in DENOMINATOR, not threshold.** Intelligence judges _every
+  present section_ and declares **no required set**; Market Discovery and Revenue judge **only their
+  own declared required sections**. Printing a state without its denominator invites exactly the
+  comparison ADR-0027 D2 refused.
+- **`producedAt` is a required call-site parameter and THROWS if omitted** (D3). Never `new Date()`.
+  The demo passes a **copy** of the frozen scenario time — `Object.freeze` is shallow, so the `Date`
+  is copied rather than handed out. The producer's **single** `new Date(` is pinned by test to the
+  exact shape `new Date(scenario.constructedAt.getTime())`.
+- **`run` is never gated on context, and must never become so.** The runs take no argument derived
+  from readiness. **D7b** — byte-identical run reports under a `blocked` context — is the only test
+  that can prove it; a source-scan of the capability packages could not, because a gate introduced
+  here would live in `demo-runtime`, not in a capability.
+- **`CapabilityRegistryEntry.consumes` did NOT gain `ScoredBifContext`** (D6). This slice was
+  precisely the pressure that would have added it.
+- **API / web / smoke remain DEFERRED (D8).** Scope identifiers are kept **out of the readiness shape
+  entirely**, so the question of putting them in a public read-only payload stays open rather than
+  being decided by omission.
+- **Non-adopters carry no `state`** — no `null`, no `0`, no `"N/A"`, no defaulted `sufficiency`
+  (D5). Non-adoption is a **declared property**, never a deficiency and never a lesser capability.
+- **Tests scan emitted string CONTENT, never `items.length`.** `output.items` is **not uniform**:
+  Intelligence **can be non-empty**; Market Discovery and Revenue are structurally always `[]`. A
+  length check is _wrong_ for one and _vacuous_ for the other two.
+
+### Three judgement calls made during implementation — carry these
+
+1. **The D7a stdout scan is SCOPED to the readiness stage, not the whole golden file.** The capability
+   RUN output below it legitimately names opportunities (`opportunityId`,
+   `opportunityType: "DEMAND_CAPTURE"`, `priority: "HIGH"`). ADR-0027 D1 binds the readiness
+   **assessment**, not the runs, whose whole job is to produce decision objects. Scanning the runs
+   would forbid the product from doing the thing it exists to do.
+2. **`'Vision & Strategy'` is a CANONICAL BIF SECTION NAME**, not derived strategy — verified against
+   the full 12-name list as the **only** such collision. It is **neutralized as a token** so the
+   remainder of each line is still scanned. ⚠️ The forbidden-vocabulary regex was **never loosened**,
+   and a whole-line exemption was tried first and **rejected** because the name also appears embedded
+   in improvement-hint lists.
+3. **Two pre-existing source guards in `business-discovery.spec.ts` were REPOINTED, not relaxed.** D2
+   moved the three `scenario.*` reads one module down into the producer; a guard left scanning
+   `business-discovery.ts` would have **passed by scanning the wrong file**. They now assert the reads
+   where they happen and additionally pin the producer's single `new Date(`.
+
+⚠️ **`ContextReadinessThresholds` is a UNION of the three published threshold types, not a flattened
+`Record<string, number>`.** Each adopter publishes a differently-shaped set because each judges a
+different denominator; one index signature would assert a common shape they do not have, and would
+let a future edit swap one capability's thresholds for another's without the compiler objecting.
+⚠️ This surfaced **only at `tsc`** — vitest does not typecheck. The three published constants are
+`interface`s, which have no implicit index signature.
+
+### Baseline unmoved
+
+`sample-output.txt` grew by **60 lines with zero deletions**. All six demo facts hold: 6 capabilities,
+6 pending approvals, accounting invariant OK, no side effects, **7 populated / 5 omitted** canonical
+sections, and **97/63 intake vs 12/17 BIF** — four scores, never combined.
+
+---
+
+## §5 — Remaining slices
+
+**None on this track.** Slices 1 (#162), 2a (#164), 2b (#166) and 3 (#170) are all **DONE**;
+ADR-0046 D3's demo-surface track is complete. Do not rebuild any of them.
+
+Two follow-ups are **recorded, not authorized** — each needs its own decision first:
+
+| Follow-up                                                   | Why it is not this track                                                                                                                                             |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A forbidden-vocabulary scan for **Intelligence's own spec** | Only **two** of the three adopters have one; Intelligence does not, making it the least-defended path. Adding one belongs in **its own** spec, as a separate change. |
+| Surfacing readiness over **API / web / smoke**              | **Deferred by ADR-0047 D8.** Readiness envelopes carry scope identifiers that must not reach the public read-only payload by omission.                               |
+
+⚠️ ADR-0046 **D7** still stands and is unaffected by any of this: never run `age-capture` in
+`produceAndCapture` against any durable database until an authenticated principal exists.
+`produceOnly` opens no connection and constructs no `PrismaClient`, which is precisely why it is not
+gated by ADR-0043 open question 2.
