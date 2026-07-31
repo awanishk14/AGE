@@ -1,9 +1,13 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, mergeConfig } from 'vitest/config';
 
-export default defineConfig({
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    include: ['src/**/*.test.{ts,tsx}'],
-  },
-});
+import { vitestBaseConfig } from '../../vitest.base.config';
+
+export default mergeConfig(
+  vitestBaseConfig,
+  defineConfig({
+    test: {
+      environment: 'jsdom',
+      include: ['src/**/*.test.{ts,tsx}'],
+    },
+  }),
+);
