@@ -1,6 +1,6 @@
 # ADR-0048 — Splitting ADR-0047 D8, and the rendering layer that nothing tests
 
-Status: Proposed
+Status: Accepted
 Date: 2026-07-31
 Relates to: ADR-0027 (context readiness), ADR-0046 (D2 — the reframe; D3 — the demo-surface track),
 ADR-0047 (D1, D4, D8, D9 — the context-readiness bridge)
@@ -15,11 +15,10 @@ authorized (D1 below)
 
 ADR-0047 D8 deferred surfacing context readiness over the API, the web `/demo` page and the API
 smoke script, and stated that the deferral needed its own decision rather than a guess. This is that
-decision. It is merged with `Status: Proposed`, which decides nothing; a separate PR flips it to
-`Accepted`, as ADR-0043 §0.1 established and ADR-0047 §0.1 followed.
+decision. It was merged as PR #177 with `Status: Proposed`, which decided nothing; **this separate PR
+flips it to `Accepted`**, as ADR-0043 §0.1 established and ADR-0047 §0.1 followed.
 
-Acceptance, when it comes, is **self-acceptance under the standing architect grant**. The user's
-mandate, verbatim:
+Acceptance is **self-acceptance under the standing architect grant**. The user's mandate, verbatim:
 
 > _"i told you to act as an architect and take descision that makes the software robust and perform
 > for whats it intended. incase of complex issue deploy council to make decision. and also keep
@@ -28,6 +27,9 @@ mandate, verbatim:
 
 Acceptance is therefore the architect's under a stated grant. It is **not** a claim that the user
 reviewed each decision below. The decisions are mine, and so is responsibility for them.
+
+Nothing in §2 was changed to accept it. In particular D4 still **defers web rendering**, and both
+dissents in §4 stand recorded rather than resolved.
 
 ### 0.2 A four-lens council, and the finding none of them was asked for
 
