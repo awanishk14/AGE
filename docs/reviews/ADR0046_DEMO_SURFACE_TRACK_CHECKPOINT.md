@@ -292,12 +292,89 @@ ADR-0046 D3's demo-surface track is complete. Do not rebuild any of them.
 
 Two follow-ups are **recorded, not authorized** — each needs its own decision first:
 
-| Follow-up                                                   | Why it is not this track                                                                                                                                             |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A forbidden-vocabulary scan for **Intelligence's own spec** | Only **two** of the three adopters have one; Intelligence does not, making it the least-defended path. Adding one belongs in **its own** spec, as a separate change. |
-| Surfacing readiness over **API / web / smoke**              | **Deferred by ADR-0047 D8.** Readiness envelopes carry scope identifiers that must not reach the public read-only payload by omission.                               |
+| Follow-up                                                       | Why it is not this track                                                                                                               |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~A forbidden-vocabulary scan for **Intelligence's own spec**~~ | ✅ **DONE — PR #173 @ `f6ae1c1`.** See §6.                                                                                             |
+| Surfacing readiness over **API / web / smoke**                  | **Deferred by ADR-0047 D8.** Readiness envelopes carry scope identifiers that must not reach the public read-only payload by omission. |
 
 ⚠️ ADR-0046 **D7** still stands and is unaffected by any of this: never run `age-capture` in
 `produceAndCapture` against any durable database until an authenticated principal exists.
 `produceOnly` opens no connection and constructs no `PrismaClient`, which is precisely why it is not
 gated by ADR-0043 open question 2.
+
+---
+
+## §6 — Follow-on hardening: Intelligence's forbidden-vocabulary scan (PR #173 @ `f6ae1c1`)
+
+Not a slice of the ADR-0046 D3 track — it discharges the first follow-up §5 recorded. Needed no new
+ADR: ADR-0027 Decision 1 already forbids the behaviour; only the **test** was missing.
+
+### What was actually exposed
+
+Intelligence is one of the three ADR-0027 context-readiness adopters. **Market Discovery and Revenue
+each scan their own emitted strings for forbidden vocabulary; Intelligence did not.** Its only
+defence was the demo-runtime scan one layer up, which sees the **rendered** surface — so a sentence
+the capability authored but the demo did not print was scanned by nothing.
+
+Tests only. **No source change**, and the golden `sample-output.txt` is untouched.
+
+### What shipped — 5 tests, over 3 contexts (sparse sample · fully scored · version override)
+
+- **authored text** — `sufficiency.reasons` / `.warnings`, `summary.limitations` /
+  `.improvementHints`, `unsupportedSections[].reason`, `missingSections[].limitation` — never names
+  an opportunity, plan, action, recommendation, next step or priority.
+- **carried warnings and reasons are scanned too.** They are authored by the scoring/projection
+  layer, but "someone else wrote it" is not a defence when this capability is what puts the sentence
+  in front of a reader.
+- **items carry no authored prose at all.** The key set is **pinned** — `capability`, `createdAt`,
+  `id`, `sectionCompletenessScore`, `sectionConfidenceScore`, `sectionName`, `sectionType`,
+  `supportedFields` — so an item that grows a prose field fails here instead of silently escaping the
+  content scan.
+- **nothing is ranked.** Items stay in projection order, and the module reaches for no comparator
+  (`.sort(` / `.slice(0,` are both absent). ⚠️ "Rank" and "shortlist" are two of Decision 1's six
+  forbidden verbs and **neither is visible to a vocabulary scan** — an items array ordered by score
+  _is_ a shortlist whatever it is called.
+
+### ⚠️ Do not undo — three rules this encodes
+
+- **`'Vision & Strategy'` is neutralized as a TOKEN, never exempted, and the pattern was never
+  loosened.** It is a canonical BIF section name, not derived strategy; the authored sentences
+  interpolate the section they are about. The remainder of every line is still scanned in full and no
+  line is skipped wholesale. ⚠️ The neutralizer is driven off **the context's own section names**
+  (`sections` **and** `omittedSections`, longest-first), _not_ a hard-coded string — so a canonical
+  rename cannot leave a stale exemption behind or silently un-neutralize it. This is the same
+  approach already used in `packages/demo-runtime/src/tests/context-readiness.spec.ts` and
+  `apps/demo/src/tests/run.spec.ts`; it is now the established treatment in three places.
+- **Item counts accumulate ACROSS contexts and are asserted after the loop, never per context.**
+  ⚠️ `output.items` is **not uniform** — a context whose sections are all unsupported legitimately
+  emits none. A per-context floor tests the fixture, not the rule; asserting nothing at all would let
+  an empty scan report perfect compliance. Both halves matter.
+- Every scan counts what it examined and asserts that count **after** the loop — the repo's
+  guard-test convention, applied here to string scans rather than file walks.
+
+### Proof it is non-vacuous
+
+An emitted sentence was temporarily reworded from `…limiting this assessment` to
+`…limiting this recommendation`; the scan failed on exactly that test, and the source was restored.
+A scan that cannot be made to fail is not evidence.
+
+### ⚠️ Still open — recorded here, deliberately NOT folded in
+
+**Intelligence has no sanctioned non-derivation notice.** Market Discovery emits
+`'It derives no market opportunity'` and Revenue `'It derives no revenue plan'`; Intelligence states
+no equivalent. The scan proves it says nothing forbidden — it cannot make the capability say the one
+thing that is affirmatively useful. Adding it **changes emitted text**, and therefore
+`apps/demo/sample-output.txt`, so it is its own change and must regenerate the golden.
+
+### Gates
+
+Package tests 91/91 + typecheck · `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build` ·
+`pnpm demo` · `pnpm --filter @age/api test` · `pnpm --filter @age/api smoke:demo`.
+PR CI green (all 15 steps executed, including `API demo runtime smoke`); post-merge `main` CI
+**success** @ `f6ae1c1`. ⚠️ `ci-db.yml` correctly did **not** trigger — the change touches neither
+`apps/capture` nor any persistence path. An expected non-trigger, not a skipped gate.
+
+### Changed files
+
+`packages/capabilities/intelligence/src/tests/processing/assess-scored-bif-context.spec.ts`
+(+179, tests only).
