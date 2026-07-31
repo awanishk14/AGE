@@ -3,8 +3,10 @@
 > Per-PR record for the track opened by ADR-0048 (which split ADR-0047 D8).
 > **Append a section per merged PR.** The working-memory handover keeps pointers only.
 >
-> Track state: **D5 shipped (#179), D4 shipped (#181).** Next is **D3 step 4** — the readiness block
-> on API + smoke. **D3's web step remains deferred**, though its D4 harness precondition is now met.
+> Track state: **D5 shipped (#179), D4 shipped (#181), D3 step 4 shipped (#184).**
+> The only step left is **D3 step 5 — readiness on web**, which remains deferred:
+> its D4 harness precondition is met, but ⚠️ **both of ADR-0048 §4's unresolved dissents point at
+> it.** Read §4 before starting it.
 
 | PR   | SHA       | What                                                           | Kind                |
 | ---- | --------- | -------------------------------------------------------------- | ------------------- |
@@ -13,6 +15,8 @@
 | #179 | `a61f59e` | D5 — the published-item-surface guard                          | tests               |
 | #180 | `168b5fa` | Standing-residuals extraction                                  | docs                |
 | #181 | `3fca556` | D4 — a web rendering test that executes in `ci.yml`            | tests + test config |
+| #183 | `5caa191` | #166 capture-residual extraction                               | docs                |
+| #184 | `a686397` | D3 step 4 — the readiness stage on the API and smoke           | source + tests      |
 
 ---
 
@@ -147,10 +151,10 @@ asserts the count after the loop.**
 
 ## §4 — What remains on this track
 
-| Step                                     | State                                                                                                                                                                                                                                                                                                                |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D3 step 4 — readiness on **API + smoke** | ⬅️ **Next. Gated by nothing.** Field-by-field, **no aggregate**. `DEMO_SCENARIO_METADATA.constructedAt` already supplies ADR-0047 D3's `producedAt`. ⚠️ ADR-0048 §4 records the skeptic's view that this is **low-value on its own**, authorized mainly so the web step has something to render — **keep it small.** |
-| D3 step 5 — readiness on **web**         | Harness precondition now met by #181. ⚠️ **Read ADR-0048 §4 first** — both unresolved dissents point here.                                                                                                                                                                                                           |
+| Step                                     | State                                                                                                      |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| D3 step 4 — readiness on **API + smoke** | ✅ **DONE — #184.** See §5. Do not rebuild it, and do not "complete" it with an aggregate.                 |
+| D3 step 5 — readiness on **web**         | Harness precondition now met by #181. ⚠️ **Read ADR-0048 §4 first** — both unresolved dissents point here. |
 
 **D7 binds every surface, forever:** fixed registry order, each state adjacent to its **own**
 `requiredSectionTypes` and `thresholds`, **no aggregate of any kind**, no ordinal colour scale. The
@@ -159,3 +163,54 @@ three states are incommensurable in **denominator**, not threshold.
 **D8 authorizes none of:** capture writes (the ADR-0046 D7 prohibition stands) · auth · a client
 registry (ADR-0046 D1) · snapshot readers · any change to the three assessors · reordering or
 aggregating readiness states · removing the scope-stripping at the `context-readiness.ts` boundary.
+
+---
+
+## §5 — D3 step 4: the readiness stage on the API and smoke (#184 @ `a686397`)
+
+`GET /demo/capabilities` now carries a `contextReadiness` block beside
+`businessDiscovery` and `reports`. Confirmed executed in `ci.yml` by reading the job log — both the
+new spec (`✓ src/modules/demo/tests/context-readiness-surface.spec.ts (7 tests)`) and the smoke step
+(`[smoke] OK: … 6 readiness rows with no aggregate …`).
+
+### What was missing
+
+The CLI has printed this stage since ADR-0047 slice 3. The API published the intake stage and the
+capability runs but **not the stage between them**, so a consumer saw six capability reports with no
+statement of how far the captured context carries each one.
+
+### What it refuses, and why each refusal is pinned
+
+- **No aggregate of any kind** — no overall readiness, no count of ready capabilities, no ordering by
+  state. The three states differ in **denominator**, not in where a line was drawn, so any
+  cross-capability value invents a scale that does not exist (ADR-0047 D4 / ADR-0048 D7).
+- **A non-adopter row carries no state** — not `null`, not `0`, not `"N/A"`, not a defaulted
+  `sufficiency` (ADR-0047 D5). ⚠️ The JSON round trip is exactly where an absent field could arrive
+  as `null`, which is why the **smoke check** asserts this and not only the spec.
+- ⚠️ `thresholds` keeps the runtime's **UNION** of the three published threshold types. Flattening it
+  to `Record<string, number>` typechecks and would have been the path of least resistance — it is
+  refused because it reads as one shared scale.
+- `producedAt` comes from the frozen scenario time; **never `new Date()`**. Pinned by a determinism
+  test comparing two calls.
+- **No scope identifier** reaches the payload (ADR-0048 D2, permanent).
+- The runs take **no argument derived from readiness** (ADR-0047 D7b) — readiness is reported
+  beside them, never above them.
+
+### Proven non-vacuous by three mutations, each failing by name, each restored
+
+| Mutation                                  | Failure                                                                                         |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `overallReadinessScore` on the block      | `contextReadiness gained an unpinned field` — in the **spec and the smoke check**               |
+| entries sorted so adopters group together | registry-order test **and** `the adopter rows are contiguous — the block looks sorted by state` |
+| `state: entry.state ?? 'N/A'`             | `Growth.state was filled in: expected 'N/A' to be undefined`                                    |
+
+⚠️ The non-contiguity test is the one that is easy to misread as decorative. Registry order
+interleaves adopters and non-adopters; **grouping is what sorting by state looks like** once the
+labels are stripped, and it is the change a reviewer would wave through as tidying.
+
+⚠️ `apps/web` was **not** touched. It keeps its own `CapabilityDemoResponse` in `src/lib/demo.ts`, so
+the new field did not propagate — rendering readiness on web is D3 step 5 and stays deferred.
+
+⚠️ The CLI print is unchanged, so `apps/demo/sample-output.txt` is **not** regenerated. The demo
+baseline is byte-identical: 97/63 intake vs 12/17 BIF, 7 populated + 5 omitted, 6 capabilities,
+6 pending approvals, no side effects.
