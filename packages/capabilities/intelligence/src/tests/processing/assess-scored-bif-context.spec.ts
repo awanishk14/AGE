@@ -494,6 +494,57 @@ describe('assessScoredBifContext (ADR-0026 Decision 5)', () => {
    * emptiness would be asserting the opposite of the real rule. ADR-0027's
    * constraint is about item **content**, never item count.
    */
+  describe('the sanctioned non-derivation notice (ADR-0027 Decision 1)', () => {
+    const NOTICE =
+      'This assessment reports context readiness only. It derives no business conclusion, and no conclusion about the business may be inferred from it (ADR-0027 Decision 1).';
+
+    it('states plainly what this capability does not do, in every non-blocked state', () => {
+      // ⚠️ The point of this notice is that it is AFFIRMATIVE. The
+      // forbidden-vocabulary scan below proves only that nothing prohibited was
+      // said — that is silence, and silence is exactly what an over-reading
+      // reader fills in. A scan cannot make a capability say something.
+      const cases: Array<[string, ScoredBifContext]> = [
+        ['partial', sampleContext()],
+        ['ready', fullyScoredContext()],
+      ];
+
+      for (const [label, context] of cases) {
+        const result = assessScoredBifContext(CONTEXT, context, { producedAt: PRODUCED_AT });
+        const reasons = result.output.sufficiency?.reasons ?? [];
+
+        expect(result.output.sufficiency?.state, label).not.toBe(
+          CapabilitySufficiencyState.Blocked,
+        );
+        expect(reasons, label).toContain(NOTICE);
+        // Last, matching Market Discovery and Revenue, so a reader comparing
+        // the three capabilities finds it in the same place every time.
+        expect(reasons[reasons.length - 1], label).toBe(NOTICE);
+      }
+    });
+
+    it("is the peer of Market Discovery's and Revenue's, and says nothing they do not", () => {
+      // Those two say "It derives no market opportunity" / "no revenue plan".
+      // Intelligence assesses context support rather than a domain artefact, so
+      // its object is a business CONCLUSION. ⚠️ The wording is deliberately not
+      // "no opportunity"/"no plan": this capability does not produce those in
+      // the first place, and claiming to withhold something it never had would
+      // misdescribe what it does.
+      expect(NOTICE).toContain('reports context readiness only');
+      expect(NOTICE).toContain('derives no business conclusion');
+      expect(NOTICE).toContain('ADR-0027 Decision 1');
+    });
+
+    it('survives the forbidden-vocabulary scan rather than being exempted from it', () => {
+      // ⚠️ The notice is emitted prose and is scanned like any other line — it
+      // is NOT added to an exemption list. A sanctioned sentence that had to be
+      // exempted from the rule it announces would be self-defeating.
+      const forbidden =
+        /\b(opportunit(y|ies)|recommend(ed|ation|ations)?|plan|action|strateg(y|ic|ies)|next step|should|priorit)/i;
+
+      expect(NOTICE).not.toMatch(forbidden);
+    });
+  });
+
   describe('no opportunity is derived, ranked, named or hinted at (ADR-0027 Decision 1)', () => {
     const contexts = (): ScoredBifContext[] => [
       sampleContext(),

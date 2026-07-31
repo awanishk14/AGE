@@ -220,6 +220,17 @@ function buildReasons(
   const rest: string[] = [
     `Root BIF confidence is ${scoredBifContext.bifConfidenceScore} and root completeness is ${scoredBifContext.bifCompletenessScore}, as computed by the scoring layer and carried through unchanged.`,
     `${scoredBifContext.metadata.populatedFieldCount} field(s) are populated across ${scoredBifContext.sections.length} present section(s); ${scoredBifContext.omittedSections.length} of ${scoredBifContext.metadata.canonicalSectionCount} canonical section(s) are absent and therefore unknown.`,
+    // The sanctioned non-derivation notice. Market Discovery and Revenue each
+    // emit their own ('It derives no market opportunity' / 'no revenue plan');
+    // this is Intelligence's, and it is stated in the SAME position — last in
+    // the reasons — so a reader comparing the three capabilities sees it in
+    // the same place every time.
+    //
+    // ⚠️ It says what this capability DOES NOT DO. That is not redundant with
+    // the forbidden-vocabulary scan: the scan proves nothing prohibited was
+    // said, which is silence, and silence is what an over-reading reader fills
+    // in. This is the affirmative statement a scan cannot produce.
+    `This assessment reports context readiness only. It derives no business conclusion, and no conclusion about the business may be inferred from it (ADR-0027 Decision 1).`,
   ];
 
   return [head, ...rest];

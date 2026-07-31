@@ -50,6 +50,7 @@ A capability reporting "ready" means only that the captured context carries it t
     - 1 of 7 present BIF section(s) meet the support thresholds, so some context can be relied on and the rest cannot.
     - Root BIF confidence is 17 and root completeness is 12, as computed by the scoring layer and carried through unchanged.
     - 10 field(s) are populated across 7 present section(s); 5 of 12 canonical section(s) are absent and therefore unknown.
+    - This assessment reports context readiness only. It derives no business conclusion, and no conclusion about the business may be inferred from it (ADR-0027 Decision 1).
     limitation: Context for 'Organization Identity' cannot be relied on yet: confidence 43 is below the required 50 and completeness 29 is below the required 50. This describes the captured context only — it is not a finding about the business.
     limitation: Context for 'Vision & Strategy' cannot be relied on yet: confidence 22 is below the required 50 and completeness 13 is below the required 50. This describes the captured context only — it is not a finding about the business.
     limitation: Context for 'ICP & Personas' cannot be relied on yet: confidence 45 is below the required 50. This describes the captured context only — it is not a finding about the business.
