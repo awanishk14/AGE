@@ -3,10 +3,11 @@
 > Per-PR record for the track opened by ADR-0048 (which split ADR-0047 D8).
 > **Append a section per merged PR.** The working-memory handover keeps pointers only.
 >
-> Track state: **D5 shipped (#179), D4 shipped (#181), D3 step 4 shipped (#184).**
-> The only step left is **D3 step 5 — readiness on web**, which remains deferred:
-> its D4 harness precondition is met, but ⚠️ **both of ADR-0048 §4's unresolved dissents point at
-> it.** Read §4 before starting it.
+> Track state: **COMPLETE.** D5 shipped (#179), D4 shipped (#181), D3 step 4 shipped (#184),
+> **D3 step 5 shipped (#186)**. ⚠️ ADR-0048 D3 has **no step left** — do not invent one, and do not
+> "finish" the web surface with an aggregate, a sort or a colour scale (D7 binds it forever, §6).
+> ⚠️ Both of ADR-0048 §4's unresolved dissents pointed at step 5 and are **answered, not dissolved**
+> — see §6. Read §4 before touching this surface again.
 
 | PR   | SHA       | What                                                           | Kind                |
 | ---- | --------- | -------------------------------------------------------------- | ------------------- |
@@ -17,6 +18,8 @@
 | #181 | `3fca556` | D4 — a web rendering test that executes in `ci.yml`            | tests + test config |
 | #183 | `5caa191` | #166 capture-residual extraction                               | docs                |
 | #184 | `a686397` | D3 step 4 — the readiness stage on the API and smoke           | source + tests      |
+| #185 | `576d883` | D3 step 4 checkpoint (§5)                                      | docs                |
+| #186 | `029eb3d` | D3 step 5 — the readiness stage rendered on web                | source + tests      |
 
 ---
 
@@ -151,10 +154,10 @@ asserts the count after the loop.**
 
 ## §4 — What remains on this track
 
-| Step                                     | State                                                                                                      |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| D3 step 4 — readiness on **API + smoke** | ✅ **DONE — #184.** See §5. Do not rebuild it, and do not "complete" it with an aggregate.                 |
-| D3 step 5 — readiness on **web**         | Harness precondition now met by #181. ⚠️ **Read ADR-0048 §4 first** — both unresolved dissents point here. |
+| Step                                     | State                                                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------ |
+| D3 step 4 — readiness on **API + smoke** | ✅ **DONE — #184.** See §5. Do not rebuild it, and do not "complete" it with an aggregate. |
+| D3 step 5 — readiness on **web**         | ✅ **DONE — #186.** See §6. Nothing remains on this track.                                 |
 
 **D7 binds every surface, forever:** fixed registry order, each state adjacent to its **own**
 `requiredSectionTypes` and `thresholds`, **no aggregate of any kind**, no ordinal colour scale. The
@@ -214,3 +217,82 @@ the new field did not propagate — rendering readiness on web is D3 step 5 and 
 ⚠️ The CLI print is unchanged, so `apps/demo/sample-output.txt` is **not** regenerated. The demo
 baseline is byte-identical: 97/63 intake vs 12/17 BIF, 7 populated + 5 omitted, 6 capabilities,
 6 pending approvals, no side effects.
+
+---
+
+## §6 — D3 step 5: the readiness stage rendered on web (#186 @ `029eb3d`)
+
+`apps/web/src/app/demo/page.tsx` renders a `ContextReadinessSection` **between** the discovery card
+and the capability run cards — the position the pipeline actually has (intake → context readiness →
+capability runs) and **never as a gate above the runs** (ADR-0047 D7b). Three files, +414/−1:
+`src/lib/demo.ts`, `src/app/demo/page.tsx`, `src/app/demo/page.test.tsx` (**7 → 12 tests**).
+Confirmed executed in `ci.yml` by reading the job log — `✓ src/app/demo/page.test.tsx (12 tests)` —
+not inferred from a green tick.
+
+### The four refusals the section is built from
+
+- **No aggregate, no sort, no grouping.** `readiness.entries` is rendered in supplied order. ⚠️
+  Grouping the assessing capabilities together **is** what sorting by state looks like once the
+  labels are stripped, so the test asserts adopters stay non-contiguous, not merely "not sorted".
+- **The state is never rendered through `Notice`.** `Notice` renders an emerald/amber pair off a
+  boolean; pointing it at a readiness state would paint three **incommensurable** measurements onto
+  one good/bad axis — the ordinal colour scale ADR-0047 D4 forbids, **arrived at by component reuse
+  rather than by anyone deciding to.** The state is a neutral mono chip; each state renders adjacent
+  to its **own** denominator sentence and its **own** `key=value` thresholds.
+- **A non-adopter carries nothing** — no dash, no `"N/A"`, no empty state chip, no greyed-out row.
+  `ReasonList` returns `null` for an absent or empty list rather than "(none)" (ADR-0047 D5).
+- **`incommensurabilityNotice` is rendered, not carried.** Without it, three states in one list read
+  as a scale.
+
+⚠️ `src/lib/demo.ts` types `thresholds` as `Readonly<Record<string, number>>` — **here and only
+here.** `apps/web` deliberately keeps its own copy of the wire contract and does not import
+`@age/demo-runtime`, so the browser cannot see the runtime UNION type. That widening is safe in one
+direction only: the values are **displayed**, never compared across capabilities and never merged
+into a shared threshold object. ⚠️ On the API side the UNION stays (§5) — do not "align" them.
+
+### Fixture choices that are load-bearing
+
+- The three adopters get **three different states** (`partial` / `insufficient` / `ready`). If the
+  fixture gave them all the same state, every assertion about not ranking them would pass without
+  the page ever having had the **opportunity** to rank anything.
+- Thresholds are `${capability}Floor = 41`, not 40. **40 is the mean of the 63/17 confidence pair**
+  and is already forbidden by the pre-existing "no combined score" test — a threshold that collides
+  with it would make a failure ambiguous about which rule broke.
+- The placeholder scan lists `N/A`, `n/a`, `null`, `undefined`, `unknown`, `(none)` and
+  **deliberately excludes the em dash**, which the declaration sentence legitimately contains.
+
+### Proven non-vacuous by five mutations of `page.tsx`, each failing by name, each restored
+
+| Mutation                                | Failure                                                     |
+| --------------------------------------- | ----------------------------------------------------------- |
+| entries sorted by state                 | the adopter rows are contiguous — the block reads as sorted |
+| `<Notice ok={entry.state === 'ready'}>` | the readiness state is rendered on a good/bad colour axis   |
+| `entry.state ?? 'N/A'`                  | a non-adopter row rendered the placeholder `N/A`            |
+| the notice replaced by a computed count | a figure derived across capabilities is rendered            |
+| a literal `3 capabilities ready`        | a figure derived across capabilities is rendered            |
+
+⚠️ The **pre-existing `GRADED_VALUE` source scan did NOT catch the `Notice` mutation** — `entry.state`
+does not match its regex. The new colour test did. A source scan and a rendering assertion defend
+different failures; do not retire either on the strength of the other.
+
+### ⚠️ A real defect in one of these guards, found only by mutation
+
+The count guard was written `/\b\d+\s+(capabilities?\s+)?ready\b/i` and **silently passed** on a real
+rendered `1 of 6 ready`. Cause: `textContent` concatenates sibling elements **with no separator**, so
+a count rendered just above the first row reads `…6 readyIntelligence…` and the trailing `\b` never
+matches. Fixed by removing the trailing anchor and generalizing the literal `3` to `\d+`. The lesson
+is the general one: **a guard is evidence only once it has been made to fail** by mutating the thing
+it protects — never the guard — and then restored.
+
+### Both ADR-0048 §4 dissents, answered
+
+- **The skeptic** ("rendering readiness invites someone to rank it"): **none of the six new tests add
+  a capability the page did not have.** Every one asserts a **refusal**. The step ships the stage
+  plus the machinery that fails when someone later ranks it.
+- **The product lens** (six identical cards imply a trust claim a BIF confidence of 17 contradicts):
+  this step renders the stage that states how far context carries each capability, but **does not
+  claim to close that gap — the run cards are untouched.**
+
+⚠️ The CLI print is unchanged, so `apps/demo/sample-output.txt` is **not** regenerated. Demo baseline
+byte-identical: 97/63 intake vs 12/17 BIF, 7 populated + 5 omitted, 6 capabilities, 6 pending
+approvals, no side effects.
