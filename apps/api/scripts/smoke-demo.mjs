@@ -105,6 +105,48 @@ function validate(body) {
     !('pendingApproval' in discovery),
     'businessDiscovery must never enter the approval model',
   );
+  // Stage two must survive serialization too, and must survive it WITHOUT
+  // acquiring an aggregate. A JSON round-trip is where an `undefined` state
+  // could silently become `null`, and where a helpful-looking summary field
+  // would first become visible to a consumer (ADR-0047 D4 / ADR-0048 D7).
+  const readiness = body.contextReadiness;
+  assert(readiness !== undefined, 'response has no `contextReadiness` block');
+  assert(
+    readiness.incommensurabilityNotice?.length > 0,
+    'the incommensurability notice is missing — three states in one list read as a scale',
+  );
+  assert(
+    readiness.entries?.length === 6,
+    `expected 6 readiness rows, got ${readiness.entries?.length}`,
+  );
+  assert(
+    JSON.stringify(readiness.entries.map((e) => e.capabilityName)) ===
+      JSON.stringify(body.reports.map((r) => r.capability)),
+    'readiness rows are not in the same fixed registry order as the run reports',
+  );
+  for (const key of Object.keys(readiness)) {
+    assert(
+      key === 'incommensurabilityNotice' || key === 'entries',
+      `contextReadiness gained an unpinned field "${key}" — no aggregate may be published`,
+    );
+  }
+  let statedRows = 0;
+  for (const entry of readiness.entries) {
+    // ⚠️ A non-adopter must arrive with the field ABSENT. `null` over the wire
+    // is exactly the invented value ADR-0047 D5 refuses.
+    assert(
+      !('state' in entry) || typeof entry.state === 'string',
+      `readiness row "${entry.capabilityName}" serialized a non-string state`,
+    );
+    if (entry.state === undefined) continue;
+    assert(
+      typeof entry.denominator === 'string' && entry.thresholds !== undefined,
+      `readiness row "${entry.capabilityName}" reports a state without its own denominator`,
+    );
+    statedRows += 1;
+  }
+  assert(statedRows === 3, `expected 3 assessing capabilities, got ${statedRows}`);
+
   // Both score pairs must survive serialization — reporting only the intake
   // pair would overstate what the produced Draft BIF actually contains.
   for (const field of [
@@ -171,7 +213,9 @@ async function main() {
     validate(body);
     console.log(
       `[smoke] OK: 6 capabilities, ${body.summary.totalPendingApprovals} pending approvals, ` +
-        `accounting invariant ${body.summary.accountingInvariantHolds}, no side effects.`,
+        `accounting invariant ${body.summary.accountingInvariantHolds}, ` +
+        `${body.contextReadiness.entries.length} readiness rows with no aggregate, ` +
+        `no side effects.`,
     );
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));

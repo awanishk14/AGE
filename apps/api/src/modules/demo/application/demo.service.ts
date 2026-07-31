@@ -1,15 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import {
   DEMO_SCENARIO_METADATA,
+  buildContextReadinessReport,
+  produceDemoScoredBifContext,
   runAllCapabilities,
   runBusinessDiscoveryIntake,
   type BusinessDiscoveryIntakeSummary,
   type CapabilityRunReport,
+  type ContextReadinessEntry,
+  type ContextReadinessReport,
 } from '@age/demo-runtime';
 import type {
   BusinessDiscoveryDemoSummary,
   CapabilityDemoReport,
   CapabilityDemoResponse,
+  ContextReadinessDemoEntry,
+  ContextReadinessDemoReport,
 } from './dto';
 
 const DEMO_TITLE = 'AGE — In-Memory Capability Demo';
@@ -54,6 +60,51 @@ function toBusinessDiscoverySummary(
   };
 }
 
+/**
+ * Project one readiness row into the API shape, field by field.
+ *
+ * ⚠️ A spread is refused here for the same reason it is refused for the intake
+ * block: the runtime row is free to grow a field the read-only endpoint has not
+ * decided to publish, and a spread would publish it silently.
+ *
+ * ⚠️ Optional fields are copied as-is. An absent field stays absent — it is
+ * never coerced to `null`, `0`, `[]` or `"N/A"`, because a non-adopter has no
+ * honest value to report and a filled-in one would read as a deficiency
+ * (ADR-0047 D5).
+ */
+function toReadinessEntry(entry: ContextReadinessEntry): ContextReadinessDemoEntry {
+  return {
+    capabilityName: entry.capabilityName,
+    assessesContext: entry.assessesContext,
+    declaration: entry.declaration,
+    state: entry.state,
+    reasons: entry.reasons,
+    limitations: entry.limitations,
+    improvementHints: entry.improvementHints,
+    requiredSectionTypes: entry.requiredSectionTypes,
+    // Each capability's OWN published thresholds, carried through unchanged.
+    // Never merged with another capability's, never compared against one.
+    thresholds: entry.thresholds,
+    denominator: entry.denominator,
+  };
+}
+
+/**
+ * Project the readiness stage for the API.
+ *
+ * ⚠️ `entries` keeps the runtime's fixed registry order. It is never sorted,
+ * grouped or ordered by state, and NO aggregate is derived from it — an
+ * "overall readiness", a count of ready capabilities, or any ordering by state
+ * would express three incommensurable measurements on one invented scale
+ * (ADR-0047 D4 / ADR-0048 D7).
+ */
+function toReadinessReport(report: ContextReadinessReport): ContextReadinessDemoReport {
+  return {
+    incommensurabilityNotice: report.incommensurabilityNotice,
+    entries: report.entries.map(toReadinessEntry),
+  };
+}
+
 /** Project one shared-runtime report into the read-only API report shape. */
 function toDemoReport(report: CapabilityRunReport): CapabilityDemoReport {
   return {
@@ -89,6 +140,20 @@ export class DemoService {
     // canonical Path B mapping needs are visible at the call site. It is demo
     // scenario framing only — never production tenant identity, never scope.
     const discovery = runBusinessDiscoveryIntake(DEMO_SCENARIO_METADATA);
+
+    // Stage two: context readiness (ADR-0047 D1, published here by ADR-0048 D3
+    // step 4). Produced through the demo's single production point (D2).
+    // ⚠️ `producedAt` is supplied HERE from the frozen scenario time — never
+    // `new Date()`, which would make this endpoint's response non-deterministic
+    // and the CLI's determinism note false. `Object.freeze` is shallow, so the
+    // Date is copied rather than handed out.
+    const scoredBifContext = produceDemoScoredBifContext(DEMO_SCENARIO_METADATA).context;
+    const readiness = buildContextReadinessReport(scoredBifContext, {
+      producedAt: new Date(DEMO_SCENARIO_METADATA.constructedAt.getTime()),
+    });
+
+    // ⚠️ The runs below take NO argument derived from readiness and must never
+    // become gated on it (ADR-0047 D7b). Readiness is reported beside them.
     const reports = await runAllCapabilities();
     const demoReports = reports.map(toDemoReport);
 
@@ -104,6 +169,7 @@ export class DemoService {
       humanApprovedExecution: true,
       sideEffectsPerformed: false,
       businessDiscovery: toBusinessDiscoverySummary(discovery),
+      contextReadiness: toReadinessReport(readiness),
       reports: demoReports,
       summary: {
         capabilitiesRun: reports.length,
