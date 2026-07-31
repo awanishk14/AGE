@@ -22,6 +22,8 @@ import { runAllCapabilities } from '../capabilities';
 
 const MODULE_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const INTAKE_SOURCE = readFileSync(join(MODULE_DIRECTORY, '..', 'business-discovery.ts'), 'utf8');
+/** The demo's single ScoredBifContext production point (ADR-0047 D2). */
+const PRODUCER_SOURCE = readFileSync(join(MODULE_DIRECTORY, '..', 'scored-bif-context.ts'), 'utf8');
 const SCENARIO_SOURCE = readFileSync(
   join(MODULE_DIRECTORY, '..', 'demo-scenario-metadata.ts'),
   'utf8',
@@ -216,23 +218,45 @@ describe('ADR-0039 — demo scenario metadata is explicit and demo-owned', () =>
     expect(SCENARIO_SOURCE).toMatch(/ADR-0039/);
   });
 
-  it('is passed in, not reached for — the intake stage invents none of the three', () => {
-    const source = withoutComments(INTAKE_SOURCE);
-    expect(source).not.toMatch(/DEMO_SCENARIO_METADATA/);
-    expect(source).not.toMatch(/new Date\(/);
-    expect(source).not.toMatch(/Date\.now\(/);
-    expect(source).not.toMatch(/Math\.random\(/);
+  it('is passed in, not reached for — neither module invents any of the three', () => {
+    // ⚠️ ADR-0047 D2 moved the three scenario reads one module down, into the
+    // demo's single production point. The property this test defends is
+    // unchanged, so it is asserted WHERE THE VALUES ARE NOW READ rather than
+    // relaxed: a guard left pointing at a module that no longer does the thing
+    // would pass by scanning the wrong file.
+    for (const source of [withoutComments(INTAKE_SOURCE), withoutComments(PRODUCER_SOURCE)]) {
+      expect(source).not.toMatch(/DEMO_SCENARIO_METADATA/);
+      expect(source).not.toMatch(/Date\.now\(/);
+      expect(source).not.toMatch(/Math\.random\(/);
+    }
+
     // Every one of the three reaches the mapper from the parameter.
-    expect(source).toMatch(/scenario\.organizationId/);
-    expect(source).toMatch(/scenario\.constructedAt/);
-    expect(source).toMatch(/scenario\.changedBy/);
+    const producer = withoutComments(PRODUCER_SOURCE);
+    expect(producer).toMatch(/scenario\.organizationId/);
+    expect(producer).toMatch(/scenario\.constructedAt/);
+    expect(producer).toMatch(/scenario\.changedBy/);
+
+    // The intake stage itself still reaches for nothing at all: it takes the
+    // scenario and hands it straight on.
+    expect(withoutComments(INTAKE_SOURCE)).not.toMatch(/new Date\(/);
+    // The producer's ONE `new Date(` is a defensive COPY of the scenario's own
+    // frozen time (`Object.freeze` is shallow), never a wall-clock read — so it
+    // is pinned to that exact shape rather than merely permitted.
+    expect(producer).toMatch(/new Date\(scenario\.constructedAt\.getTime\(\)\)/);
+    expect(producer.match(/new Date\(/g)).toHaveLength(1);
   });
 
-  it('uses canonical Path B', () => {
+  it('uses canonical Path B, through the single demo production point', () => {
     // The legacy Path A mapper was retired outright (ADR-0039 D7), and its
     // absence is now asserted repository-wide in
     // `@age/business-discovery-contracts` rather than restated here.
-    expect(withoutComments(INTAKE_SOURCE)).toMatch(/produceScoredBifContext/);
+    //
+    // ADR-0047 D2: intake no longer calls the mapper directly — it goes through
+    // `produceDemoScoredBifContext`, so the demo assembles the three Path B
+    // values in exactly one place and the readiness stage cannot assemble a
+    // second, silently-divergent set.
+    expect(withoutComments(INTAKE_SOURCE)).toMatch(/produceDemoScoredBifContext/);
+    expect(withoutComments(PRODUCER_SOURCE)).toMatch(/produceScoredBifContext\(/);
   });
 
   it('changing the scenario changes only what the scenario owns', () => {

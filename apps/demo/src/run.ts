@@ -1,9 +1,12 @@
 import {
   DEMO_SCENARIO_METADATA,
+  buildContextReadinessReport,
+  produceDemoScoredBifContext,
   runAllCapabilities,
   runBusinessDiscoveryIntake,
   type BusinessDiscoveryIntakeSummary,
   type CapabilityRunReport,
+  type ContextReadinessReport,
 } from '@age/demo-runtime';
 
 /**
@@ -81,6 +84,61 @@ function printDiscovery(summary: BusinessDiscoveryIntakeSummary): void {
   );
 }
 
+/**
+ * Print the context-readiness stage (ADR-0047). This runs between intake and the
+ * capability runs and produces no decision objects — nothing here is approved or
+ * executed, and nothing derived from it feeds the runs.
+ *
+ * ⚠️ THE ORDER BELOW IS FIXED REGISTRY ORDER AND MUST NEVER BE SORTED, grouped
+ * or reordered by state, and NO aggregate line may be added — no "overall
+ * readiness", no "2 of 3 ready", no count across capabilities. Each state is
+ * printed adjacent to its OWN denominator and its OWN thresholds, because the
+ * three states are incommensurable and a state shown without its denominator
+ * invites exactly the comparison ADR-0027 D2 refused (ADR-0047 D4).
+ */
+function printContextReadiness(report: ContextReadinessReport): void {
+  console.log('');
+  console.log(line('='));
+  console.log('CONTEXT READINESS: how far the captured context carries each capability');
+  console.log(line('='));
+
+  for (const notice of report.incommensurabilityNotice) {
+    console.log(notice);
+  }
+
+  for (const entry of report.entries) {
+    console.log('');
+    console.log(`  ${entry.capabilityName}: ${entry.declaration}`);
+
+    if (entry.state === undefined) {
+      // A declared property, never a deficiency and never a lesser capability.
+      // No null, no 0, no "N/A", no defaulted sufficiency (ADR-0047 D5).
+      continue;
+    }
+
+    console.log(`    state: ${entry.state}`);
+    console.log(`    basis: ${entry.denominator}`);
+    if (entry.requiredSectionTypes !== undefined) {
+      console.log(`    requires: ${entry.requiredSectionTypes.join(', ')}`);
+    }
+    if (entry.thresholds !== undefined) {
+      const printed = Object.entries(entry.thresholds)
+        .map(([k, v]) => `${k}=${v}`)
+        .join('  ');
+      console.log(`    thresholds: ${printed}`);
+    }
+    for (const reason of entry.reasons ?? []) {
+      console.log(`    - ${reason}`);
+    }
+    for (const limitation of entry.limitations ?? []) {
+      console.log(`    limitation: ${limitation}`);
+    }
+    for (const hint of entry.improvementHints ?? []) {
+      console.log(`    to raise readiness: ${hint}`);
+    }
+  }
+}
+
 function printReport(report: CapabilityRunReport): void {
   console.log('');
   console.log(line('='));
@@ -153,6 +211,18 @@ async function main(): Promise<void> {
   const discovery = runBusinessDiscoveryIntake(DEMO_SCENARIO_METADATA);
   printDiscovery(discovery);
 
+  // Stage two: context readiness (ADR-0047). `producedAt` is supplied HERE, at
+  // the call site, from the frozen scenario time — ⚠️ never `new Date()`, which
+  // would make the determinism note at the foot of sample-output.txt false.
+  // `Object.freeze` is shallow, so the Date is copied rather than passed.
+  const scoredBifContext = produceDemoScoredBifContext(DEMO_SCENARIO_METADATA).context;
+  const readiness = buildContextReadinessReport(scoredBifContext, {
+    producedAt: new Date(DEMO_SCENARIO_METADATA.constructedAt.getTime()),
+  });
+  printContextReadiness(readiness);
+
+  // ⚠️ The runs below are NOT gated on readiness above, and must never become
+  // so. They take no argument derived from it (ADR-0047 D7b).
   const reports = await runAllCapabilities();
 
   let totalPending = 0;

@@ -2,11 +2,11 @@ import {
   DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
   SAMPLE_BUSINESS_DISCOVERY_PROFILE,
   businessDiscoveryProfileSchema,
-  produceScoredBifContext,
   validateProfileAgainstQuestionnaire,
 } from '@age/business-discovery-contracts';
 
 import type { DemoScenarioMetadata } from './demo-scenario-metadata';
+import { produceDemoScoredBifContext } from './scored-bif-context';
 
 /**
  * Business Discovery — the upstream *intake* stage of the demo.
@@ -117,11 +117,12 @@ export function runBusinessDiscoveryIntake(
     profile,
     DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
   );
-  const { context, mappingMetadata } = produceScoredBifContext(profile, {
-    organizationId: scenario.organizationId,
-    constructedAt: scenario.constructedAt,
-    changedBy: scenario.changedBy,
-  });
+  // Produced through the shared demo producer (ADR-0047 D2), so the three
+  // scenario values canonical Path B requires are assembled in exactly one
+  // place. This summary deliberately does NOT grow a `context` field: it is the
+  // four-score contract projected field-by-field into a published API DTO, and
+  // widening it would drag the readiness slice into the API layer.
+  const { context, mappingMetadata } = produceDemoScoredBifContext(scenario);
 
   return {
     profileId: profile.id,
