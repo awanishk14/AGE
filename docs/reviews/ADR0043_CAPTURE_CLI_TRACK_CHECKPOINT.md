@@ -349,3 +349,24 @@ stating what it does **not** prove. Assertions unchanged; behaviour unchanged.
 | ---- | ---------------------------------------------------------- | --------------------- |
 | #157 | Slice B2 checkpoint (docs-only)                            | → `4c0e628`           |
 | #158 | **ADR-0045** — track terminus + the D4 test-honesty repair | `99d136e` → `45057e1` |
+
+---
+
+## §7 — What #166 changed about the capture residual (verbatim, extracted from the working-memory handover)
+
+`age-capture` is now **executable** (webpack bundle → `dist/bin/age-capture.cjs`; `build` = `tsc` +
+bundle) and **has been executed, in `produceOnly` only.** Before #166 it was not merely uninvoked —
+it was **unrunnable by anyone** (`node dist/main.js` → `ERR_MODULE_NOT_FOUND`).
+Still true and unchanged: it is invoked by **no workflow, no package script and no other package**;
+`main.ts` has zero importers; **`produceAndCapture` has never run and must not** (the ADR-0046 D7 standing prohibition — see `AGE_STANDING_RESIDUALS.md`).
+
+⚠️ **`scripts/bundle.mjs` asserts the lazy split point and that assertion must not be removed.**
+The build fails if `age-capture.cjs` contains `new PrismaClient(`, **and equally if no lazy chunk
+does**. It is two-sided on purpose. Verified in both directions: a static import leaves webpack
+reporting `compiled successfully` while the assertion fails. It is **not** a size optimisation — it is
+the only thing between a refactor and a `produceOnly` that opens a database connection.
+
+⚠️ **There is no `--mode` flag.** Older text here said "make `--mode produceOnly` invokable" — wrong.
+Real surface: required `--profile`, `--client-id`, `--organization-id`, `--changed-by`; optional
+`--bif-id`, `--snapshot-id`, `--captured-at`; boolean `--capture`, `--confirm`.
+**`produceOnly` is the default; `--capture` opts into `produceAndCapture`.**
