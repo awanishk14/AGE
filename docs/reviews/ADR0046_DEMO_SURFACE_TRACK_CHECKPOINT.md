@@ -358,7 +358,7 @@ An emitted sentence was temporarily reworded from `…limiting this assessment` 
 `…limiting this recommendation`; the scan failed on exactly that test, and the source was restored.
 A scan that cannot be made to fail is not evidence.
 
-### ⚠️ Still open — recorded here, deliberately NOT folded in
+### ~~⚠️ Still open — recorded here, deliberately NOT folded in~~ — ✅ CLOSED by PR #175, see §7
 
 **Intelligence has no sanctioned non-derivation notice.** Market Discovery emits
 `'It derives no market opportunity'` and Revenue `'It derives no revenue plan'`; Intelligence states
@@ -378,3 +378,65 @@ PR CI green (all 15 steps executed, including `API demo runtime smoke`); post-me
 
 `packages/capabilities/intelligence/src/tests/processing/assess-scored-bif-context.spec.ts`
 (+179, tests only).
+
+---
+
+## §7 — Intelligence's sanctioned non-derivation notice (PR #175 @ `7673810`)
+
+The item §6 recorded as **still open**, now closed. Needed no new ADR — ADR-0027 Decision 1 already
+governs it, and both peer capabilities already did this.
+
+### What was missing, stated precisely
+
+Market Discovery emitted `'It derives no market opportunity'` and Revenue `'It derives no revenue
+plan'`. **Intelligence stated no equivalent.**
+
+⚠️ The distinction that makes this a real gap rather than a cosmetic one: #173's vocabulary scan
+proves Intelligence says nothing **prohibited**. That is **silence** — and silence is exactly what an
+over-reading reader fills in. **A scan cannot make a capability say something.** Only the capability
+can. Do not treat a passing scan as equivalent to a stated notice; they defend opposite failures.
+
+### What shipped
+
+Appended to `buildReasons`' `rest` in
+`packages/capabilities/intelligence/src/processing/assess-scored-bif-context.ts`:
+
+> `This assessment reports context readiness only. It derives no business conclusion, and no
+conclusion about the business may be inferred from it (ADR-0027 Decision 1).`
+
+### Three judgement calls — carry these
+
+- **The object is a business CONCLUSION, not an opportunity or a plan.** Deliberate. Intelligence
+  assesses context _support_; it does not produce a domain artefact at all. Wording it as "derives no
+  opportunity" would claim to withhold something it never had, which **misdescribes the capability**.
+  It also aligns with the standing semantic that **absence is never a conclusion**.
+- **Emitted LAST, matching both peers.** A reader comparing the three capabilities finds the notice
+  in the same position every time. Do not move it.
+- **From `buildReasons` only — NOT the blocked path.** ⚠️ All **three** capabilities carry a single
+  reason when blocked, so extending the notice there is a **pattern-wide question about the ADR-0027
+  pattern**, not an Intelligence gap. Recorded here rather than guessed at. If it is ever taken up,
+  it belongs in all three at once.
+
+### The rule the tests encode
+
+⚠️ **The notice passes the forbidden-vocabulary scan rather than being exempted from it.** A
+sanctioned sentence that had to be exempted from the rule it announces would be self-defeating —
+which is also why the wording avoids `plan` / `opportunity` / `strategy` rather than adding an
+allow-list entry. Three tests: present **and last** in both non-blocked states (`partial`, `ready`);
+wording is the peer of the other two; and it is scanned like any other emitted line.
+
+### Golden
+
+`apps/demo/sample-output.txt` regenerated — **exactly one line added**, the trailing `createdAt`
+determinism note preserved. All three notices now read in parallel in the demo output.
+⚠️ Regenerate by taking the CLI output **bounded by its first and last `####` banner lines**: a plain
+`pnpm demo > file` redirect captures pnpm's and Nx's wrapper output as well, which is not the CLI's.
+
+**Baseline unmoved**: 6 capabilities, 6 pending approvals, accounting invariant OK, no side effects,
+7 populated / 5 omitted, 97/63 intake vs 12/17 BIF.
+
+### Gates
+
+Package 94/94 + typecheck · `pnpm lint` · `typecheck` · `test` (32 projects) · `build` · `demo` ·
+`@age/api` test (39) · `smoke:demo`. PR CI green; post-merge `main` CI **success** @ `7673810`.
+`ci-db.yml` correctly did not trigger.
