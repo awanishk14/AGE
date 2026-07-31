@@ -15,6 +15,19 @@ export {
   runBusinessDiscoveryIntake,
   type BusinessDiscoveryIntakeSummary,
 } from './business-discovery';
+// The demo's single point of ScoredBifContext production (ADR-0047 D2). Both
+// the intake stage and the context-readiness stage produce through this.
+export { produceDemoScoredBifContext } from './scored-bif-context';
+// Context readiness — the demo's THIRD stage (ADR-0047 D1):
+// intake → context readiness → capability runs. First non-test caller of the
+// ADR-0027 readiness pattern. ⚠️ Never gates `run`; never ranks; no aggregate.
+export {
+  buildContextReadinessReport,
+  type ContextReadinessReport,
+  type ContextReadinessEntry,
+  type ContextReadinessThresholds,
+  type BuildContextReadinessReportOptions,
+} from './context-readiness';
 // Demo scenario metadata (ADR-0039). The demo's own declared organizationId /
 // constructedAt / changedBy for canonical Path B mapping. Scenario framing only
 // — never production tenant identity, never scope.

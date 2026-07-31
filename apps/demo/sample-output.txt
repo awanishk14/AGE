@@ -37,6 +37,66 @@ Scored BIF context projection (status: Draft — never promoted):
 Discovery captures context only — no strategy, no approval required. The scores above are reported, never acted on: nothing is ranked, planned or promoted from them. Evidence references are counted, never fetched.
 
 ========================================================================
+CONTEXT READINESS: how far the captured context carries each capability
+========================================================================
+These readiness states are NOT comparable with one another. Each capability judges a different set of BIF sections against its own published thresholds, so the states differ in what they measure, not merely in where a line was drawn.
+No value here is computed across capabilities, and the rows are never ordered by state. There is deliberately no single figure summarising them, because no shared scale exists in which one could be expressed.
+A capability reporting "ready" means only that the captured context carries it that far. It never means the Draft BIF may be promoted, and no work is derived from any state below.
+
+  Intelligence: assesses the scored BIF context and reports how far it carries this capability
+    state: partial
+    basis: judges every BIF section present in the context; declares no required set
+    thresholds: minSectionConfidenceScore=50  minSectionCompletenessScore=50  minRootConfidenceScoreForReady=70
+    - 1 of 7 present BIF section(s) meet the support thresholds, so some context can be relied on and the rest cannot.
+    - Root BIF confidence is 17 and root completeness is 12, as computed by the scoring layer and carried through unchanged.
+    - 10 field(s) are populated across 7 present section(s); 5 of 12 canonical section(s) are absent and therefore unknown.
+    limitation: Context for 'Organization Identity' cannot be relied on yet: confidence 43 is below the required 50 and completeness 29 is below the required 50. This describes the captured context only — it is not a finding about the business.
+    limitation: Context for 'Vision & Strategy' cannot be relied on yet: confidence 22 is below the required 50 and completeness 13 is below the required 50. This describes the captured context only — it is not a finding about the business.
+    limitation: Context for 'ICP & Personas' cannot be relied on yet: confidence 45 is below the required 50. This describes the captured context only — it is not a finding about the business.
+    limitation: Context for 'Market & Competition' cannot be relied on yet: confidence 21 is below the required 50 and completeness 11 is below the required 50. This describes the captured context only — it is not a finding about the business.
+    limitation: Context for 'Brand System' cannot be relied on yet: confidence 22 is below the required 50 and completeness 13 is below the required 50. This describes the captured context only — it is not a finding about the business.
+    limitation: Context for 'GTM System' cannot be relied on yet: confidence 24 is below the required 50 and completeness 14 is below the required 50. This describes the captured context only — it is not a finding about the business.
+    limitation: 'Marketing Intelligence' is absent from this BIF, so it is unknown. Absence is a limitation of the captured context and must not be read as a strength or a weakness.
+    limitation: 'Technology Stack' is absent from this BIF, so it is unknown. Absence is a limitation of the captured context and must not be read as a strength or a weakness.
+    limitation: 'Assets' is absent from this BIF, so it is unknown. Absence is a limitation of the captured context and must not be read as a strength or a weakness.
+    limitation: 'KPIs' is absent from this BIF, so it is unknown. Absence is a limitation of the captured context and must not be read as a strength or a weakness.
+    limitation: 'Constraints' is absent from this BIF, so it is unknown. Absence is a limitation of the captured context and must not be read as a strength or a weakness.
+    to raise readiness: Raising confidence or completeness on 'Organization Identity', 'Vision & Strategy', 'ICP & Personas', 'Market & Competition', 'Brand System', 'GTM System' — for example by citing independent sources for the fields already captured — would move those section(s) into supported context.
+    to raise readiness: Capturing 'Marketing Intelligence', 'Technology Stack', 'Assets', 'KPIs', 'Constraints' would remove the unknowns limiting this assessment.
+
+  Market Discovery: assesses the scored BIF context and reports how far it carries this capability
+    state: partial
+    basis: judges only the BIF sections it declares it requires
+    requires: icp_personas, products_services, market_competition
+    thresholds: minSectionConfidenceScore=50  minSectionCompletenessScore=50  minRootConfidenceScoreForReady=70
+    - 1 of the 3 BIF section(s) this capability requires meet the support thresholds, so part of the market context can be relied on and the rest cannot.
+    - Root BIF confidence is 17 and root completeness is 12, as computed by the scoring layer and carried through unchanged.
+    - 0 of the 3 required section(s) are absent from this BIF and are therefore unknown; 10 field(s) are populated across 7 present section(s).
+    - This assessment reports context readiness only. It derives no market opportunity, and no opportunity may be inferred from it (ADR-0027 Decision 1).
+    limitation: Context for 'ICP & Personas' cannot be relied on yet: confidence 45 is below the required 50. This describes the captured context only — it is not a finding about the business or its market.
+    limitation: Context for 'Market & Competition' cannot be relied on yet: confidence 21 is below the required 50 and completeness 11 is below the required 50. This describes the captured context only — it is not a finding about the business or its market.
+    to raise readiness: Raising confidence or completeness on 'ICP & Personas', 'Market & Competition' — for example by citing independent sources for the fields already captured — would move those section(s) into supported context.
+
+  Growth: does not assess external context — this capability declares none
+
+  Authority: does not assess external context — this capability declares none
+
+  Operations: does not assess external context — this capability declares none
+
+  Revenue: assesses the scored BIF context and reports how far it carries this capability
+    state: partial
+    basis: judges only the BIF sections it declares it requires
+    requires: products_services, icp_personas, gtm_system
+    thresholds: minSectionConfidenceScore=50  minSectionCompletenessScore=50  minRootConfidenceScoreForReady=70
+    - 1 of the 3 BIF section(s) this capability requires meet the support thresholds, so part of the revenue context can be relied on and the rest cannot.
+    - Root BIF confidence is 17 and root completeness is 12, as computed by the scoring layer and carried through unchanged.
+    - 0 of the 3 required section(s) are absent from this BIF and are therefore unknown; 10 field(s) are populated across 7 present section(s).
+    - This assessment reports context readiness only. It derives no revenue plan, and no revenue plan may be inferred from it (ADR-0027 Decision 1).
+    limitation: Context for 'ICP & Personas' cannot be relied on yet: confidence 45 is below the required 50. This describes the captured context only — it is not a finding about the business or its revenue.
+    limitation: Context for 'GTM System' cannot be relied on yet: confidence 24 is below the required 50 and completeness 14 is below the required 50. This describes the captured context only — it is not a finding about the business or its revenue.
+    to raise readiness: Raising confidence or completeness on 'ICP & Personas', 'GTM System' — for example by citing independent sources for the fields already captured — would move those section(s) into supported context.
+
+========================================================================
 CAPABILITY: Intelligence
 ========================================================================
 accepted=1  rejected=1  duplicate=1  derived=3  |  contradictionCount=0
