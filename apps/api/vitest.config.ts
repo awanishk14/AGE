@@ -1,13 +1,12 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, mergeConfig } from 'vitest/config';
 
-export default defineConfig({
-  test: {
-    globals: true,
-    environment: 'node',
-    include: ['src/**/*.{test,spec}.ts'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'lcov'],
+import { vitestBaseConfig } from '../../vitest.base.config';
+
+export default mergeConfig(
+  vitestBaseConfig,
+  defineConfig({
+    test: {
+      include: ['src/**/*.{test,spec}.ts'],
     },
-  },
-});
+  }),
+);
