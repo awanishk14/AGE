@@ -59,6 +59,52 @@ export interface BusinessDiscoveryDemoSummary {
   readonly competitorCount: number;
 }
 
+/**
+ * One capability's context-readiness row, as returned by the API.
+ *
+ * ⚠️ `thresholds` is typed `Readonly<Record<string, number>>` HERE and only
+ * here, because the browser has no access to the three published threshold
+ * types and this file deliberately does not import from `@age/demo-runtime` —
+ * `apps/web` keeps its own copy of the wire contract so an API DTO change
+ * cannot reach the browser without someone editing this file. That widening is
+ * safe in one direction only: the values are **displayed**, never compared
+ * across capabilities, and never merged into a shared threshold object.
+ *
+ * ⚠️ For a non-adopter, `state`, `reasons`, `thresholds` and
+ * `requiredSectionTypes` arrive ABSENT — never `null`, never `0`, never
+ * `"N/A"`. They are optional here for that reason, and the renderer must show
+ * nothing rather than a placeholder (ADR-0047 D5).
+ */
+export interface ContextReadinessDemoEntry {
+  readonly capabilityName: string;
+  readonly assessesContext?: readonly string[];
+  readonly declaration: string;
+  readonly state?: string;
+  readonly reasons?: readonly string[];
+  readonly limitations?: readonly string[];
+  readonly improvementHints?: readonly string[];
+  readonly requiredSectionTypes?: readonly string[];
+  readonly thresholds?: Readonly<Record<string, number>>;
+  readonly denominator?: string;
+}
+
+/**
+ * The context-readiness stage, as returned by the API.
+ *
+ * ⚠️ There is no aggregate on the wire and none may be computed here. The three
+ * published states differ in DENOMINATOR — each capability judges a different
+ * set of BIF sections against its own thresholds — so a count of "how many are
+ * ready", an ordering by state, or a colour scale over them would invent a
+ * shared scale that does not exist (ADR-0047 D4 / ADR-0048 D7).
+ *
+ * ⚠️ `incommensurabilityNotice` must be RENDERED, not just carried: without it,
+ * three states in one list read as a scale.
+ */
+export interface ContextReadinessDemoReport {
+  readonly incommensurabilityNotice: readonly string[];
+  readonly entries: readonly ContextReadinessDemoEntry[];
+}
+
 /** Top-level response envelope for the capability demo endpoint. */
 export interface CapabilityDemoResponse {
   readonly title: string;
@@ -66,6 +112,12 @@ export interface CapabilityDemoResponse {
   readonly humanApprovedExecution: boolean;
   readonly sideEffectsPerformed: boolean;
   readonly businessDiscovery: BusinessDiscoveryDemoSummary;
+  /**
+   * Stage two of the pipeline: intake → context readiness → capability runs.
+   * ⚠️ The runs are NOT gated on this and must never be rendered as though they
+   * were (ADR-0047 D7b) — it is shown beside them, never above them as a gate.
+   */
+  readonly contextReadiness: ContextReadinessDemoReport;
   readonly reports: readonly CapabilityDemoReport[];
   readonly summary: {
     readonly capabilitiesRun: number;
