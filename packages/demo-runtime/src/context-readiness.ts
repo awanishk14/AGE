@@ -24,7 +24,7 @@ import { GROWTH_CAPABILITY_ENTRY } from '@age/capability-growth';
 import { AUTHORITY_CAPABILITY_ENTRY } from '@age/capability-authority';
 import { OPERATIONS_CAPABILITY_ENTRY } from '@age/capability-operations';
 
-import { demoContext } from './fixtures';
+import { ClientContext } from '@age/capability-kit';
 
 /**
  * Context readiness — the demo's THIRD pipeline stage (ADR-0047 D1).
@@ -159,6 +159,22 @@ export interface BuildContextReadinessReportOptions {
    * (ADR-0047 D3).
    */
   readonly producedAt: Date;
+
+  /**
+   * Caller-supplied, ALWAYS (ADR-0053 D5). This **supersedes ADR-0047 D9**,
+   * which recorded that `clientContext` was not parameterised and that this
+   * stage imported `demoContext` directly.
+   *
+   * 🚫 **No default value** (ADR-0049 D2). A default would make the whole stage
+   * unfalsifiable behind a signature that only *looks* parameterised — worse
+   * than the hardwired import, because the hardwired import was at least
+   * honest about what it did.
+   *
+   * ⚠️ The demo passes `demoContext` explicitly and the demo baseline does not
+   * move (98/63 intake vs 12/17 BIF). If it moves, something other than this
+   * plumbing changed and the change is wrong.
+   */
+  readonly clientContext: ClientContext;
 }
 
 /**
@@ -210,8 +226,9 @@ function displayName(entryName: unknown): string {
  * buildContextReadinessReport — assess the demo's scored context with each
  * adopting capability and return a print-ready, non-ranking report.
  *
- * The `ClientContext` passed to the assessors is `demoContext`, unchanged
- * (ADR-0047 D9). ⚠️ It diverges from `DEMO_SCENARIO_METADATA.organizationId`,
+ * The `ClientContext` passed to the assessors is CALLER-SUPPLIED (ADR-0053 D5,
+ * superseding ADR-0047 D9, under which this stage imported `demoContext`).
+ * ⚠️ When the demo passes `demoContext`, it diverges from `DEMO_SCENARIO_METADATA.organizationId`,
  * under which the BIF was authored. That divergence is RECORDED, not reconciled:
  * `ScoredBifContext` carries no scope — scope does not survive the projection —
  * so the assessment's FINDINGS are correct either way and only the envelope
@@ -228,15 +245,22 @@ export function buildContextReadinessReport(
       'buildContextReadinessReport requires a caller-supplied producedAt (ADR-0047 D3); this stage never reads the wall clock',
     );
   }
+  if (!(options?.clientContext instanceof ClientContext)) {
+    throw new Error(
+      'buildContextReadinessReport requires a caller-supplied clientContext (ADR-0053 D5); it is never defaulted, and this stage no longer imports a fixture context',
+    );
+  }
+  const clientContext = options.clientContext;
+
   // Copied so a caller's reference cannot be mutated through ours, and so the
   // shallow-frozen scenario Date cannot travel into three assessors by reference.
   const producedAt = new Date(options.producedAt.getTime());
 
-  const intelligence = assessScoredBifContext(demoContext, scoredBifContext, { producedAt });
-  const marketDiscovery = assessMarketContextReadiness(demoContext, scoredBifContext, {
+  const intelligence = assessScoredBifContext(clientContext, scoredBifContext, { producedAt });
+  const marketDiscovery = assessMarketContextReadiness(clientContext, scoredBifContext, {
     producedAt,
   });
-  const revenue = assessRevenueContextReadiness(demoContext, scoredBifContext, { producedAt });
+  const revenue = assessRevenueContextReadiness(clientContext, scoredBifContext, { producedAt });
 
   const assessed: Readonly<Record<string, ContextReadinessEntry>> = {
     Intelligence: {

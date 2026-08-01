@@ -21,6 +21,10 @@ import { produceDemoScoredBifContext } from '../scored-bif-context';
 import { runAllCapabilities } from '../capabilities';
 import { DEMO_SCENARIO_METADATA } from '../demo-scenario-metadata';
 import { DEMO_BUSINESS_DISCOVERY_PROFILE } from '../demo-profile';
+import { demoContext } from '../fixtures';
+import { ClientContext } from '@age/capability-kit';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * ADR-0047 D7 — the five invariant tests for the context-readiness bridge.
@@ -113,7 +117,10 @@ describe('ADR-0047 D7 — context-readiness bridge invariants', () => {
     const neutralize = (line: string) => line.split(canonicalSectionName).join("'<section>'");
 
     it('emits no forbidden vocabulary in any string leaf of the report', () => {
-      const report = buildContextReadinessReport(sampleContext(), { producedAt: PRODUCED_AT });
+      const report = buildContextReadinessReport(sampleContext(), {
+        producedAt: PRODUCED_AT,
+        clientContext: demoContext,
+      });
       const strings = collectStrings(report);
 
       // ⚠️ Assert the walk found something FIRST. An empty walk would otherwise
@@ -127,7 +134,10 @@ describe('ADR-0047 D7 — context-readiness bridge invariants', () => {
     });
 
     it('states the incommensurability on the surface rather than leaving it implicit', () => {
-      const report = buildContextReadinessReport(sampleContext(), { producedAt: PRODUCED_AT });
+      const report = buildContextReadinessReport(sampleContext(), {
+        producedAt: PRODUCED_AT,
+        clientContext: demoContext,
+      });
       expect(collectStrings(report.incommensurabilityNotice).length).toBeGreaterThan(0);
       expect(report.incommensurabilityNotice.join(' ')).toMatch(/not compar|different set/i);
     });
@@ -136,9 +146,13 @@ describe('ADR-0047 D7 — context-readiness bridge invariants', () => {
   describe('D7b — run-independence, proven by injection rather than inspection', () => {
     it('produces byte-identical capability run reports under a blocked context', async () => {
       // Readiness moves from `partial`/`insufficient` to `blocked`...
-      const withSample = buildContextReadinessReport(sampleContext(), { producedAt: PRODUCED_AT });
+      const withSample = buildContextReadinessReport(sampleContext(), {
+        producedAt: PRODUCED_AT,
+        clientContext: demoContext,
+      });
       const withBlocked = buildContextReadinessReport(blockedContext(), {
         producedAt: PRODUCED_AT,
+        clientContext: demoContext,
       });
       expect(JSON.stringify(withSample)).not.toEqual(JSON.stringify(withBlocked));
 
@@ -155,8 +169,14 @@ describe('ADR-0047 D7 — context-readiness bridge invariants', () => {
 
   describe('D7c — ordering invariance (the mechanical test for D4)', () => {
     it('keeps emitted order and every label unchanged when the states change', () => {
-      const sample = buildContextReadinessReport(sampleContext(), { producedAt: PRODUCED_AT });
-      const blocked = buildContextReadinessReport(blockedContext(), { producedAt: PRODUCED_AT });
+      const sample = buildContextReadinessReport(sampleContext(), {
+        producedAt: PRODUCED_AT,
+        clientContext: demoContext,
+      });
+      const blocked = buildContextReadinessReport(blockedContext(), {
+        producedAt: PRODUCED_AT,
+        clientContext: demoContext,
+      });
 
       const names = (report: ContextReadinessReport) => report.entries.map((e) => e.capabilityName);
 
@@ -183,7 +203,10 @@ describe('ADR-0047 D7 — context-readiness bridge invariants', () => {
 
   describe('D7d — no aggregate of any kind', () => {
     it('exposes no key that could be a value across capabilities', () => {
-      const report = buildContextReadinessReport(sampleContext(), { producedAt: PRODUCED_AT });
+      const report = buildContextReadinessReport(sampleContext(), {
+        producedAt: PRODUCED_AT,
+        clientContext: demoContext,
+      });
 
       // Each capability's OWN published thresholds legitimately carry
       // `min...Score` keys. They are asserted by identity below instead, so they
@@ -201,7 +224,10 @@ describe('ADR-0047 D7 — context-readiness bridge invariants', () => {
     });
 
     it('carries each capability its own thresholds and requiredSectionTypes by value identity', () => {
-      const report = buildContextReadinessReport(sampleContext(), { producedAt: PRODUCED_AT });
+      const report = buildContextReadinessReport(sampleContext(), {
+        producedAt: PRODUCED_AT,
+        clientContext: demoContext,
+      });
       const byName = new Map(report.entries.map((e) => [e.capabilityName, e]));
 
       // Value identity, so a shared constant cannot be substituted silently.
@@ -250,7 +276,10 @@ describe('ADR-0047 D7 — context-readiness bridge invariants', () => {
     });
 
     it('drives non-adopters from declared metadata, never as a deficiency (D5)', () => {
-      const report = buildContextReadinessReport(sampleContext(), { producedAt: PRODUCED_AT });
+      const report = buildContextReadinessReport(sampleContext(), {
+        producedAt: PRODUCED_AT,
+        clientContext: demoContext,
+      });
       const byName = new Map(report.entries.map((e) => [e.capabilityName, e]));
 
       for (const name of ['Growth', 'Authority', 'Operations']) {
@@ -267,7 +296,10 @@ describe('ADR-0047 D7 — context-readiness bridge invariants', () => {
 
   describe('D8 — scope identifiers stay out of the report shape entirely', () => {
     it('carries no clientId or organizationId anywhere in the report', () => {
-      const report = buildContextReadinessReport(sampleContext(), { producedAt: PRODUCED_AT });
+      const report = buildContextReadinessReport(sampleContext(), {
+        producedAt: PRODUCED_AT,
+        clientContext: demoContext,
+      });
       const keys = collectKeys(report);
       expect(keys.length).toBeGreaterThan(0);
       expect(keys).not.toContain('clientId');
@@ -286,14 +318,62 @@ describe('ADR-0047 D7 — context-readiness bridge invariants', () => {
       expect(() =>
         buildContextReadinessReport(sampleContext(), {
           producedAt: undefined as unknown as Date,
+          clientContext: demoContext,
         }),
       ).toThrow(/producedAt/i);
     });
 
     it('is byte-identical across repeated calls with the same inputs', () => {
-      const first = buildContextReadinessReport(sampleContext(), { producedAt: PRODUCED_AT });
-      const second = buildContextReadinessReport(sampleContext(), { producedAt: PRODUCED_AT });
+      const first = buildContextReadinessReport(sampleContext(), {
+        producedAt: PRODUCED_AT,
+        clientContext: demoContext,
+      });
+      const second = buildContextReadinessReport(sampleContext(), {
+        producedAt: PRODUCED_AT,
+        clientContext: demoContext,
+      });
       expect(JSON.stringify(first)).toEqual(JSON.stringify(second));
+    });
+  });
+
+  describe('ADR-0053 D5 — clientContext is a required parameter', () => {
+    it('refuses to run without a caller-supplied clientContext', () => {
+      expect(() =>
+        buildContextReadinessReport(sampleContext(), {
+          producedAt: PRODUCED_AT,
+          clientContext: undefined as unknown as ClientContext,
+        }),
+      ).toThrow(/clientContext/i);
+    });
+
+    it('refuses a value that merely looks like a context', () => {
+      expect(() =>
+        buildContextReadinessReport(sampleContext(), {
+          producedAt: PRODUCED_AT,
+          clientContext: { clientId: 'c', organizationId: 'o' } as unknown as ClientContext,
+        }),
+      ).toThrow(/clientContext/i);
+    });
+
+    it('accepts a context for a client other than the demo one', () => {
+      // The point of D5: the stage is no longer welded to one business.
+      const other = new ClientContext('client-example-001', 'org-example-001');
+      const report = buildContextReadinessReport(sampleContext(), {
+        producedAt: PRODUCED_AT,
+        clientContext: other,
+      });
+      expect(report.entries.length).toBeGreaterThan(0);
+    });
+
+    it('no longer imports demoContext into the readiness stage', () => {
+      // ADR-0049 D2: a signature that only looks parameterised is worse than an
+      // honest hardwired import, so the import must actually be gone.
+      const source = readFileSync(join(__dirname, '..', 'context-readiness.ts'), 'utf8');
+      const withoutComments = source
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/(^|[^:])\/\/.*$/gm, '$1');
+      expect(withoutComments.length).toBeGreaterThan(0);
+      expect(withoutComments).not.toContain('demoContext');
     });
   });
 });
