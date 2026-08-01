@@ -78,6 +78,30 @@ Identity is strictly **human-centric**:
   human or an approved workflow** (Doc 04, Doc 12).
 - **No standalone AI identity layer exists** in the product model.
 
+### 3.1 How Business Context Is Derived
+
+AGE **already models ownership** through a client context (Organization / Client / Project). What
+changes as the product matures is **where that context comes from** — never what it means.
+
+| Stage                     | The context is…                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Operator-driven (current) | **supplied by the trusted operator**, who is the sole human with access                                       |
+| Multi-tenant SaaS         | **derived from the authenticated user and their organization membership**, before any business logic executes |
+
+Three invariants hold in both stages and are not negotiable:
+
+- 🚫 **Context is never inferred from the payload being processed.** It is supplied, or it is derived
+  from an authenticated identity — never guessed from the data's contents.
+- 🚫 **Context is never defaulted, generated, or fabricated.** A missing context is a **refusal**, not
+  an occasion to invent one; a fabricated scope puts an identifier into circulation that names nothing.
+- ⚠️ **Derivation precedes business logic.** In SaaS the check happens **before** any reasoning runs,
+  not as a filter applied to results afterwards.
+
+⚠️ **The operator-driven stage is a trust assumption, not an authorization decision, and must be
+stated as such.** A context supplied by a trusted operator proves only that the operator asserted it.
+The SaaS transition is precisely the point at which that assertion must become **proven** — which is
+why identity is added rather than retrofitted (§3, Doc 06).
+
 ## 4. Authorization Alignment
 
 Security enforcement aligns with the Permission Model (Doc 06):
@@ -146,6 +170,11 @@ How auditing is implemented (storage, integrity, retention) is outside product s
 6. **Credentials are out of the product model** — Security + Infrastructure own them; never reachable
    by AI agents or pure layers.
 7. **Auditing is a system-wide invariant** — all meaningful actions traceable; no layer bypasses it.
+8. **Context derivation** (§3.1). Business context is **supplied by the trusted operator** today and
+   **derived from the authenticated user and their organization membership** in multi-tenant SaaS,
+   before any business logic executes. It is never inferred from a payload, never defaulted, and
+   never fabricated. The operator-driven stage is a **stated trust assumption, not an authorization
+   decision.**
 
 **Out of scope (implementation / security-design — not product decisions):** authentication
 mechanisms (identity providers, SSO, MFA, session handling) · encryption algorithms & key management

@@ -114,7 +114,7 @@ cannot invoke them** (enforcing Doc 11). Pure layers may only _sense_ from sourc
 
 ### 6.1 Delegated Execution to a Peer Product
 
-A **peer product** (Doc 11 §2.1) may own execution for its own domain — it may hold the credentials
+A **peer product** (Doc 11 §2.1.1) may own execution for its own domain — it may hold the credentials
 and perform the outward action that AGE never performs itself.
 
 This **does not create an exception to §1.** The boundary is preserved because **the handover is
@@ -125,12 +125,18 @@ product's own governance, under its own approval model.
 
 Three constraints follow, and none is optional:
 
-1. **AGE does not hold the peer product's credentials** (Doc 11 §6, Doc 13). Delegating execution
-   means delegating the credential too.
+1. **AGE does not hold the peer product's credentials** (Doc 11 §6.1, Doc 13). Delegating execution
+   means delegating the credential too. Under credential locality AGE stores only the **reference**
+   needed to route the handover to the right execution surface in the right client scope.
 2. **No layer above the Execution Layer may hand anything over.** A capability or agent that called a
    peer product directly would breach §1 exactly as it would with any integration.
 3. **AGE never claims the outcome as its own act.** The record says AGE handed over an approved plan
    and what the peer product reported back — never that AGE performed the external action.
+
+4. **A handover never chains.** AGE hands work to one peer product at a time, within one approved
+   plan. A peer product must never pass that work on to another peer product (Doc 11 §2.1.1 rule 4) —
+   the second step would execute outside AGE's approval, scope and audit while still appearing to be
+   part of an approved plan.
 
 ⚠️ Delegation is **not** a reason to loosen approval. A plan AGE would not be allowed to execute is a
 plan AGE is not allowed to hand over.

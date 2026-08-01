@@ -68,11 +68,43 @@ The canonical conceptual classification (no further subtyping required):
 | **Execution Integration** | Performs external actions — write / side-effect surface.           |
 | **Hybrid Integration**    | May serve **both** roles depending on the capability using it.     |
 
-### 2.1 Peer Products Are Not Integrations
+### 2.1 Three Categories of System
+
+§2 classifies an integration by **what AGE does with it**. That is orthogonal to a prior question:
+**who owns the thing, and could it exist without AGE?** Three categories answer it, and every system
+AGE touches falls into exactly one.
+
+| Category                 | What it is                                        | Owned by                 | Exists without AGE             | AGE reaches it via                    |
+| ------------------------ | ------------------------------------------------- | ------------------------ | ------------------------------ | ------------------------------------- |
+| **External Integration** | Someone else's product                            | A third-party vendor     | Yes — AGE is irrelevant to it  | A connection in a business context    |
+| **Peer Product**         | An independent product the same organization owns | The product organization | Yes — it has its own customers | Its **public contract only** (§2.1.1) |
+| **AGE-native**           | Exists **only because AGE exists**                | AGE                      | No — it is AGE's core value    | Not applicable — it _is_ AGE          |
+
+- **External Integration** — Google Ads, Search Console, GA4, HubSpot, Salesforce, Shopify. AGE has
+  **no influence over their roadmap** and must assume none. Governed entirely by §2–§7.
+- **Peer Product** — see §2.1.1. Independently viable and independently sellable.
+- **AGE-native** — the Intent Engine, the Strategy Engine, BIF generation, orchestration, planning,
+  and the approval workflow. 🚫 **These must never be extracted into standalone products.** They are
+  the reason AGE is worth having; a peer product that reproduced them would be a competitor built
+  from AGE's own substance.
+  ⚠️ "AGE-native" is an **ownership** category, not the frozen **Capability** concept. It spans both
+  the registered Capabilities and the platform machinery beneath them (Capability Architecture).
+
+⚠️ **The categories are about ownership; §2's Source/Execution/Hybrid classes are about use.** A peer
+product is still classified Source, Execution or Hybrid according to what AGE does with it. The two
+axes are independent and neither overrides the other.
+
+### 2.1.1 Peer Products Are Not Integrations
 
 Some external systems AGE composes with are **not integrations at all**. A **peer product** is a
 system that is **independently viable** — it has its own users, its own value proposition, and can be
 sold and operated with AGE absent — and which AGE nonetheless consumes.
+
+Because AGE integrates with a peer product **only through its public contract**, each product remains
+**independently deployable, independently sellable, and independently evolvable.** An organization
+may use the peer product without AGE, AGE without the peer product, or both together. **No product
+acquires AGE-specific behaviour.** This is the whole commercial point of the category: it is what
+keeps one codebase from becoming two — a standalone edition and an AGE-flavoured edition.
 
 |                      | Integration                                       | Peer product                                                               |
 | -------------------- | ------------------------------------------------- | -------------------------------------------------------------------------- |
@@ -81,17 +113,41 @@ sold and operated with AGE absent — and which AGE nonetheless consumes.
 | How AGE reaches it   | A connection configured within a business context | Its **public product boundary** — the same surface any other consumer uses |
 | If AGE is removed    | The channel has no remaining purpose              | Nothing changes for its own users                                          |
 
-Three rules govern peer products, and they are the point of this section:
+Four rules govern peer products, and they are the point of this section:
 
 1. **The dependency arrow points from AGE outward and never back.** AGE may depend on a peer
    product. A peer product must never grow an AGE-shaped dependency — no AGE-only endpoint, no AGE
    concept in its domain model, no coupling that makes it unsellable alone.
+
+   ⚠️ **This forbids features that _only_ benefit AGE — not features AGE happened to motivate.**
+   Composition legitimately reveals gaps, and a peer product may evolve because AGE exposed a useful
+   capability. The test is **not** where the idea came from; it is: **would this enhancement make
+   sense for the peer product's own users and roadmap if AGE did not exist?** If yes, build it — it
+   is ordinary product evolution. If it is justifiable only by AGE's needs, it is the coupling this
+   rule exists to prevent.
+
 2. **AGE consumes a peer product across its public product boundary only** — never a private table,
    never a shared database, never an internal module. A shared datastore would silently merge two
    products into one and destroy the independence this section exists to protect.
+
+   ⚠️ **A peer product may itself expose capabilities internally, but AGE never depends on those
+   capabilities directly. AGE depends only on the peer product's published contract.** An internal
+   service is not a contract: it carries no compatibility promise, so the moment AGE calls one, the
+   peer product can no longer refactor its own internals without breaking AGE — which is rule 1's
+   dependency arrow reversed by accident rather than by decision.
+   ⚠️ **"Capability" here means the peer product's own internal notion**, not AGE's frozen Capability
+   concept (§2.1). The two are unrelated.
+
 3. **A peer product is classified for §2 purposes by what AGE does with it**, exactly as any other
    external system: read-only consumption is **sensing**, and anything that writes or acts is
    **execution** and passes through the Execution Layer (§4, Doc 12 §6.1).
+
+4. **Hub and spoke — a peer product never interacts with another peer product.** Cross-product
+   insight is produced **only** by AGE reasoning over a shared BIF (Doc 02 §8), never by wiring two
+   peer products together. Direct wiring would (a) grow to N² bespoke connections, (b) let two
+   products take an independent decision — the exact failure AGE exists to prevent — and (c) place
+   the conclusion in a product that cannot see the whole client. Each peer product contributes what
+   it observes as Evidence and **reads nothing about the others.**
 
 ⚠️ **This does not weaken §1.2.** Data arriving from a peer product is still interpreted only through
 Client and Project context, and is still never treated as a standalone system _inside AGE's
@@ -140,6 +196,28 @@ defines only that connections:
 **How credentials are stored, rotated, or secured belongs to security and infrastructure design**
 (Doc 13 Security; Doc 14 Configuration) — reinforcing the boundary with Doc 13.
 
+### 6.1 Credential Locality (canonical principle)
+
+> **Credentials are owned only by execution surfaces. AGE stores references, never secrets.**
+
+The **execution surface** that talks to a service owns that service's credentials. AGE stores only the
+**references** required to route a request to the correct execution surface within the correct client
+scope.
+
+⚠️ **"Execution surface" means an Execution Integration or a peer product — never a Capability.**
+Capabilities are pure and may never invoke an external system or see a credential (§4, Doc 12 §1–§2).
+The frozen architecture forbids the reading in which a Capability holds a secret.
+
+This is a **principle, not a deployment detail**, and it holds for every service AGE will ever reach —
+Google Ads, Meta, LinkedIn, Search Console, GA4, Shopify, WooCommerce, HubSpot, Slack. Three
+consequences:
+
+- **A compromise of AGE does not expose a single third-party account.** There is nothing to take.
+- **Revocation stays with the owner of the connection**, not with AGE.
+- **Multi-tenant SaaS needs no new credential model.** Each customer's account stays connected to the
+  execution surface they already authorized; AGE's stored reference is scoped per §5 and names a
+  route, never a secret.
+
 ## 7. Capability-Enablement & Audit
 
 - **Capability-enabled, not user-managed.** Integrations are **not** configured by users as standalone
@@ -165,10 +243,23 @@ The following were resolved by the Product Owner and are now canonical:
 6. **Capability-enabled.** Integrations are exposed through capabilities within a business context,
    not configured as standalone user primitives.
 
-7. **Peer products** (§2.1). An independently viable system that AGE composes with is not an
+7. **Peer products** (§2.1.1). An independently viable system that AGE composes with is not an
    integration. AGE consumes it across its public product boundary only; the dependency arrow points
    from AGE outward and never back; and the execution boundary, scope isolation and approval apply to
    it unchanged.
+8. **Three ownership categories** (§2.1): **External Integration** (a third party's product),
+   **Peer Product** (an independent product the same organization owns), **AGE-native** (exists only
+   because AGE exists, and is never extracted into a standalone product). Orthogonal to the
+   Source/Execution/Hybrid classification of §2.
+9. **Peer-product evolution.** Rule 1 forbids features that **only** benefit AGE, not features AGE
+   motivated. The test is whether the enhancement stands on the peer product's own roadmap with AGE
+   absent (§2.1.1 rule 1).
+10. **Hub and spoke.** A peer product never interacts with another peer product; cross-product
+    insight is produced only by AGE reasoning over a shared BIF (§2.1.1 rule 4).
+11. **Credential locality.** **Credentials are owned only by execution surfaces; AGE stores
+    references, never secrets** (§6.1). Capabilities are pure and never see a credential.
+12. **Public contract only.** A peer product may expose capabilities internally, but AGE depends only
+    on its published contract — never on an internal service (§2.1.1 rule 2).
 
 **Canonical principle:** integrations are **contextual perception and action channels** — sensing to
 enrich understanding, execution to extend reach — always interpreted through Client and Project
