@@ -1,7 +1,8 @@
 # ADR-0051 — The questionnaire cannot say what the profile requires
 
-Status: Proposed
+Status: Accepted
 Date: 2026-08-01
+Accepted: 2026-08-01 (self-accepted under the standing architect grant — see §0.1)
 Relates to: ADR-0026 D4 (missing sections are limitations, never negative evidence), ADR-0027
 (context readiness), ADR-0047 D4 (no ordinal colour scale), ADR-0049 D1/D2 (the profile is a
 required input), ADR-0050 D1–D8 (`buildProfileFromAnswers`) and ADR-0050 §3 erratum
@@ -20,8 +21,13 @@ the mandate the user gave on 2026-07-30, quoted verbatim:
 > creating session handover document at important checkpoint so we dont loose track and you
 > continusoy work without stopping for asking me question."_
 
-It is `Status: Proposed` and **decides nothing yet**. Per the established process (#88→#89 through
-#192→#193) it is merged to record the decision request; a separate PR flips it to `Accepted`.
+It was merged as `Status: Proposed` in PR #199 to record the decision request, and this separate PR
+flips it to `Accepted` — the established process (#88→#89 through #192→#193).
+
+⚠️ **Acceptance here is the architect's, under the grant quoted above. It is NOT a claim that the
+user reviewed each decision.** The same standing applies as for ADR-0046 and ADR-0048–0050. Anything
+in §2.1 remains **recorded, not authorized** — acceptance of this ADR does not reach it, and each of
+those five items still needs its own `Status: Proposed` ADR.
 
 ### 0.2 The four-lens council
 
