@@ -1,6 +1,6 @@
 # ADR-0050 — The profile nobody can author
 
-Status: Proposed
+Status: Accepted
 Date: 2026-08-01
 Relates to: ADR-0026 D4 (missing sections are limitations, never negative evidence), ADR-0038/0039
 (canonical Path B), ADR-0046 D7 (the capture prohibition), ADR-0047 D3 (caller-supplied
@@ -22,6 +22,24 @@ HTTP route.
 D5's premise does not hold yet, and says so below. Authorizing the drafting of an ADR is not
 authorizing a predetermined conclusion; recording that the recommended next step was wrong is the
 ADR doing its job.
+
+The governing delegation, verbatim, is the mandate the user gave on 2026-07-30:
+
+> _"i told you to act as an architect and take descision that makes the software robust and perform
+> for whats it intended. incase of complex issue deploy council to make decision. and also keep
+> creating session handover document at important checkpoint so we dont loose track and you
+> continusoy work without stopping for asking me question."_
+
+It was merged as PR #192 with `Status: Proposed`, which decided nothing; **this separate PR flips it
+to `Accepted`**, as every ADR since 0043 has done.
+
+Acceptance is **self-acceptance under a stated grant** — the architect's, and mine to answer for. It
+is **not** a claim that the user reviewed each decision below. Nothing in §2 was changed in order to
+accept it: D7 still withholds the HTTP route, §2.2 still withholds four recorded-but-unauthorized
+items, and both dissents in §4 stand **recorded rather than resolved**.
+
+⚠️ One decision here is **not** the architect's and was not taken: authentication (ADR-0046 §4).
+D7 is written so that this slice pre-commits it in no direction.
 
 ### 0.2 The four-lens council
 
