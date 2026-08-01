@@ -201,6 +201,21 @@ That rules out the two easy integration styles:
 RankOps does not know about AGE. This is what D2's `externalRefs` buys and is the reason the mapping
 lives here rather than there.
 
+⚠️ **This does not conflict with Doc 11 §1.2, and the reading is recorded here so it is not
+re-litigated.** Doc 11 says integrations are "not independent modules… never as standalone systems."
+That governs **how AGE interprets what arrives** — always through Client and Project context, never
+as free-floating system output. It says nothing about whether the system on the other end can exist
+without AGE. D7 is the **stronger** form of the same principle: AGE scopes everything it consumes to
+a client, _and_ refuses to make the source depend on it.
+
+⚠️ **Doc 15 §2 is a separate matter and is NOT resolved here.** It states that AGE's editions are
+"scaling tiers of the same platform, not separate products" — which is about **AGE's own** tiers,
+not about composing other products, so it neither authorizes nor forbids D7. Per `START_HERE.md` §4
+the Product Bible outranks an ADR, so **an amendment to Doc 15 recording that AGE composes
+independently-viable products is required**, and it needs **Product Owner approval** — it is a
+product change, not an architectural one, and is therefore outside the §0.1 architect grant.
+🚫 Until that amendment lands, do not cite D7 as having changed the Product Bible.
+
 ⚠️ **Corollary for every future integration slice:** AGE consumes each system across its **public
 product boundary** — the API or interface it would offer any customer — never a private table, a
 shared database, or an internal module. If a needed fact is not on that boundary, the fix is to add
