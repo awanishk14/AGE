@@ -68,6 +68,31 @@ These are **scaling tiers of the same platform, not separate products.** All edi
 same underlying architecture** and differ only in **scale, governance, and capability enablement**.
 **No edition introduces a different system model.**
 
+### 2.1 Editions Are Not the Only Axis: AGE Composes Peer Products
+
+⚠️ **"Not separate products" above is a statement about AGE's own editions, and about nothing else.**
+It says the Founder / Agency / Commercial SaaS / Enterprise line is one platform at four scales. It
+does **not** say that everything AGE draws on must be part of AGE.
+
+AGE additionally **composes peer products** (Doc 11 §2.1): systems that are **independently viable**,
+that are sold and operated in their own right, and that AGE consumes across their public product
+boundary. A peer product may therefore ship as **its own product line with its own editions** _and_
+appear inside AGE — those are the same system serving two markets, not a fork.
+
+This axis is governed, not open-ended:
+
+1. **AGE does not absorb a peer product.** Composition is not acquisition; AGE gains no ownership of
+   its roadmap, its domain model or its data.
+2. **A peer product gains no AGE-shaped dependency.** If removing AGE would break it, it was never a
+   peer product — it was a component, and it belongs inside AGE instead.
+3. **The edition model still applies to AGE alone.** A peer product's tiers are its own and are never
+   mapped onto Founder / Agency / Commercial SaaS / Enterprise.
+4. **Nothing here relaxes the execution boundary.** A composed peer product is bound by Doc 11 §4 and
+   Doc 12 §6.1 exactly as any other external system.
+
+⚠️ This section records **which axis is which**. It is not a delivery commitment, and it names no
+specific system — the roadmap is directional and defines no catalog (§1, Doc 11 §3).
+
 ## 3. Delivery Phases
 
 The canonical five phases (System Map §10):
