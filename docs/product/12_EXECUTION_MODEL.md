@@ -112,6 +112,29 @@ platforms, and data-mutation surfaces. Other layers may **reference integrations
 cannot invoke them** (enforcing Doc 11). Pure layers may only _sense_ from source integrations
 (Doc 11 §4).
 
+### 6.1 Delegated Execution to a Peer Product
+
+A **peer product** (Doc 11 §2.1) may own execution for its own domain — it may hold the credentials
+and perform the outward action that AGE never performs itself.
+
+This **does not create an exception to §1.** The boundary is preserved because **the handover is
+itself the execution operation**: AGE produces an approved plan (a pure act — `propose`, §2), and
+handing that plan to the peer product is a side effect performed **by the Execution Layer, gated by
+approval (§5), scoped per §7, and traced per §8.** What happens beyond the handover is the peer
+product's own governance, under its own approval model.
+
+Three constraints follow, and none is optional:
+
+1. **AGE does not hold the peer product's credentials** (Doc 11 §6, Doc 13). Delegating execution
+   means delegating the credential too.
+2. **No layer above the Execution Layer may hand anything over.** A capability or agent that called a
+   peer product directly would breach §1 exactly as it would with any integration.
+3. **AGE never claims the outcome as its own act.** The record says AGE handed over an approved plan
+   and what the peer product reported back — never that AGE performed the external action.
+
+⚠️ Delegation is **not** a reason to loosen approval. A plan AGE would not be allowed to execute is a
+plan AGE is not allowed to hand over.
+
 ## 7. Scope & Isolation
 
 - Every execution runs within a single **Organization / Client / Project** scope and **never crosses
