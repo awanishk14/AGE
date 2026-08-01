@@ -1,7 +1,8 @@
 # ADR-0053 — The client registry and the operator principal
 
-Status: Proposed
+Status: Accepted
 Date: 2026-08-01
+Accepted: 2026-08-01
 Relates to: ADR-0009 (the `Client` aggregate, still reserved), ADR-0026 D4 (missing sections are
 limitations, never negative evidence), ADR-0046 D5 (RLS is coherence, not authorization) and D7
 (no capture writes), ADR-0047 D9 (`clientContext` is not parameterised — **superseded by D5
@@ -24,6 +25,21 @@ the user gave on 2026-07-30, quoted verbatim:
 
 Acceptance under that grant is the architect's. It is **not** a claim that the user reviewed each
 decision below.
+
+### 0.1b Acceptance
+
+⚠️ **This ADR was NOT self-accepted.** It was proposed in #206, merged in `Proposed` state to record
+it, and put to the user together with two things the architect grant does not cover: a position on
+**provenance** (`operator:<handle>` stamped permanently onto history) and a position on **how the
+user's three products relate commercially** (D7). The user accepted it directly, verbatim:
+
+> _"1. accept it, 2. amend it, meanwhile work go ahead"_
+
+— where (1) is this ADR and (2) is the Doc 15 §2 amendment required by D7.
+
+⚠️ **The Doc 15 amendment is a separate act with a separate authority** (Product Owner, per
+`START_HERE.md` §5) and lands in its own PR. Until it does, D7's own warning stands: **do not cite
+D7 as having changed the Product Bible.**
 
 ### 0.2 The context that forced it
 
