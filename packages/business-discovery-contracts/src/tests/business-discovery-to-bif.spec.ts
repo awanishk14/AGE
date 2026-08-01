@@ -287,10 +287,10 @@ describe('Discovery -> BIF draft mapper', () => {
     it('does NOT put discovery capture completeness on the BIF root', () => {
       const scoring = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
       const { bif } = mapBusinessDiscoveryToBifDraft(SAMPLE_BUSINESS_DISCOVERY_PROFILE, OPTIONS);
-      // The sample is a near-complete intake (97) that populates a small part of
+      // The sample is a near-complete intake (98) that populates a small part of
       // the BIF surface. If those two ever coincided the assertion below would be
       // vacuous, so guard that they genuinely differ on this fixture.
-      expect(scoring.completenessScore).toBe(97);
+      expect(scoring.completenessScore).toBe(98);
       expect(bif.completenessScore).not.toBe(scoring.completenessScore);
       expect(bif.completenessScore).toBeLessThan(scoring.completenessScore);
     });
@@ -302,7 +302,7 @@ describe('Discovery -> BIF draft mapper', () => {
         OPTIONS,
       );
       expect(metadata.discoveryCompletenessScore).toBe(scoring.completenessScore);
-      expect(metadata.discoveryCompletenessScore).toBe(97);
+      expect(metadata.discoveryCompletenessScore).toBe(98);
     });
 
     it('computes the BIF root completeness from emitted fields over BIF definitions', () => {

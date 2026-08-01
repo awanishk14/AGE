@@ -88,7 +88,7 @@ describe('AGE demo CLI app', () => {
     const source = readFileSync(join(here, '..', 'run.ts'), 'utf8');
 
     // The intake pair and the BIF pair must both reach the operator. Printing
-    // only the intake pair (97/63 on the sample profile) would read as a
+    // only the intake pair (98/63 on the sample profile) would read as a
     // strong result while the produced Draft BIF is sparse (12/17).
     for (const field of [
       'discoveryCompletenessScore',

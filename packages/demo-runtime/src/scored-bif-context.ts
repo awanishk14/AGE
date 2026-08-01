@@ -13,7 +13,7 @@ import type { DemoScenarioMetadata } from './demo-scenario-metadata';
  *
  * WHY THIS EXISTS RATHER THAN A `context` FIELD ON THE INTAKE SUMMARY:
  * `BusinessDiscoveryIntakeSummary` is the four-score contract that pins
- * 97/63 intake vs 12/17 BIF across three surfaces, and it is projected
+ * 98/63 intake vs 12/17 BIF across three surfaces, and it is projected
  * field-by-field into a published API DTO. Widening it to carry the context
  * would drag this slice into the API layer for no benefit (ADR-0047 D2).
  *

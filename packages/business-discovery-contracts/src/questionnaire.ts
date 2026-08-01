@@ -2,8 +2,12 @@ import { z } from 'zod';
 import {
   discoveryQuestionKindSchema,
   discoverySectionIdSchema,
+  evidenceSourceKindSchema,
+  offeringKindSchema,
   type DiscoveryQuestionKind,
   type DiscoverySectionId,
+  type EvidenceSourceKind,
+  type OfferingKind,
 } from './enums';
 
 /**
@@ -72,6 +76,32 @@ export interface BusinessDiscoveryQuestionnaireQuestion {
   readonly kind: DiscoveryQuestionKind;
   readonly choices?: readonly string[];
   readonly satisfiedBy?: ProfileSignal;
+  /**
+   * ADR-0051 D2/D3 — THE ENUM IS DECLARED ON THE QUESTION, NEVER DERIVED FROM
+   * THE ANSWER.
+   *
+   * `Offering.type` and `EvidenceSourceRef.kind` are required enums that no
+   * free-text answer supplies, which is why `buildProfileFromAnswers` refused to
+   * populate either collection (ADR-0050 D2). The refusal was correct and the
+   * consequence was a profile that could never carry an offering or an evidence
+   * source — capping `discoveryConfidenceScore` at 35 however honestly the
+   * questionnaire was answered.
+   *
+   * The fix is here rather than in the mapper: the questionnaire AUTHOR
+   * classifies once, at design time, visibly in data ("List the products you
+   * sell" carries `entryKind: 'product'`); the OPERATOR transcribes names
+   * verbatim; the MAPPER still never inspects prose and still never infers. Two
+   * questions may therefore legitimately target the same signal, one per enum
+   * value.
+   *
+   * ⚠️ Meaningful only on a question whose `satisfiedBy` signal routes to a
+   * kinded collection. `buildProfileFromAnswers` rejects a questionnaire that
+   * pins an `OfferingKind` on an evidence question or vice versa.
+   *
+   * ⚠️ `'url'` remains a plain reference string that is NEVER fetched. Nothing
+   * here authorizes retrieval.
+   */
+  readonly entryKind?: OfferingKind | EvidenceSourceKind;
 }
 
 export const businessDiscoveryQuestionnaireQuestionSchema = z.object({
@@ -83,6 +113,7 @@ export const businessDiscoveryQuestionnaireQuestionSchema = z.object({
   kind: discoveryQuestionKindSchema,
   choices: z.array(z.string().min(1)).optional(),
   satisfiedBy: profileSignalSchema.optional(),
+  entryKind: z.union([offeringKindSchema, evidenceSourceKindSchema]).optional(),
 });
 
 /**

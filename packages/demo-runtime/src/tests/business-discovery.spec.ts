@@ -102,11 +102,11 @@ describe('Business Discovery demo intake', () => {
       DEMO_SCENARIO_METADATA,
     );
 
-    // The honesty proof, pinned. A thoroughly captured interview (97/63) still
+    // The honesty proof, pinned. A thoroughly captured interview (98/63) still
     // yields a sparse Draft BIF (12/17), because discovery covers only part of
     // the BIF surface. If a future change makes either pair drift toward the
     // other, this fails rather than quietly flattering the result.
-    expect(summary.discoveryCompletenessScore).toBe(97);
+    expect(summary.discoveryCompletenessScore).toBe(98);
     expect(summary.discoveryConfidenceScore).toBe(63);
     expect(summary.bifCompletenessScore).toBe(12);
     expect(summary.bifConfidenceScore).toBe(17);

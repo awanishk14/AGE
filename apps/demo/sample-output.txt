@@ -12,7 +12,7 @@ questionnaire: age-business-discovery v2026.1  |  profile schema: VALID  |  ques
 missingRequired=0  criticalGaps=0
 
 Scores (four distinct measurements — never interchangeable):
-  intake: completeness=97  confidence=63   (properties of the interview)
+  intake: completeness=98  confidence=63   (properties of the interview)
   BIF:    completeness=12  confidence=17   (properties of the produced Draft BIF)
   A well-captured interview still yields a sparse BIF: discovery covers only part of the BIF surface.
 

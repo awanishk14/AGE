@@ -17,7 +17,7 @@ import type { BusinessDiscoveryProfile } from '@age/business-discovery-contracts
  *
  * ⚠️ It re-exports the shared sample rather than declaring a second fixture:
  * `SAMPLE_BUSINESS_DISCOVERY_PROFILE` is the pinned regression baseline behind
- * the 97/63 intake vs 12/17 BIF facts, and a divergent copy here would let those
+ * the 98/63 intake vs 12/17 BIF facts, and a divergent copy here would let those
  * drift apart silently. The alias exists so that `apps/demo` and `apps/api` name
  * the demo's profile without taking a direct dependency on the contracts
  * package.
