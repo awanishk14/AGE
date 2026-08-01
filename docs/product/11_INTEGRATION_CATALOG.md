@@ -129,6 +129,15 @@ Four rules govern peer products, and they are the point of this section:
 2. **AGE consumes a peer product across its public product boundary only** — never a private table,
    never a shared database, never an internal module. A shared datastore would silently merge two
    products into one and destroy the independence this section exists to protect.
+
+   ⚠️ **A peer product may itself expose capabilities internally, but AGE never depends on those
+   capabilities directly. AGE depends only on the peer product's published contract.** An internal
+   service is not a contract: it carries no compatibility promise, so the moment AGE calls one, the
+   peer product can no longer refactor its own internals without breaking AGE — which is rule 1's
+   dependency arrow reversed by accident rather than by decision.
+   ⚠️ **"Capability" here means the peer product's own internal notion**, not AGE's frozen Capability
+   concept (§2.1). The two are unrelated.
+
 3. **A peer product is classified for §2 purposes by what AGE does with it**, exactly as any other
    external system: read-only consumption is **sensing**, and anything that writes or acts is
    **execution** and passes through the Execution Layer (§4, Doc 12 §6.1).
@@ -189,9 +198,11 @@ defines only that connections:
 
 ### 6.1 Credential Locality (canonical principle)
 
-> **AGE never stores third-party credentials.** The **execution surface** that talks to a service
-> owns that service's credentials. AGE stores only the **references** required to route a request to
-> the correct execution surface within the correct client scope.
+> **Credentials are owned only by execution surfaces. AGE stores references, never secrets.**
+
+The **execution surface** that talks to a service owns that service's credentials. AGE stores only the
+**references** required to route a request to the correct execution surface within the correct client
+scope.
 
 ⚠️ **"Execution surface" means an Execution Integration or a peer product — never a Capability.**
 Capabilities are pure and may never invoke an external system or see a credential (§4, Doc 12 §1–§2).
@@ -245,9 +256,10 @@ The following were resolved by the Product Owner and are now canonical:
    absent (§2.1.1 rule 1).
 10. **Hub and spoke.** A peer product never interacts with another peer product; cross-product
     insight is produced only by AGE reasoning over a shared BIF (§2.1.1 rule 4).
-11. **Credential locality.** AGE never stores third-party credentials; the execution surface owns
-    them and AGE stores only routing references (§6.1). Capabilities are pure and never see a
-    credential.
+11. **Credential locality.** **Credentials are owned only by execution surfaces; AGE stores
+    references, never secrets** (§6.1). Capabilities are pure and never see a credential.
+12. **Public contract only.** A peer product may expose capabilities internally, but AGE depends only
+    on its published contract — never on an internal service (§2.1.1 rule 2).
 
 **Canonical principle:** integrations are **contextual perception and action channels** — sensing to
 enrich understanding, execution to extend reach — always interpreted through Client and Project
