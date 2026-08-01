@@ -1,0 +1,317 @@
+import type { BusinessDiscoveryProfile } from './business-discovery-profile';
+import type { DiscoveryAnswer } from './discovery-answer';
+import type { DiscoveryQuestion } from './discovery-question';
+import type { DiscoverySection } from './discovery-section';
+import type { CustomerSegment } from './customer-segment';
+import type { CompetitorReference } from './competitor-reference';
+import type { BusinessGoal } from './business-goal';
+import type { DiscoverySectionId } from './enums';
+import {
+  PROFILE_SIGNALS,
+  type BusinessDiscoveryQuestionnaire,
+  type BusinessDiscoveryQuestionnaireQuestion,
+  type ProfileSignal,
+} from './questionnaire';
+
+/**
+ * buildProfileFromAnswers — the producing direction (ADR-0050).
+ *
+ * `validateProfileAgainstQuestionnaire` has always been able to CHECK whether a
+ * profile answers a questionnaire. Nothing could PRODUCE one: no function in the
+ * repository returned a `BusinessDiscoveryProfile`, so ADR-0049's required
+ * profile parameter was, in practice, reachable with exactly one argument — the
+ * hand-authored sample. This closes that.
+ *
+ * ⚠️ THE WHOLE HAZARD IS TRANSCRIPTION VS INFERENCE (ADR-0050 D2). An answer is
+ * prose; the structured fields are typed. This function only ever copies an
+ * answer's text VERBATIM into a field that can hold it, and OMITS every field it
+ * has no answer for. It never splits one prose answer into several entries,
+ * never derives an enum from wording, and never placeholder-fills. A sparse
+ * profile is the correct output of a sparse answer set, not a degraded one —
+ * `calculateBusinessDiscoveryCompleteness` and the readiness layer exist to
+ * report exactly that sparsity (ADR-0026 D4: a limitation, never negative
+ * evidence).
+ *
+ * Pure and deterministic: no clock, no generated identifiers, no randomness, no
+ * I/O. Output ordering follows the QUESTIONNAIRE's section and question order,
+ * not the caller's answer order, so the same answers in any order produce an
+ * identical profile.
+ */
+
+/**
+ * How a `ProfileSignal`'s answer may be written into the profile.
+ *
+ * - `scalar` — a single string field, copied verbatim.
+ * - `stringList` — a `readonly string[]` field; every answer value verbatim.
+ * - `namedList` — a `{ id, <label> , …all other fields optional }` collection;
+ *   one entry per answer value, the text verbatim as the label, and every
+ *   optional field left absent.
+ * - `untranscribable` — the target REQUIRES a field no answer can supply. See
+ *   the two entries below; this is a refusal, not an omission.
+ */
+type SignalTarget =
+  | {
+      readonly kind: 'scalar';
+      readonly field: 'businessName' | 'industry' | 'businessModel' | 'brandPositioning';
+    }
+  | {
+      readonly kind: 'stringList';
+      readonly field: 'geographies' | 'marketingChannels' | 'constraints' | 'assets';
+    }
+  | { readonly kind: 'namedList'; readonly field: 'segments' | 'competitors' | 'goals' }
+  | { readonly kind: 'untranscribable'; readonly because: string };
+
+/**
+ * ADR-0050 D3 — `satisfiedBy` IS THE ROUTING TABLE, and this is its only
+ * elaboration. A question populates a structured field if and only if it
+ * declares `satisfiedBy`, and the target is whatever that signal names here.
+ * No name matching, no prompt parsing, no per-question special cases.
+ *
+ * ⚠️ Exhaustive over `PROFILE_SIGNALS` BY TYPE — adding a signal without a
+ * target here is a compile error, and a test pins the two to the same closed
+ * set so the producing and checking directions cannot drift apart.
+ */
+export const PROFILE_SIGNAL_TARGETS: Readonly<Record<ProfileSignal, SignalTarget>> = {
+  businessName: { kind: 'scalar', field: 'businessName' },
+  industry: { kind: 'scalar', field: 'industry' },
+  businessModel: { kind: 'scalar', field: 'businessModel' },
+  brandPositioning: { kind: 'scalar', field: 'brandPositioning' },
+
+  geographies: { kind: 'stringList', field: 'geographies' },
+  marketingChannels: { kind: 'stringList', field: 'marketingChannels' },
+  constraints: { kind: 'stringList', field: 'constraints' },
+  assets: { kind: 'stringList', field: 'assets' },
+
+  segments: { kind: 'namedList', field: 'segments' },
+  competitors: { kind: 'namedList', field: 'competitors' },
+  goals: { kind: 'namedList', field: 'goals' },
+
+  // ⚠️ ADR-0050 D2, applied rather than approximated. Both of these targets have
+  // a REQUIRED enum field that an answer's text does not contain, so populating
+  // them would mean choosing a value — inference, which is prohibited.
+  //
+  // ⚠️ ADR-0050 §2.1 as merged listed `Offering` among the all-else-optional
+  // shapes. That was factually wrong: `Offering.type` is a required
+  // `OfferingKind`. See the erratum in the ADR. Do NOT "complete" this by
+  // defaulting `type` to 'service' — product-vs-service is a real business fact
+  // about the offering, not a formatting choice, and a wrong one is a fabricated
+  // conclusion about someone's business.
+  offerings: {
+    kind: 'untranscribable',
+    because:
+      "Offering.type is a required OfferingKind ('product' | 'service') that no answer supplies",
+  },
+  evidenceSources: {
+    kind: 'untranscribable',
+    because:
+      "EvidenceSourceRef.kind is a required EvidenceSourceKind ('client-statement' | 'document' | 'url') that no answer supplies",
+  },
+};
+
+/** Required caller-supplied identity (ADR-0050 D5). Never defaulted, never generated. */
+export interface BuildProfileFromAnswersOptions {
+  /** Profile identifier. The caller owns identity; this function invents none. */
+  readonly id: string;
+  /** ISO-8601 capture timestamp. Caller-supplied — this function reads no clock. */
+  readonly capturedAt: string;
+}
+
+/** Every non-empty, trimmed value an answer carries, in the order given. */
+function answerValues(answer: DiscoveryAnswer): readonly string[] {
+  const raw = Array.isArray(answer.value) ? answer.value : [answer.value as string];
+  return raw.map((entry) => entry.trim()).filter((entry) => entry.length > 0);
+}
+
+/** Drop `critical` and `satisfiedBy`: a profile section carries `DiscoveryQuestion`, not the questionnaire's shape. */
+function toDiscoveryQuestion(question: BusinessDiscoveryQuestionnaireQuestion): DiscoveryQuestion {
+  return {
+    id: question.id,
+    sectionId: question.sectionId,
+    prompt: question.prompt,
+    required: question.required,
+    kind: question.kind,
+    // ⚠️ Field-by-field, and `choices` conditionally — never a spread. A spread
+    // would carry `critical`/`satisfiedBy` into a shape that does not declare
+    // them, and would write `choices: undefined` where the source has no key.
+    ...(question.choices === undefined ? {} : { choices: question.choices }),
+  };
+}
+
+/**
+ * buildProfileFromAnswers — map a questionnaire answer set to a
+ * `BusinessDiscoveryProfile` by transcription only.
+ *
+ * @throws if `answers` is not an array, if `questionnaire` has no sections, if
+ * `options.id` or `options.capturedAt` is missing or blank, or if no answer
+ * supplies a business name.
+ *
+ * ⚠️ The business-name throw is NOT "an unanswered question is an error" —
+ * ADR-0050 D4 says the opposite and this function honours it: every other
+ * unanswered or unmapped question simply contributes nothing and leaves the
+ * profile sparse. `businessName` is the single field the profile schema itself
+ * makes required and non-empty, so without it there is no valid profile to
+ * return and the only alternative would be to invent one.
+ */
+export function buildProfileFromAnswers(
+  answers: readonly DiscoveryAnswer[],
+  questionnaire: BusinessDiscoveryQuestionnaire,
+  options: BuildProfileFromAnswersOptions,
+): BusinessDiscoveryProfile {
+  if (!Array.isArray(answers)) {
+    throw new TypeError('buildProfileFromAnswers requires an answers array');
+  }
+  if (questionnaire?.sections === undefined || questionnaire.sections.length === 0) {
+    throw new TypeError(
+      'buildProfileFromAnswers requires a questionnaire with at least one section',
+    );
+  }
+  if (typeof options?.id !== 'string' || options.id.trim().length === 0) {
+    throw new TypeError('buildProfileFromAnswers requires a caller-supplied options.id');
+  }
+  if (typeof options?.capturedAt !== 'string' || options.capturedAt.trim().length === 0) {
+    throw new TypeError('buildProfileFromAnswers requires a caller-supplied options.capturedAt');
+  }
+
+  // Answers are indexed by question id, so output order is driven by the
+  // questionnaire rather than by the order the caller happened to submit.
+  const byQuestionId = new Map<string, DiscoveryAnswer>();
+  for (const answer of answers) {
+    if (answerValues(answer).length > 0) {
+      byQuestionId.set(answer.questionId, answer);
+    }
+  }
+
+  let businessName: string | undefined;
+  const scalars = new Map<string, string>();
+  const stringLists = new Map<string, string[]>();
+  const segments: CustomerSegment[] = [];
+  const competitors: CompetitorReference[] = [];
+  const goals: BusinessGoal[] = [];
+  const sections: DiscoverySection[] = [];
+
+  for (const section of questionnaire.sections) {
+    const sectionAnswers: DiscoveryAnswer[] = [];
+
+    for (const question of section.questions) {
+      const answer = byQuestionId.get(question.id);
+      if (answer === undefined) {
+        // ADR-0050 D4 — not an error. The profile stays sparse.
+        continue;
+      }
+
+      // D6: recorded as an answer whether or not it also feeds a structured
+      // signal, so the two representations cannot disagree.
+      sectionAnswers.push(answer);
+
+      if (question.satisfiedBy === undefined) {
+        continue;
+      }
+
+      const target = PROFILE_SIGNAL_TARGETS[question.satisfiedBy];
+      const values = answerValues(answer);
+
+      switch (target.kind) {
+        case 'scalar': {
+          const [first] = values;
+          // `values` is non-empty by construction (blank answers never enter
+          // the index), but a scalar field must never be written `undefined` —
+          // that would be a present key with no value, which is neither an
+          // answer nor an honest omission.
+          if (first !== undefined) {
+            if (target.field === 'businessName') {
+              businessName = first;
+            } else {
+              scalars.set(target.field, first);
+            }
+          }
+          break;
+        }
+        case 'stringList': {
+          const existing = stringLists.get(target.field) ?? [];
+          stringLists.set(target.field, [...existing, ...values]);
+          break;
+        }
+        case 'namedList': {
+          values.forEach((text, index) => {
+            // A synthetic identifier derived from the question id. An id is an
+            // identifier, not content — nothing about the business is invented.
+            const id = `${question.id}-${index + 1}`;
+            if (target.field === 'segments') {
+              segments.push({ id, name: text });
+            } else if (target.field === 'competitors') {
+              competitors.push({ id, name: text });
+            } else {
+              goals.push({ id, statement: text });
+            }
+          });
+          break;
+        }
+        case 'untranscribable':
+          // Deliberately nothing. The answer is still recorded above, so the
+          // operator's words are never lost — only the structured collection
+          // this function may not fabricate is left empty.
+          break;
+      }
+    }
+
+    if (sectionAnswers.length > 0) {
+      sections.push({
+        id: section.id as DiscoverySectionId,
+        name: section.name,
+        questions: section.questions.map(toDiscoveryQuestion),
+        answers: sectionAnswers,
+      });
+    }
+  }
+
+  if (businessName === undefined) {
+    throw new TypeError(
+      'buildProfileFromAnswers requires an answer satisfying the businessName signal: the profile schema requires a non-empty businessName and this function invents none',
+    );
+  }
+
+  const optionalScalar = (field: string): Record<string, string> => {
+    const value = scalars.get(field);
+    // Omitted, never placeholder-filled (ADR-0050 D2).
+    return value === undefined ? {} : { [field]: value };
+  };
+
+  return {
+    id: options.id,
+    businessName,
+    ...optionalScalar('industry'),
+    ...optionalScalar('businessModel'),
+    ...optionalScalar('brandPositioning'),
+
+    geographies: stringLists.get('geographies') ?? [],
+    marketingChannels: stringLists.get('marketingChannels') ?? [],
+    constraints: stringLists.get('constraints') ?? [],
+    assets: stringLists.get('assets') ?? [],
+
+    sections,
+    segments,
+    competitors,
+    goals,
+
+    // ⚠️ Empty by decision, not by oversight:
+    // - `offerings` / `evidenceSources` — untranscribable, see the table above.
+    // - `assumptions` — an assumption is a judgement about the business; reading
+    //   one out of an answer is inference.
+    // - `gaps` — `validateProfileAgainstQuestionnaire` derives these from the
+    //   profile and the questionnaire. Writing them here would duplicate that
+    //   and let the two disagree.
+    // - `fieldEvidence` — omitted entirely; a profile that cites nothing is
+    //   exactly as valid as before that field existed.
+    offerings: [],
+    evidenceSources: [],
+    assumptions: [],
+    gaps: [],
+
+    capturedAt: options.capturedAt,
+  };
+}
+
+/** The closed signal set this module routes, for the drift guard. */
+export const TRANSCRIBED_PROFILE_SIGNALS: readonly ProfileSignal[] = PROFILE_SIGNALS.filter(
+  (signal) => PROFILE_SIGNAL_TARGETS[signal].kind !== 'untranscribable',
+);

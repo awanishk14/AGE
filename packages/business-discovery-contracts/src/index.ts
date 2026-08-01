@@ -79,6 +79,19 @@ export type {
 // Curated default questionnaire (static definition, no side effects).
 export { DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE } from './default-questionnaire';
 
+// Answers -> profile mapper (ADR-0050). The PRODUCING direction, and the
+// declared inverse of `PROFILE_SIGNAL_PREDICATES` below. It TRANSCRIBES and
+// never INFERS: answer text is copied verbatim, every field it has no answer
+// for is omitted rather than placeholder-filled, and two signals (`offerings`,
+// `evidenceSources`) are refused outright because their targets require an enum
+// no answer supplies. Pure: no clock, no generated id, no randomness, no I/O.
+export {
+  PROFILE_SIGNAL_TARGETS,
+  TRANSCRIBED_PROFILE_SIGNALS,
+  buildProfileFromAnswers,
+} from './build-profile-from-answers';
+export type { BuildProfileFromAnswersOptions } from './build-profile-from-answers';
+
 // Questionnaire validation (pure, deterministic completeness check).
 export {
   questionnaireValidationResultSchema,

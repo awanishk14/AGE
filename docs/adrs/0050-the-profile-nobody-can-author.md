@@ -158,6 +158,28 @@ per value with the text verbatim as `name`/`statement` and **every optional fiel
 never populated by this function. Splitting one prose answer into several entries, or deriving a
 `horizon` from words like "next year", is inference and is prohibited.
 
+#### ⚠️ Erratum to §2.1 — `Offering` is NOT all-else-optional (corrected during implementation)
+
+The paragraph above lists `Offering` among the `{ id, name, …all other fields optional }` shapes.
+**That is factually wrong.** `Offering.type` is a **required** `OfferingKind` (`'product' |
+'service'`), and `EvidenceSourceRef.kind` is a **required** `EvidenceSourceKind`
+(`'client-statement' | 'document' | 'url'`). Neither value is present in an answer's text.
+
+**D2 is unchanged and is what forces the correction.** Applying "transcribe, never infer" correctly
+means those two signals cannot be transcribed at all, because populating either target requires
+_choosing_ an enum value. So the mapper routes **11 of the 13 signals** and refuses `offerings` and
+`evidenceSources` outright, carrying a stated reason for each.
+
+⚠️ Do **not** "complete" the mapper by defaulting `Offering.type` to `'service'` or
+`EvidenceSourceRef.kind` to `'client-statement'`. Product-versus-service is a real fact about
+someone's business, not a formatting choice, and a wrong one is a fabricated conclusion —
+exactly what the standing boundaries prohibit. The operator's words are **not** lost: D6 still
+records every such answer in `sections[].answers[]`, so only the structured collection this
+function may not fabricate is left empty.
+
+The remaining shapes in §2.1 are correct as written: `CustomerSegment`, `CompetitorReference` and
+`BusinessGoal` are each `{ id, name|statement, …all else optional }` and are transcribed.
+
 ### 2.2 Recorded, not authorized
 
 Surfaced while investigating and deliberately not acted on: the `demoContext` scope stamp (§0.5.2 —
