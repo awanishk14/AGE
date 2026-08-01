@@ -1,6 +1,6 @@
 # ADR-0049 — The intake that accepts no input
 
-Status: Proposed
+Status: Accepted
 Date: 2026-08-01
 Relates to: ADR-0038/0039 (canonical Path B), ADR-0044 D1 (no snapshot consumer), ADR-0046 D1/D2/D7
 (the product reframe; the authentication trigger; the capture prohibition), ADR-0047 D2/D6/D7b (the
@@ -17,9 +17,16 @@ The user's instruction, verbatim, on 2026-08-01:
 > _"act as an architect and decide, i am looking for the finished product."_
 
 This ADR is written under the standing architect grant recorded in ADR-0043 §0.1 and reaffirmed by
-the mandate quoted in ADR-0048 §0.1. It is filed `Status: Proposed`; a separate PR flips it to
-`Accepted`, as every ADR since 0043 has done. Acceptance will be **self-acceptance under a stated
-grant** — not a claim that the user reviewed each decision below.
+the mandate quoted in ADR-0048 §0.1. It was merged as PR #188 with `Status: Proposed`, which decided
+nothing; **this separate PR flips it to `Accepted`**, as every ADR since 0043 has done.
+
+Acceptance is **self-acceptance under a stated grant** — the architect's, and mine to answer for. It
+is **not** a claim that the user reviewed each decision below. Nothing in §2 was changed to accept
+it: D5 still withholds the HTTP route, D7 still withholds context-driven capability inputs, and both
+dissents in §4 stand **recorded rather than resolved**.
+
+⚠️ One decision here is **not** the architect's and was not taken: authentication (ADR-0046 §4).
+D6 is written so that this slice does not pre-commit it in any direction.
 
 The phrase _"the finished product"_ is the operative one. It reframes the question from _"what is
 the next slice on the current track?"_ to _"what stands between this repository and something a
