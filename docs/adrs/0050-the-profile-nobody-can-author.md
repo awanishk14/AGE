@@ -190,9 +190,34 @@ schema failure before the summary is built. Each needs its own `Status: Proposed
 
 ## 3. Consequences
 
-A questionnaire answer set becomes a profile, so ADR-0049's parameter has a second reachable
-argument and the pipeline can be pointed at a real business by a human. The route, when it comes,
-has something to accept that a person could plausibly have produced.
+A questionnaire answer set becomes a profile, so ADR-0049's parameter has a second **constructible**
+argument. The route, when it comes, has something to accept that a person could plausibly have
+produced.
+
+#### ⚠️ Erratum to §3 — "reachable" and "can be pointed at a real business" were overclaims
+
+The sentence above originally read: _"ADR-0049's parameter has a second **reachable** argument and
+the pipeline **can be pointed at a real business by a human**."_ Both halves are false as shipped,
+and the second is the same class of overclaim ADR-0049 D2 exists to prevent — committed in the ADR
+that closed it. Corrected in place rather than softened, because the decisions are unaffected:
+
+- `buildProfileFromAnswers` has **zero non-test callers**. Nothing in `apps/` or `packages/`
+  invokes it, so no execution path reaches the profile parameter with an argument it produced.
+  **Constructible is not reachable**, and this ADR should have said so.
+- **No human can point anything at a real business.** There is no form, no route and no CLI flag
+  that accepts an answer set. The mapper is a library function callable only from code.
+
+What D1–D8 actually delivered stands unchanged: a total, testable, transcription-only function from
+answers to a profile, and the proof (D8) that its output survives
+`validateProfileAgainstQuestionnaire`. **Authoring the answers remains unbuilt** — which is exactly
+why ADR-0051 exists, and why the honest ordering is to fix what the questionnaire cannot express
+_before_ building a surface that would render the result.
+
+⚠️ A related charge was **examined and rejected**: that `apps/demo/src/tests/run.spec.ts`'s
+`runBusinessDiscoveryIntake(DEMO_BUSINESS_DISCOVERY_PROFILE, …)` regex is what prevents the pipeline
+being pointed elsewhere. It is not. That guard pins **one caller** — the demo CLI — to naming its
+subject at the call site, which _is_ ADR-0049 D2. It constrains the demo, not the function. **Do not
+loosen it** on the strength of this erratum.
 
 The cost is that a transcribed profile is **sparse by design** — thin `Offering`s, no
 `valueProposition`, no `fieldEvidence`. That is correct and must not be "improved" by enriching the
