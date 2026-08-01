@@ -66,14 +66,35 @@ export const DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE: BusinessDiscoveryQuestion
       id: 'offerings',
       name: 'Offerings',
       questions: [
+        // ADR-0051 D1/D2 — one question per `OfferingKind`, because the kind is
+        // pinned by the AUTHOR here and never read out of the operator's prose.
+        // The single "products or services" question it replaces could not
+        // produce an `Offering` at all: `Offering.type` is required and its
+        // answer does not contain it, so every answers-built profile had
+        // `offerings: []` and `products_services` was always omitted.
+        //
+        // ⚠️ Do NOT collapse these back into one question and ask the operator
+        // "products or services?". That applies a whole-business answer to every
+        // entry, and a business selling both has no honest answer to give.
         {
-          id: 'off-list',
+          id: 'off-products',
           sectionId: 'offerings',
-          prompt: 'What are the core products or services offered?',
+          prompt: 'Which products does the business sell? List them by name.',
           required: true,
           critical: true,
           kind: 'list',
           satisfiedBy: 'offerings',
+          entryKind: 'product',
+        },
+        {
+          id: 'off-services',
+          sectionId: 'offerings',
+          prompt: 'Which services does the business provide? List them by name.',
+          required: true,
+          critical: true,
+          kind: 'list',
+          satisfiedBy: 'offerings',
+          entryKind: 'service',
         },
       ],
     },
@@ -189,14 +210,42 @@ export const DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE: BusinessDiscoveryQuestion
       id: 'evidence-assumptions',
       name: 'Evidence & Assumptions',
       questions: [
+        // ADR-0051 D1/D3 — one question per `EvidenceSourceKind`, for the same
+        // reason as offerings above. This is what lifts `evidenceSources` off
+        // empty, and therefore what lifts `noEvidenceCap: 35` — by making the
+        // evidence real, never by relaxing the cap.
+        //
+        // ⚠️ A 'url' answer is a plain reference string. It is recorded and
+        // never fetched; nothing here performs or authorizes retrieval.
         {
-          id: 'ev-sources',
+          id: 'ev-documents',
           sectionId: 'evidence-assumptions',
-          prompt: 'What evidence sources back the captured context?',
+          prompt: 'Which documents back the captured context? List them by title.',
           required: false,
           critical: false,
           kind: 'list',
           satisfiedBy: 'evidenceSources',
+          entryKind: 'document',
+        },
+        {
+          id: 'ev-urls',
+          sectionId: 'evidence-assumptions',
+          prompt: 'Which web references back the captured context? List their addresses.',
+          required: false,
+          critical: false,
+          kind: 'list',
+          satisfiedBy: 'evidenceSources',
+          entryKind: 'url',
+        },
+        {
+          id: 'ev-statements',
+          sectionId: 'evidence-assumptions',
+          prompt: 'Which statements from the client back the captured context?',
+          required: false,
+          critical: false,
+          kind: 'list',
+          satisfiedBy: 'evidenceSources',
+          entryKind: 'client-statement',
         },
         {
           id: 'ev-assumptions',

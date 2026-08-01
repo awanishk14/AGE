@@ -87,7 +87,7 @@ describe('Business Discovery completeness scoring', () => {
   describe('pinned score examples', () => {
     it('scores the fully-populated sample profile', () => {
       const result = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
-      expect(result.completenessScore).toBe(97);
+      expect(result.completenessScore).toBe(98);
       expect(result.discoveryConfidenceScore).toBe(63);
       expect(result.readinessBand).toBe('strong');
       expect(result.missingRequiredCount).toBe(0);
@@ -115,7 +115,7 @@ describe('Business Discovery completeness scoring', () => {
 
     it('scores a profile whose evidence is listed but never cited', () => {
       const result = calculateBusinessDiscoveryCompleteness(LISTED_BUT_UNCITED_PROFILE);
-      expect(result.completenessScore).toBe(97);
+      expect(result.completenessScore).toBe(98);
       // Capped: nominal evidence is barely better than none.
       expect(result.discoveryConfidenceScore).toBe(45);
       expect(result.readinessBand).toBe('usable');
@@ -123,7 +123,7 @@ describe('Business Discovery completeness scoring', () => {
 
     it('scores a profile with a missing required/critical area', () => {
       const result = calculateBusinessDiscoveryCompleteness(MISSING_CRITICAL_PROFILE);
-      expect(result.completenessScore).toBe(87);
+      expect(result.completenessScore).toBe(89);
       expect(result.discoveryConfidenceScore).toBe(51);
       expect(result.readinessBand).toBe('partial');
       expect(result.criticalGapCount).toBe(1);
@@ -153,9 +153,9 @@ describe('Business Discovery completeness scoring', () => {
         assets: [],
         constraints: [],
       });
-      expect(base.completenessScore).toBe(97);
-      expect(one.completenessScore).toBe(92);
-      expect(two.completenessScore).toBe(87);
+      expect(base.completenessScore).toBe(98);
+      expect(one.completenessScore).toBe(93);
+      expect(two.completenessScore).toBe(89);
     });
   });
 
@@ -359,7 +359,7 @@ describe('Business Discovery completeness scoring', () => {
 
     it('leaves answer-level-only scoring exactly as before', () => {
       const result = calculateBusinessDiscoveryCompleteness(SAMPLE_BUSINESS_DISCOVERY_PROFILE);
-      expect(result.completenessScore).toBe(97);
+      expect(result.completenessScore).toBe(98);
       expect(result.discoveryConfidenceScore).toBe(63);
       expect(result.readinessBand).toBe('strong');
     });
@@ -374,7 +374,7 @@ describe('Business Discovery completeness scoring', () => {
 
     it('demotes to partial on an open critical gap despite high completeness', () => {
       const result = calculateBusinessDiscoveryCompleteness(MISSING_CRITICAL_PROFILE);
-      expect(result.completenessScore).toBe(87); // would band `usable` on completeness alone
+      expect(result.completenessScore).toBe(89); // would band `usable` on completeness alone
       expect(result.readinessBand).toBe('partial');
     });
 
@@ -385,9 +385,9 @@ describe('Business Discovery completeness scoring', () => {
       expect(result.readinessBand).toBe('partial');
     });
 
-    it('demotes to usable on uncited evidence despite 97 completeness', () => {
+    it('demotes to usable on uncited evidence despite 98 completeness', () => {
       const result = calculateBusinessDiscoveryCompleteness(LISTED_BUT_UNCITED_PROFILE);
-      expect(result.completenessScore).toBe(97); // would band `strong` on completeness alone
+      expect(result.completenessScore).toBe(98); // would band `strong` on completeness alone
       expect(result.discoveryConfidenceScore).toBe(45); // between the 40 and 60 floors
       expect(result.readinessBand).toBe('usable');
     });

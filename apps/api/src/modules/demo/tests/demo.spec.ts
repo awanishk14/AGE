@@ -109,7 +109,7 @@ describe('DemoController GET /demo/capabilities', () => {
 
     // The honesty proof: a well-captured interview still yields a sparse Draft
     // BIF. Pinned so the endpoint cannot start flattering the result.
-    expect(discovery.discoveryCompletenessScore).toBe(97);
+    expect(discovery.discoveryCompletenessScore).toBe(98);
     expect(discovery.discoveryConfidenceScore).toBe(63);
     expect(discovery.bifCompletenessScore).toBe(12);
     expect(discovery.bifConfidenceScore).toBe(17);

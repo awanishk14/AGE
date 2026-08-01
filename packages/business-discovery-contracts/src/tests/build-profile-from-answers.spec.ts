@@ -44,19 +44,44 @@ describe('buildProfileFromAnswers (ADR-0050)', () => {
       expect(PROFILE_SIGNALS).toHaveLength(13);
     });
 
-    it('names exactly the two signals it refuses to transcribe, and says why', () => {
+    it('refuses no signal outright, and routes the two kinded ones through the question (ADR-0051 D4)', () => {
       const refused = PROFILE_SIGNALS.filter(
         (signal) => PROFILE_SIGNAL_TARGETS[signal].kind === 'untranscribable',
       );
-      // ⚠️ Both targets have a REQUIRED enum field no answer supplies. Adding a
-      // default for either is the inference ADR-0050 D2 prohibits.
-      expect(refused).toEqual(['offerings', 'evidenceSources']);
-      expect(TRANSCRIBED_PROFILE_SIGNALS).toHaveLength(11);
+      // ⚠️ ADR-0051 D4 dropped `untranscribable` for EXACTLY `offerings` and
+      // `evidenceSources` — the only two members it ever had — because the
+      // QUESTION can now pin the required enum. Nothing else was reclassified.
+      expect(refused).toEqual([]);
+      expect(TRANSCRIBED_PROFILE_SIGNALS).toHaveLength(13);
 
-      for (const signal of refused) {
-        const target = PROFILE_SIGNAL_TARGETS[signal];
-        expect(target.kind === 'untranscribable' && target.because.length > 0).toBe(true);
-      }
+      const kinded = PROFILE_SIGNALS.filter(
+        (signal) => PROFILE_SIGNAL_TARGETS[signal].kind === 'kindedList',
+      );
+      expect(kinded).toEqual(['offerings', 'evidenceSources']);
+    });
+
+    it('never populates the seven fields that stay unpopulated (ADR-0051 D4)', () => {
+      // ⚠️ The refusal is narrowed, not lifted. A kinded entry carries its id,
+      // its verbatim text and the AUTHOR-pinned enum — and nothing else. Filling
+      // any of these is still the inference ADR-0050 D2 prohibits.
+      const profile = buildProfileFromAnswers(
+        [
+          NAME_ANSWER,
+          { questionId: 'off-products', value: ['Roasted beans'] },
+          { questionId: 'ev-urls', value: ['https://example.com/deck'] },
+          answer('segments', ['Cafés']),
+          answer('competitors', ['BeanCo']),
+          answer('goals', ['Double revenue next year']),
+        ],
+        DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
+        OPTIONS,
+      );
+
+      expect(Object.keys(profile.offerings[0]!).sort()).toEqual(['id', 'name', 'type']);
+      expect(Object.keys(profile.evidenceSources[0]!).sort()).toEqual(['id', 'kind', 'label']);
+      expect(Object.keys(profile.segments[0]!).sort()).toEqual(['id', 'name']);
+      expect(Object.keys(profile.competitors[0]!).sort()).toEqual(['id', 'name']);
+      expect(Object.keys(profile.goals[0]!).sort()).toEqual(['id', 'statement']);
     });
 
     it('populates no structured field for a question with no satisfiedBy', () => {
@@ -162,26 +187,127 @@ describe('buildProfileFromAnswers (ADR-0050)', () => {
       expect(profile.competitors[0]?.name).toBe('Blue Bottle, Stumptown and Counter Culture');
     });
 
-    it('leaves offerings and evidenceSources empty even when those questions are answered', () => {
+    it('takes the enum from the QUESTION and the text from the ANSWER (ADR-0051 D2/D3)', () => {
       const profile = buildProfileFromAnswers(
         [
           NAME_ANSWER,
-          answer('offerings', ['Wholesale beans', 'Barista training']),
-          answer('evidenceSources', ['Founder interview']),
+          { questionId: 'off-products', value: ['Wholesale beans'] },
+          { questionId: 'off-services', value: ['Barista training'] },
+          { questionId: 'ev-statements', value: ['Founder interview'] },
         ],
         DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
         OPTIONS,
       );
 
-      // ⚠️ A refusal, not a gap in coverage. `Offering.type` and
-      // `EvidenceSourceRef.kind` are required enums no answer supplies.
-      expect(profile.offerings).toEqual([]);
-      expect(profile.evidenceSources).toEqual([]);
+      // ⚠️ The enums below appear in NEITHER answer. They come from the two
+      // questions' `entryKind`, authored at design time — which is exactly why
+      // this is transcription and not inference.
+      expect(profile.offerings).toEqual([
+        { id: 'off-products-1', name: 'Wholesale beans', type: 'product' },
+        { id: 'off-services-1', name: 'Barista training', type: 'service' },
+      ]);
+      expect(profile.evidenceSources).toEqual([
+        { id: 'ev-statements-1', label: 'Founder interview', kind: 'client-statement' },
+      ]);
 
-      // ⚠️ …but the operator's words are NOT lost — D6 still recorded them.
+      // ⚠️ Two questions targeting one signal APPEND. If the second overwrote
+      // the first — the defect the duplicate check exists to stop — the
+      // `off-products` entry would be gone above.
+      expect(profile.offerings).toHaveLength(2);
+
+      // D6 still records the operator's words as answers too.
       const values = profile.sections.flatMap((s) => s.answers.flatMap((a) => a.value));
       expect(values).toContain('Wholesale beans');
       expect(values).toContain('Founder interview');
+    });
+
+    it('rejects a questionnaire that would make the mapper invent or discard an enum', () => {
+      const withQuestion = (
+        question: Record<string, unknown>,
+      ): typeof DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE => ({
+        ...DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
+        sections: [
+          {
+            id: 'offerings',
+            name: 'Offerings',
+            questions: [question as never],
+          },
+        ],
+      });
+
+      const base = {
+        id: 'q-1',
+        sectionId: 'offerings',
+        prompt: 'List them',
+        required: true,
+        critical: false,
+        kind: 'list',
+        satisfiedBy: 'offerings',
+      };
+
+      // No `entryKind`: the mapper would have to choose one.
+      expect(() => buildProfileFromAnswers([], withQuestion(base), OPTIONS)).toThrow(/entryKind/);
+
+      // An `EvidenceSourceKind` pinned on an offerings question.
+      expect(() =>
+        buildProfileFromAnswers([], withQuestion({ ...base, entryKind: 'document' }), OPTIONS),
+      ).toThrow(/accepts only product \| service/);
+
+      // An `entryKind` on a signal that writes no kinded entries: silently ignored otherwise.
+      expect(() =>
+        buildProfileFromAnswers(
+          [],
+          withQuestion({ ...base, satisfiedBy: 'constraints', entryKind: 'product' }),
+          OPTIONS,
+        ),
+      ).toThrow(/writes no kinded entries/);
+    });
+
+    it('still rejects a SECOND question pinning the SAME enum (ADR-0051 §3 — narrowed, not removed)', () => {
+      // ⚠️ Two `offerings` questions are legal only while they collect different
+      // kinds. Two pinning `'product'` is the original silent-overwrite hazard
+      // wearing the new shape, and must still throw.
+      const duplicate = {
+        ...DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
+        sections: [
+          {
+            id: 'offerings' as const,
+            name: 'Offerings',
+            questions: [
+              {
+                id: 'off-a',
+                sectionId: 'offerings' as const,
+                prompt: 'Products?',
+                required: true,
+                critical: false,
+                kind: 'list' as const,
+                satisfiedBy: 'offerings' as const,
+                entryKind: 'product' as const,
+              },
+              {
+                id: 'off-b',
+                sectionId: 'offerings' as const,
+                prompt: 'More products?',
+                required: true,
+                critical: false,
+                kind: 'list' as const,
+                satisfiedBy: 'offerings' as const,
+                entryKind: 'product' as const,
+              },
+            ],
+          },
+        ],
+      };
+
+      expect(() => buildProfileFromAnswers([], duplicate, OPTIONS)).toThrow(
+        /at most one question per profile signal/,
+      );
+
+      // …and the default questionnaire, which DOES carry two offerings
+      // questions, is accepted — the check was narrowed, not disabled.
+      expect(() =>
+        buildProfileFromAnswers([NAME_ANSWER], DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE, OPTIONS),
+      ).not.toThrow();
     });
 
     it('derives no assumptions and no gaps', () => {

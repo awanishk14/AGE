@@ -5,7 +5,15 @@ import type { DiscoverySection } from './discovery-section';
 import type { CustomerSegment } from './customer-segment';
 import type { CompetitorReference } from './competitor-reference';
 import type { BusinessGoal } from './business-goal';
-import type { DiscoverySectionId } from './enums';
+import type { Offering } from './offering';
+import type { EvidenceSourceRef } from './evidence-source-ref';
+import {
+  EVIDENCE_SOURCE_KINDS,
+  OFFERING_KINDS,
+  type DiscoverySectionId,
+  type EvidenceSourceKind,
+  type OfferingKind,
+} from './enums';
 import {
   PROFILE_SIGNALS,
   type BusinessDiscoveryQuestionnaire,
@@ -46,8 +54,18 @@ import {
  * - `namedList` — a `{ id, <label> , …all other fields optional }` collection;
  *   one entry per answer value, the text verbatim as the label, and every
  *   optional field left absent.
- * - `untranscribable` — the target REQUIRES a field no answer can supply. See
- *   the two entries below; this is a refusal, not an omission.
+ * - `kindedList` — a collection whose entries carry a REQUIRED enum the answer
+ *   does not contain. The enum comes from the QUESTION's `entryKind`
+ *   (ADR-0051 D2/D3), never from the answer's wording; the answer still supplies
+ *   only the text, verbatim.
+ * - `untranscribable` — the target REQUIRES a field no answer can supply and no
+ *   question can pin. A refusal, not an omission.
+ *
+ * ⚠️ `untranscribable` currently has NO members: ADR-0051 D4 moved `offerings`
+ * and `evidenceSources` to `kindedList`, and those were the only two. The
+ * variant is kept deliberately — it is the vocabulary for the next field whose
+ * required data no answer supplies, and deleting it would make the next such
+ * refusal look like an oversight rather than a decision.
  */
 type SignalTarget =
   | {
@@ -59,6 +77,12 @@ type SignalTarget =
       readonly field: 'geographies' | 'marketingChannels' | 'constraints' | 'assets';
     }
   | { readonly kind: 'namedList'; readonly field: 'segments' | 'competitors' | 'goals' }
+  | {
+      readonly kind: 'kindedList';
+      readonly field: 'offerings' | 'evidenceSources';
+      /** The enum a question targeting this signal must pin, by allowed value. */
+      readonly entryKinds: readonly string[];
+    }
   | { readonly kind: 'untranscribable'; readonly because: string };
 
 /**
@@ -86,25 +110,23 @@ export const PROFILE_SIGNAL_TARGETS: Readonly<Record<ProfileSignal, SignalTarget
   competitors: { kind: 'namedList', field: 'competitors' },
   goals: { kind: 'namedList', field: 'goals' },
 
-  // ⚠️ ADR-0050 D2, applied rather than approximated. Both of these targets have
-  // a REQUIRED enum field that an answer's text does not contain, so populating
-  // them would mean choosing a value — inference, which is prohibited.
+  // ⚠️ ADR-0051 D4. These two were `untranscribable` under ADR-0050 because
+  // `Offering.type` and `EvidenceSourceRef.kind` are required enums no answer
+  // supplies — correct then, and STILL correct about the answer. What changed is
+  // that the QUESTION can now pin the enum (`entryKind`), so the value comes
+  // from the questionnaire author at design time rather than from prose.
   //
-  // ⚠️ ADR-0050 §2.1 as merged listed `Offering` among the all-else-optional
-  // shapes. That was factually wrong: `Offering.type` is a required
-  // `OfferingKind`. See the erratum in the ADR. Do NOT "complete" this by
-  // defaulting `type` to 'service' — product-vs-service is a real business fact
-  // about the offering, not a formatting choice, and a wrong one is a fabricated
-  // conclusion about someone's business.
-  offerings: {
-    kind: 'untranscribable',
-    because:
-      "Offering.type is a required OfferingKind ('product' | 'service') that no answer supplies",
-  },
+  // ⚠️ ADR-0050 D2 is intact, not weakened. Do NOT "complete" this by defaulting
+  // `type` to 'service' or by reading product-vs-service out of the answer's
+  // wording: product-vs-service is a real business fact about the offering, not
+  // a formatting choice, and a wrong one is a fabricated conclusion about
+  // someone's business. A question with no `entryKind` is rejected, never
+  // guessed.
+  offerings: { kind: 'kindedList', field: 'offerings', entryKinds: OFFERING_KINDS },
   evidenceSources: {
-    kind: 'untranscribable',
-    because:
-      "EvidenceSourceRef.kind is a required EvidenceSourceKind ('client-statement' | 'document' | 'url') that no answer supplies",
+    kind: 'kindedList',
+    field: 'evidenceSources',
+    entryKinds: EVIDENCE_SOURCE_KINDS,
   },
 };
 
@@ -182,26 +204,56 @@ export function buildProfileFromAnswers(
   // ⚠️ This is NOT the D4 rule. An unanswered or unmapped QUESTION is never an
   // error and leaves the profile sparse. A malformed QUESTIONNAIRE is a caller
   // defect, in the same class as passing no sections at all.
-  const claimedBy = new Map<ProfileSignal, string>();
+  // ⚠️ ADR-0051 §3 — this check is NARROWED, never removed. D1–D4 make two
+  // questions legitimately target `offerings` (one per `OfferingKind`), so the
+  // flat "at most one question per signal" rule would now reject the default
+  // questionnaire. The defect it was written to close is a SECOND CLAIM
+  // OVERWRITING THE FIRST, and that is still rejected everywhere it can happen:
+  // a kinded list APPENDS rather than overwrites, so a second question is safe
+  // there and only there — and only when it pins a DIFFERENT enum value.
+  const claimedBy = new Map<string, string>();
   for (const section of questionnaire.sections) {
     for (const question of section.questions) {
       if (question.satisfiedBy === undefined) {
         continue;
       }
-      const owner = claimedBy.get(question.satisfiedBy);
+      const target = PROFILE_SIGNAL_TARGETS[question.satisfiedBy];
+
+      if (target.kind === 'kindedList') {
+        // The enum is required ON THE QUESTION. Absent, it would have to be
+        // invented — the inference ADR-0050 D2 prohibits — so this is a caller
+        // defect, not a sparse answer.
+        if (question.entryKind === undefined) {
+          throw new TypeError(
+            `buildProfileFromAnswers requires question '${question.id}' to declare an entryKind: the signal '${question.satisfiedBy}' writes entries carrying a required enum that no answer supplies, and this function invents none.`,
+          );
+        }
+        if (!target.entryKinds.includes(question.entryKind)) {
+          throw new TypeError(
+            `buildProfileFromAnswers cannot pin entryKind '${question.entryKind}' on question '${question.id}': the signal '${question.satisfiedBy}' accepts only ${target.entryKinds.join(' | ')}.`,
+          );
+        }
+      } else if (question.entryKind !== undefined) {
+        throw new TypeError(
+          `buildProfileFromAnswers cannot apply the entryKind '${question.entryKind}' declared on question '${question.id}': the signal '${question.satisfiedBy}' writes no kinded entries, so the value would be silently ignored.`,
+        );
+      }
+
+      // Keyed by signal AND pinned enum: two offerings questions coexist only
+      // while they collect different kinds. Two questions pinning 'product'
+      // would be the original overwrite hazard wearing the new shape.
+      const claim = `${question.satisfiedBy}:${question.entryKind ?? ''}`;
+      const owner = claimedBy.get(claim);
       if (owner !== undefined) {
         throw new TypeError(
           `buildProfileFromAnswers requires at most one question per profile signal: '${question.satisfiedBy}' is claimed by both '${owner}' and '${question.id}'. A second claim would overwrite the first answer's structured value without reporting it.`,
         );
       }
-      claimedBy.set(question.satisfiedBy, question.id);
+      claimedBy.set(claim, question.id);
 
       // A `list` answer carries many values; a scalar field holds one. Routing
       // one to the other keeps `values[0]` and drops the rest.
-      if (
-        PROFILE_SIGNAL_TARGETS[question.satisfiedBy].kind === 'scalar' &&
-        question.kind === 'list'
-      ) {
+      if (target.kind === 'scalar' && question.kind === 'list') {
         throw new TypeError(
           `buildProfileFromAnswers cannot route the list question '${question.id}' to the single-valued signal '${question.satisfiedBy}': all but the first value would be silently discarded.`,
         );
@@ -224,6 +276,8 @@ export function buildProfileFromAnswers(
   const segments: CustomerSegment[] = [];
   const competitors: CompetitorReference[] = [];
   const goals: BusinessGoal[] = [];
+  const offerings: Offering[] = [];
+  const evidenceSources: EvidenceSourceRef[] = [];
   const sections: DiscoverySection[] = [];
 
   for (const section of questionnaire.sections) {
@@ -283,6 +337,25 @@ export function buildProfileFromAnswers(
           });
           break;
         }
+        case 'kindedList': {
+          // The enum was validated above and comes from the QUESTION; the text
+          // comes from the ANSWER, verbatim. Every other field of the entry —
+          // `description`, `valueProposition`, `locator` — stays absent, exactly
+          // as for a `namedList` (ADR-0050 D2, unchanged by ADR-0051).
+          values.forEach((text, index) => {
+            const id = `${question.id}-${index + 1}`;
+            if (target.field === 'offerings') {
+              offerings.push({ id, name: text, type: question.entryKind as OfferingKind });
+            } else {
+              evidenceSources.push({
+                id,
+                label: text,
+                kind: question.entryKind as EvidenceSourceKind,
+              });
+            }
+          });
+          break;
+        }
         case 'untranscribable':
           // Deliberately nothing. The answer is still recorded above, so the
           // operator's words are never lost — only the structured collection
@@ -330,8 +403,10 @@ export function buildProfileFromAnswers(
     competitors,
     goals,
 
+    offerings,
+    evidenceSources,
+
     // ⚠️ Empty by decision, not by oversight:
-    // - `offerings` / `evidenceSources` — untranscribable, see the table above.
     // - `assumptions` — an assumption is a judgement about the business; reading
     //   one out of an answer is inference.
     // - `gaps` — `validateProfileAgainstQuestionnaire` derives these from the
@@ -339,8 +414,6 @@ export function buildProfileFromAnswers(
     //   and let the two disagree.
     // - `fieldEvidence` — omitted entirely; a profile that cites nothing is
     //   exactly as valid as before that field existed.
-    offerings: [],
-    evidenceSources: [],
     assumptions: [],
     gaps: [],
 

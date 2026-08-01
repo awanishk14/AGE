@@ -110,7 +110,7 @@ describe('produceScoredBifContext', () => {
         OPTIONS,
       );
 
-      expect(mappingMetadata.discoveryCompletenessScore).toBe(97);
+      expect(mappingMetadata.discoveryCompletenessScore).toBe(98);
       expect(context.bifCompletenessScore).toBe(mappingMetadata.bifPopulationCompletenessScore);
       expect(context.bifCompletenessScore).not.toBe(mappingMetadata.discoveryCompletenessScore);
     });

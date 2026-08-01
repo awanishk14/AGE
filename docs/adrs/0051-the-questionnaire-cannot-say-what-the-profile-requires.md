@@ -154,6 +154,48 @@ populated + 5 omitted canonical sections are unchanged: `SAMPLE_BUSINESS_DISCOVE
 literal and is not built from answers. If a change here moves those numbers, it has reached
 something it should not have.
 
+> ### ⚠️ Erratum to D7 (recorded during implementation, PR for D1–D4)
+>
+> **D7's number is wrong, and its reasoning is incomplete. `discoveryCompletenessScore` moves
+> 97 → 98, and that is the correct behaviour of D1, not a leak.**
+>
+> D7 argues from the profile alone: the sample is a literal, so nothing here can move it. True —
+> and irrelevant. **Completeness is a function of the profile _and_ the questionnaire**
+> (`calculateBusinessDiscoveryCompleteness` scores each question as satisfied-or-not), and D1
+> _mandates_ changing the questionnaire. Any complete D1/D3 therefore moves the number; D7 as
+> written is unsatisfiable alongside D1, and the only way to hold it literally would be to ship a
+> deliberately half-built D3.
+>
+> The mechanism, checked against the code: `evidence-assumptions` previously scored 1 of 2
+> (`ev-sources` satisfied, `ev-assumptions` has no `satisfiedBy` and is never satisfiable from
+> structured data). D3 replaces the one evidence question with three kind-pinned ones, all
+> optional, and the sample profile's `evidenceSources` carries all three kinds — so the section
+> becomes 3 of 4. At section weight 7 that is **+1 on the total: 97 → 98**. The degraded fixtures
+> move for the same reason (87 → 89, 92 → 93).
+>
+> **What D7 was actually protecting is intact, and each was verified rather than assumed:**
+>
+> - `discoveryConfidenceScore` is still **63**; `readinessBand` is still `'strong'`.
+> - The BIF pair is still **12 / 17**, and the canonical sections are still **7 populated + 5
+>   omitted**. ⚠️ In particular `products_services` is still omitted for the _sample_ — it is a
+>   literal with `offerings`, and this slice changed neither the mapper's BIF direction nor the
+>   profile.
+> - The 35-cap story is untouched: `ZERO_EVIDENCE_COMPLETE_PROFILE` still scores **93 / 35 /
+>   `'partial'`**, so §1's defect and its fix remain independently demonstrable.
+> - `pnpm demo`'s regenerated output differs from the committed baseline by **exactly one line**,
+>   the intake score.
+>
+> ⚠️ **The fix was NOT to make satisfaction kind-aware.** Requiring an offerings answer per
+> `OfferingKind` was considered and **rejected**: the sample sells two services and no products, so
+> a kind-aware predicate would report a missing required answer _and_ a critical gap for "which
+> products do you sell?" against a business that honestly sells none — a fabricated gap and a band
+> demotion. `PROFILE_SIGNAL_PREDICATES` stay kind-blind, which is also what D1 requires
+> ("not in scoring, not in the readiness assessors").
+>
+> ⚠️ **The corrected baseline is `98/63 vs 12/17`.** It is pinned in the same places the old one
+> was, and the D7 tripwire stands with the new number: a change that moves confidence, the band,
+> the BIF pair or the 7 + 5 split has still reached something it should not have.
+
 ### 2.1 Recorded, NOT authorized
 
 Surfaced and deliberately not acted on. **Each needs its own `Status: Proposed` ADR** — this list is

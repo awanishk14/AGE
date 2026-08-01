@@ -72,7 +72,13 @@ describe('@age/business-discovery-contracts — default questionnaire definition
       .filter((question) => question.critical)
       .map((question) => question.id);
     expect(critical).toEqual(
-      expect.arrayContaining(['bi-name', 'off-list', 'icp-segments', 'gc-goals']),
+      expect.arrayContaining([
+        'bi-name',
+        'off-products',
+        'off-services',
+        'icp-segments',
+        'gc-goals',
+      ]),
     );
   });
 });
@@ -108,7 +114,7 @@ describe('@age/business-discovery-contracts — questionnaire validation', () =>
     const result = validateProfileAgainstQuestionnaire(buildProfile(), questionnaire);
     const gapQuestionIds = result.criticalGaps.map((gap) => gap.missing);
     expect(result.missingRequiredQuestionIds).toEqual(
-      expect.arrayContaining(['off-list', 'icp-segments', 'gc-goals']),
+      expect.arrayContaining(['off-products', 'off-services', 'icp-segments', 'gc-goals']),
     );
     expect(result.criticalGaps.every((gap) => gap.severity === 'critical')).toBe(true);
     expect(gapQuestionIds.length).toBeGreaterThanOrEqual(3);
