@@ -1,4 +1,5 @@
 import {
+  DEMO_BUSINESS_DISCOVERY_PROFILE,
   DEMO_SCENARIO_METADATA,
   buildContextReadinessReport,
   produceDemoScoredBifContext,
@@ -208,14 +209,20 @@ async function main(): Promise<void> {
 
   // The demo scenario metadata is passed explicitly (ADR-0039 D3) — the three
   // values canonical Path B mapping needs are visible here, not hidden inside it.
-  const discovery = runBusinessDiscoveryIntake(DEMO_SCENARIO_METADATA);
+  const discovery = runBusinessDiscoveryIntake(
+    DEMO_BUSINESS_DISCOVERY_PROFILE,
+    DEMO_SCENARIO_METADATA,
+  );
   printDiscovery(discovery);
 
   // Stage two: context readiness (ADR-0047). `producedAt` is supplied HERE, at
   // the call site, from the frozen scenario time — ⚠️ never `new Date()`, which
   // would make the determinism note at the foot of sample-output.txt false.
   // `Object.freeze` is shallow, so the Date is copied rather than passed.
-  const scoredBifContext = produceDemoScoredBifContext(DEMO_SCENARIO_METADATA).context;
+  const scoredBifContext = produceDemoScoredBifContext(
+    DEMO_BUSINESS_DISCOVERY_PROFILE,
+    DEMO_SCENARIO_METADATA,
+  ).context;
   const readiness = buildContextReadinessReport(scoredBifContext, {
     producedAt: new Date(DEMO_SCENARIO_METADATA.constructedAt.getTime()),
   });

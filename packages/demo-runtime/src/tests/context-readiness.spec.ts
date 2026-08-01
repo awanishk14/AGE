@@ -20,6 +20,7 @@ import { buildContextReadinessReport, type ContextReadinessReport } from '../con
 import { produceDemoScoredBifContext } from '../scored-bif-context';
 import { runAllCapabilities } from '../capabilities';
 import { DEMO_SCENARIO_METADATA } from '../demo-scenario-metadata';
+import { DEMO_BUSINESS_DISCOVERY_PROFILE } from '../demo-profile';
 
 /**
  * ADR-0047 D7 — the five invariant tests for the context-readiness bridge.
@@ -44,7 +45,8 @@ import { DEMO_SCENARIO_METADATA } from '../demo-scenario-metadata';
 const PRODUCED_AT = new Date(DEMO_SCENARIO_METADATA.constructedAt.getTime());
 
 function sampleContext() {
-  return produceDemoScoredBifContext(DEMO_SCENARIO_METADATA).context;
+  return produceDemoScoredBifContext(DEMO_BUSINESS_DISCOVERY_PROFILE, DEMO_SCENARIO_METADATA)
+    .context;
 }
 
 /** A context this build cannot read, which forces every assessor to `blocked`. */

@@ -1,9 +1,9 @@
 import {
   DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
-  SAMPLE_BUSINESS_DISCOVERY_PROFILE,
   businessDiscoveryProfileSchema,
   validateProfileAgainstQuestionnaire,
 } from '@age/business-discovery-contracts';
+import type { BusinessDiscoveryProfile } from '@age/business-discovery-contracts';
 
 import type { DemoScenarioMetadata } from './demo-scenario-metadata';
 import { produceDemoScoredBifContext } from './scored-bif-context';
@@ -94,9 +94,9 @@ export interface BusinessDiscoveryIntakeSummary {
 
 /**
  * runBusinessDiscoveryIntake — run the read-only Business Discovery intake stage
- * against the in-repo sample profile and return a compact summary.
+ * against a **caller-supplied** discovery profile and return a compact summary.
  *
- * Steps: load `SAMPLE_BUSINESS_DISCOVERY_PROFILE` → validate against
+ * Steps: take the caller's profile → validate against
  * `businessDiscoveryProfileSchema` → validate against
  * `DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE` → map via `produceScoredBifContext`
  * using the caller-supplied scenario metadata. Inputs are never mutated and
@@ -104,14 +104,27 @@ export interface BusinessDiscoveryIntakeSummary {
  * output is fully deterministic. No strategy or execution planning is derived,
  * and the BIF status is never promoted.
  *
- * The metadata is a required parameter, not a module default: the three values
- * Path B needs must be visible at the call site (ADR-0039 D3).
+ * BOTH parameters are required and neither has a default (ADR-0039 D3,
+ * ADR-0049 D2): the three values Path B needs, and the business being analysed,
+ * must be visible at the call site rather than read from module scope.
+ *
+ * ⚠️ Until ADR-0049 this function opened with `const profile =
+ * SAMPLE_BUSINESS_DISCOVERY_PROFILE`. That single line made the whole pipeline —
+ * intake, scoring and the ADR-0047/0048 readiness stage downstream of it — a
+ * function of one constant, and therefore unfalsifiable: with a fixed input,
+ * "derived from the profile" and "hard-coded" are observationally identical.
+ * **Do not reintroduce a default.**
+ *
+ * ⚠️ A sparse or partially-answered profile is a valid input and produces a
+ * valid summary. Incompleteness is reported through the counters and the omitted
+ * section types — it is a limitation, never an error and never negative
+ * evidence (ADR-0026 D4). This function throws for no profile shape the schema
+ * accepts.
  */
 export function runBusinessDiscoveryIntake(
+  profile: BusinessDiscoveryProfile,
   scenario: DemoScenarioMetadata,
 ): BusinessDiscoveryIntakeSummary {
-  const profile = SAMPLE_BUSINESS_DISCOVERY_PROFILE;
-
   const profileSchemaValid = businessDiscoveryProfileSchema.safeParse(profile).success;
   const validation = validateProfileAgainstQuestionnaire(
     profile,
@@ -122,7 +135,7 @@ export function runBusinessDiscoveryIntake(
   // place. This summary deliberately does NOT grow a `context` field: it is the
   // four-score contract projected field-by-field into a published API DTO, and
   // widening it would drag the readiness slice into the API layer.
-  const { context, mappingMetadata } = produceDemoScoredBifContext(scenario);
+  const { context, mappingMetadata } = produceDemoScoredBifContext(profile, scenario);
 
   return {
     profileId: profile.id,

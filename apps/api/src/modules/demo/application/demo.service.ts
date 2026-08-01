@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  DEMO_BUSINESS_DISCOVERY_PROFILE,
   DEMO_SCENARIO_METADATA,
   buildContextReadinessReport,
   produceDemoScoredBifContext,
@@ -139,7 +140,10 @@ export class DemoService {
     // The scenario metadata is passed explicitly (ADR-0039 D3): the three values
     // canonical Path B mapping needs are visible at the call site. It is demo
     // scenario framing only — never production tenant identity, never scope.
-    const discovery = runBusinessDiscoveryIntake(DEMO_SCENARIO_METADATA);
+    const discovery = runBusinessDiscoveryIntake(
+      DEMO_BUSINESS_DISCOVERY_PROFILE,
+      DEMO_SCENARIO_METADATA,
+    );
 
     // Stage two: context readiness (ADR-0047 D1, published here by ADR-0048 D3
     // step 4). Produced through the demo's single production point (D2).
@@ -147,7 +151,10 @@ export class DemoService {
     // `new Date()`, which would make this endpoint's response non-deterministic
     // and the CLI's determinism note false. `Object.freeze` is shallow, so the
     // Date is copied rather than handed out.
-    const scoredBifContext = produceDemoScoredBifContext(DEMO_SCENARIO_METADATA).context;
+    const scoredBifContext = produceDemoScoredBifContext(
+      DEMO_BUSINESS_DISCOVERY_PROFILE,
+      DEMO_SCENARIO_METADATA,
+    ).context;
     const readiness = buildContextReadinessReport(scoredBifContext, {
       producedAt: new Date(DEMO_SCENARIO_METADATA.constructedAt.getTime()),
     });

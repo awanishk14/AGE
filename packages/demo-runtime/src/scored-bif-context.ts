@@ -1,7 +1,5 @@
-import {
-  SAMPLE_BUSINESS_DISCOVERY_PROFILE,
-  produceScoredBifContext,
-} from '@age/business-discovery-contracts';
+import { produceScoredBifContext } from '@age/business-discovery-contracts';
+import type { BusinessDiscoveryProfile } from '@age/business-discovery-contracts';
 
 import type { DemoScenarioMetadata } from './demo-scenario-metadata';
 
@@ -26,9 +24,21 @@ import type { DemoScenarioMetadata } from './demo-scenario-metadata';
  *
  * ⚠️ `Object.freeze` on `DEMO_SCENARIO_METADATA` is SHALLOW, so its `Date` is
  * mutable. A copy is passed, never the caller's reference (ADR-0047 D3).
+ *
+ * ADR-0049 D1/D2: the `profile` is a REQUIRED parameter. Until then this
+ * function read `SAMPLE_BUSINESS_DISCOVERY_PROFILE` from module scope, which
+ * meant the entire pipeline was a function of one constant and no test could
+ * distinguish "derived from the profile" from "hard-coded".
+ *
+ * ⚠️ The name keeps its `Demo` prefix (ADR-0049 D3): two guards were
+ * deliberately repointed at this symbol and must not be repointed again. What is
+ * demo-specific here is the scenario framing, not the profile.
  */
-export function produceDemoScoredBifContext(scenario: DemoScenarioMetadata) {
-  return produceScoredBifContext(SAMPLE_BUSINESS_DISCOVERY_PROFILE, {
+export function produceDemoScoredBifContext(
+  profile: BusinessDiscoveryProfile,
+  scenario: DemoScenarioMetadata,
+) {
+  return produceScoredBifContext(profile, {
     organizationId: scenario.organizationId,
     constructedAt: new Date(scenario.constructedAt.getTime()),
     changedBy: scenario.changedBy,

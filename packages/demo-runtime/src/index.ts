@@ -32,4 +32,8 @@ export {
 // constructedAt / changedBy for canonical Path B mapping. Scenario framing only
 // — never production tenant identity, never scope.
 export { DEMO_SCENARIO_METADATA, type DemoScenarioMetadata } from './demo-scenario-metadata';
+// The business the demo is about (ADR-0049 D1/D2). Passed explicitly at every
+// call site for the same reason the scenario metadata is — the intake stage
+// reads no profile from module scope, and must not regain a default.
+export { DEMO_BUSINESS_DISCOVERY_PROFILE } from './demo-profile';
 export * from './fixtures';

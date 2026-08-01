@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, extname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  DEMO_BUSINESS_DISCOVERY_PROFILE,
   DEMO_SCENARIO_METADATA,
   runAllCapabilities,
   runBusinessDiscoveryIntake,
@@ -60,7 +61,10 @@ describe('AGE demo CLI app', () => {
   });
 
   it('runs the upstream Business Discovery intake via the shared runtime', () => {
-    const summary = runBusinessDiscoveryIntake(DEMO_SCENARIO_METADATA);
+    const summary = runBusinessDiscoveryIntake(
+      DEMO_BUSINESS_DISCOVERY_PROFILE,
+      DEMO_SCENARIO_METADATA,
+    );
     expect(summary.profileSchemaValid).toBe(true);
     expect(summary.questionnaireValid).toBe(true);
     // Canonical Path B output: populated sections plus first-class omissions.
@@ -68,10 +72,15 @@ describe('AGE demo CLI app', () => {
     expect(summary.presentSectionTypes.length + summary.omittedSectionTypes.length).toBe(12);
   });
 
-  it('passes the demo scenario metadata explicitly at the CLI call site', () => {
+  it('passes the profile and the scenario metadata explicitly at the CLI call site', () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const source = readFileSync(join(here, '..', 'run.ts'), 'utf8');
-    expect(source).toMatch(/runBusinessDiscoveryIntake\(DEMO_SCENARIO_METADATA\)/);
+    // ADR-0039 D3 + ADR-0049 D2: BOTH the business being analysed and the three
+    // Path B provenance values are named here, at the call site — neither is
+    // read from module scope inside the stage that consumes it.
+    expect(source).toMatch(
+      /runBusinessDiscoveryIntake\(\s*DEMO_BUSINESS_DISCOVERY_PROFILE,\s*DEMO_SCENARIO_METADATA,?\s*\)/,
+    );
   });
 
   it('prints all four scores, so neither pair can stand in for the other', () => {
@@ -93,7 +102,7 @@ describe('AGE demo CLI app', () => {
   });
 
   it('keeps discovery out of the approval model (pending count unchanged)', async () => {
-    runBusinessDiscoveryIntake(DEMO_SCENARIO_METADATA);
+    runBusinessDiscoveryIntake(DEMO_BUSINESS_DISCOVERY_PROFILE, DEMO_SCENARIO_METADATA);
     const reports = await runAllCapabilities();
     const pending = reports.reduce((sum, r) => sum + r.acceptedItems.length, 0);
     expect(pending).toBe(6);
