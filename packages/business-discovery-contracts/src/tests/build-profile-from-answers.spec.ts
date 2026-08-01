@@ -455,4 +455,69 @@ describe('buildProfileFromAnswers (ADR-0050)', () => {
       expect(result.answeredRequiredQuestionIds).toContain(questionIdFor('segments'));
     });
   });
+
+  describe('a malformed QUESTIONNAIRE is rejected — silent structured loss is not tolerated', () => {
+    // ⚠️ These are NOT the D4 rule. An unanswered or unmapped QUESTION leaves
+    // the profile sparse and is never an error. A questionnaire that would make
+    // the mapper DISCARD a value it was given is a caller defect, because the
+    // answer is still recorded under D6 — so the profile would look complete
+    // while a structured field silently held only part of what was supplied.
+    // The questionnaire is an arbitrary parameter, so this is reachable.
+
+    it('refuses two questions claiming the same profile signal', () => {
+      const duplicated = {
+        ...DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
+        sections: [
+          {
+            ...DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE.sections[0]!,
+            questions: [
+              ...DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE.sections[0]!.questions,
+              {
+                // Cloned from a real question so the shape stays exactly a
+                // `BusinessDiscoveryQuestionnaireQuestion` — only the id and
+                // the claimed signal differ.
+                ...DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE.sections[0]!.questions[0]!,
+                id: 'second-claim-on-industry',
+                kind: 'text' as const,
+                satisfiedBy: 'industry' as const,
+              },
+            ],
+          },
+          ...DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE.sections.slice(1),
+        ],
+      };
+
+      // The second claim would overwrite the first answer's structured value
+      // with no report of the loss.
+      expect(() => buildProfileFromAnswers([NAME_ANSWER], duplicated, OPTIONS)).toThrow(
+        /at most one question per profile signal/,
+      );
+    });
+
+    it('refuses a list question routed to a single-valued signal', () => {
+      const industryQuestionId = questionIdFor('industry');
+      const mismatched = {
+        ...DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
+        sections: DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE.sections.map((section) => ({
+          ...section,
+          questions: section.questions.map((question) =>
+            question.id === industryQuestionId ? { ...question, kind: 'list' as const } : question,
+          ),
+        })),
+      };
+
+      // `industry` is a scalar target: all but the first value would be dropped.
+      expect(() => buildProfileFromAnswers([NAME_ANSWER], mismatched, OPTIONS)).toThrow(
+        /would be silently discarded/,
+      );
+    });
+
+    it('accepts the default questionnaire — the two checks above are not vacuous', () => {
+      // ⚠️ Without this, both tests would still pass if the mapper threw for
+      // EVERY questionnaire.
+      expect(() =>
+        buildProfileFromAnswers([NAME_ANSWER], DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE, OPTIONS),
+      ).not.toThrow();
+    });
+  });
 });

@@ -172,6 +172,43 @@ export function buildProfileFromAnswers(
     throw new TypeError('buildProfileFromAnswers requires a caller-supplied options.capturedAt');
   }
 
+  // The questionnaire is an ARBITRARY caller-supplied argument, not necessarily
+  // `DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE`. Two structural mistakes in it
+  // would otherwise cause SILENT structured data loss — the answer would still
+  // be recorded under D6, so the profile would look complete while a structured
+  // field quietly held only one of the values it was given. Both are rejected
+  // here rather than tolerated.
+  //
+  // ⚠️ This is NOT the D4 rule. An unanswered or unmapped QUESTION is never an
+  // error and leaves the profile sparse. A malformed QUESTIONNAIRE is a caller
+  // defect, in the same class as passing no sections at all.
+  const claimedBy = new Map<ProfileSignal, string>();
+  for (const section of questionnaire.sections) {
+    for (const question of section.questions) {
+      if (question.satisfiedBy === undefined) {
+        continue;
+      }
+      const owner = claimedBy.get(question.satisfiedBy);
+      if (owner !== undefined) {
+        throw new TypeError(
+          `buildProfileFromAnswers requires at most one question per profile signal: '${question.satisfiedBy}' is claimed by both '${owner}' and '${question.id}'. A second claim would overwrite the first answer's structured value without reporting it.`,
+        );
+      }
+      claimedBy.set(question.satisfiedBy, question.id);
+
+      // A `list` answer carries many values; a scalar field holds one. Routing
+      // one to the other keeps `values[0]` and drops the rest.
+      if (
+        PROFILE_SIGNAL_TARGETS[question.satisfiedBy].kind === 'scalar' &&
+        question.kind === 'list'
+      ) {
+        throw new TypeError(
+          `buildProfileFromAnswers cannot route the list question '${question.id}' to the single-valued signal '${question.satisfiedBy}': all but the first value would be silently discarded.`,
+        );
+      }
+    }
+  }
+
   // Answers are indexed by question id, so output order is driven by the
   // questionnaire rather than by the order the caller happened to submit.
   const byQuestionId = new Map<string, DiscoveryAnswer>();
