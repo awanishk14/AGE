@@ -2,6 +2,7 @@ import {
   DEMO_BUSINESS_DISCOVERY_PROFILE,
   DEMO_SCENARIO_METADATA,
   buildContextReadinessReport,
+  demoContext,
   produceDemoScoredBifContext,
   runAllCapabilities,
   runBusinessDiscoveryIntake,
@@ -225,6 +226,9 @@ async function main(): Promise<void> {
   ).context;
   const readiness = buildContextReadinessReport(scoredBifContext, {
     producedAt: new Date(DEMO_SCENARIO_METADATA.constructedAt.getTime()),
+    // ⚠️ Passed EXPLICITLY (ADR-0053 D5). The stage no longer imports it, and
+    // there is no default — a default would make the parameter decorative.
+    clientContext: demoContext,
   });
   printContextReadiness(readiness);
 
