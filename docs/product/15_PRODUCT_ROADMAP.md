@@ -74,7 +74,7 @@ same underlying architecture** and differ only in **scale, governance, and capab
 It says the Founder / Agency / Commercial SaaS / Enterprise line is one platform at four scales. It
 does **not** say that everything AGE draws on must be part of AGE.
 
-AGE additionally **composes peer products** (Doc 11 §2.1): systems that are **independently viable**,
+AGE additionally **composes peer products** (Doc 11 §2.1.1): systems that are **independently viable**,
 that are sold and operated in their own right, and that AGE consumes across their public product
 boundary. A peer product may therefore ship as **its own product line with its own editions** _and_
 appear inside AGE — those are the same system serving two markets, not a fork.

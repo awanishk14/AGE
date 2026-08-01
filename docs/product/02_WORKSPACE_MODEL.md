@@ -259,6 +259,36 @@ unchanged by this document. Additional tenants are additional Organizations; cli
 tenant. The model supports the SaaS progression (Founder → Agency → Commercial SaaS → Enterprise)
 without restructuring. Row-Level Security (RLS) remains an implementation concern, not defined here.
 
+### 16.1 What Is Tenant-Specific and What Is Shared
+
+Multi-tenancy is **not uniform**. Conflating the two columns below is the most common way a
+multi-tenant system either leaks between customers or duplicates its own engine per customer.
+
+| Tenant-specific (isolated per Organization / Client) | Shared (one implementation, all tenants) |
+| ---------------------------------------------------- | ---------------------------------------- |
+| Business Discovery                                   | AI Engine                                |
+| BIF                                                  | Planning Engine                          |
+| Plans                                                | Execution Engine                         |
+| Knowledge (BKG)                                      | Scoring models                           |
+| Reports                                              | Prompt library                           |
+| Projects                                             | Capability Framework                     |
+| Credential **references** (§6.1 of Doc 11)           | Capability Registry                      |
+| Users & membership                                   |                                          |
+
+The rule behind the table:
+
+> **Business meaning is tenant-specific. Reasoning machinery is shared.**
+
+- 🚫 **Nothing in the left column may ever be read across a tenant boundary** (§15). This is the
+  isolation guarantee customers are buying.
+- 🚫 **Nothing in the right column may hold tenant state.** A shared engine that remembered one
+  tenant's data would silently become a cross-tenant channel. Engines receive scope **as input** and
+  retain nothing — which is also why capabilities are pure (Doc 12 §2).
+- ⚠️ **Shared does not mean uniform in behaviour.** The same scoring model applied to two tenants'
+  BIFs yields different results because the **input** differs, not because the model was customized.
+- ⚠️ **A shared engine is not a shared conclusion.** Two tenants never see each other's outputs, and
+  one tenant's data never trains or tunes what another tenant receives.
+
 ## 17. Workspace Lifecycle
 
 High-level states (detailed client states live in Doc 03):
@@ -313,6 +343,10 @@ The following were resolved by the Product Owner and are now canonical for the P
    defined by the business hierarchy.
 6. **Capability scope.** Capabilities belong to the platform; execution occurs within Projects;
    knowledge accumulates at the Client level.
+7. **Tenant-specific vs shared** (§16.1). Business meaning (Discovery, BIF, Plans, Knowledge,
+   Reports, Projects, credential references, Users) is **isolated per tenant**; reasoning machinery
+   (AI Engine, Planning Engine, Execution Engine, scoring models, prompt library, Capability
+   Framework and Registry) is **shared and holds no tenant state**.
 
 **Deferred to implementation (no decision needed now):** whether persistence requires a dedicated
 `Client` aggregate — handled later as an implementation ADR only if proven necessary.
