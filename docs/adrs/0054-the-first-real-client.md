@@ -1,6 +1,6 @@
 # ADR-0054 — The first real client
 
-Status: Proposed
+Status: Accepted
 Date: 2026-08-02
 Relates to: ADR-0026 D4 (missing sections are limitations, never negative evidence), ADR-0046 D5
 (RLS is coherence, not authorization) and **D7 (no capture writes — this ADR proposes the first
@@ -17,9 +17,75 @@ PR #209 and #211).
 ### 0.1 Standing
 
 Written under the standing architect grant recorded in ADR-0043 §0.1 and reaffirmed by the mandate
-the user gave on 2026-07-30. 🚫 **This ADR is `Status: Proposed` and is NOT self-accepted.** Three of
+the user gave on 2026-07-30. 🚫 **This ADR was `Status: Proposed` and was NOT self-accepted** — the
+Product Owner accepted it, verbatim, in §0.1b. Three of
 its decisions are the user's own, quoted verbatim in §0.2, and the remainder turn on a boundary
 (ADR-0046 D7) that was set to protect data the architect cannot inspect. The user accepts or rejects.
+
+### 0.1b Acceptance — ⚠️ NOT self-accepted
+
+**The Product Owner accepted this ADR on 2026-08-02**, in their own words, reproduced verbatim:
+
+> Accepted.
+>
+> D1–D8 are approved.
+>
+> D6 is accepted with the understanding that it is a conditional permission, not a general
+> authorization for persistence.
+>
+> Writing a Scored BIF snapshot to a database is permitted only when all of the following are true:
+>
+> ClientContext is derived from a validated client record.
+> The target database is operator-controlled and local.
+> Persistence is explicitly requested by the operator.
+> produceOnly remains the default execution mode.
+> No background execution, scheduling, or automation is introduced by this slice.
+>
+> ADR-0046 D7 is not repealed; it remains the default rule outside these conditions. This slice
+> authorizes only the narrow local persistence required to complete the onboarding workflow.
+
+The Product Owner also supplied the **framing** for D6, recorded here because it is the reason the
+decision is coherent rather than a reversal:
+
+> The important point is that D6 is not introducing a new architectural direction—it is discharging
+> a safety condition that earlier ADRs deliberately postponed.
+>
+> ADR-0046 prohibited persistence because the system could not trust the identity attached to a
+> snapshot. ADR-0053 established a trusted identity source through the client record. ADR-0054
+> therefore allows persistence only after that prerequisite is satisfied. That's a coherent
+> evolution of the architecture rather than a reversal.
+
+⚠️ **A fifth condition is added by this acceptance and binds as if it were written into D6:**
+**no background execution, scheduling, or automation is introduced by this slice.** The four
+conditions already stated in D6 constrain _where and when_ a write may happen; this fifth one
+constrains _who triggers it_ — it must be the operator, in the foreground, every time.
+
+### 0.1c The dissents stay, and the Product Owner said why
+
+Both upheld dissents were **explicitly affirmed** rather than waived:
+
+> Wrong questionnaire answers — This is an inherent limitation of manual onboarding. Validation can
+> ensure structure and completeness, but it cannot determine whether a human's business answer is
+> correct.
+>
+> Hub-and-spoke enforcement — AGE can enforce that it never chains peer products together. It
+> cannot mechanically prevent RankOps from later calling MCP Ads internally. That remains an
+> architectural governance rule across products rather than something AGE alone can enforce.
+
+🚫 **Do not delete, soften or mark these dissents as mitigated.** The second one in particular
+bounds what D5's guard is allowed to _claim_: the guard is evidence about **this repository only**,
+and must never be described as proving anything about a peer product's own code.
+
+### 0.1d The stopping point, set by the Product Owner
+
+> Proceed with the implementation slice exactly within ADR-0054's accepted boundaries. Do not
+> expand the scope beyond the documented local persistence workflow. Preserve produceOnly as the
+> default. Do not introduce automation, scheduling, or production runtime wiring. Stop after the
+> first end-to-end local onboarding flow is complete and documented.
+
+⚠️ **"Stop" means stop.** The first true runtime caller is the **next** architectural phase and is
+**not** authorized by this ADR. When the local onboarding flow runs end to end and is documented,
+the correct next action is a checkpoint and a fresh `Status: Proposed` ADR — not the next slice.
 
 ### 0.2 The decisions the user already made, verbatim
 
@@ -167,11 +233,23 @@ D6 therefore permits **exactly one narrow case**, and every clause is load-beari
    from `produceOnly`, no inference.
 4. Refusing is always available and always safe: **`produceOnly` remains the default** and opens no
    connection at all.
+5. ⚠️ **Added by the acceptance (§0.1b) and binding as if written here: no background execution, no
+   scheduling, no automation is introduced by this slice.** Every write is operator-triggered, in
+   the foreground.
 
-🚫 **ADR-0046 D7 remains in force everywhere else and is NOT repealed.** ⚠️ If the user rejects D6,
-the rest of this ADR still stands and slice B produces a profile the operator can read but not a
-stored one — **and in that case the ADR-0053 dissent-2 ceiling is NOT discharged**, which must be
-stated rather than quietly accepted.
+🚫 **ADR-0046 D7 remains in force everywhere else and is NOT repealed.** D6 is a **conditional
+permission, not a general authorization for persistence** (§0.1b) — outside these five conditions
+ADR-0046 D7 is still the rule, unchanged.
+
+⚠️ **Why this is not a reversal** (the Product Owner's framing, §0.1b): ADR-0046 prohibited
+persistence because the system could not trust the identity attached to a snapshot; ADR-0053
+established that trusted identity through the client record; D6 permits persistence **only after
+that prerequisite is satisfied.** The condition was discharged, not waived.
+
+⚠️ The "if the user rejects D6" branch below is now **moot — D6 was accepted.** It is left in place
+because the record should show what the alternative was: the rest of the ADR would still have stood,
+slice B would produce a profile the operator can read but not a stored one, and **the ADR-0053
+dissent-2 ceiling would NOT have been discharged.**
 
 ### D7 — The falsification test is stated in advance
 
