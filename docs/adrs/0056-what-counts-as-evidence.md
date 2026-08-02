@@ -1,6 +1,10 @@
 # ADR-0056 — What counts as evidence
 
 Status: Proposed
+🛑 **The required council has RUN and REFUTED D1 and D2 (§0.1e). The architect adopts the refutation
+and recommends REJECTING D1 and D2 while keeping D3–D7.** The decision text in §2 is left standing
+unamended so the proposal can be read against what was found; it is a record of a rejected proposal,
+not a live recommendation. The decision remains the Product Owner's.
 Date: 2026-08-02
 Relates to: ADR-0010 (`@age/evidence-contracts` owns the evidence enums; RIE is a producer, not the
 owner), ADR-0011 (the deterministic quality score this ADR is asked to change), ADR-0026 D4
@@ -70,7 +74,8 @@ vocabulary under delivery pressure, which is exactly how the units bug in RankOp
 ⚠️ **This section's original verdict — "narrowly stronger, but not decisively so", applied to both
 members equally — is SUPERSEDED by §D2.1**, which was written when the Product Owner asked for the
 timing argument in full. Working it through split the two: `ENGAGEMENT` survives the objection on
-structural grounds, `QUESTION` does not. **Read §D2.1, not this paragraph, for the current position.**
+structural grounds, `QUESTION` does not. 🛑 **§D2.1 IS ITSELF NOW SUPERSEDED BY §0.1e — the council
+refuted both members and reversed the split. Read §0.1e for the current position.**
 The superseded verdict is left standing rather than deleted, because an objection that was once
 answered too easily is itself worth seeing. **Still recorded unresolved** — §0.1d hands it to a
 council.
@@ -103,6 +108,113 @@ Scope of the required council, deliberately narrow:
 ⚠️ Per finding 7, the lenses get **the code and the enum**, never this ADR's prose — otherwise the
 architect's reasoning returns as independent confirmation of itself. Per finding 8, the evidence and
 the conclusion are adopted **separately**.
+
+### 0.1e — THE COUNCIL HAS NOW RUN. IT REFUTED D1 AND D2.
+
+Ran 2026-08-02, three lenses, refuting briefs, each given the code and the enum and **not** this
+document (finding 7). Verdicts: **REFUTE** (classification), **REFUTE** (members), and
+**PROCEED-MODIFIED** (contract-evolution — but on mechanics only, explicitly not on whether either
+change is _right_).
+
+🛑 **The architect adopts the refutation. D1 and D2 as drafted below should NOT be accepted.** The
+decision text in §2 is left standing **unamended** so the Product Owner can read what was proposed
+against what was found; it is now a **record of a rejected proposal**, not a live recommendation.
+
+I re-verified every load-bearing claim in the code rather than taking the lenses at face value
+(finding 8 — evidence and conclusion adopted separately). All four hold:
+
+| Claim                                                      | Verified at                                                   | Holds |
+| ---------------------------------------------------------- | ------------------------------------------------------------- | ----- |
+| `polarity` is **required** on every signal                 | `evidence-contracts/src/extracted-signal.ts:11`               | ✅    |
+| `strength` is a bounded `0–100` quality figure             | `extracted-signal.ts:9-10`                                    | ✅    |
+| `ExtractedSignal.type` is already plain `string`           | `extracted-signal.ts:5`                                       | ✅    |
+| equal `signalType` is a **precondition** for contradiction | `detect-contradictions.ts:42`                                 | ✅    |
+| `EvidenceSourceKind` already exists as a 3rd taxonomy      | `business-discovery-contracts/src/enums.ts:49`                | ✅    |
+| `"reserved"` has **no precedent** in the data dictionary   | `grep -c reserved docs/product/05_DATA_DICTIONARY.md` → **0** | ✅    |
+
+**Against D1 — the four classes are drawn from four different axes.** `SOLICITED_REVIEW` is an
+elicitation mode, `PUBLIC_DISCUSSION` a venue, `VENDOR_CONTROLLED` a control relationship, and
+`INDEXED_ARTIFACT` a _retrieval method_. A partition whose cells answer four different questions is
+not a joint in the domain. `INDEXED_ARTIFACT` is the tell: it holds exactly the two members that
+resisted the other three — a residual bucket dressed as a peer class. `GOOGLE_SEARCH` is not a source
+at all but a retrieval method, and inherits the class of whatever it surfaced.
+
+The soft spot named in §0.1d was understated. **Seven of twelve** members admit two or more classes,
+not two: `YOUTUBE`, `GITHUB`, `SOCIAL`, `GOOGLE_SEARCH`, `FORUM` (a vendor-hosted forum is
+vendor-controlled by D1's own criterion), `ADS`, `JOB_POSTING`. The five that classify cleanly do so
+because they name _one site with one dominant use_, not because the axis is sharp — the root cause is
+that `EvidenceSource` is itself heterogeneous, mixing named platforms, venue archetypes, artefact
+genres and one retrieval method. ⚠️ **No single-axis partition can be clean over a set that is not
+itself of one kind.**
+
+An equally defensible authorship axis (subject / customer / third-party) was mapped across all 12 and
+scores no better — **and disagrees with D1 on four of twelve members.** Two honest axes producing
+different answers on a third of the enum is the operational definition of an arbitrary carve-up.
+
+The origin-not-trust disclaimer also does not survive contact with the names. "Controlled" is a
+caution word, not a description of an act; the neutral term is `SELF_PUBLISHED`. Read down the list
+and it is a descending independence ladder. And the only nameable consumer of a source class is
+weighting — which `score-evidence-quality.ts:7-13` forbids without its own ADR. **D1 supplies the
+vocabulary for exactly the ranking it disclaims.**
+
+**Against D2 — and this reverses §D2.1.** I argued there that `ENGAGEMENT` survives on structural
+grounds and `QUESTION` does not. **That is backwards, and the code says so:**
+
+- `SignalType` is defined as _"the kind of signal a piece of evidence carries"_ — every one of the 10
+  members is a **speech act with a stance**. `ENGAGEMENT` is a measurement, which §D2.1 treated as the
+  argument _for_ it. It is the argument _against_ it.
+- Worse, it is actively harmful in shipped code. `polarity` is required, so an engagement record must
+  invent one. Two `ENGAGEMENT` records on the same `targetField` — a 5-reply thread and a 500-reply
+  thread — differ in magnitude, not in claim; with invented opposing polarity,
+  `detect-contradictions.ts:42` reports a **false contradiction between two correct measurements**.
+- And it does not even house the number. `strength` is a bounded 0–100 quality figure; a reply count
+  is unbounded. Engagement is dimensional data with **no correct home in the contract** — a 12th enum
+  member gives it a label and nowhere to put the value.
+- `QUESTION` fails differently and more softly: its definition bundles interrogative _form_ with an
+  unanswered-ness _judgement about the subject_ that a sensing layer which "never modifies BIF" is not
+  positioned to make. Strip that and the residue overlaps `PAIN_POINT`/`INTENT` rather than
+  partitioning against them — "does anyone else find X slow?" is a pain point phrased as a question.
+
+**The "reserved — no producer" marking is a fig leaf.** It lives in a markdown cell; the contract
+carries no reservation at all, and `z.nativeEnum(SignalType)` (`evidence.schema.ts:18`) will accept
+`ENGAGEMENT` from any caller on day one. A reservation the type system and the validator both
+contradict is not a mitigation. And there is **no precedent** for the marking — the word appears zero
+times in the data dictionary today.
+
+**The asymmetry argument wins cleanly**, and §D2.1 lost it. The usual counterweight — "adding later
+forces a coordinated migration across consumers" — is **absent here**: `detect-contradictions.ts:42`
+is the entire consumption surface and is an equality test needing no change for any number of new
+members. So adding later is unusually cheap and removing a published member is unusually expensive.
+
+⚠️ **A producer that needs to record something the enum lacks already has an unconstrained field** —
+`ExtractedSignal.type` is plain `string` (`extracted-signal.ts:5`). The mislabelling risk D2 was built
+to prevent has an existing escape hatch, and an enum member does not prevent mislabelling anyway: a
+**classification rule** does, and shipping `QUESTION` with no producer ships no rule about when to
+choose it over `INTENT`. The first implementer still guesses, now with 12 options instead of 10.
+
+**What the council could NOT refute**, recorded because a lens that only objects is as useless as one
+that only agrees:
+
+- `{G2, CAPTERRA, TRUSTPILOT}` is a **real cluster** — it co-varies on every axis tried. One real
+  cluster does not license a four-way partition built to accommodate it.
+- The change is **cheap and non-breaking**. Nothing is persisted — neither enum appears in
+  `schema.prisma` or any snapshot codec — so this is not a forward-compatibility event, and there is
+  no exhaustive consumer of either enum to break. That is an argument for **reversibility, not
+  correctness**; a published contract's real cost is citation, not code.
+- The **origin-not-trust constraint is a genuine prior**, agreed with the Product Owner before the
+  review. The objection is that D1's four names do not honour it — not that it was insincere.
+- The exhaustive-`Record` mechanism **does** work as claimed, and is robust to this repo's tsconfig
+  (prior art: `derive-opportunities.ts:12`, over a string-literal union rather than a TS `enum`).
+  ⚠️ But only in one form: written `as Record<…>`, as `Partial<Record<…>>`, or built via
+  `reduce`/`Object.fromEntries`, the exhaustiveness guarantee **silently evaporates** and nothing in
+  the lint config forbids it. If any classification is ever built, that constraint is binding.
+
+**Recommendation to the Product Owner — reject D1 and D2, keep D3–D7.** The council was scoped to
+D1/D2 only and said nothing about the rest, which are boundaries and deferrals rather than contracts.
+If a classification is wanted later, the council's finding is that it does not belong on the source
+enum at all: it belongs as a field on the `Evidence` record, set by the adapter that fetched the item
+— the only thing that knows whether a given YouTube URL is a brand channel or a creator's review.
+**That cannot be decided before an adapter exists**, and no adapter is authorized (D7).
 
 ---
 
@@ -162,6 +274,14 @@ fallthrough, reintroduces the silent-default failure this shape exists to preven
 ⚠️ **See §0.1c.** Neither has a producer today and D7 forbids building one.
 
 #### D2.1 — Why define them now rather than with the first producer
+
+🛑 **SUPERSEDED BY §0.1e. Its conclusion was WRONG, and in the specific direction it was most
+confident about.** This section argued `ENGAGEMENT` survives on structural grounds while `QUESTION`
+does not. The council found the structural argument runs the **opposite** way, and the code agrees:
+`ENGAGEMENT` is a measurement rather than a speech act, must invent a required `polarity`, and would
+manufacture false contradictions at `detect-contradictions.ts:42`. It is left standing undeleted
+because a confident wrong answer is worth seeing next to what corrected it — and because it is the
+clearest evidence in this repo for why §0.1d's council was made a precondition rather than a courtesy.
 
 The Product Owner asked for this argument explicitly. It is given, and then its strongest
 counter-argument is given too, because the honest answer is that **the case is good for one member
