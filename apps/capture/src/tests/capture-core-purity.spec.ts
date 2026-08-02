@@ -18,10 +18,19 @@ import { describe, expect, it } from 'vitest';
  * previous guard tests in this repo.
  */
 
+/**
+ * ⚠️ A module added to the CLI core but not to this array is a module the guard
+ * does not see. The list is the coverage claim, so it grows with the core.
+ */
 const CORE_MODULES = [
   'capture-arguments.ts',
   'capture-connection-target.ts',
   'capture-profile-input.ts',
+  'cli-argument-tokens.ts',
+  'onboarding-arguments.ts',
+  'onboarding-runner.ts',
+  'local-database-target.ts',
+  'capture-cli.ts',
   'index.ts',
 ] as const;
 

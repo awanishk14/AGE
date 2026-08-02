@@ -37,3 +37,25 @@ export type { ParsedBusinessDiscoveryProfileDocument } from './capture-profile-i
 
 export { CAPTURE_EXIT_CODES, runCapture } from './capture-runner';
 export type { CaptureConnection, CaptureRunResult, CaptureRuntime } from './capture-runner';
+
+export { isCanonicalUtcTimestamp, readStrictValue, tokenize } from './cli-argument-tokens';
+export type { Tokens } from './cli-argument-tokens';
+
+export { parseOnboardingArguments } from './onboarding-arguments';
+export type { OnboardingCommand, ParsedOnboardingArguments } from './onboarding-arguments';
+
+export { ONBOARDING_EXIT_CODES, runOnboarding } from './onboarding-runner';
+export type { OnboardingRunResult, OnboardingRuntime } from './onboarding-runner';
+
+export { ONBOARDING_SUBCOMMAND, runCli } from './capture-cli';
+export type { CaptureCliRuntime } from './capture-cli';
+
+/**
+ * ADR-0054 D6 condition 2. Exported so the rule can be read — and tested —
+ * without reaching for the composition root, which imports `@prisma/client`.
+ */
+export {
+  assertLocalDatabaseTarget,
+  databaseTargetHost,
+  NonLocalDatabaseTargetError,
+} from './local-database-target';

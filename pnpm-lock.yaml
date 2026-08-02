@@ -123,6 +123,12 @@ importers:
       '@age/capability-kit':
         specifier: workspace:*
         version: link:../../packages/capability-kit
+      '@age/client-registry':
+        specifier: workspace:*
+        version: link:../../packages/client-registry
+      '@age/discovery-answer-file':
+        specifier: workspace:*
+        version: link:../../packages/discovery-answer-file
       '@age/scored-bif-snapshot-persistence':
         specifier: workspace:*
         version: link:../../packages/scored-bif-snapshot-persistence
