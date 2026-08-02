@@ -1,3 +1,5 @@
+import { describeJsonParseFailure } from '@age/operator-file-policy';
+
 import type {
   BusinessDiscoveryQuestionnaire,
   BusinessDiscoveryQuestionnaireQuestion,
@@ -81,10 +83,15 @@ function validateScalar(value: unknown, question: BusinessDiscoveryQuestionnaire
   if (question.kind === 'choice') {
     const choices = question.choices ?? [];
     if (!choices.includes(value)) {
+      // 🚫 The supplied value is NOT echoed. ADR-0054 D1: the validator names
+      // the question id, never the answer text — a refusal that quoted the
+      // answer would put a real business's words into a terminal log. The
+      // declared choices are safe to name: they come from the questionnaire,
+      // which is ours, not from the operator's file.
       throw new DiscoveryAnswerFileError(
         `Question "${question.id}" only accepts one of its declared choices ` +
-          `(${choices.map((choice) => `"${choice}"`).join(', ')}), but the file supplied ` +
-          `"${value}".`,
+          `(${choices.map((choice) => `"${choice}"`).join(', ')}), and the file supplied ` +
+          'a value that is not among them.',
         question.id,
       );
     }
@@ -170,8 +177,10 @@ export function parseDiscoveryAnswerFile(
   try {
     document = JSON.parse(rawText) as unknown;
   } catch (error) {
+    // ⚠️ The parser's message is NOT surfaced: V8 embeds a fragment of the
+    // source in it, and here that source is the business's own words.
     throw new DiscoveryAnswerFileError(
-      `The answer file is not valid JSON: ${(error as Error).message}`,
+      `The answer file is not valid JSON (${describeJsonParseFailure(error)}).`,
     );
   }
 

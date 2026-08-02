@@ -150,6 +150,22 @@ describe('the entry point is the sole owner of the effects', () => {
     },
   );
 
+  /**
+   * 🚫 NO STACK IS EVER PRINTED, in any module of this CLI. A stack renders
+   * framed values, and the frames reachable from the onboarding path hold the
+   * operator's connection string and the client's serialized context. The
+   * error's NAME says what went wrong without saying what was being written.
+   *
+   * ⚠️ Nor is a driver's MESSAGE printed: Prisma's validation class renders the
+   * whole `data` argument. The one place `.message` is still read is where this
+   * repository wrote the refusal itself and governs its wording.
+   */
+  it('never reads .stack anywhere in the CLI, entry point included', () => {
+    const owners = SOURCE_FILES.filter((moduleFile) => /\.stack\b/.test(code(moduleFile)));
+
+    expect(owners).toEqual([]);
+  });
+
   it('constructs a PrismaClient only in the composition root', () => {
     const owners = SOURCE_FILES.filter((moduleFile) =>
       code(moduleFile).includes('new PrismaClient('),

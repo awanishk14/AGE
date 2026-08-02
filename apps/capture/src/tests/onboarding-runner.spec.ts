@@ -6,7 +6,12 @@ import type {
 import { describe, expect, it } from 'vitest';
 
 import type { CaptureConnection } from '../capture-runner';
-import { ONBOARDING_EXIT_CODES, runOnboarding, type OnboardingRuntime } from '../onboarding-runner';
+import {
+  ONBOARDING_EXIT_CODES,
+  driverFailureLabelOf,
+  runOnboarding,
+  type OnboardingRuntime,
+} from '../onboarding-runner';
 
 /**
  * ADR-0054 D6 — the onboarding run, driven with no database and no filesystem.
@@ -329,6 +334,49 @@ describe('runOnboarding — produceAndCapture', () => {
 
     expect(result.exitCode).toBe(ONBOARDING_EXIT_CODES.captureFailed);
     expect(closed.count).toBe(1);
-    expect(result.stderr.join(' ')).toContain('relation does not exist');
+    // ⚠️ The driver's MESSAGE is not printed — its name is. A Prisma validation
+    // error renders the whole `data` argument, which on this path is the
+    // serialized `ScoredBifContext`: the client's business facts in their own
+    // words. The name says what went wrong without saying what was written.
+    expect(result.stderr.join(' ')).toContain('Capture failed: Error');
+    expect(result.stderr.join(' ')).not.toContain('relation does not exist');
+  });
+
+  it('reports the driver error code when there is one, and never its message', async () => {
+    const driverError = Object.assign(new Error('Invalid `prisma.scoredBifSnapshot.create()`'), {
+      name: 'PrismaClientValidationError',
+      code: 'P2002',
+    });
+    const { runtime } = harness({ answer: () => ({ status: 'failed', error: driverError }) });
+
+    const result = await runOnboarding(capturingArgs, runtime);
+
+    expect(result.stderr.join(' ')).toBe('Capture failed: PrismaClientValidationError (P2002)');
+  });
+});
+
+describe('driverFailureLabelOf', () => {
+  // Tested directly because `ScoredBifSnapshotCaptureFailed.error` is typed as
+  // `Error`: the non-Error case cannot be reached through the runner without a
+  // cast that would assert something the type says is impossible. It is still a
+  // real case — the value originates in a driver this repository does not own.
+  it('degrades an unrecognised value to a constant rather than stringifying it', () => {
+    // 🚫 `String(error)` would print whatever a future driver decided to throw.
+    expect(driverFailureLabelOf({ context: 'Wholly Invented Widgets' })).toBe(
+      'the driver reported a non-Error failure',
+    );
+    expect(driverFailureLabelOf('Wholly Invented Widgets')).not.toContain('Wholly');
+  });
+
+  it('never returns the error message', () => {
+    const error = Object.assign(new Error('Invalid `prisma.scoredBifSnapshot.create()`'), {
+      name: 'PrismaClientValidationError',
+    });
+    expect(driverFailureLabelOf(error)).toBe('PrismaClientValidationError');
+  });
+
+  it('ignores a non-string or empty code rather than rendering it', () => {
+    expect(driverFailureLabelOf(Object.assign(new Error('x'), { code: 42 }))).toBe('Error');
+    expect(driverFailureLabelOf(Object.assign(new Error('x'), { code: '' }))).toBe('Error');
   });
 });

@@ -69,6 +69,12 @@ main(process.argv.slice(2))
     // An unexpected throw is not a capture failure and must not borrow its
     // code: `runCapture` reports every anticipated failure as a code, so
     // reaching here means something the CLI did not model went wrong.
-    process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);
+    //
+    // 🚫 THE STACK IS NOT PRINTED. A stack renders framed values, and the
+    // frames reachable here hold the operator's connection string and the
+    // client's serialized context. `openLocalCaptureOrchestrator` is called
+    // outside `runOnboarding`'s try, so a driver initialisation failure lands
+    // exactly here — which is why this is the wrong place for a default dump.
+    process.stderr.write(`${error instanceof Error ? error.name : 'Unexpected failure'}\n`);
     process.exitCode = 1;
   });

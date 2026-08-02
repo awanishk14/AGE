@@ -100,6 +100,49 @@ describe('parseDiscoveryAnswerFile', () => {
     it('refuses an empty file', () => {
       expect(() => parseDiscoveryAnswerFile('', Q)).toThrow(DiscoveryAnswerFileError);
     });
+
+    /**
+     * ⚠️ The answer file holds the business's own words. V8's "Unexpected
+     * token" class QUOTES A WINDOW OF THE SOURCE, so splicing the parser's
+     * message into the refusal printed part of a real client's answers onto
+     * stderr. The unquoted-value fixture is chosen because it produces that
+     * class — the positional class does not quote the source, and a fixture
+     * that produced one would have made this guard vacuous.
+     */
+    const LEAKY = `{"questionnaireId":"${Q.id}","answers":[{"questionId":"bi-name","value":Wholly Invented Widgets}]}`;
+
+    it('the fixture really does make the parser quote the file', () => {
+      let raw = '';
+      try {
+        JSON.parse(LEAKY);
+      } catch (error) {
+        raw = (error as Error).message;
+      }
+      expect(raw).toContain('Wholly');
+    });
+
+    it('says only what it is allowed to say about a malformed file', () => {
+      let message = '';
+      try {
+        parseDiscoveryAnswerFile(LEAKY, Q);
+      } catch (error) {
+        message = (error as Error).message;
+      }
+
+      // Exact, not a list of absent substrings: only an exact match rules out
+      // a leak of something nobody thought to list.
+      expect(message).toBe('The answer file is not valid JSON (at an unreported position).');
+    });
+
+    it('reports the position when the parser gives one', () => {
+      let message = '';
+      try {
+        parseDiscoveryAnswerFile(`{"answers":[{"questionId":"bi-name"} broken]}`, Q);
+      } catch (error) {
+        message = (error as Error).message;
+      }
+      expect(message).toMatch(/^The answer file is not valid JSON \(at position \d+\)\.$/);
+    });
   });
 
   describe('pins the questionnaire the answers were written against', () => {
@@ -261,6 +304,23 @@ describe('parseDiscoveryAnswerFile', () => {
       expect(() =>
         parseDiscoveryAnswerFile(choiceFile('definitely-not-a-choice'), CHOICE_Q),
       ).toThrow(/fx-model/);
+    });
+
+    it('does not echo the supplied value, and does name the declared choices', () => {
+      // The declared choices come from the questionnaire, which is ours. The
+      // supplied value came from the operator's file and may be a real
+      // business's words — it is described, never quoted.
+      let message = '';
+      try {
+        parseDiscoveryAnswerFile(choiceFile('we sell widgets to Wholly Invented Ltd'), CHOICE_Q);
+      } catch (error) {
+        message = (error as Error).message;
+      }
+
+      expect(message).toContain('"b2b"');
+      expect(message).toContain('"b2c"');
+      expect(message).not.toContain('Wholly Invented');
+      expect(message).not.toContain('widgets');
     });
   });
 

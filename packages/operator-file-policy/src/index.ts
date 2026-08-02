@@ -15,3 +15,11 @@ export {
   OperatorFilePathRefusedError,
   assertOperatorFilePathOutsideRepository,
 } from './operator-file-path-policy';
+
+/**
+ * The second rule about an operator-authored file: how a parse failure may be
+ * described. 🚫 The parser's own message is never surfaced — V8 embeds a
+ * fragment of the source in it, and for these files that fragment is client
+ * data.
+ */
+export { describeJsonParseFailure } from './operator-file-json-policy';

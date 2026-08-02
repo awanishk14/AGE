@@ -112,6 +112,54 @@ describe('loadClientRecordFile', () => {
     expect(() => load('{ not json')).toThrow(ClientRecordFileError);
   });
 
+  /**
+   * The refusal must not carry the file back. ⚠️ V8's "Unexpected token" class
+   * QUOTES A WINDOW OF THE SOURCE — `Unexpected token 'W', ..."playName":Wholly
+   * Inv"... is not valid JSON` — so splicing the parser's message into the
+   * refusal printed part of the record onto stderr.
+   *
+   * ⚠️ The unquoted-value fixture below is chosen BECAUSE it produces that
+   * class. The positional class ("at position 59") does not quote the source at
+   * all, so a fixture that produced one would have made this guard vacuous.
+   */
+  const LEAKY = `{"records":[{"clientId":"client-fictional-1","displayName":Wholly Invented Widgets}]}`;
+
+  it('the fixture really does make the parser quote the file', () => {
+    // Otherwise a future Node that stopped quoting would leave the guard below
+    // passing while proving nothing.
+    let raw = '';
+    try {
+      JSON.parse(LEAKY);
+    } catch (error) {
+      raw = (error as Error).message;
+    }
+    expect(raw).toContain('Wholly');
+    expect(raw).toContain('playName');
+  });
+
+  it('says only what it is allowed to say about a malformed file', () => {
+    let message = '';
+    try {
+      load(LEAKY);
+    } catch (error) {
+      message = (error as Error).message;
+    }
+
+    // An EXACT match, not a set of absent substrings: it is the only assertion
+    // that cannot be satisfied by a message that leaks something unlisted.
+    expect(message).toBe('The client record file is not valid JSON (at an unreported position).');
+  });
+
+  it('reports the position when the parser gives one', () => {
+    let message = '';
+    try {
+      load('{"records":[{"clientId":"client-fictional-1"} broken]}');
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    expect(message).toMatch(/^The client record file is not valid JSON \(at position \d+\)\.$/);
+  });
+
   it('refuses a document without a records array', () => {
     expect(() => load(JSON.stringify({ clients: [RECORD] }))).toThrow(/"records" array/);
     expect(() => load(JSON.stringify([RECORD]))).toThrow(/"records" array/);
