@@ -16,6 +16,7 @@ import {
 import { loadDiscoveryAnswerFile } from '@age/discovery-answer-file';
 
 import type { CaptureConnection } from './capture-runner';
+import { driverFailureLabelOf } from './driver-failure-label';
 import { parseOnboardingArguments, type OnboardingCommand } from './onboarding-arguments';
 
 /**
@@ -110,26 +111,12 @@ const messageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
 /**
- * How a failure from the DRIVER is described — as opposed to `messageOf`, which
- * renders refusals this repository wrote and whose wording is already governed.
- *
- * 🚫 A Prisma error's message is never printed. Its validation class renders the
- * whole `data` argument, which here is the serialized `ScoredBifContext` — the
- * client's business facts, in their own words. The error's NAME and `code` say
- * what went wrong without saying what was being written.
- *
- * ⚠️ An unrecognised value degrades to a constant, never to `String(error)`:
- * whatever a future driver throws, it must not reach stderr by default.
+ * ⚠️ `driverFailureLabelOf` is re-exported, NOT re-implemented. It moved to its
+ * own module when `runCapture` needed the same rule — as opposed to `messageOf`
+ * above, which renders refusals this repository wrote and whose wording is
+ * already governed.
  */
-export const driverFailureLabelOf = (error: unknown): string => {
-  if (!(error instanceof Error)) {
-    return 'the driver reported a non-Error failure';
-  }
-
-  const code = (error as { code?: unknown }).code;
-
-  return typeof code === 'string' && code.length > 0 ? `${error.name} (${code})` : error.name;
-};
+export { driverFailureLabelOf } from './driver-failure-label';
 
 /**
  * The echo half of ADR-0043 D4's echo-and-`--confirm` mitigation, printed on

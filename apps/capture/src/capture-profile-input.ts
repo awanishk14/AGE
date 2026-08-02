@@ -1,5 +1,6 @@
 import type { BusinessDiscoveryProfile } from '@age/business-discovery-contracts';
 import { businessDiscoveryProfileSchema } from '@age/business-discovery-contracts';
+import { describeJsonParseFailure } from '@age/operator-file-policy';
 
 /**
  * The CLI's profile-document boundary (ADR-0043 D3, Slice B1).
@@ -54,8 +55,15 @@ export function parseBusinessDiscoveryProfileDocument(
   try {
     document = JSON.parse(text);
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { ok: false, errors: [`${source} is not valid JSON: ${reason}`] };
+    // ⚠️ The parser's message is NOT surfaced. V8 embeds a fragment of the
+    // source text in it, so a malformed profile would print part of a real
+    // business's discovery profile onto stderr. Same rule as the two operator
+    // file loaders, kept by the same single implementation: name the position,
+    // never the contents.
+    return {
+      ok: false,
+      errors: [`${source} is not valid JSON (${describeJsonParseFailure(error)}).`],
+    };
   }
 
   if (!isJsonObject(document)) {

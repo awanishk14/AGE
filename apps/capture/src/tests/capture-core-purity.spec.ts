@@ -27,6 +27,7 @@ const CORE_MODULES = [
   'capture-connection-target.ts',
   'capture-profile-input.ts',
   'cli-argument-tokens.ts',
+  'driver-failure-label.ts',
   'onboarding-arguments.ts',
   'onboarding-runner.ts',
   'local-database-target.ts',

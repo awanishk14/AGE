@@ -5,6 +5,7 @@ import type { ScoredBifSnapshotCaptureOrchestrator } from '@age/scored-bif-snaps
 
 import { parseCaptureArguments, type CaptureCommand } from './capture-arguments';
 import { parseBusinessDiscoveryProfileDocument } from './capture-profile-input';
+import { driverFailureLabelOf } from './driver-failure-label';
 
 /**
  * The capture CLI's run logic (ADR-0043 D2/D3/D4/D5, Slice B2).
@@ -189,7 +190,7 @@ export async function runCapture(
   if (result.capture.kind !== 'captured') {
     const detail =
       result.capture.kind === 'failed'
-        ? messageOf(result.capture.error)
+        ? driverFailureLabelOf(result.capture.error)
         : 'capture was not attempted';
 
     return failure(
