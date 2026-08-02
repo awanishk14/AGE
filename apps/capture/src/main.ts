@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
-import { runCapture, type CaptureRuntime } from './capture-runner';
+import { runCli, type CaptureCliRuntime } from './capture-cli';
 
 /**
  * The capture CLI's entry point (ADR-0043 D5, Slice B2).
@@ -26,8 +26,9 @@ import { runCapture, type CaptureRuntime } from './capture-runner';
  * have drained and the connection has been released.
  */
 
-const runtime: CaptureRuntime = {
+const runtime: CaptureCliRuntime = {
   readProfileText: (path: string): string => readFileSync(path, 'utf8'),
+  readOperatorFileText: (path: string): string => readFileSync(path, 'utf8'),
   now: () => new Date(),
   newSnapshotId: () => randomUUID(),
   openCaptureOrchestrator: async () => {
@@ -35,10 +36,20 @@ const runtime: CaptureRuntime = {
 
     return openPrismaCaptureConnection();
   },
+  /**
+   * ADR-0054 D6 condition 2: the onboarding command's door refuses a target
+   * that is not on this machine. A SEPARATE door from the one above, because
+   * `age-capture` is also what `ci-db.yml` drives against its service container.
+   */
+  openLocalCaptureOrchestrator: async () => {
+    const { openLocalPrismaCaptureConnection } = await import('./capture-composition');
+
+    return openLocalPrismaCaptureConnection();
+  },
 };
 
 export async function main(argv: readonly string[]): Promise<number> {
-  const result = await runCapture(argv, runtime);
+  const result = await runCli(argv, runtime);
 
   for (const line of result.stdout) {
     process.stdout.write(`${line}\n`);

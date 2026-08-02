@@ -10,6 +10,7 @@ import {
   type CaptureConnectionEnvironment,
 } from './capture-connection-target';
 import type { CaptureConnection } from './capture-runner';
+import { assertLocalDatabaseTarget } from './local-database-target';
 
 /**
  * The composition root for the capture CLI — the ADR-0043 D6 chain, assembled
@@ -108,4 +109,29 @@ export function openPrismaCaptureConnection(
     orchestrator: new ScoredBifSnapshotCaptureOrchestrator(repository),
     close: () => client.$disconnect(),
   };
+}
+
+/**
+ * The same chain, behind ADR-0054 D6 condition 2: the target must be a local
+ * development database the operator controls, or the run refuses.
+ *
+ * ⚠️ A SEPARATE FUNCTION, NOT A FLAG ON THE ONE ABOVE. `age-capture` — and
+ * `ci-db.yml`'s live migration test — drive `openPrismaCaptureConnection`
+ * directly, and D6 is a permission for the onboarding command, not a new
+ * restriction on everything that already existed. A shared function with an
+ * `allowRemote` escape hatch would be the same rule with a documented way past
+ * it.
+ *
+ * ⚠️ The assertion happens ABOVE `new PrismaClient(`. A check that ran after
+ * the client was constructed would already have handed the connection string to
+ * a driver that may dial on first use.
+ */
+export function openLocalPrismaCaptureConnection(
+  options: CaptureConnectionOptions = {},
+): CaptureConnection {
+  const url = options.datasourceUrl ?? resolveConnectionUrl(options.environment ?? process.env);
+
+  assertLocalDatabaseTarget(url);
+
+  return openPrismaCaptureConnection({ ...options, datasourceUrl: url });
 }

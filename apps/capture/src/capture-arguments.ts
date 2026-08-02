@@ -21,7 +21,13 @@
  * A correctly-formatted but wrong `--client-id` yields a correctly-scoped write
  * of the wrong client's data. Format validation plus echo-and-`--confirm`
  * reduce the fat-finger case; only an authenticated caller closes the gap.
+ *
+ * THE RULES THEMSELVES LIVE IN `cli-argument-tokens.ts`, shared with the D6
+ * onboarding command. Two copies of one fail-closed rule drift silently,
+ * because the relaxed copy still passes its own tests.
  */
+
+import { isCanonicalUtcTimestamp, readStrictValue, tokenize } from './cli-argument-tokens';
 
 /** What the operator asked for. Every field is exactly what they typed. */
 export interface CaptureCommand {
@@ -69,141 +75,8 @@ const BOOLEAN_FLAGS: ReadonlySet<string> = new Set<string>(['--capture', '--conf
 /** Flags that only mean something once capture has actually been requested. */
 const CAPTURE_ONLY_FLAGS = ['--snapshot-id', '--captured-at'] as const;
 
-/**
- * Exactly what `Date.prototype.toISOString` emits: UTC, `Z`, milliseconds
- * always present. Anything else — an offset, a bare date, second precision — is
- * refused rather than normalised, because `capturedAt` is stored as text and
- * its lexicographic order IS the series chronology (ADR-0029). Two encodings of
- * the same instant would sort against each other.
- */
-const CANONICAL_UTC_TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.\d{3}Z$/;
-
-const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
-
-const isLeapYear = (year: number): boolean =>
-  (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-
-/**
- * Calendar-validates without constructing a `Date`. Not pedantry: this module
- * must stay clock-free and copy-safe under the repo's purity-guard pattern,
- * which scans module source for `new Date(`. Validation needs no clock.
- */
-const isCanonicalUtcTimestamp = (value: string): boolean => {
-  const match = CANONICAL_UTC_TIMESTAMP.exec(value);
-  if (match === null) {
-    return false;
-  }
-
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const hour = Number(match[4]);
-  const minute = Number(match[5]);
-  const second = Number(match[6]);
-
-  if (month < 1 || month > 12) {
-    return false;
-  }
-  if (hour > 23 || minute > 59 || second > 59) {
-    return false;
-  }
-
-  const daysInMonth = month === 2 && isLeapYear(year) ? 29 : (DAYS_IN_MONTH[month - 1] as number);
-
-  return day >= 1 && day <= daysInMonth;
-};
-
-interface Tokens {
-  readonly values: ReadonlyMap<string, string>;
-  readonly booleans: ReadonlySet<string>;
-  readonly errors: readonly string[];
-}
-
-const tokenize = (argv: readonly string[]): Tokens => {
-  const values = new Map<string, string>();
-  const booleans = new Set<string>();
-  const errors: string[] = [];
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index] as string;
-
-    if (!token.startsWith('--')) {
-      errors.push(`Unexpected positional argument: ${token}. Every input is a named flag.`);
-      continue;
-    }
-
-    if (BOOLEAN_FLAGS.has(token)) {
-      if (booleans.has(token)) {
-        errors.push(`${token} was given more than once.`);
-        continue;
-      }
-      booleans.add(token);
-      continue;
-    }
-
-    if (!VALUE_FLAGS.has(token)) {
-      errors.push(`Unknown flag: ${token}.`);
-      continue;
-    }
-
-    const next = argv[index + 1];
-    // A flag is never another flag's value. Silently swallowing `--client-id`
-    // as the value of a preceding `--profile` is how a scope argument goes
-    // missing without anyone noticing.
-    if (next === undefined || next.startsWith('--')) {
-      errors.push(`${token} requires a value.`);
-      continue;
-    }
-
-    index += 1;
-
-    if (values.has(token)) {
-      errors.push(`${token} was given more than once. Refusing to guess which value was meant.`);
-      continue;
-    }
-
-    values.set(token, next);
-  }
-
-  return { values, booleans, errors };
-};
-
-/**
- * Rejects blanks, and rejects padding rather than trimming it.
- *
- * `scoredBifSnapshotScopeSchema` uses `z.string().trim()`, which would silently
- * rewrite `' client-1 '` into `client-1`. For a value that becomes part of an
- * append-only primary key that is the wrong behaviour: the operator's shell
- * history and the stored row would disagree. This CLI is not entitled to decide
- * which id was meant.
- */
-const readStrictValue = (
-  flag: string,
-  values: ReadonlyMap<string, string>,
-  errors: string[],
-): string | undefined => {
-  const raw = values.get(flag);
-  if (raw === undefined) {
-    return undefined;
-  }
-
-  if (raw.trim().length === 0) {
-    errors.push(`${flag} must not be blank.`);
-    return undefined;
-  }
-
-  if (raw.trim() !== raw) {
-    errors.push(
-      `${flag} must not have leading or trailing whitespace. Refusing to trim it into a different value.`,
-    );
-    return undefined;
-  }
-
-  return raw;
-};
-
 export function parseCaptureArguments(argv: readonly string[]): ParsedCaptureArguments {
-  const { values, booleans, errors: tokenErrors } = tokenize(argv);
+  const { values, booleans, errors: tokenErrors } = tokenize(argv, VALUE_FLAGS, BOOLEAN_FLAGS);
   const errors: string[] = [...tokenErrors];
 
   // Every missing required flag is reported, not just the first — one retry per

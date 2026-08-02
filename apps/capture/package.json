@@ -25,6 +25,8 @@
     "@age/business-discovery-capture": "workspace:*",
     "@age/business-discovery-contracts": "workspace:*",
     "@age/capability-kit": "workspace:*",
+    "@age/client-registry": "workspace:*",
+    "@age/discovery-answer-file": "workspace:*",
     "@age/scored-bif-snapshot-persistence": "workspace:*",
     "@prisma/client": "^5.20.0",
     "zod": "^3.23.8"
