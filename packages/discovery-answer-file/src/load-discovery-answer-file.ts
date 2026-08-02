@@ -2,8 +2,8 @@ import type {
   BusinessDiscoveryQuestionnaire,
   DiscoveryAnswer,
 } from '@age/business-discovery-contracts';
+import { assertOperatorFilePathOutsideRepository } from '@age/operator-file-policy';
 
-import { assertAnswerFilePathOutsideRepository } from './answer-file-path-policy';
 import { DiscoveryAnswerFileError, parseDiscoveryAnswerFile } from './parse-discovery-answer-file';
 
 /**
@@ -40,7 +40,7 @@ export interface LoadDiscoveryAnswerFileOptions {
 /**
  * Loads and validates an operator-authored answer file.
  *
- * @throws {AnswerFilePathRefusedError} if the path is blank, relative, or
+ * @throws {OperatorFilePathRefusedError} if the path is blank, relative, or
  *         inside the repository working tree — raised before any read.
  * @throws {DiscoveryAnswerFileError} if the file cannot be read, or if its
  *         contents fail validation (naming the offending question id).
@@ -51,7 +51,7 @@ export function loadDiscoveryAnswerFile(
   const { path, repositoryRoot, questionnaire, readFileText } = options;
 
   // Order is load-bearing: a refused path must never be opened.
-  assertAnswerFilePathOutsideRepository(path, repositoryRoot);
+  assertOperatorFilePathOutsideRepository(path, repositoryRoot, 'answer file');
 
   let rawText: string;
   try {

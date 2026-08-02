@@ -1,7 +1,7 @@
 import { DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE } from '@age/business-discovery-contracts';
+import { OperatorFilePathRefusedError } from '@age/operator-file-policy';
 import { describe, expect, it } from 'vitest';
 
-import { AnswerFilePathRefusedError } from '../answer-file-path-policy';
 import { loadDiscoveryAnswerFile } from '../load-discovery-answer-file';
 import { DiscoveryAnswerFileError } from '../parse-discovery-answer-file';
 
@@ -57,7 +57,7 @@ describe('loadDiscoveryAnswerFile', () => {
           return VALID;
         },
       }),
-    ).toThrow(AnswerFilePathRefusedError);
+    ).toThrow(OperatorFilePathRefusedError);
 
     // The refusal must precede the effect — otherwise a refused path has
     // already been opened.

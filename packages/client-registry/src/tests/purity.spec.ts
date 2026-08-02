@@ -57,10 +57,14 @@ describe('@age/client-registry is pure', () => {
     expect(examined).toBe(files.length);
   });
 
-  it('imports @age/capability-kit and zod, and nothing else from the workspace', () => {
+  it('declares only the workspace dependencies it needs', () => {
     const declared = JSON.parse(readFileSync(join(SRC, '..', 'package.json'), 'utf8')) as {
       dependencies: Record<string, string>;
     };
-    expect(Object.keys(declared.dependencies).sort()).toEqual(['@age/capability-kit', 'zod']);
+    expect(Object.keys(declared.dependencies).sort()).toEqual([
+      '@age/capability-kit',
+      '@age/operator-file-policy',
+      'zod',
+    ]);
   });
 });

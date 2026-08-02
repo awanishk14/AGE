@@ -29,4 +29,17 @@ export {
   type OperatorPrincipal,
 } from './operator-principal';
 
+/**
+ * ADR-0054 D3 — a loader, NOT new fixtures. It still performs no I/O: the read
+ * is injected, so "lookup, not loader" survives in the sense that matters (this
+ * package reaches nothing on its own).
+ */
+export {
+  ClientRecordFileError,
+  loadClientRecordFile,
+  requireClientRecord,
+  type ClientRecordFileReader,
+  type LoadClientRecordFileOptions,
+} from './load-client-record-file';
+
 export { FICTIONAL_CLIENT_RECORDS, FICTIONAL_MARKER } from './fixtures/fictional-clients';

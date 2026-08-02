@@ -1,5 +1,5 @@
 {
-  "name": "@age/discovery-answer-file",
+  "name": "@age/operator-file-policy",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
@@ -16,11 +16,7 @@
     "test": "vitest run",
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
-  "dependencies": {
-    "@age/business-discovery-contracts": "workspace:*",
-    "@age/operator-file-policy": "workspace:*",
-    "zod": "^3.23.8"
-  },
+  "dependencies": {},
   "devDependencies": {
     "vitest": "^2.1.1"
   }
