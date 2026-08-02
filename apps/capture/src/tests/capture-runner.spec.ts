@@ -240,10 +240,28 @@ describe('runCapture — produceAndCapture', () => {
     const result = await runCapture([...CAPTURE_ARGS], runtime);
 
     expect(result.exitCode).toBe(CAPTURE_EXIT_CODES.captureFailed);
-    expect(result.stderr).toEqual(['Capture failed: insert refused']);
+    // ⚠️ The driver's MESSAGE is not printed — its name is. A Prisma validation
+    // error renders the whole `data` argument, which on this path is the
+    // serialized `ScoredBifContext`. Same rule as `onboard`; this path shipped
+    // without it because it was the fixture path, and a fixture path is not a
+    // reason to keep a leak that costs one word to close.
+    expect(result.stderr).toEqual(['Capture failed: Error']);
+    expect(result.stderr.join(' ')).not.toContain('insert refused');
     // The produced context is still reported: it was genuinely produced.
     expect(result.stdout).toContain('bifStatus:       Draft');
     expect(closed.count).toBe(1);
+  });
+
+  it('reports the driver error code when there is one, and never its message', async () => {
+    const driverError = Object.assign(new Error('Invalid `prisma.scoredBifSnapshot.create()`'), {
+      name: 'PrismaClientValidationError',
+      code: 'P2002',
+    });
+    const { runtime } = harness({ answer: () => ({ status: 'failed', error: driverError }) });
+
+    const result = await runCapture([...CAPTURE_ARGS], runtime);
+
+    expect(result.stderr).toEqual(['Capture failed: PrismaClientValidationError (P2002)']);
   });
 
   it('releases the connection even when the chain throws', async () => {

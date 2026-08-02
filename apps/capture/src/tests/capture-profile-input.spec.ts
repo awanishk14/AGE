@@ -70,6 +70,55 @@ describe('parseBusinessDiscoveryProfileDocument', () => {
     expect(parseBusinessDiscoveryProfileDocument(text, './profile.json').ok).toBe(false);
   });
 
+  /**
+   * The same defect PR #220 fixed in the two operator-file loaders, in the
+   * third place it shipped. V8's "Unexpected token" `SyntaxError` QUOTES A
+   * WINDOW OF THE SOURCE, and this boundary spliced that message into its own
+   * refusal — so a malformed profile printed a fragment of a real business's
+   * discovery profile onto stderr.
+   *
+   * ⚠️ The unquoted-value fixture below is chosen BECAUSE it produces that
+   * class. The POSITIONAL class ("at position 59") does not quote the source at
+   * all, so a fixture producing one would leave this guard vacuous — that is
+   * exactly how two of #220's guards passed against the unfixed code.
+   */
+  const LEAKY = `{"id":"profile-1","businessName":Wholly Invented Widgets}`;
+
+  it('the fixture really does make the parser quote the file', () => {
+    // Otherwise a future Node that stopped quoting would leave the guard below
+    // passing while proving nothing.
+    let raw = '';
+    try {
+      JSON.parse(LEAKY);
+    } catch (error) {
+      raw = (error as Error).message;
+    }
+    expect(raw).toContain('Wholly');
+    expect(raw).toContain('essName');
+  });
+
+  it('says only what it is allowed to say about a malformed profile', () => {
+    const parsed = parseBusinessDiscoveryProfileDocument(LEAKY, './profile.json');
+    if (parsed.ok) {
+      throw new Error('expected failure');
+    }
+
+    // An EXACT match, not a set of absent substrings: it is the only assertion
+    // that cannot be satisfied by a message that leaks something unlisted.
+    expect(parsed.errors).toEqual([
+      './profile.json is not valid JSON (at an unreported position).',
+    ]);
+  });
+
+  it('reports the position when the parser gives one', () => {
+    const parsed = parseBusinessDiscoveryProfileDocument('{"id":"x"} broken', './profile.json');
+    if (parsed.ok) {
+      throw new Error('expected failure');
+    }
+
+    expect(parsed.errors[0]).toMatch(/^\.\/profile\.json is not valid JSON \(at position \d+\)\.$/);
+  });
+
   it('is pure — the same text yields the same outcome', () => {
     expect(parseBusinessDiscoveryProfileDocument('{"id":"x"}', './p.json')).toEqual(
       parseBusinessDiscoveryProfileDocument('{"id":"x"}', './p.json'),

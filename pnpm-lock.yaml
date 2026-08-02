@@ -129,6 +129,9 @@ importers:
       '@age/discovery-answer-file':
         specifier: workspace:*
         version: link:../../packages/discovery-answer-file
+      '@age/operator-file-policy':
+        specifier: workspace:*
+        version: link:../../packages/operator-file-policy
       '@age/scored-bif-snapshot-persistence':
         specifier: workspace:*
         version: link:../../packages/scored-bif-snapshot-persistence
