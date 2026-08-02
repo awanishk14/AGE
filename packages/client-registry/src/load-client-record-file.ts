@@ -1,4 +1,7 @@
-import { assertOperatorFilePathOutsideRepository } from '@age/operator-file-policy';
+import {
+  assertOperatorFilePathOutsideRepository,
+  describeJsonParseFailure,
+} from '@age/operator-file-policy';
 
 import { type ClientRecord, findClientRecord, parseClientRecord } from './client-record';
 
@@ -89,8 +92,13 @@ export function loadClientRecordFile(
   try {
     document = JSON.parse(rawText) as unknown;
   } catch (error) {
+    // ⚠️ The parser's message is NOT surfaced. V8 embeds a fragment of the
+    // source text in it, so a malformed record file would print part of the
+    // record — possibly a client's display name or an advertising account id —
+    // onto stderr. Same rule as the per-record refusal below: name the
+    // position, never the contents.
     throw new ClientRecordFileError(
-      `The client record file is not valid JSON: ${(error as Error).message}`,
+      `The client record file is not valid JSON (${describeJsonParseFailure(error)}).`,
     );
   }
 
