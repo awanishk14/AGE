@@ -68,6 +68,7 @@ describe('@age/discovery-answer-file is pure', () => {
     };
     expect(Object.keys(declared.dependencies).sort()).toEqual([
       '@age/business-discovery-contracts',
+      '@age/operator-file-policy',
       'zod',
     ]);
   });

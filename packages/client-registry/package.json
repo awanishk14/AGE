@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@age/capability-kit": "workspace:*",
+    "@age/operator-file-policy": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {
