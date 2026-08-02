@@ -56,6 +56,25 @@ high-blast-radius decisions, and an enum in the published data dictionary qualif
 docs-only and self-blocking (D7 forbids implementation before acceptance), so the cost was bounded —
 but it was a **departure, recorded here rather than concealed**. §0.1d now closes it.
 
+### 0.1c The dissent the architect could not resolve
+
+**D2 adds two enum members whose producers do not exist.** `QUESTION` and `ENGAGEMENT` describe
+signals that arrive from social and community surfaces AGE cannot currently read — there is no
+adapter, no ingest endpoint, and D7 forbids building one. A reasonable objection is that an enum
+member no producer can emit is the same defect ADR-0055 is named after: a row nobody writes.
+
+The counter-argument: the enum is a **published contract in the data dictionary**, and contracts are
+amended before producers, not after — the alternative is that the first adapter's author invents the
+vocabulary under delivery pressure, which is exactly how the units bug in RankOps ADR-0033 happened.
+
+⚠️ **This section's original verdict — "narrowly stronger, but not decisively so", applied to both
+members equally — is SUPERSEDED by §D2.1**, which was written when the Product Owner asked for the
+timing argument in full. Working it through split the two: `ENGAGEMENT` survives the objection on
+structural grounds, `QUESTION` does not. **Read §D2.1, not this paragraph, for the current position.**
+The superseded verdict is left standing rather than deleted, because an objection that was once
+answered too easily is itself worth seeing. **Still recorded unresolved** — §0.1d hands it to a
+council.
+
 ### 0.1d — A council on D1 and D2 is a PRECONDITION OF ACCEPTANCE
 
 Product Owner direction, 2026-08-02, on the first draft of this ADR:
@@ -84,18 +103,6 @@ Scope of the required council, deliberately narrow:
 ⚠️ Per finding 7, the lenses get **the code and the enum**, never this ADR's prose — otherwise the
 architect's reasoning returns as independent confirmation of itself. Per finding 8, the evidence and
 the conclusion are adopted **separately**.
-
-### 0.1c The dissent the architect could not resolve
-
-**D2 adds two enum members whose producers do not exist.** `QUESTION` and `ENGAGEMENT` describe
-signals that arrive from social and community surfaces AGE cannot currently read — there is no
-adapter, no ingest endpoint, and D7 forbids building one. A reasonable objection is that an enum
-member no producer can emit is the same defect ADR-0055 is named after: a row nobody writes.
-
-The counter-argument, which the architect finds narrowly stronger but not decisively so: the enum is
-a **published contract in the data dictionary**, and contracts are amended before producers, not
-after — the alternative is that the first adapter's author invents the vocabulary under delivery
-pressure, which is exactly how the units bug in RankOps ADR-0033 happened. **Recorded unresolved.**
 
 ---
 
