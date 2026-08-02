@@ -147,14 +147,21 @@ Accepted and **deliberately left open**.
 
 ## §4 — Standing, unanswered, carried forward
 
-1. ⚠️ **PR #209 — the Product Bible amendment (Docs 11 §2.1 + §8, 12 §6.1, 15 §2.1)** introducing the
-   **peer product**. 🚫 **Requires PRODUCT OWNER approval.** Per `START_HERE.md` §4 the Bible outranks
-   an ADR, so **until it lands, do not cite ADR-0053 D7 as having changed the Product Bible.**
+1. ✅ **RESOLVED — PR #209 landed.** The Product Bible amendment introducing the **peer product** was
+   **approved by the Product Owner** and merged (`31e97c1`), with a refinement in **#211**
+   (`74e850b`). ADR-0053 D7 may now be cited as having changed the Bible. ⚠️ The live sections are
+   `docs/product/11_INTEGRATION_CATALOG.md` §2.1/§2.1.1/§6.1 · `02` §16.1 · `12` §6.1 · `13` §3.1 —
+   **read those, not this summary.** Per `START_HERE.md` §4 the Bible still outranks an ADR.
 2. ⚠️ **Open question put to the user, unanswered:** is **mcp-ads-server** _the_ ads Execution Layer
    (the recommendation), or does AGE build its own ads execution and call mcp-ads underneath?
 3. ⚠️ **Not one real business has passed through AGE.** ~200 merged PRs, six capabilities, a frozen
    architecture — and every surface is fed by **one frozen sample profile**. The falsifiable test
    offered to the user: **by the end of slice B, vTEST's real answers should produce a stored profile
    you can look at.** If that has not happened, the problem is the **method**, not the next slice.
+   ⚠️ **Slice B has now shipped the PATH (#214/#215/#216/#217 — see
+   `ADR0054_FIRST_REAL_CLIENT_TRACK_CHECKPOINT.md`), which is NOT the same as having passed a real
+   business through it.** The suite drives an injected runtime; the actual local run is the
+   operator's to perform. 🚫 **Do not mark this item resolved until a real row has been written and
+   read back.**
 4. 🚫 **vTEST and Doctor at Door are the live test clients and their names must never be committed**
    (D3). ⚠️ mcp-ads touches **live spend**; its safety rules are not optional.
