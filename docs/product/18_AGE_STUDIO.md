@@ -7,6 +7,11 @@
 > would treat it differently. The Operator Console is the product. Everything else exists to support
 > it."_
 >
+> ⚠️ **Amended the same day**, after the Product Owner confirmed the direction and added three
+> things: the thirteen Studio workspaces (**Organizations** joins the list), the **operator-workflow
+> vs business-action** distinction (§2.1), and the single evaluation question with Studio-first
+> delivery (§7). 🚫 **None of the three authorizes code.**
+>
 > 🚫 **This document authorizes no code.** It is a product frame. Every screen it names is still
 > gated by **ADR-0057**, which is `Proposed`.
 
@@ -51,6 +56,7 @@ written down since the original Product Bibles. What has never existed is a path
 | The Product Owner's workspace | Already specified in                                  | Operator-Experience screen |
 | ----------------------------- | ----------------------------------------------------- | -------------------------- |
 | Dashboard                     | `07_UI_NAVIGATION.md` §5 (dashboards as entry points) | **S1** Console Home        |
+| Organizations                 | `02_WORKSPACE_MODEL.md`, `06_PERMISSION_MODEL.md`     | 🔒 **V2 only** — see §2.1  |
 | Clients                       | `03_CLIENT_LIFECYCLE.md`, `02_WORKSPACE_MODEL.md`     | **S2** Businesses          |
 | Discovery                     | ADR-0049/0050/0051, `@age/business-discovery`         | **S4** Discovery           |
 | Business Intelligence         | `@age/bif`, ADR-0026                                  | **S5** BIF                 |
@@ -64,7 +70,7 @@ written down since the original Product Bibles. What has never existed is a path
 | Settings                      | `14_CONFIGURATION_MODEL.md`                           | **S13** Diagnostics (V1)   |
 | _(not in the list)_           | Where AGE disagrees with itself                       | **S7** Contradictions      |
 
-⚠️ **S7 has no counterpart in the twelve.** That is not an oversight in the Product Owner's list — it
+⚠️ **S7 has no counterpart in the thirteen.** That is not an oversight in the Product Owner's list — it
 is the workspace no comparable product has, and the one that most distinguishes AGE. It stays.
 
 **Conclusion:** 🚫 **Do not write a new information architecture.** `07_UI_NAVIGATION.md` is Final and
@@ -89,7 +95,7 @@ boundary — it is the point at which AGE stops being able to name who acted.
 |             | **Studio V1 — the honest mirror**                                            | **Studio V2 — the workspace**                             |
 | ----------- | ---------------------------------------------------------------------------- | --------------------------------------------------------- |
 | Trust model | One operator, one machine, loopback only                                     | Multiple people, multiple organisations, networked        |
-| Actions     | **Read only**                                                                | Author · approve · execute                                |
+| Actions     | **Read only** (⚠️ see §2.1 — an _operator workflow_ is a separate class)     | Author · approve · execute                                |
 | Identity    | 🚫 None. `OperatorPrincipal` is a **label**, never an authorization decision | Authenticated, entitled, attributed                       |
 | Gate        | **ADR-0057** (`Proposed`)                                                    | **ADR J → K → L** (entitlement), 🚫 none written yet      |
 | Proves      | That AGE can represent its own thinking without lying                        | That AGE can be operated by someone other than its author |
@@ -99,6 +105,42 @@ it answers the question the Product Owner actually asked — _"where are we seei
 
 🚫 **V2 may not be reached by increments.** No V1 screen grows a write. A write needs a new ADR, and
 that ADR is blocked on entitlement, not on UI effort.
+
+---
+
+### 2.1 The line is _business action_, not _any write_ — the Product Owner’s clarification
+
+⚠️ **Amended 2026-08-03**, verbatim: _"I still want V1 to be read-only from the perspective of
+business actions. However, onboarding itself is an operator workflow, not a business execution
+workflow. Therefore I am comfortable with the Discovery onboarding eventually moving into Studio
+after the architecture has been proven through the CLI path. Strategy approvals and execution
+approvals remain V2 capabilities."_
+
+This splits what was one category into two:
+
+| Class                                                                  | Examples                                                                                               | Version                                                                                     |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| **Read**                                                               | Every screen in §1                                                                                     | **V1**                                                                                      |
+| **Operator workflow** — the operator describing a business to AGE      | Authoring/editing a discovery answer set; running capture for a business the operator already controls | **V1.5** — 🛑 after the CLI path has been proven (ADR-0055 D7), and 🚫 only under a NEW ADR |
+| **Business action** — AGE acting on the world, or on behalf of someone | Strategy approval, execution approval, dispatching work to a peer product                              | **V2** — 🛑 requires identity and entitlement first                                         |
+
+⚠️ **V1.5 is a real permission change and is 🚫 NOT authorized by this document.** ADR-0057 D4 was
+rewritten in #225 to withdraw the console’s write permission entirely, and D8 refuses **every**
+write. Restoring a narrow write needs its own `Status: Proposed` ADR that states the boundary in
+code, not in prose — 🚫 it may not be reached by relaxing D8, and 🚫 not by an increment.
+
+⚠️ **Three conditions travel with V1.5, and none is discharged by this clarification:**
+
+1. 🛑 **The CLI path must have been proven first** — ADR-0054 D6/D7. _"after the architecture has
+   been proven through the CLI path"_ is the Product Owner’s own precondition, not a preference.
+2. 🚫 **`produceAndCapture` stays bound by ADR-0054 D6’s five conditions** — local database the
+   operator controls, scope from a loaded `ClientRecord`, explicit confirmation, `produceOnly`
+   default, and **no background execution, scheduling or automation**. A browser form does not
+   relax any of the five; it must satisfy all five or refuse.
+3. ⚠️ **An operator workflow still writes attributable data.** `OperatorPrincipal` is a **label**,
+   never an authorization decision (ADR-0053 D4). The moment a second person can reach the
+   surface, that label stops identifying anyone — so V1.5 remains single-operator and loopback,
+   or it becomes V2 and waits for entitlement.
 
 ---
 
@@ -195,12 +237,44 @@ faint one, and an unknown node is labelled **"Not known"**, never rendered as an
 
 ---
 
-## 7. The standing frame
+## 7. The standing frame — one question
 
-⚠️ Whenever a track competes for effort, ask: **what can the operator see afterwards that they could
-not see before?** If the answer is "nothing", the track is backend refinement, and the architecture
-freeze already says it waits.
+⚠️ **Adopted 2026-08-03**, verbatim: _"I want all future implementation work to be evaluated
+against one question: ‘Does this improve AGE Studio?’ If the answer is no, it probably belongs in
+a peer product or doesn’t belong at all."_
 
-🛑 **But the inverse is not a licence.** A screen the customer would love, built before its ADR is
+That is now the standing prioritisation test. It sits **below** §3.1 and §3’s gates, not above them:
+a track that improves Studio and is not yet authorized still waits.
+
+🛑 **The inverse is not a licence.** A screen the customer would love, built before its ADR is
 accepted or before entitlement exists, is exactly the failure this project has avoided for
 fifty-seven ADRs.
+
+### 7.1 Studio-first delivery — and the one thing "mock data" may never do
+
+✅ **Adopted:** _"Every backend capability should immediately gain a visible home inside Studio,
+even if that home initially renders mock or read-only data before full runtime integration is
+completed."_ A capability with no home in Studio is, to the customer, indistinguishable from a
+capability that does not exist — so from here, **a backend slice is not complete until its home
+exists.**
+
+🛑 **But "mock data" is the single most dangerous phrase in an epistemic product.**
+`17_DESIGN_SYSTEM.md` §0.1 outranks this section: 🚫 **no component may make an absence look like a
+presence.** A screen that renders invented numbers while the runtime is not wired is AGE lying
+about a business — the exact failure the whole design system exists to prevent, and it is worse
+than no screen at all, because it is convincing.
+
+Therefore an unwired Studio home renders one of two things, and 🚫 never a third:
+
+| ✅ Allowed                                                                                                                 | 🚫 Forbidden                                                           |
+| -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| **"Not assessed — this capability is not yet wired"**, in the design system’s _not assessed_ treatment                     | Invented scores, confidences, evidence counts or claims                |
+| The **frozen, obviously-fictional demo scenario**, labelled as such (`DEMO_SCENARIO_METADATA`, `constructedAt` 2026-01-01) | Plausible-looking placeholder data for a **real** business             |
+| An empty state that says what would appear here and what it needs                                                          | A skeleton/shimmer that implies data is arriving when nothing is wired |
+
+⚠️ **Obvious fictionality is the guard** — the same rule that keeps `vTEST` and `Doctor at Door`
+out of the fixtures (ADR-0053 D3). 🚫 Do not "make the mock more realistic."
+
+⚠️ **`17_DESIGN_SYSTEM.md` §4’s four states apply to the home itself:** _known_, _unattributed_,
+_unknown_ and **_not assessed_** are four states that must never share a visual treatment. An
+unwired capability is **not assessed**. 🚫 It is never rendered as zero, empty, or low.
