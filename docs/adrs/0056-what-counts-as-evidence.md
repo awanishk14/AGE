@@ -1,10 +1,12 @@
 # ADR-0056 — What counts as evidence
 
-Status: Proposed
-🛑 **The required council has RUN and REFUTED D1 and D2 (§0.1e). The architect adopts the refutation
-and recommends REJECTING D1 and D2 while keeping D3–D7.** The decision text in §2 is left standing
-unamended so the proposal can be read against what was found; it is a record of a rejected proposal,
-not a live recommendation. The decision remains the Product Owner's.
+Status: Accepted — 🛑 **as recommended, which means D1 and D2 are REJECTED and D3–D7 stand.**
+⚠️ **Accepted by the Product Owner on 2026-08-03, NOT self-accepted — their verbatim note is §0.1f.**
+🚫 **D1 and D2 ARE NOT DECISIONS OF THIS ADR.** The required council RAN and REFUTED them (§0.1e); the
+architect adopted the refutation and the Product Owner accepted that recommendation. The text of D1
+and D2 in §2 is left standing **unamended** so the proposal can be read against what was found — it
+is **a record of a rejected proposal, never a live instruction**. 🚫 Do not implement D1 or D2, and
+🚫 do not re-propose them as drafted; read §0.1e first.
 Date: 2026-08-02
 Relates to: ADR-0010 (`@age/evidence-contracts` owns the evidence enums; RIE is a producer, not the
 owner), ADR-0011 (the deterministic quality score this ADR is asked to change), ADR-0026 D4
@@ -20,7 +22,12 @@ committed**), ADR-0055 §5 item 5 and its "next number is 0056".
 
 Written under the standing architect grant recorded in ADR-0043 §0.1.
 
-🚫 **This ADR is `Status: Proposed` and MUST NOT be self-accepted.** It changes a published enum in
+🚫 **This ADR was `Status: Proposed` and was NOT self-accepted** — the Product Owner accepted it in
+their own words (§0.1f), after the council §0.1d made a precondition had run (§0.1e). The paragraph
+below is the standing that applied while it was open, kept unedited because it is the reason the
+acceptance had to come from them.
+
+It changes a published enum in
 the Bible's data dictionary (D6), which is Product Owner territory: the precedent is PR #209/#211,
 where the peer-product model was amended only after a Product Owner comment on the open PR, not by
 the architect merging their own reading. **The Product Owner accepts, amends or rejects this in their
@@ -86,6 +93,10 @@ Product Owner direction, 2026-08-02, on the first draft of this ADR:
 
 > **"The lack of council review is acceptable for now, but before acceptance I'd like a council pass
 > specifically on D1 and D2 because enum changes become long-lived contracts."**
+
+✅ **This precondition was SATISFIED before acceptance** — the council ran on 2026-08-02 and its
+findings are §0.1e; the Product Owner accepted afterwards (§0.1f). The requirement below is kept in
+the present tense as it was written.
 
 🚫 **This ADR MUST NOT be accepted — by anyone, including the Product Owner acting on the architect's
 summary — until that council has run and its dissent is recorded here.** The reason is in the
@@ -216,6 +227,43 @@ enum at all: it belongs as a field on the `Evidence` record, set by the adapter 
 — the only thing that knows whether a given YouTube URL is a brand channel or a creator's review.
 **That cannot be decided before an adapter exists**, and no adapter is authorized (D7).
 
+### 0.1f Acceptance — ⚠️ NOT self-accepted, and it accepts a REJECTION
+
+**The Product Owner accepted this ADR on 2026-08-03**, in their own words, reproduced verbatim and in
+full:
+
+> ADR-0055 and ADR-0056 are both Proposed and are yours to answer — I won't self-accept either.
+> ADR-0056 carries my recommendation to reject D1 and D2 (the council refuted them) and keep D3–D7.
+> go ahead
+
+⚠️ **The note is terse, and the architect's reading of it is recorded here so a wrong reading is
+visible and correctable rather than silently load-bearing.** The Product Owner restated the
+architect's recommendation — reject D1 and D2, keep D3–D7 — and answered "go ahead". That is read as
+**accepting the recommendation**, not as accepting the ADR as drafted. 🚫 If the intent was to accept
+D1 and D2 after all, this section is wrong and must be corrected by the Product Owner; the architect
+will not reinstate them on its own reading, because the council refuted them on the code.
+
+**What is therefore Accepted:** **D3, D4, D5, D6 and D7.**
+**What is therefore Rejected:** **D1 and D2.**
+
+🛑 **D6 has lost its subject.** D6 authorized amending `docs/product/05_DATA_DICTIONARY.md` to mirror
+the enum changes D1 and D2 proposed. With both rejected, **there is nothing to mirror**: the data
+dictionary's `EvidenceSource` (12 members) and `SignalType` (10 members) lines are **correct as they
+stand and must not be touched**. D6 survives as the _rule_ — the published dictionary is amended only
+alongside the enum it mirrors, and only with Product Owner involvement (the #209/#211 precedent) —
+🚫 not as a work item. **This acceptance authorizes NO edit to the Bible.**
+
+⚠️ **D5's falsification clause therefore has nothing to falsify, and that is the correct outcome.**
+The demo baseline (98/63 intake vs 12/17 BIF, 7 populated + 5 omitted, `sample-output.txt`
+byte-identical) must not move — which it cannot, because no enum changes.
+
+✅ **Net effect on the codebase: NONE, deliberately.** This ADR produces no code, and D7 forbade
+writing any before acceptance. That is not a wasted ADR — it is a published enum that was _nearly_
+changed on an argument that did not survive contact with the code, and the record of why is the
+deliverable. 🚫 Do not re-propose D1 or D2 as drafted. ⚠️ If a source classification is wanted later,
+§0.1e's finding stands: it belongs as a field on the **`Evidence` record set by the fetching
+adapter**, never on the source enum, and it cannot be decided before an adapter exists.
+
 ---
 
 ## 1. Context — what is actually there
@@ -244,6 +292,10 @@ matters the moment anything weights them.
 
 ### D1 — `EvidenceSourceClass` is added; `EvidenceSource` is RETAINED, never replaced
 
+> 🛑 **REJECTED — refuted by the council (§0.1e), rejection accepted by the Product Owner (§0.1f).**
+> The text below is preserved **as a record of what was proposed**, so it can be read against what
+> was found. 🚫 It is not an instruction. Do not implement it; do not re-propose it as drafted.
+
 A second, small enum classifies each existing source by **what kind of act produced it**, not by how
 trustworthy it is:
 
@@ -263,6 +315,10 @@ source fails `tsc` until someone classifies it. A `Map` with a default, or a `sw
 fallthrough, reintroduces the silent-default failure this shape exists to prevent.
 
 ### D2 — `QUESTION` and `ENGAGEMENT` join `SignalType`
+
+> 🛑 **REJECTED — refuted by the council (§0.1e), rejection accepted by the Product Owner (§0.1f).**
+> ⚠️ Note especially that **§D2.1's own argument was found backwards**: `ENGAGEMENT` is the WEAKER
+> member, not the stronger. The text below is preserved **as a record**, not as an instruction.
 
 - **`QUESTION`** — the subject's market is asking something the subject has not answered. Distinct
   from `PAIN_POINT` (a stated problem) and from `INTENT` (a stated purchase direction): a question is
