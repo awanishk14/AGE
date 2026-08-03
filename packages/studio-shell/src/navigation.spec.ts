@@ -58,7 +58,7 @@ describe('STUDIO_AREAS', () => {
     expect(everyAreaIsUnwired()).toBe(false);
 
     const wired = STUDIO_AREAS.filter((a) => a.wiring === 'wired').map((a) => a.id);
-    expect(wired).toEqual(['businesses', 'diagnostics']);
+    expect(wired).toEqual(['businesses', 'discovery', 'diagnostics']);
   });
 
   /**

@@ -13,7 +13,9 @@
     "clean": "rimraf .next .turbo *.tsbuildinfo"
   },
   "dependencies": {
+    "@age/business-discovery-contracts": "workspace:*",
     "@age/client-registry": "workspace:*",
+    "@age/discovery-answer-file": "workspace:*",
     "@age/operator-file-policy": "workspace:*",
     "@age/studio-shell": "workspace:*",
     "next": "^15.0.0",

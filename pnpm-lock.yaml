@@ -170,9 +170,15 @@ importers:
 
   apps/studio:
     dependencies:
+      '@age/business-discovery-contracts':
+        specifier: workspace:*
+        version: link:../../packages/business-discovery-contracts
       '@age/client-registry':
         specifier: workspace:*
         version: link:../../packages/client-registry
+      '@age/discovery-answer-file':
+        specifier: workspace:*
+        version: link:../../packages/discovery-answer-file
       '@age/operator-file-policy':
         specifier: workspace:*
         version: link:../../packages/operator-file-policy
@@ -679,9 +685,15 @@ importers:
 
   packages/studio-shell:
     dependencies:
+      '@age/business-discovery-contracts':
+        specifier: workspace:*
+        version: link:../business-discovery-contracts
       '@age/client-registry':
         specifier: workspace:*
         version: link:../client-registry
+      '@age/discovery-answer-file':
+        specifier: workspace:*
+        version: link:../discovery-answer-file
     devDependencies:
       vitest:
         specifier: ^2.1.1

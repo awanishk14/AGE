@@ -209,6 +209,40 @@ seed a row) · 🚫 ADR-0054 D6's **five conditions** on `produceAndCapture`, an
 🚫 ADR-0053 D4 (`OperatorPrincipal` is never an authorization decision) · 🚫 the BIF `Draft → Active`
 refusal, and every other item in D8 that is not a write.
 
+### 0.8 The Answer File inverts — the console authors it, the CLI consumes it (Product Owner, 2026-08-03)
+
+⚠️ **This closes §6 q4, which §0.7 reopened as urgent.** The question was which surface owns
+discovery answers once the console can write: the hand-edited JSON file, or the console. Two authors
+of the same artifact would have meant two truths and no way to tell which was later.
+
+**The Product Owner's answer, verbatim:**
+
+> "The console should become the author. The CLI should become a consumer… So the Answer File remains
+> the canonical artifact, but humans no longer edit JSON directly."
+
+⚠️ **This is recorded as an amendment, NOT a new ADR** — it settles a question ADR-0057 already
+asked, and changes no decision beyond D4's scope.
+
+**What follows from it, and what does not:**
+
+1. ✅ **The Answer File stays canonical, byte-for-byte and format-for-format.** 🚫 The console does
+   **not** get a private format, a database table, or a "console draft" that the CLI cannot read.
+   `age-capture` reads exactly what it read before.
+2. ✅ **The console renders the questionnaire and writes the file.** This is class 2 (Knowledge
+   Authoring): the operator types their own business's words, and pressing Submit is their act.
+3. ⚠️ **There is exactly ONE validator, and it is the CLI's.** The console renders the file and hands
+   it to `parseDiscoveryAnswerFile` — the same function the CLI calls. 🚫 A second validator in the
+   console would drift, and the surface that drifted would be the one nobody ran the CLI against.
+4. ⚠️ **A draft is not an Answer File.** Autosave writes a **draft** file, which the CLI never reads;
+   Submit renders the **Answer File**. 🚫 Do not merge them — a half-typed draft that `age-capture`
+   accepted would score a business on answers it had not finished giving.
+5. 🚫 **Hand-editing the JSON is not forbidden, and must not be broken.** The file remains a plain
+   file in the operator's own directory. "Humans no longer edit JSON directly" describes the
+   intended path, 🚫 not a lock — a console that could not be bypassed would be a console the
+   operator could not recover from.
+6. 🚫 **This authorizes no BIF generation.** Writing the Answer File is where the console stops.
+   `produceAndCapture` remains behind ADR-0054 D6's five conditions, and ADR-0055 D7 is untouched.
+
 ---
 
 ## 1. Context
