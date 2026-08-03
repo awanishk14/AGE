@@ -1,0 +1,18 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "studio",
+  "projectType": "application",
+  "sourceRoot": "apps/studio/src",
+  "tags": ["scope:studio", "type:app"],
+  "targets": {
+    "build": { "command": "next build", "options": { "cwd": "apps/studio" } },
+    "dev": { "command": "next dev -H 127.0.0.1 -p 3100", "options": { "cwd": "apps/studio" } },
+    "start": { "command": "next start -H 127.0.0.1 -p 3100", "options": { "cwd": "apps/studio" } },
+    "typecheck": {
+      "command": "tsc -p tsconfig.json --noEmit",
+      "options": { "cwd": "apps/studio" }
+    },
+    "lint": { "command": "eslint .", "options": { "cwd": "apps/studio" } },
+    "test": { "command": "vitest run", "options": { "cwd": "apps/studio" } }
+  }
+}
