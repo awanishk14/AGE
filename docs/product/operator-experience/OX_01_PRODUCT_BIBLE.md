@@ -173,18 +173,21 @@ a second opinion.**
 
 ## 5. Actions, and their permission classes
 
-Four classes. The class is a property of the action, not of the operator.
+The class is a property of the action, not of the operator. ⚠️ **There were four; there is now one.**
 
-| Class               | Meaning                                            | Examples                     |
-| ------------------- | -------------------------------------------------- | ---------------------------- |
-| **Read**            | No effect                                          | Everything on S3, S5–S12     |
-| **Local author**    | Writes an operator-owned file outside the repo     | Editing the answer file (S4) |
-| **Confirmed write** | Appends a snapshot; requires explicit confirmation | Capture (S4)                 |
-| **Refused**         | Structurally unavailable in the console            | Everything in §6             |
+| Class                                    | Meaning                                 | Examples                               |
+| ---------------------------------------- | --------------------------------------- | -------------------------------------- |
+| **Read**                                 | No effect                               | Everything on S3, S5–S12               |
+| ~~**Local author**~~ 🚫 **WITHDRAWN**    | Would write an operator-owned file      | —                                      |
+| ~~**Confirmed write**~~ 🚫 **WITHDRAWN** | Would append a snapshot                 | —                                      |
+| **Refused**                              | Structurally unavailable in the console | Everything in §6 — and now every write |
 
-**Confirmed write** carries the entire weight of ADR-0054 D6. On the console it means:
-the target is verified local, the scope comes from a loaded record and is never typed, the operator
-confirms in the same interaction, and nothing schedules it. There is no "capture on save".
+⚠️ **Amended 2026-08-03: there is exactly ONE action class left, Read.** The Product Owner answered
+open question 1 — _"✅ View ✅ Browse ✅ Inspect ✅ Understand ❌ Modify ❌ Execute ❌ Approve ❌ Delete"_ —
+so both write classes are 🚫 **withdrawn**, not deferred. The console opens **no write connection of
+any kind**. 🚫 No capture, no answer-file authoring, no capture-on-save, no "just the answer file",
+and 🚫 "the operator confirmed it" is not a substitute for the 🛑 **NEW ADR** any future write would
+require.
 
 ### What is immutable
 
@@ -300,11 +303,12 @@ holds it. If no, AGE holds only the reference.
 
 These are stops, listed here and carried into Phase 6.
 
-1. **Does the console ever capture, or only read?** This Bible assumes it may perform ADR-0054 D6's
-   confirmed write. A defensible alternative is that all writes stay in the CLI and the console is
-   strictly read-only, which would make OX-INV-1 far easier to hold.
-2. **Is the answer file still the intake, or does the console become the author of record?** A form
-   that writes the file keeps one source of truth. A form that replaces it creates a second.
+1. ✅ **ANSWERED 2026-08-03 — strictly READ-ONLY.** The Product Owner: _"YES. Very strongly… Because
+   your CLI is already your trusted operator interface. The UI should first prove that it can
+   accurately represent AGE's thinking. Only then should it become an action surface."_ 🚫 Every write
+   class is withdrawn; 🛑 a future write needs a new ADR.
+2. ✅ **MOOT, by 1.** The answer file remains the sole author of record, because the console cannot
+   write it. 🚫 Do not revive this as a "read-only form" that later grows a submit.
 3. **Does History diff two snapshots, or only list them?** Diffing implies a comparison semantics
    nothing in the repository currently defines.
 4. **What does the console do when zero peer products are reachable?** Showing nothing and showing

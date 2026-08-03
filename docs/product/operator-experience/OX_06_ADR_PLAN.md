@@ -26,8 +26,13 @@ ceiling. ADR-0055 and ADR-0056 were both accepted by the Product Owner, and neit
 **Written and proposed with this program.** `docs/adrs/0057-the-operator-console.md`.
 
 Decides: that a local operator surface exists at all · **OX-INV-1**, loopback by construction ·
-that it performs no write the CLI cannot · that it is not a draft of Doc 07's product · the twelve
-screens and the four refusal classes · that G-14 and G-15 are preconditions for anything non-loopback.
+**that it is READ-ONLY and performs no write at all** (D4 as amended, per the owner's 2026-08-03
+answer) · that it is not a draft of Doc 07's product · the twelve screens and the four refusal
+classes · that G-14 and G-15 are preconditions for anything non-loopback.
+
+⚠️ **§0.4 records two answered open questions and §0.5 the architecture freeze — and 🚫 neither is an
+acceptance.** The ADR is **still `Proposed`** and 🛑 must not be self-accepted on the strength of an
+endorsement.
 
 This is the gate. **Everything below is blocked on it.**
 
@@ -35,21 +40,29 @@ This is the gate. **Everything below is blocked on it.**
 
 ## The planned ADRs
 
-| #     | Subject                      | Gap  | Blocked on                         | The decision it actually asks for                                                                                                                                                                                      |
-| ----- | ---------------------------- | ---- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A** | Snapshot read model          | G-1  | ADR-0057 + **operator's D6 write** | What a read connection is, such that it is _structurally_ incapable of writing. Already authorized in substance by ADR-0055 (`inspect`) — this ADR exists only if the console's read differs from the CLI's            |
-| **B** | Console HTTP surface         | G-16 | ADR-0057                           | Which endpoints exist, and how OX-INV-1 is enforced and proven. Must state that a bind failure is a **startup refusal**, not a warning                                                                                 |
-| **C** | Rendering-logic boundary     | G-17 | ADR-0057                           | Where screen logic lives given `jsdom` is absent. Likely "a package, per ADR-0048's precedent" — but the precedent must be extended deliberately, not assumed                                                          |
-| **D** | Evidence ingestion adapter   | G-3  | A + B                              | The **first** adapter, and what it may set on an `Evidence` record. ⚠️ Must open by restating that ADR-0056 D1/D2 were **rejected** and 🚫 must not re-propose them as drafted                                         |
-| **E** | Contradiction surfacing      | G-4  | D                                  | Whether the detector is fit to show an operator. 🚫 Must be made to fail on a known non-contradiction first                                                                                                            |
-| **F** | Contradiction adjudication   | G-5  | E                                  | 🛑 **The hard one.** How a judgement is recorded in an append-only world that has no update, no delete and no `current` flag                                                                                           |
-| **G** | Strategy engine wiring       | G-6  | G-2                                | How SIE is invoked and what its output's provenance is. ⚠️ Not a UI slice                                                                                                                                              |
-| **H** | Peer product contract client | G-8  | ADR-0057                           | ⚠️ **Which peer first** — dissent 3 is open, and mcp-ads may beat RankOps. An owner decision, not an architect one                                                                                                     |
-| **I** | Knowledge graph producer     | G-11 | D                                  | Whether BKG is fed from evidence, from the BIF, or retired                                                                                                                                                             |
-| **J** | Entitlement function         | G-14 | —                                  | 🔴 **Independent of the console and more urgent than it.** The only producer of a `ClientContext` for persistence. ⚠️ ADR-0055 D9 records this as a ceiling, **recorded not scheduled**; this ADR is what schedules it |
-| **K** | Authentication               | G-15 | J                                  | The first second-person surface. ADR-0053 dissent 1                                                                                                                                                                    |
-| **L** | Execution re-introduction    | G-7  | J, K                               | 🛑 **Undoing a deliberate revert.** Must account for why PRs #41–#61 were reverted and what changed                                                                                                                    |
-| **M** | Live onboarding flow         | G-13 | B                                  | Console-authored records, **outside the repo, never committed**                                                                                                                                                        |
+| #                     | Subject                      | Gap  | Blocked on                         | The decision it actually asks for                                                                                                                                                                                      |
+| --------------------- | ---------------------------- | ---- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A**                 | Snapshot read model          | G-1  | ADR-0057 + **operator's D6 write** | What a read connection is, such that it is _structurally_ incapable of writing. Already authorized in substance by ADR-0055 (`inspect`) — this ADR exists only if the console's read differs from the CLI's            |
+| **B**                 | Console HTTP surface         | G-16 | ADR-0057                           | Which endpoints exist, and how OX-INV-1 is enforced and proven. Must state that a bind failure is a **startup refusal**, not a warning                                                                                 |
+| **C**                 | Rendering-logic boundary     | G-17 | ADR-0057                           | Where screen logic lives given `jsdom` is absent. Likely "a package, per ADR-0048's precedent" — but the precedent must be extended deliberately, not assumed                                                          |
+| **D**                 | Evidence ingestion adapter   | G-3  | A + B                              | The **first** adapter, and what it may set on an `Evidence` record. ⚠️ Must open by restating that ADR-0056 D1/D2 were **rejected** and 🚫 must not re-propose them as drafted                                         |
+| **E**                 | Contradiction surfacing      | G-4  | D                                  | Whether the detector is fit to show an operator. 🚫 Must be made to fail on a known non-contradiction first                                                                                                            |
+| **F**                 | Contradiction adjudication   | G-5  | E                                  | 🛑 **The hard one.** How a judgement is recorded in an append-only world that has no update, no delete and no `current` flag                                                                                           |
+| **G**                 | Strategy engine wiring       | G-6  | G-2                                | How SIE is invoked and what its output's provenance is. ⚠️ Not a UI slice                                                                                                                                              |
+| **H** ⏸️ **DEFERRED** | Peer product contract client | G-8  | ⏸️ the §0.5 freeze                 | ⚠️ **Which peer first** — dissent 3 is open, and mcp-ads may beat RankOps. An owner decision, not an architect one                                                                                                     |
+| **I** ⏸️ **DEFERRED** | Knowledge graph producer     | G-11 | ⏸️ the §0.5 freeze                 | Whether BKG is fed from evidence, from the BIF, or retired                                                                                                                                                             |
+| **J**                 | Entitlement function         | G-14 | —                                  | 🔴 **Independent of the console and more urgent than it.** The only producer of a `ClientContext` for persistence. ⚠️ ADR-0055 D9 records this as a ceiling, **recorded not scheduled**; this ADR is what schedules it |
+| **K**                 | Authentication               | G-15 | J                                  | The first second-person surface. ADR-0053 dissent 1                                                                                                                                                                    |
+| **L**                 | Execution re-introduction    | G-7  | J, K                               | 🛑 **Undoing a deliberate revert.** Must account for why PRs #41–#61 were reverted and what changed                                                                                                                    |
+| **M**                 | Live onboarding flow         | G-13 | B                                  | Console-authored records, **outside the repo, never committed**                                                                                                                                                        |
+
+⏸️ **DEFERRED by the architecture freeze (2026-08-03): ADRs H and I.** The owner directed that primary
+effort move to **Identity, Operator Console and Runtime wiring**, and that new ADRs exist only to
+support those three areas. H (peer contract) and I (knowledge graph) fall outside all three.
+⚠️ **D, E, F and G survive the freeze** — they are runtime _wiring_, which the freeze names as in
+scope; it protects the domain model and persistence, 🚫 not the act of connecting what is already
+built.
+⚠️ **M is now 🚫 moot** — console-authored records are a write, and the console has none.
 
 **Not planned:** search (G-9), notifications (G-10), task queue (G-12). The latter two 🚫 conflict with
 ADR-0054 D6 condition 5 and cannot be proposed while that relaxation is what permits capture at all.
@@ -81,11 +94,16 @@ grows.
 
 Carried from Bible §10 and the gaps. Each is a genuine product decision:
 
-1. **Does the console ever capture, or is it strictly read-only?** Read-only makes OX-INV-1
-   dramatically easier to hold and removes an entire refusal class.
+1. ✅ **ANSWERED 2026-08-03 — strictly READ-ONLY.** 🚫 Every write class withdrawn; 🛑 a future write
+   surface requires a new ADR and 🚫 may not be reached by increments.
 2. **Which peer product is first?** Dissent 3 is open by design.
 3. **Is execution re-introduced?** The revert was deliberate.
 4. **Does the answer file remain the author of record, or does the console replace it?**
 5. **Is the knowledge graph fed, or retired?** It has been an orphan for a long time.
-6. **When does the J→K→L track start?** ⚠️ This is the one with a wrong answer. Starting it _after_ a
-   networked surface exists is the retrofit ADR-0055 D9 explicitly forbids.
+6. ✅ **ANSWERED 2026-08-03 — start J→K→L NOW, in parallel.** The owner: _"you are one step away from
+   somebody saying: 'Can my colleague also log in?' Once that happens, D9 becomes a production
+   problem instead of an architectural note."_ ⚠️ **Read-only does not discharge J** — a console that
+   cannot write can still _read_ the wrong tenant's snapshots, because scope is caller-asserted and
+   RLS only checks it against itself.
+
+⚠️ **Questions 2–5 remain 🛑 OPEN**, and 2 and 5 are additionally ⏸️ **deferred by the §0.5 freeze**.

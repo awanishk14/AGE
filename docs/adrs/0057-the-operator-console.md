@@ -52,6 +52,54 @@ permission-aware multi-user product over `Organization → Client → Project`. 
 it** and does not implement it. D3 states the relationship: the console is a precursor surface with a
 different trust model, and it must never be promoted into Doc 07's product.
 
+### 0.4 The Product Owner's answers to open questions 1 and 6 (2026-08-03)
+
+⚠️ **This ADR is STILL `Status: Proposed`.** The Product Owner answered **two of the six** open
+questions in §6 and endorsed the reasoning, but 🚫 **did not accept the ADR**, and explicitly named
+that as correct: _"He refused to silently reinterpret your instruction. ADR-0057 is Proposed, not
+Accepted. That is exactly how governance should work."_ 🚫 **Do not read the endorsement as
+acceptance, and do not self-accept on the strength of it.**
+
+**Open question 1 — does the console ever capture, or is it strictly read-only?** Answered verbatim:
+
+> "YES. Very strongly. Version 1 of the Operator Console should be: ✅ View ✅ Browse ✅ Inspect
+> ✅ Understand ❌ Modify ❌ Execute ❌ Approve ❌ Delete. Because your CLI is already your trusted
+> operator interface. The UI should first prove that it can accurately represent AGE's thinking.
+> Only then should it become an action surface."
+
+**Open question 6 — when does the entitlement track start?** Answered verbatim:
+
+> "Start entitlement (J → K → L) in parallel. I agree. Now that you're introducing an Operator
+> Console, you are one step away from somebody saying: 'Can my colleague also log in?' Once that
+> happens, D9 becomes a production problem instead of an architectural note. So I would not postpone
+> entitlement until after the UI."
+
+**Consequences, applied below:** D4 is amended to remove the conditional capture · D8 gains the
+read-only refusal · §6 questions 1 and 6 are struck as answered · `OX_07`'s **Wave 3 is deleted**
+and the J-track is promoted ahead of the console waves.
+
+⚠️ Four questions — **2 (which peer first), 3 (execution), 4 (the answer file), 5 (the knowledge
+graph)** — 🛑 **remain open and are still stops.**
+
+### 0.5 The architecture freeze (Product Owner, 2026-08-03)
+
+Recorded verbatim, and binding on this program:
+
+> "Freeze backend architecture unless a critical defect is discovered. From this point onward, the
+> primary effort should move to Identity, Operator Console, and Runtime wiring. New ADRs should exist
+> only to support those areas, not to continue refining already-stable core architecture."
+
+⚠️ **This has a consequence the architect will not conceal:** of the thirteen ADRs planned in
+`OX_06`, **I (knowledge graph) and H (peer product contract) fall outside all three named areas** and
+are therefore **deferred by the freeze**, not merely unscheduled. 🚫 They must not be smuggled back in
+as "runtime wiring". ⚠️ **G (strategy engine wiring) and D/E/F (evidence and contradictions) are
+runtime wiring and remain in scope** — the freeze protects the domain model and persistence, which are
+what "already-stable core architecture" names; it does not freeze the act of _connecting_ what is
+already built.
+
+🚫 **The freeze is not a licence to skip governance.** An ADR is still required for each area; there
+are simply fewer areas an ADR may be written about.
+
 ---
 
 ## 1. Context
@@ -102,11 +150,26 @@ carries.
 🚫 It must never be promoted into a multi-user surface by increments. The moment a second person can
 act, or the surface is reachable off the machine, **D6 and D7 below become mandatory first.**
 
-### D4 — The console performs no write the CLI cannot already perform
+### D4 — **The console is READ-ONLY. It performs no write at all.** _(amended per §0.4)_
 
-Reads, plus the operator's own answer file, plus — **only if the Product Owner answers open question 1
-affirmatively** — a confirmed capture under all five of ADR-0054 D6's conditions. 🚫 No new authority
-over any data. 🚫 Nothing scheduled, backgrounded or automated (D6 condition 5).
+⚠️ **Amended 2026-08-03 by the Product Owner's answer to open question 1.** The earlier text
+permitted a confirmed capture "only if the owner answers question 1 affirmatively". The answer was
+**read-only**, so that permission is 🚫 **withdrawn**.
+
+Version 1 is **View · Browse · Inspect · Understand**, and 🚫 **never Modify, Execute, Approve or
+Delete.** The console opens **no write connection of any kind** — reads travel over a connection
+**structurally incapable of writing**, not a writable one used politely.
+
+🚫 It does not capture. 🚫 It does not write the answer file. 🚫 It does not author a client record.
+🚫 It has no authority over any data. 🚫 Nothing scheduled, backgrounded or automated.
+
+⚠️ **The CLI remains the only write surface**, and the owner's reason is the load-bearing part:
+_"the UI should first prove that it can accurately represent AGE's thinking. Only then should it
+become an action surface."_ 🛑 **Any future write requires a NEW ADR** — 🚫 it may not be reached by
+increments, and 🚫 "the operator confirmed it" is not a substitute for that ADR.
+
+✅ **This makes OX-INV-1 materially easier to hold** and removes an entire refusal class: a surface
+that cannot write cannot be tricked into writing for the wrong tenant.
 
 ### D5 — Rendering rules that are invariants, not styling
 
@@ -140,7 +203,9 @@ caller who can still assert any scope.
 
 ### D8 — Categorical refusals
 
-🚫 No authentication or second user modelled · no non-loopback bind · no BIF `Draft → Active`
+🚫 **No write of any kind, and no writable connection opened** (D4 as amended) · no capture · no
+answer-file authoring · no approval or execution affordance · 🚫 **no authentication or second user
+modelled** · no non-loopback bind · no BIF `Draft → Active`
 promotion · no placeholder-filling · no score improved, recomputed, overridden or capped · unknown
 never converted into good or bad · no snapshot edited, deleted or versioned · no write to a peer
 product and no peer UI rendered · no fabricated provenance, sections, scores or conclusions · nothing
@@ -210,14 +275,25 @@ ADR-0054 D6's five conditions are untouched.
 
 ## 6. Open questions for the Product Owner
 
-These are stops, not architect decisions:
+These are stops, not architect decisions.
 
-1. **Does the console ever capture, or is it strictly read-only?** Read-only deletes Wave 3, removes a
-   refusal class, and makes OX-INV-1 materially easier to hold.
-2. **Which peer product is first?** Dissent 3 is deliberately open — RankOps is unfinished, so mcp-ads
-   may be right.
-3. **Is execution re-introduced?** The revert was deliberate.
-4. **Does the answer file remain the author of record?**
-5. **Is the knowledge graph fed, or retired?** It has been an orphan for a long time.
-6. **When does the entitlement track start?** ⚠️ **This is the one with a wrong answer.** Starting it
-   after a networked surface exists is exactly the retrofit ADR-0055 D9 forbids.
+✅ **1 — ANSWERED 2026-08-03: strictly READ-ONLY.** Verbatim in §0.4. D4 is amended, D8 gains the
+refusal, and `OX_07`'s Wave 3 is deleted. 🚫 Do not reopen it by increments.
+
+🛑 **2 — OPEN. Which peer product is first?** Dissent 3 is deliberately open — RankOps is unfinished,
+so mcp-ads may be right. ⚠️ **Now also deferred by the §0.5 freeze** (ADR H is outside the three
+named areas).
+
+🛑 **3 — OPEN. Is execution re-introduced?** The revert of PRs #41–#61 was deliberate.
+
+🛑 **4 — OPEN. Does the answer file remain the author of record?** ⚠️ The read-only answer makes this
+**less urgent but not moot**: the console cannot write the file either way, so the question is now
+about the CLI's future, not the console's.
+
+🛑 **5 — OPEN. Is the knowledge graph fed, or retired?** ⚠️ **Also deferred by the freeze** (ADR I).
+A long-standing orphan either way.
+
+✅ **6 — ANSWERED 2026-08-03: start the J→K→L track NOW, in parallel.** Verbatim in §0.4. The owner's
+reasoning is recorded because it is stronger than the ADR's own: _"you are one step away from somebody
+saying 'can my colleague also log in?' Once that happens, D9 becomes a production problem instead of
+an architectural note."_

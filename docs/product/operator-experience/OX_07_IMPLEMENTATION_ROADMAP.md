@@ -69,19 +69,22 @@ reconstructing a BIF would mean inventing version history and audit actors.
 
 ---
 
-## Wave 3 — Capture from the console
+## Wave 3 — ~~Capture from the console~~ 🚫 **DELETED 2026-08-03**
 
-_Blocked on: Wave 2 + **owner decision 1** (does the console capture at all?)._
+🛑 **The Product Owner answered decision 1: the console is strictly READ-ONLY.** This wave —
+answer-file write-back, dry run, confirmed capture — is **deleted, not deferred.** ADR-0057 D4 is
+amended and D8 now refuses every write categorically.
 
-| Slice   | Delivers                                                                                                          |
-| ------- | ----------------------------------------------------------------------------------------------------------------- |
-| **3.1** | Answer file written back to the operator's own file, outside the repo, via the **one** path-policy implementation |
-| **3.2** | Dry run — produce and score without connecting to anything                                                        |
-| **3.3** | Confirmed capture under all five ADR-0054 D6 conditions                                                           |
+Verbatim: _"✅ View ✅ Browse ✅ Inspect ✅ Understand ❌ Modify ❌ Execute ❌ Approve ❌ Delete.
+Because your CLI is already your trusted operator interface. The UI should first prove that it can
+accurately represent AGE's thinking. Only then should it become an action surface."_
 
-🚫 No capture-on-save. 🚫 No autosave-then-capture. 🚫 Nothing scheduled, ever.
-⚠️ If the owner answers "read-only" to decision 1, **this entire wave is deleted** — and OX-INV-1 gets
-materially easier to hold.
+🚫 **Do not resurrect any part of this wave**, and 🚫 do not reach a write by increments — no
+capture-on-save, no "just the answer file", no "the operator confirmed it". 🛑 **A future write
+surface requires a NEW ADR**, not a slice.
+
+✅ **Wave numbering is unchanged on purpose.** Waves 4–7 keep their numbers so every reference
+elsewhere stays valid, and this heading remains as the record of _why_ there is no Wave 3.
 
 ---
 
@@ -133,19 +136,32 @@ _Blocked on: ADR H, and **owner decision 2** — which peer is first. Dissent 3 
 
 ---
 
-## The parallel track — and it should start first
+## The J-track — ✅ **AUTHORIZED TO START NOW, and it is the priority**
 
 ```
 J (entitlement) ── K (authentication) ── L (execution re-introduction)
 ```
 
-⚠️ **This does not depend on the console and should not queue behind it.** ADR-0055 D9 records the
-entitlement function as a ceiling, and it must become the only producer of a `ClientContext` for
-persistence **before** any networked surface — **never retrofitted under one.**
+✅ **The Product Owner answered decision 6 on 2026-08-03: start it in parallel, now.** It is no longer
+"the parallel track" — under the §0.5 architecture freeze, **Identity is one of the three named areas
+of primary effort**, and the console is another.
 
-The console standing under that ceiling via OX-INV-1 is a **containment**, not a resolution. Each
-wave makes AGE more useful, and each increment of usefulness increases the pressure to expose it to
-one more person. 🛑 **The right time to start J is before that pressure exists, which is now.**
+The owner's reasoning, verbatim, because it is sharper than this document's own:
+
+> "Now that you're introducing an Operator Console, you are one step away from somebody saying: 'Can
+> my colleague also log in?' Once that happens, D9 becomes a production problem instead of an
+> architectural note. So I would not postpone entitlement until after the UI."
+
+⚠️ **This does not depend on the console and must not queue behind it.** ADR-0055 D9 requires the
+entitlement function to become the **only producer** of a `ClientContext` for persistence **before**
+any networked surface — 🚫 **never retrofitted under one.**
+
+⚠️ **The read-only answer does not discharge J.** A console that cannot write can still _read_ the
+wrong tenant's snapshots, because scope is asserted by the caller and RLS only checks it against
+itself. 🚫 Do not treat read-only as making entitlement optional — it lowers the blast radius, it does
+not remove the defect.
+
+🛑 **L (execution) remains blocked on open question 3**, which is still unanswered.
 
 ---
 
@@ -154,12 +170,12 @@ one more person. 🛑 **The right time to start J is before that pressure exists
 ```
 Slice 0 (operator's run) ─────────────┐
                                        ▼
-ADR-0057 ── B,C ── Wave 1 ── ADR A ── Wave 2 ──┬── Wave 3 (owner decision 1)
-                                                ├── Wave 4 ── ADR G ── Wave 6
+ADR-0057 ── B,C ── Wave 1 ── ADR A ── Wave 2 ──┬── Wave 4 ── ADR G ── Wave 6
                                                 └── ADR D ── Wave 5
-ADR H ───────────────────────────────────────────── Wave 7 (owner decision 2)
+                                   🚫 Wave 3 DELETED — console is read-only
+                                   ⏸️ ADR H → Wave 7, and ADR I, DEFERRED by the freeze
 
-ADR J ── ADR K ── ADR L        ← independent; start now
+ADR J ── ADR K ── ADR L     ← start NOW; J is the priority, L waits on question 3
 ```
 
 ---
@@ -170,5 +186,10 @@ The operator can answer all eight questions from Bible §1 about a **real** busi
 without reading code — and every answer carries its provenance, its confidence, and an honest account
 of what AGE does not know.
 
-⚠️ **Waves 1–4 achieve six of the eight.** Contradictions and peer products need Waves 5 and 7. Nothing
-in this roadmap achieves execution, and 🚫 nothing should, until ADR L accounts for the revert.
+⚠️ **Waves 1–4 achieve six of the eight.** Contradictions need Wave 5; peer products need Wave 7,
+which is **deferred by the freeze**. Nothing in this roadmap achieves execution, and 🚫 nothing should,
+until ADR L accounts for the revert.
+
+⚠️ **"Done" is now explicitly a READING milestone, not a doing one.** The console proves AGE can
+represent its own thinking accurately. 🛑 Whether it ever becomes an action surface is a separate
+decision, on a separate ADR, that has not been made.

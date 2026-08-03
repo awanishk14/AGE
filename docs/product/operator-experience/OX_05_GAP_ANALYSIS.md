@@ -13,7 +13,7 @@
 | **G-2**  | Runtime caller over a real stored context  | S8               | 🔴 Critical    | G-1                                       |
 | **G-3**  | Evidence ingestion                         | S6, S7           | 🟠 High        | ADR-0056 D3                               |
 | **G-4**  | Contradiction detection over real evidence | S7               | 🟠 High        | G-3                                       |
-| **G-5**  | Contradiction adjudication (a write)       | S7               | 🟡 Medium      | G-4                                       |
+| **G-5**  | Contradiction adjudication (a write)       | S7               | 🟡 Medium      | G-4 — 🚫 **never from the console**       |
 | **G-6**  | SIE wiring                                 | S9               | 🟠 High        | G-2                                       |
 | **G-7**  | Execution + approval                       | S10              | 🔴 Critical    | Was **reverted**                          |
 | **G-8**  | Peer contract clients                      | S12              | 🟡 Medium      | Dissent 3 open                            |
@@ -31,8 +31,16 @@
 
 ## The critical path
 
-**G-16 → G-1 → G-2 → G-6.** Everything else is a branch off it. G-14/G-15 are not on the path
-_because the console is loopback-only_ — and they become mandatory the instant that stops being true.
+**G-16 → G-1 → G-2 → G-6.** Everything else is a branch off it.
+
+⚠️ **Amended 2026-08-03: G-14 is now on the critical path by owner decision** — the J→K→L track starts
+**now, in parallel**, and Identity is one of the three named areas of primary effort under the
+architecture freeze. 🚫 Loopback-only is what made deferring G-14 _survivable_, never what made it
+_unnecessary_, and ⚠️ the console being **read-only does not discharge it**: a surface that cannot
+write can still read the wrong tenant's snapshots.
+
+⏸️ **Deferred by the freeze:** G-8 (peers) and G-11 (knowledge graph). 🚫 **Moot under read-only:**
+G-13 (console-authored records) and the console half of G-5.
 
 ---
 
@@ -142,7 +150,7 @@ render an empty graph and imply AGE knows more than it does.
 
 ---
 
-## G-13 — Live organization onboarding 🟡
+## G-13 — Live organization onboarding 🟡 — 🚫 **MOOT for the console (read-only, 2026-08-03)**
 
 Records are hand-authored files. A console-driven flow is possible **only outside the repository**, and
 🚫 records are never committed — not even redacted or masked. ⚠️ Visibility is **not** a control: the

@@ -12,12 +12,12 @@
 
 **Data ownership.** Exactly four owners, and no screen may blur them:
 
-| Owner                         | Holds                                             | Console's relationship                                   |
-| ----------------------------- | ------------------------------------------------- | -------------------------------------------------------- |
-| The **operator's filesystem** | Answer file, client record file                   | Reads; may write only the answer file                    |
-| **PostgreSQL** (`age_app`)    | Snapshots, append-only                            | Reads; appends only under confirmed write                |
-| **Pure packages**             | Every derivation — mapping, scoring, capabilities | Calls; never reimplements                                |
-| **Peer products**             | Their own data                                    | Requests over a public contract; never stores as its own |
+| Owner                         | Holds                                             | Console's relationship                                    |
+| ----------------------------- | ------------------------------------------------- | --------------------------------------------------------- |
+| The **operator's filesystem** | Answer file, client record file                   | 🚫 **Reads only** — writes nothing                        |
+| **PostgreSQL** (`age_app`)    | Snapshots, append-only                            | 🚫 **Reads only**, over a connection incapable of writing |
+| **Pure packages**             | Every derivation — mapping, scoring, capabilities | Calls; never reimplements                                 |
+| **Peer products**             | Their own data                                    | Requests over a public contract; never stores as its own  |
 
 **Persistence.** The console persists nothing of its own. It has no tables, no cache, no session
 store, no local storage of business data. Every screen is a projection of one of the four owners
@@ -101,9 +101,9 @@ differ, and differing is correct.
 | **Inputs**        | `DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE` (`age-business-discovery` / `2026.1`); the operator's answer file                                                 |
 | **Outputs**       | Per-question answer state — **answered / omitted**, never "empty"; validation refusals naming question ids; the produced profile and its scores on a dry run |
 | **Dependencies**  | `@age/discovery-answer-file`, `parseDiscoveryAnswerFile`, `produceScoredBifContext`, `@age/operator-file-policy`                                             |
-| **Events**        | Load file · edit an answer · omit an answer · validate · dry run · **confirmed capture**                                                                     |
+| **Events**        | Load file · validate · dry run. 🚫 **No edit, no omit-toggle, no capture** — read-only (2026-08-03)                                                          |
 | **Ownership**     | The operator's file                                                                                                                                          |
-| **Persistence**   | Writes back to **their** file, outside the working tree                                                                                                      |
+| **Persistence**   | 🚫 **None.** The console never writes the answer file; the operator edits it in their own editor                                                             |
 | **Refresh**       | On request                                                                                                                                                   |
 | **Relationships** | → S5 (the BIF it produces), S11 (the snapshot it appends)                                                                                                    |
 
@@ -115,8 +115,12 @@ produce exactly the inflated completeness score the refusal exists to prevent.
 must be outside the repository root, and relative paths are refused outright rather than resolved,
 because `path.resolve` reads `cwd`.
 
-⚠️ **Confirmed capture is the only write on this screen** and carries all five of ADR-0054 D6's
-conditions. There is no capture-on-save, no autosave-then-capture, and no scheduling.
+🚫 **There is no write on this screen, and no write anywhere in the console** (ADR-0057 D4 as amended,
+2026-08-03). Capture stays in the CLI, where ADR-0054 D6's five conditions are already enforced.
+🚫 No capture-on-save, no autosave, no scheduling — and 🚫 no "read-only form" that later grows a
+submit.
+⚠️ **Omission is still a first-class rendering state** even though it is no longer a control: an
+unanswered question renders **"omitted"**, 🚫 never "empty".
 
 ---
 

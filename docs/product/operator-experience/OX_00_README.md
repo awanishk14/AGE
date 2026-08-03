@@ -88,8 +88,11 @@ none, and 🚫 it must never be described as proving the console is unreachable.
    most load-bearing rendering rule in the program.
 3. **A low score is a correct result.** No screen offers an affordance that improves a score. There
    is no "boost", no "recalculate", no cap to raise. The console cannot make AGE more confident.
-4. **The console performs no write the CLI cannot already perform.** It is not a new authority over
-   the data; it is a window, plus exactly the writes ADR-0054 D6 already permits.
+4. **The console is READ-ONLY and performs no write at all.** _(Product Owner, 2026-08-03 — ADR-0057
+   D4 as amended.)_ It is a window, and nothing else: ✅ View · Browse · Inspect · Understand ·
+   🚫 never Modify, Execute, Approve or Delete. Reads travel over a connection **structurally
+   incapable of writing**. 🛑 A future write surface requires a **NEW ADR**, and 🚫 may not be reached
+   by increments.
 5. **Peer products are shown, never absorbed** (ADR-0053). AGE displays what a peer product's public
    contract returns and reasons over it. It renders no peer product's UI and reimplements no peer
    product's screens.
