@@ -47,12 +47,32 @@ describe('STUDIO_AREAS', () => {
   });
 
   /**
-   * ⚠️ The honest state of this slice. When an area is genuinely wired this test
-   * is expected to be updated — but it must be updated because something was
-   * wired, 🚫 never to make a screen look finished.
+   * ⚠️ Updated because something was genuinely wired — 🚫 never to make a screen
+   * look finished. Businesses reads the operator record file and Diagnostics
+   * reports the console's own state; both render a real result.
+   *
+   * ⚠️ Every OTHER area must stay unwired. This test exists to make flipping one
+   * a deliberate, visible act rather than a side effect of a screen edit.
    */
-  it('reports that nothing is wired yet', () => {
-    expect(everyAreaIsUnwired()).toBe(true);
+  it('reports exactly which areas are wired', () => {
+    expect(everyAreaIsUnwired()).toBe(false);
+
+    const wired = STUDIO_AREAS.filter((a) => a.wiring === 'wired').map((a) => a.id);
+    expect(wired).toEqual(['businesses', 'diagnostics']);
+  });
+
+  /**
+   * 🚫 A wired area must NOT carry a not-wired explanation — a stale sentence
+   * saying "not connected in this slice" would outlive the wiring and tell the
+   * operator the screen is dead when it is live.
+   */
+  it('leaves no stale not-wired reason on a wired area', () => {
+    for (const area of STUDIO_AREAS.filter((a) => a.wiring === 'wired')) {
+      expect(
+        area.notWiredBecause,
+        `${area.id} is wired but explains why it is not`,
+      ).toBeUndefined();
+    }
   });
 
   /**
@@ -73,7 +93,7 @@ describe('STUDIO_AREAS', () => {
 
   /** S7 Contradictions and S13 Diagnostics are areas in their own right. */
   it('keeps Contradictions and Diagnostics as first-class areas', () => {
-    expect(areaByRoute('/contradictions')?.screen).toBe('S7');
+    expect(areaByRoute('/b/:clientId/contradictions')?.screen).toBe('S7');
     expect(areaByRoute('/diagnostics')?.screen).toBe('S13');
   });
 
@@ -110,7 +130,7 @@ describe('areasForLevel', () => {
 
 describe('areaByRoute', () => {
   it('resolves a known route', () => {
-    expect(areaByRoute('/bif')?.id).toBe('bif');
+    expect(areaByRoute('/b/:clientId/bif')?.id).toBe('bif');
   });
 
   it('returns undefined for an unknown route rather than a fallback area', () => {

@@ -16,6 +16,9 @@
     "test": "vitest run",
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
+  "dependencies": {
+    "@age/client-registry": "workspace:*"
+  },
   "devDependencies": {
     "vitest": "^2.1.1"
   }
