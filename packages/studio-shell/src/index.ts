@@ -27,11 +27,40 @@ export {
 
 export {
   areaByRoute,
+  areaHref,
+  areaNeedsClientId,
   areasForLevel,
+  CLIENT_ID_PARAMETER,
   everyAreaIsUnwired,
+  matchAreaRoute,
+  MissingClientScopeError,
   REFUSED_AREAS,
   STUDIO_AREAS,
+  SUBJECT_ROUTE_PREFIX,
   type AreaLevel,
   type AreaWiring,
+  type MatchedRoute,
   type StudioArea,
 } from './navigation';
+
+export {
+  CLIENT_RECORD_FILE_VARIABLE,
+  resolveClientRecordSource,
+  type ClientRecordSource,
+} from './client-record-source';
+
+export {
+  countBusinesses,
+  groupIntoOrganizationBands,
+  presentBusinesses,
+  type BusinessesView,
+  type OrganizationBand,
+} from './businesses-view';
+
+export {
+  presentSystemStatus,
+  type CaptureStoreState,
+  type IdentityState,
+  type StatusFacet,
+  type SystemStatusInput,
+} from './system-status';

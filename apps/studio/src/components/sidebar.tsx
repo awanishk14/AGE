@@ -2,10 +2,14 @@ import Link from 'next/link';
 
 import { areasForLevel, type AreaLevel } from '@age/studio-shell';
 
+/**
+ * 🚫 The `subject` level is deliberately ABSENT. Subject areas live at
+ * `/b/:clientId/...` and cannot be linked from here — the sidebar has no
+ * business in hand, and a link that picked one would be inventing a scope.
+ */
 const SECTIONS: readonly { level: AreaLevel; heading: string }[] = [
   { level: 'console', heading: 'Console' },
   { level: 'business', heading: 'Businesses' },
-  { level: 'subject', heading: 'Within a business' },
 ];
 
 /**
@@ -14,8 +18,8 @@ const SECTIONS: readonly { level: AreaLevel; heading: string }[] = [
  * ⚠️ The areas come from `@age/studio-shell`, not from a list written here. A
  * second list is a second truth. 🚫 Do not add a link that has no area.
  *
- * ⚠️ Every area currently reads "not wired", and the sidebar says so on each
- * item rather than presenting a full navigation that leads to empty screens.
+ * ⚠️ An area that is not wired says so on the item rather than presenting a
+ * full navigation that leads to empty screens.
  */
 export function Sidebar() {
   return (
@@ -54,6 +58,16 @@ export function Sidebar() {
           </ul>
         </div>
       ))}
+
+      <div className="px-4 pb-6 pt-2">
+        <p className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[hsl(var(--age-text-muted))]">
+          Within a business
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--age-text-muted))]">
+          Discovery, BIF, Evidence and the rest open inside one business. Choose it under Businesses
+          first — there is no default business, and none is selected for you.
+        </p>
+      </div>
     </nav>
   );
 }

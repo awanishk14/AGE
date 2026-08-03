@@ -24,6 +24,24 @@
  */
 
 /**
+ * ⚠️ Subject-level routes carry the business in the PATH — `/b/:clientId/...`.
+ *
+ * This is not cosmetic. A subject screen is meaningless without a scope, and a
+ * scope held only in memory is a scope that survives a reload, a bookmark and a
+ * second tab differently from the URL the operator is looking at. Putting the
+ * `clientId` in the path makes the scope of every subject screen legible,
+ * shareable and impossible to lose track of.
+ *
+ * 🚫 There is no `/b/:organizationId/...`. The organization is read OFF the
+ * resolved record, never typed and never selected — ADR-0054 D2 refuses a typed
+ * scope by name, and a level you can navigate into is a level you can select.
+ */
+export const SUBJECT_ROUTE_PREFIX = '/b';
+
+/** The placeholder a subject route template carries in place of a clientId. */
+export const CLIENT_ID_PARAMETER = ':clientId';
+
+/**
  * How much of an area actually works today.
  *
  * ⚠️ These are NOT decorative. `17_DESIGN_SYSTEM.md` §4 requires that "not
@@ -68,10 +86,16 @@ export interface StudioArea {
 }
 
 /**
- * ⚠️ Every area is `not-wired` in this slice, and that is the honest state.
- * Wave 1 has zero database dependency; Wave 2 onward is blocked on ADR-0055 D7 —
- * the operator's own capture run. 🚫 Do not flip a `wiring` to `wired` to make a
- * screen look finished, and 🚫 do not seed a row to justify flipping one.
+ * ⚠️ Two areas are now `wired` — Businesses and Diagnostics — because each reads
+ * a real source and can render a real result. Everything else is `not-wired`,
+ * and that is still the honest state: the subject areas are blocked on ADR-0055
+ * D7, the operator's own capture run.
+ *
+ * 🚫 Do not flip a `wiring` to `wired` to make a screen look finished, and 🚫 do
+ * not seed a row to justify flipping one. `wired` means the screen reads the
+ * real source — it does NOT promise the source has anything in it. A wired
+ * screen over an empty source renders "unknown"; an unwired screen renders
+ * "not assessed"; those are different states and both are honest.
  */
 export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
   {
@@ -91,15 +115,13 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
     route: '/businesses',
     level: 'business',
     screen: 'S2',
-    wiring: 'not-wired',
+    wiring: 'wired',
     question: 'Which businesses does AGE know, and under what scope?',
-    notWiredBecause:
-      'Reads the operator record file through @age/client-registry. Not connected in this slice.',
   },
   {
     id: 'discovery',
     label: 'Discovery',
-    route: '/discovery',
+    route: '/b/:clientId/discovery',
     level: 'subject',
     screen: 'S4',
     wiring: 'not-wired',
@@ -109,7 +131,7 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
   {
     id: 'bif',
     label: 'Business Information Framework',
-    route: '/bif',
+    route: '/b/:clientId/bif',
     level: 'subject',
     screen: 'S5',
     wiring: 'not-wired',
@@ -120,7 +142,7 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
   {
     id: 'evidence',
     label: 'Evidence',
-    route: '/evidence',
+    route: '/b/:clientId/evidence',
     level: 'subject',
     screen: 'S6',
     wiring: 'not-wired',
@@ -130,7 +152,7 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
   {
     id: 'contradictions',
     label: 'Contradictions',
-    route: '/contradictions',
+    route: '/b/:clientId/contradictions',
     level: 'subject',
     screen: 'S7',
     wiring: 'not-wired',
@@ -140,7 +162,7 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
   {
     id: 'intelligence',
     label: 'Intelligence',
-    route: '/intelligence',
+    route: '/b/:clientId/intelligence',
     level: 'subject',
     screen: 'S8',
     wiring: 'not-wired',
@@ -150,7 +172,7 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
   {
     id: 'strategy',
     label: 'Strategy',
-    route: '/strategy',
+    route: '/b/:clientId/strategy',
     level: 'subject',
     screen: 'S9',
     wiring: 'not-wired',
@@ -161,7 +183,7 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
   {
     id: 'execution',
     label: 'Execution',
-    route: '/execution',
+    route: '/b/:clientId/execution',
     level: 'subject',
     screen: 'S10',
     wiring: 'not-wired',
@@ -172,7 +194,7 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
   {
     id: 'history',
     label: 'History',
-    route: '/history',
+    route: '/b/:clientId/history',
     level: 'subject',
     screen: 'S11',
     wiring: 'not-wired',
@@ -182,7 +204,7 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
   {
     id: 'peer-products',
     label: 'Peer Products',
-    route: '/peer-products',
+    route: '/b/:clientId/peer-products',
     level: 'subject',
     screen: 'S12',
     wiring: 'not-wired',
@@ -196,10 +218,8 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
     route: '/diagnostics',
     level: 'console',
     screen: 'S13',
-    wiring: 'not-wired',
+    wiring: 'wired',
     question: 'Is the console telling the truth about itself?',
-    notWiredBecause:
-      'Slice 1.2 wires this: bind address, database host only, questionnaire version, refusal log.',
   },
 ]);
 
@@ -217,6 +237,87 @@ export function areasForLevel(level: AreaLevel): readonly StudioArea[] {
 
 export function areaByRoute(route: string): StudioArea | undefined {
   return STUDIO_AREAS.find((area) => area.route === route);
+}
+
+/** True when this area's route needs a business before it can be linked to. */
+export function areaNeedsClientId(area: StudioArea): boolean {
+  return area.route.includes(CLIENT_ID_PARAMETER);
+}
+
+/**
+ * Raised when a subject-level route is asked for without a business.
+ *
+ * 🚫 There is deliberately no fallback clientId, no "first business", and no
+ * "last selected". Substituting any of those would put a scope into circulation
+ * that the operator did not choose — the same failure class as a fabricated
+ * record (ADR-0054 D3), reached from the navigation layer instead.
+ */
+export class MissingClientScopeError extends Error {
+  readonly areaId: string;
+
+  constructor(areaId: string) {
+    super(
+      `The "${areaId}" area is scoped to one business and cannot be linked to without a clientId. ` +
+        'No business is substituted: a scope the operator did not choose is not a default, it is an invention.',
+    );
+    this.name = 'MissingClientScopeError';
+    this.areaId = areaId;
+  }
+}
+
+/**
+ * The href for an area, with the business substituted into subject routes.
+ *
+ * @throws {MissingClientScopeError} when a subject area is asked for with no
+ *         business selected.
+ */
+export function areaHref(area: StudioArea, clientId?: string): string {
+  if (!areaNeedsClientId(area)) {
+    return area.route;
+  }
+
+  if (clientId === undefined || clientId.trim() === '') {
+    throw new MissingClientScopeError(area.id);
+  }
+
+  return area.route.replace(CLIENT_ID_PARAMETER, encodeURIComponent(clientId));
+}
+
+export interface MatchedRoute {
+  readonly area: StudioArea;
+  /** Present only for subject-level routes. */
+  readonly clientId?: string;
+}
+
+/**
+ * Resolve a real pathname back to its area and business.
+ *
+ * ⚠️ Returns `undefined` for anything unrecognised. 🚫 No nearest-match, no
+ * redirect to a plausible screen — an unknown route is an unknown route.
+ */
+export function matchAreaRoute(pathname: string): MatchedRoute | undefined {
+  const exact = areaByRoute(pathname);
+  if (exact !== undefined && !areaNeedsClientId(exact)) {
+    return { area: exact };
+  }
+
+  const segments = pathname.split('/').filter((segment) => segment !== '');
+  if (segments.length !== 3 || `/${segments[0]}` !== SUBJECT_ROUTE_PREFIX) {
+    return undefined;
+  }
+
+  const rawClientId = segments[1] ?? '';
+  const tail = segments[2] ?? '';
+  const clientId = decodeURIComponent(rawClientId);
+  if (clientId.trim() === '') {
+    return undefined;
+  }
+
+  const area = STUDIO_AREAS.find(
+    (candidate) => candidate.route === `${SUBJECT_ROUTE_PREFIX}/${CLIENT_ID_PARAMETER}/${tail}`,
+  );
+
+  return area === undefined ? undefined : { area, clientId };
 }
 
 /**

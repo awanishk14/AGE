@@ -3,11 +3,17 @@ import { describe, expect, it } from 'vitest';
 
 import { AreaScreen } from './area-screen';
 
+/**
+ * ⚠️ `AreaScreen` now serves the console-level areas only. Subject areas moved
+ * to `/b/:clientId/...` and are rendered by `SubjectAreaScreen`, which resolves
+ * the business FIRST. 🚫 Do not point this component at a subject route again —
+ * it has no scope to resolve and would render a subject screen for no business.
+ */
 describe('AreaScreen', () => {
   it('names the area and the question it will answer', () => {
-    render(<AreaScreen route="/bif" />);
-    expect(screen.getByRole('heading', { name: 'Business Information Framework' })).toBeDefined();
-    expect(screen.getByText(/What does AGE believe about this business/)).toBeDefined();
+    render(<AreaScreen route="/" />);
+    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeDefined();
+    expect(screen.getByText(/What changed, what is waiting/)).toBeDefined();
   });
 
   /**
@@ -16,14 +22,14 @@ describe('AreaScreen', () => {
    * knows nothing.
    */
   it('says it is not wired, and why', () => {
-    render(<AreaScreen route="/bif" />);
+    render(<AreaScreen route="/" />);
     expect(screen.getByText('This screen is not wired yet')).toBeDefined();
-    expect(screen.getByText(/ADR-0055 D7/)).toBeDefined();
+    expect(screen.getByText(/nothing truthful to compose/)).toBeDefined();
     expect(screen.getByText(/Not assessed/)).toBeDefined();
   });
 
   it('distinguishes not-having-looked from having-looked-and-found-nothing', () => {
-    render(<AreaScreen route="/evidence" />);
+    render(<AreaScreen route="/" />);
     expect(screen.getByText(/not because AGE looked and found nothing/)).toBeDefined();
   });
 
@@ -32,7 +38,7 @@ describe('AreaScreen', () => {
    * AGE does not have.
    */
   it('renders no number that could be mistaken for a result', () => {
-    const { container } = render(<AreaScreen route="/businesses" />);
+    const { container } = render(<AreaScreen route="/" />);
     const text = container.textContent ?? '';
     expect(text.length).toBeGreaterThan(50);
     // The only digits permitted are those inside cited document identifiers.
@@ -42,6 +48,13 @@ describe('AreaScreen', () => {
 
   it('does not invent a fallback for an unknown route', () => {
     render(<AreaScreen route="/organizations" />);
+    expect(screen.getByRole('heading', { name: 'Unknown screen' })).toBeDefined();
+  });
+
+  it('does not render a subject route, which has no scope here', () => {
+    // ⚠️ `/discovery` no longer exists as a route. It must resolve to nothing
+    // rather than quietly rendering the Discovery area with no business.
+    render(<AreaScreen route="/discovery" />);
     expect(screen.getByRole('heading', { name: 'Unknown screen' })).toBeDefined();
   });
 });

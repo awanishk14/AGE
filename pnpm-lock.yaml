@@ -170,6 +170,12 @@ importers:
 
   apps/studio:
     dependencies:
+      '@age/client-registry':
+        specifier: workspace:*
+        version: link:../../packages/client-registry
+      '@age/operator-file-policy':
+        specifier: workspace:*
+        version: link:../../packages/operator-file-policy
       '@age/studio-shell':
         specifier: workspace:*
         version: link:../../packages/studio-shell
@@ -672,6 +678,10 @@ importers:
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(terser@5.48.0)
 
   packages/studio-shell:
+    dependencies:
+      '@age/client-registry':
+        specifier: workspace:*
+        version: link:../client-registry
     devDependencies:
       vitest:
         specifier: ^2.1.1

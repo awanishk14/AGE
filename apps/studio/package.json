@@ -13,6 +13,8 @@
     "clean": "rimraf .next .turbo *.tsbuildinfo"
   },
   "dependencies": {
+    "@age/client-registry": "workspace:*",
+    "@age/operator-file-policy": "workspace:*",
     "@age/studio-shell": "workspace:*",
     "next": "^15.0.0",
     "react": "^18.3.1",
