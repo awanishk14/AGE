@@ -1,6 +1,9 @@
 # ADR-0055 — The row nobody reads
 
-Status: Proposed
+Status: Accepted
+⚠️ **Accepted by the Product Owner on 2026-08-03, NOT self-accepted — their verbatim note is §0.1a.**
+🛑 **D7 is a precondition INSIDE this ADR and acceptance does not discharge it:** the `inspect` slice
+must not start until the operator has performed the ADR-0054 D6 write. 🚫 Do not seed a row.
 Date: 2026-08-02
 Relates to: ADR-0026 D4 (absence is a limitation, never negative evidence), ADR-0027 (readiness is a
 separate named entry point, never a gate on `run`), ADR-0044 D1/D2/D4/D5/D6 (the snapshot read path
@@ -18,8 +21,11 @@ authorized**, and ADR-0054 §0.1d (the stopping point this ADR exists to lift).
 Written under the standing architect grant recorded in ADR-0043 §0.1 and reaffirmed by the mandate
 the user gave on 2026-07-30.
 
-🚫 **This ADR is `Status: Proposed` and MUST NOT be self-accepted.** ADR-0054 §0.1d is the Product
-Owner's own stopping point, added by them and not by the architect:
+🚫 **This ADR was `Status: Proposed` and was NOT self-accepted** — the Product Owner accepted it in
+their own words, reproduced verbatim in §0.1a. The paragraph below is the standing that applied while
+it was open, kept unedited because it is the reason the acceptance had to come from them.
+
+ADR-0054 §0.1d is the Product Owner's own stopping point, added by them and not by the architect:
 
 > **"Stop" means stop.** The first true runtime caller is the **next** architectural phase and is
 > **not** authorized by this ADR.
@@ -28,6 +34,46 @@ An architect who lifts a stop the Product Owner set, under a grant the Product O
 converted a delegation into a self-issued permission. The grant covers deciding _what_ to build; it
 does not cover deciding that a stop has expired. **The Product Owner accepts, amends or rejects this
 in their own words.** Until they do, no code is written from it.
+
+### 0.1a Acceptance — ⚠️ NOT self-accepted
+
+**The Product Owner accepted this ADR on 2026-08-03**, in their own words, reproduced verbatim and in
+full:
+
+> ADR-0055 and ADR-0056 are both Proposed and are yours to answer — I won't self-accept either.
+> ADR-0056 carries my recommendation to reject D1 and D2 (the council refuted them) and keep D3–D7.
+> go ahead
+
+⚠️ **The note is terse, and the architect's reading of it is recorded here so that a wrong reading is
+visible and correctable rather than silently load-bearing.** The Product Owner quoted the architect's
+own summary of the two open decision requests back and answered "go ahead". That is read as:
+**ADR-0055 is accepted as drafted, D1–D9**, and ADR-0056 is accepted **as recommended** (its own
+acceptance is recorded in that ADR, not here). It is **not** read as authorizing anything the ADR
+itself does not authorize.
+
+🛑 **WHAT THIS ACCEPTANCE DOES NOT DO — read before writing a line of code:**
+
+1. 🚫 **It does not discharge D7.** D7 is a precondition inside this ADR, not a condition on it: the
+   `inspect` slice **must not start** until the operator has actually performed the ADR-0054 D6
+   write against their own database. Acceptance makes the slice authorized-once-D7-is-met; it does
+   not make D7 met. 🚫 **Do not seed a row to unblock development** — a seeded row would make the
+   reader prove it can read a row this repository wrote, which is the exact self-confirming result
+   the whole slice exists to avoid.
+2. 🚫 **It does not schedule D9.** D9 is recorded as a ceiling, and §2 says so in its own title. The
+   entitlement function it names is still a **separate, unwritten ADR**, and it must land **before**
+   any networked surface, never retrofitted under one.
+3. 🚫 **It does not lift D8's categorical refusals** — a seventh capability, a new engine, a new
+   contracts package, mcp-ads/RankOps wiring, and any API/Web/auth/multi-user/background surface all
+   remain out of scope, as does any change that improves a score or lifts a cap.
+4. ⚠️ **It changes nothing about ADR-0046 D7 or ADR-0054 D6's five conditions.** They bind exactly as
+   before.
+
+✅ **D6 is already discharged, and NOT by this ADR.** The four leaking refusal messages D6 named were
+fixed under the Product Owner's separate, explicit authorization — _"No ADR needed"_ — in **PR #220**
+(the record file, the answer file, the `choice` echo and `runOnboarding`'s driver message) and
+**PR #222** (a **third** `JSON.parse` site, `capture-profile-input.ts`, that had shipped unfixed, and
+`runCapture`'s driver message, which #220 had flagged and left). ⚠️ D6 is therefore **history, not a
+work item**: 🚫 do not re-implement it, and 🚫 do not read its presence in §2 as outstanding work.
 
 ### 0.1b The council, and what it disagreed about
 
