@@ -46,6 +46,22 @@ export function BusinessesScreen({ view }: { readonly view: BusinessesView }) {
         </p>
       )}
 
+      {/*
+        ⚠️ Offered in every state except "not configured", where there is
+        nowhere to write and the form would refuse on submit. An action the
+        operator cannot complete is worse than one that is absent.
+      */}
+      {view.kind === 'not-configured' ? null : (
+        <p className="mt-4">
+          <Link
+            href={{ pathname: '/businesses/new' }}
+            className="rounded border border-[hsl(var(--age-border))] px-3 py-1.5 text-sm underline-offset-2 hover:underline"
+          >
+            Create a client
+          </Link>
+        </p>
+      )}
+
       <div className="mt-6">
         {view.kind === 'not-configured' ? <NotConfigured variable={view.variable} /> : null}
         {view.kind === 'refused' ? <Refused reason={view.reason} /> : null}

@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE } from '@age/business-discovery-contracts';
@@ -9,7 +9,11 @@ import {
 } from '@age/client-registry';
 import {
   answerFileNameFor,
+  appendClientRecord,
   canSubmit,
+  renderClientRecordFile,
+  validateClientRecordDraft,
+  type ClientRecordDraft,
   DiscoveryDraftError,
   draftFileNameFor,
   emptyDraft,
@@ -135,6 +139,105 @@ export function resolveBusinessScope(clientId: string): BusinessScope {
         : { kind: 'resolved', client };
     }
   }
+}
+
+/**
+ * ────────────────────────────────────────────────────────────────────────────
+ * CREATING A CLIENT
+ *
+ * ⚠️ Class 1 (Platform Administration) under ADR-0057 D4, and human-initiated:
+ * the operator types their own business's identity and presses a button.
+ *
+ * 🚫 This does NOT create an organization. No tenant model exists (ADR-0058 D4);
+ * `organizationId` is a string the operator supplies, and the Organizations band
+ * stays derived from it.
+ * ────────────────────────────────────────────────────────────────────────────
+ */
+
+export type CreateClientOutcome =
+  | { readonly kind: 'created'; readonly clientId: string; readonly firstRecord: boolean }
+  | { readonly kind: 'not-configured'; readonly variable: string }
+  | { readonly kind: 'refused'; readonly reason: string; readonly field?: string };
+
+/**
+ * Write a new record into the operator's client record file.
+ *
+ * ⚠️ THE READ IS LOAD-BEARING AND HAPPENS FIRST. The new record is appended to
+ * what is actually on disk, never to what a screen was showing — otherwise a
+ * second console, or a hand edit made since this page loaded, would be
+ * overwritten by a form that never saw it.
+ *
+ * ⚠️ THE ONE CASE THAT IS NOT A REFUSAL: the file does not exist yet. The
+ * operator has named a path (that is the explicit act ADR-0054 D3 requires) and
+ * has no clients, so creating the file is the ordinary first use. 🚫 Every other
+ * failure to read — malformed JSON, a bad record, a duplicate id already in the
+ * file — REFUSES, because writing over a file that exists and could not be
+ * parsed would destroy real client records to make a form succeed.
+ */
+export function createClientRecord(draft: ClientRecordDraft): CreateClientOutcome {
+  const source = resolveClientRecordSource(process.env);
+  if (source.kind === 'not-configured') {
+    return { kind: 'not-configured', variable: source.variable };
+  }
+
+  const validated = validateClientRecordDraft(draft);
+  if (validated.kind === 'refused') {
+    return { kind: 'refused', reason: validated.reason, field: validated.field };
+  }
+
+  // The path is checked before anything is opened, through the single policy
+  // implementation — same rule, same function, as every other operator file.
+  try {
+    assertOperatorFilePathOutsideRepository(source.path, repositoryRoot(), 'client record file');
+  } catch (error) {
+    return {
+      kind: 'refused',
+      reason:
+        error instanceof OperatorFilePathRefusedError
+          ? error.message
+          : 'The client record file path could not be used.',
+    };
+  }
+
+  let existing: readonly ClientRecord[] = [];
+  let firstRecord = false;
+
+  if (!existsSync(source.path)) {
+    // ⚠️ Distinguished from "unreadable" deliberately. `existsSync` answers a
+    // different question than a failed read: a file that exists and cannot be
+    // parsed must never take this branch.
+    firstRecord = true;
+  } else {
+    try {
+      existing = loadClientRecordFile({
+        path: source.path,
+        repositoryRoot: repositoryRoot(),
+        readFileText: (path) => readFileSync(path, 'utf8'),
+      });
+    } catch (error) {
+      return {
+        kind: 'refused',
+        reason:
+          error instanceof ClientRecordFileError || error instanceof OperatorFilePathRefusedError
+            ? `${error.message} No client was created — the existing file is left exactly as it is.`
+            : 'The existing client record file could not be read, so nothing was written to it.',
+      };
+    }
+  }
+
+  const appended = appendClientRecord(existing, validated.record);
+  if (appended.kind === 'refused') {
+    return { kind: 'refused', reason: appended.reason, field: appended.field };
+  }
+
+  try {
+    writeFileSync(source.path, renderClientRecordFile(appended.records), 'utf8');
+  } catch {
+    // 🚫 The system error is not surfaced: it carries the full path.
+    return { kind: 'refused', reason: 'The client record file could not be written.' };
+  }
+
+  return { kind: 'created', clientId: validated.record.clientId, firstRecord };
 }
 
 /**
