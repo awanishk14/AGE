@@ -124,9 +124,8 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
     route: '/b/:clientId/discovery',
     level: 'subject',
     screen: 'S4',
-    wiring: 'not-wired',
+    wiring: 'wired',
     question: 'What has the operator told AGE, and what is still unanswered?',
-    notWiredBecause: 'Reads the questionnaire and an answer file. Not connected in this slice.',
   },
   {
     id: 'bif',

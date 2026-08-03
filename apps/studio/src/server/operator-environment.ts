@@ -1,16 +1,33 @@
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
+import { DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE } from '@age/business-discovery-contracts';
 import {
   ClientRecordFileError,
   loadClientRecordFile,
   type ClientRecord,
 } from '@age/client-registry';
 import {
+  answerFileNameFor,
+  canSubmit,
+  DiscoveryDraftError,
+  draftFileNameFor,
+  emptyDraft,
+  parseDiscoveryDraft,
   presentBusinesses,
+  renderAnswerFile,
+  renderDiscoveryDraft,
   resolveClientRecordSource,
+  resolveDiscoveryWorkspace,
+  UnsafeClientIdError,
+  validateDraft,
   type BusinessesView,
+  type DiscoveryDraft,
 } from '@age/studio-shell';
-import { OperatorFilePathRefusedError } from '@age/operator-file-policy';
+import {
+  assertOperatorFilePathOutsideRepository,
+  OperatorFilePathRefusedError,
+} from '@age/operator-file-policy';
 
 /**
  * The ONE module in `apps/studio` that performs an effect.
@@ -117,6 +134,204 @@ export function resolveBusinessScope(clientId: string): BusinessScope {
         ? { kind: 'unknown-client', clientId }
         : { kind: 'resolved', client };
     }
+  }
+}
+
+/**
+ * ────────────────────────────────────────────────────────────────────────────
+ * DISCOVERY DRAFTS
+ *
+ * ⚠️ Autosave is permitted: it preserves what the operator typed and initiates
+ * nothing (Product Owner, 2026-08-03 — "not AGE making a business decision;
+ * it's simply preserving the operator's draft"). 🚫 It must never grow into
+ * something that submits, recomputes or generates on its own — that would be a
+ * system-initiated act, which is class 3 even though its effect is internal.
+ *
+ * 🚫 The draft is stored SERVER-SIDE, in the directory the operator named. No
+ * browser-local store, ever: a business's own words must not sit in
+ * `localStorage` where nothing in this repo governs their lifetime.
+ * ────────────────────────────────────────────────────────────────────────────
+ */
+
+/** The questionnaire the console renders. There is exactly one. */
+export const STUDIO_QUESTIONNAIRE = DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE;
+
+export type DiscoveryWorkspaceOutcome =
+  | { readonly kind: 'not-configured'; readonly variable: string }
+  | { readonly kind: 'refused'; readonly reason: string }
+  | { readonly kind: 'ready'; readonly directory: string };
+
+/**
+ * Locate the workspace, and refuse it if it is inside the repository.
+ *
+ * ⚠️ The same fail-closed rule as every other operator file, through the same
+ * single implementation (`@age/operator-file-policy`). 🚫 Do not re-implement
+ * it here — the copy that gets relaxed still passes its own tests.
+ */
+function resolveWorkspaceDirectory(): DiscoveryWorkspaceOutcome {
+  const workspace = resolveDiscoveryWorkspace(process.env);
+
+  if (workspace.kind === 'not-configured') {
+    return { kind: 'not-configured', variable: workspace.variable };
+  }
+
+  try {
+    assertOperatorFilePathOutsideRepository(
+      workspace.directory,
+      repositoryRoot(),
+      'the discovery workspace directory',
+    );
+    return { kind: 'ready', directory: workspace.directory };
+  } catch (error) {
+    if (error instanceof OperatorFilePathRefusedError) {
+      return { kind: 'refused', reason: error.message };
+    }
+    return {
+      kind: 'refused',
+      reason: 'The discovery workspace could not be used, and the failure was not recognised.',
+    };
+  }
+}
+
+export type DraftOutcome =
+  | { readonly kind: 'not-configured'; readonly variable: string }
+  | { readonly kind: 'refused'; readonly reason: string }
+  | { readonly kind: 'loaded'; readonly draft: DiscoveryDraft; readonly everSaved: boolean };
+
+/**
+ * Read the operator's saved draft, or say why there is none.
+ *
+ * ⚠️ `everSaved` distinguishes "nothing has been typed yet" from "we could not
+ * look" — 🚫 an empty form must never be shown as though it were a draft that
+ * was read and found blank.
+ */
+export function readDiscoveryDraft(clientId: string): DraftOutcome {
+  const workspace = resolveWorkspaceDirectory();
+  if (workspace.kind !== 'ready') {
+    return workspace;
+  }
+
+  let path: string;
+  try {
+    path = join(workspace.directory, draftFileNameFor(clientId));
+  } catch (error) {
+    if (error instanceof UnsafeClientIdError) {
+      return { kind: 'refused', reason: error.message };
+    }
+    throw error;
+  }
+
+  let rawText: string;
+  try {
+    rawText = readFileSync(path, 'utf8');
+  } catch {
+    // ⚠️ No file yet is the ordinary state of a business nobody has started.
+    // 🚫 The underlying error is not surfaced: it embeds the path, and the path
+    // is the operator's own directory layout.
+    return { kind: 'loaded', draft: emptyDraft(STUDIO_QUESTIONNAIRE), everSaved: false };
+  }
+
+  try {
+    return {
+      kind: 'loaded',
+      draft: parseDiscoveryDraft(rawText, STUDIO_QUESTIONNAIRE),
+      everSaved: true,
+    };
+  } catch (error) {
+    if (error instanceof DiscoveryDraftError) {
+      // 🚫 Refused, never discarded and never started over. The operator's
+      // typing is still in that file; overwriting it with a fresh empty draft
+      // would destroy work to make a screen render.
+      return { kind: 'refused', reason: error.message };
+    }
+    return { kind: 'refused', reason: 'The saved draft could not be read.' };
+  }
+}
+
+export type SaveOutcome =
+  | { readonly kind: 'saved' }
+  | { readonly kind: 'not-configured'; readonly variable: string }
+  | { readonly kind: 'refused'; readonly reason: string };
+
+/** Persist the draft. Called by autosave and by an explicit Save. */
+export function writeDiscoveryDraft(clientId: string, draft: DiscoveryDraft): SaveOutcome {
+  const workspace = resolveWorkspaceDirectory();
+  if (workspace.kind !== 'ready') {
+    return workspace;
+  }
+
+  try {
+    mkdirSync(workspace.directory, { recursive: true });
+    writeFileSync(
+      join(workspace.directory, draftFileNameFor(clientId)),
+      renderDiscoveryDraft(draft, STUDIO_QUESTIONNAIRE),
+      'utf8',
+    );
+    return { kind: 'saved' };
+  } catch (error) {
+    if (error instanceof UnsafeClientIdError) {
+      return { kind: 'refused', reason: error.message };
+    }
+    // 🚫 The system error is not surfaced: it carries the full path.
+    return {
+      kind: 'refused',
+      reason: 'The draft could not be written to the discovery workspace.',
+    };
+  }
+}
+
+export type SubmitOutcome =
+  | { readonly kind: 'written'; readonly fileName: string }
+  | { readonly kind: 'not-configured'; readonly variable: string }
+  | { readonly kind: 'refused'; readonly reason: string; readonly questionId?: string };
+
+/**
+ * Write the canonical Answer File.
+ *
+ * ⚠️ This is the operator's explicit act (ADR-0057 D4 class 2 — knowledge
+ * authoring), never a consequence of typing. 🚫 It does NOT generate a BIF, run
+ * capture or touch a database: it writes the same artifact `age-capture onboard`
+ * already consumes, so the console becomes the author and the CLI the consumer
+ * without either inventing a second format.
+ */
+export function submitDiscoveryAnswers(clientId: string, draft: DiscoveryDraft): SubmitOutcome {
+  const workspace = resolveWorkspaceDirectory();
+  if (workspace.kind !== 'ready') {
+    return workspace;
+  }
+
+  const validation = validateDraft(draft, STUDIO_QUESTIONNAIRE);
+  if (validation.kind === 'refused') {
+    return { kind: 'refused', reason: validation.reason, questionId: validation.questionId };
+  }
+
+  if (!canSubmit(draft, STUDIO_QUESTIONNAIRE)) {
+    return {
+      kind: 'refused',
+      reason:
+        'Some required questions are still unanswered. An unanswered question is omitted from ' +
+        'the answer file rather than filled in, so submitting now would understate what is known ' +
+        'about this business.',
+    };
+  }
+
+  try {
+    const fileName = answerFileNameFor(clientId);
+    mkdirSync(workspace.directory, { recursive: true });
+    writeFileSync(
+      join(workspace.directory, fileName),
+      renderAnswerFile(draft, STUDIO_QUESTIONNAIRE),
+      'utf8',
+    );
+    return { kind: 'written', fileName };
+  } catch (error) {
+    if (error instanceof UnsafeClientIdError) {
+      return { kind: 'refused', reason: error.message };
+    }
+    return {
+      kind: 'refused',
+      reason: 'The answer file could not be written to the discovery workspace.',
+    };
   }
 }
 

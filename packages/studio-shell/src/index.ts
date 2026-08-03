@@ -58,6 +58,35 @@ export {
 } from './businesses-view';
 
 export {
+  applyDraftAnswer,
+  canSubmit,
+  draftFromFormEntries,
+  fieldValueOf,
+  DiscoveryDraftError,
+  emptyDraft,
+  isListQuestion,
+  parseDiscoveryDraft,
+  renderAnswerFile,
+  renderDiscoveryDraft,
+  summarizeDiscoveryProgress,
+  validateDraft,
+  type DiscoveryDraft,
+  type DiscoveryDraftValue,
+  type DiscoveryProgress,
+  type DraftValidation,
+} from './discovery-draft';
+
+export {
+  answerFileNameFor,
+  assertSafeClientIdForFileName,
+  DISCOVERY_WORKSPACE_VARIABLE,
+  draftFileNameFor,
+  resolveDiscoveryWorkspace,
+  UnsafeClientIdError,
+  type DiscoveryWorkspace,
+} from './discovery-workspace';
+
+export {
   presentSystemStatus,
   type CaptureStoreState,
   type IdentityState,
