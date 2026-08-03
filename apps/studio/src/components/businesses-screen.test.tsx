@@ -35,6 +35,13 @@ describe('BusinessesScreen', () => {
       const { container } = render(<BusinessesScreen view={view} />);
       expect(container.textContent).not.toMatch(/\b0 businesses\b/);
     });
+
+    it('does NOT offer Create a client — there is nowhere to write it', () => {
+      // ⚠️ An action the operator cannot complete is worse than one that is
+      // absent: the form would only refuse on submit.
+      render(<BusinessesScreen view={view} />);
+      expect(screen.queryByRole('link', { name: 'Create a client' })).toBeNull();
+    });
   });
 
   describe('when the record file is refused', () => {
@@ -63,6 +70,13 @@ describe('BusinessesScreen', () => {
       expect(screen.getByText(/AGE looked, and the file names no businesses/)).toBeDefined();
       expect(screen.getByText(/a result, not a failure/)).toBeDefined();
       expect(screen.getByText('0 businesses read from the operator record file.')).toBeDefined();
+    });
+
+    it('offers Create a client — the way out of an empty file', () => {
+      render(<BusinessesScreen view={{ kind: 'none' }} />);
+      expect(screen.getByRole('link', { name: 'Create a client' }).getAttribute('href')).toBe(
+        '/businesses/new',
+      );
     });
   });
 

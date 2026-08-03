@@ -77,6 +77,18 @@ export {
 } from './discovery-draft';
 
 export {
+  appendClientRecord,
+  CLIENT_RECORD_DRAFT_FIELDS,
+  clientRecordDraftFromFormEntries,
+  emptyClientRecordDraft,
+  parseExternalRefsText,
+  renderClientRecordFile,
+  validateClientRecordDraft,
+  type ClientRecordDraft,
+  type ClientRecordDraftOutcome,
+} from './client-record-draft';
+
+export {
   answerFileNameFor,
   assertSafeClientIdForFileName,
   DISCOVERY_WORKSPACE_VARIABLE,
