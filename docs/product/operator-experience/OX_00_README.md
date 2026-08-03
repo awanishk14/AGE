@@ -1,8 +1,11 @@
 # The Operator Experience Program
 
 > A program, not a document. Seven phases, produced together so that no phase can quietly
-> contradict another. **Status: Proposed in full — none of it is authorized to be built.**
-> The governing decision request is **ADR-0057**.
+> contradict another. ⚠️ **ADR-0057 was ACCEPTED by the Product Owner on 2026-08-03** — the console
+> itself is authorized. 🚫 **The rest of this program is not:** each wave in `OX_07` names the ADR it
+> needs, and **ADR B, ADR C and ADR J are still required and still `Proposed`-first.**
+> 🛑 **Acceptance did NOT discharge ADR-0055 D7** — no screen reads a real snapshot until the
+> operator’s own CLI run. 🚫 Do not seed a row.
 
 > ⚠️ **Read [`../18_AGE_STUDIO.md`](../18_AGE_STUDIO.md) first.** The Product Owner corrected the
 > framing on 2026-08-03: the console **is the product**, not a feature that follows the architecture.
