@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * AGE Studio theme.
+ *
+ * ⚠️ `17_DESIGN_SYSTEM.md` §0.1: "The primary job is not beauty — it is not
+ * lying." Everything below serves that.
+ *
+ * 🚫 The four epistemic states — known, unattributed, unknown, not assessed —
+ * MUST NEVER share a visual treatment, and 🚫 colour never encodes any of them
+ * alone. Each carries a distinct border style AND a distinct written label, so
+ * the distinction survives greyscale, colour-blindness and a screenshot.
+ */
+
+:root {
+  color-scheme: light;
+
+  --age-bg: 0 0% 100%;
+  --age-surface: 220 14% 98%;
+  --age-border: 220 13% 88%;
+  --age-text: 222 22% 16%;
+  --age-text-muted: 220 9% 43%;
+
+  /* Known — AGE has a value AND an attributed source for it. */
+  --age-known: 158 54% 32%;
+  /* Unattributed — AGE has a value, but no source it can point at. */
+  --age-unattributed: 38 82% 38%;
+  /* Unknown — AGE looked, and there is nothing. A correct, final answer. */
+  --age-unknown: 222 12% 45%;
+  /* Not assessed — AGE has not looked. 🚫 NEVER rendered as zero or empty. */
+  --age-not-assessed: 265 30% 48%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --age-bg: 222 24% 9%;
+    --age-surface: 222 20% 13%;
+    --age-border: 220 14% 24%;
+    --age-text: 220 18% 92%;
+    --age-text-muted: 220 10% 65%;
+
+    --age-known: 158 44% 55%;
+    --age-unattributed: 38 72% 60%;
+    --age-unknown: 220 10% 62%;
+    --age-not-assessed: 265 40% 72%;
+  }
+}
+
+body {
+  background-color: hsl(var(--age-bg));
+  color: hsl(var(--age-text));
+}
+
+/*
+ * The state chip. ⚠️ The `::before` glyph and the text label are NOT decoration —
+ * they are what makes the states distinguishable without colour. 🚫 Do not
+ * remove either to make the interface tidier.
+ */
+.age-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+
+.age-state::before {
+  font-weight: 700;
+}
+
+.age-state--known {
+  border: 1px solid hsl(var(--age-known));
+  color: hsl(var(--age-known));
+}
+.age-state--known::before {
+  content: '●';
+}
+
+.age-state--unattributed {
+  border: 1px dashed hsl(var(--age-unattributed));
+  color: hsl(var(--age-unattributed));
+}
+.age-state--unattributed::before {
+  content: '◐';
+}
+
+.age-state--unknown {
+  border: 1px solid hsl(var(--age-unknown));
+  border-style: double;
+  color: hsl(var(--age-unknown));
+}
+.age-state--unknown::before {
+  content: '○';
+}
+
+.age-state--not-assessed {
+  border: 1px dotted hsl(var(--age-not-assessed));
+  color: hsl(var(--age-not-assessed));
+}
+.age-state--not-assessed::before {
+  content: '—';
+}
