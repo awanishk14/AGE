@@ -1,9 +1,11 @@
 # ADR-0057 — The Operator Console, and the loopback invariant that makes it safe
 
-Status: Proposed
-🚫 **This is a decision request and must NOT be self-accepted.** It introduces a new surface and it
-stands underneath a security ceiling the architect did not author — neither is within the §2 grant.
-🛑 **No code may be written from this ADR before acceptance** (D9).
+Status: **Accepted** — by the **Product Owner**, 2026-08-03, in their own words (§0.6).
+🚫 **NOT self-accepted.** The architect proposed it and did not accept it; the acceptance is quoted
+verbatim in §0.6 and was given in a message that also directed the work that follows it.
+⚠️ **Acceptance authorizes the console. It does NOT discharge ADR-0055 D7** (the operator’s own
+write), 🚫 does not reopen D4’s withdrawn write permission, and 🚫 does not answer open questions
+2, 3 and 4, which remain stops (§6).
 Date: 2026-08-03
 Relates to: ADR-0026 D4 (absence is a limitation, never negative evidence), ADR-0027 (readiness is a
 separate named entry point, never a gate on `run`), ADR-0046 D5 (RLS is coherence, not authorization)
@@ -99,6 +101,56 @@ already built.
 
 🚫 **The freeze is not a licence to skip governance.** An ADR is still required for each area; there
 are simply fewer areas an ADR may be written about.
+
+---
+
+### 0.6 Acceptance (Product Owner, 2026-08-03)
+
+✅ **Accepted.** Recorded verbatim:
+
+> "I would do one thing immediately: Accept ADR-0057. I don’t think there’s much value in keeping
+> it in Proposed. The concern Claude has is governance ("don’t self-authorize"), which is correct.
+> But from a product standpoint, you’ve already made the decision. Once ADR-0057 is Accepted, it
+> becomes the foundation for all frontend work."
+
+And, in the same message, the direction that follows from it:
+
+> "Accept ADR-0057, stop writing major product documentation, and begin implementing AGE Studio.
+> Use the existing Product Bible, OX documents, Design System, and AGE Studio document as the
+> source of truth. Only create ADRs when a new architectural decision is actually required. Focus
+> engineering effort on delivering the Studio shell and progressively replacing CLI-only workflows
+> with Studio interfaces while preserving the existing backend contracts."
+
+⚠️ **This ADR was NOT self-accepted.** The precedent ran in full: #224 merged it as `Proposed`,
+#225 recorded answers and an endorsement **without** treating either as acceptance, and this PR
+flips `Status` with the Product Owner’s own note. 🚫 The architect never accepted it.
+
+#### What acceptance does, and what it does not
+
+| ✅ Now authorized                                                    | 🚫 Still NOT authorized                                                 |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| A local, loopback-only Operator Console exists (D1, D2)              | Any write of any kind (D4, D8)                                          |
+| The Studio shell, navigation, layout and components (`OX_07` Wave 1) | Reading a real business’s snapshots — **ADR-0055 D7** is undischarged   |
+| Wiring screens to packages that need no database                     | Exposing the console off `127.0.0.1` (D2, D6, D7)                       |
+| Beginning the identity track as ADR J, `Status: Proposed`            | Treating `OperatorPrincipal` as an authorization decision (ADR-0053 D4) |
+
+⚠️ **The single most important consequence to not misread:** acceptance unblocks the _console_. It
+does not unblock the _data_. 🛑 ADR-0055 D7 still requires that one real business has passed through
+the shipped CLI path before any screen reads a snapshot back — the Product Owner reaffirmed that
+rule on the same day: _"That rule has protected the architecture over and over. Don’t weaken it
+now."_ 🚫 **Do not seed a row to unblock a screen.**
+
+#### The instruction to stop writing documentation
+
+✅ Adopted. From here the source of truth is: `docs/product/01`–`18`, `OX_00`–`OX_07`,
+`17_DESIGN_SYSTEM.md` and this ADR. ⚠️ **One exception the Product Owner named themselves** — the
+**AGE Studio Screen Specification**, one page per screen, which they asked for as the implementation
+contract between product and engineering. That is the last planned document.
+
+🚫 **"Only create ADRs when a new architectural decision is actually required" is not a licence to
+skip one when it is.** Three are already known to be required and are unaffected by this
+instruction: **ADR J** (entitlement), **ADR B** (the console’s HTTP surface and how OX-INV-1 is
+enforced in code) and **ADR C** (where rendering logic lives, per the ADR-0048 precedent).
 
 ---
 
@@ -214,14 +266,17 @@ scheduled or backgrounded · no `clientId`, `organizationId` or `OperatorPrincip
 🚫 **No `EvidenceSourceClass` facet and no `QUESTION`/`ENGAGEMENT` signal types** — ADR-0056 D1 and D2
 were **rejected**, and this ADR 🚫 does not re-propose them.
 
-### D9 — No code before acceptance
+### D9 — No code before acceptance ✅ **DISCHARGED 2026-08-03**
 
-🚫 Nothing in this ADR or in `OX_00`–`OX_07` is authorized. The program documents are a record and a
-plan. Each wave in `OX_07` names the ADR that must be Accepted first.
+✅ **Acceptance was given (§0.6), so D9 no longer blocks.** Code may be written from this ADR.
 
-⚠️ **And acceptance of this ADR does not discharge ADR-0055 D7.** Wave 2 onward is blocked on the
-**operator's own** D6 write. 🚫 Do not seed a row — a seeded row proves only that the reader reads what
-this repository wrote.
+⚠️ Each wave in `OX_07` still names the ADR that must be Accepted before it. D9 gated _this_ ADR;
+🚫 it did not pre-authorize the others. **ADR B, ADR C and ADR J are still required and still
+`Proposed`-first.**
+
+🛑 **And acceptance of this ADR does not discharge ADR-0055 D7.** Wave 2 onward is blocked on the
+**operator’s own** D6 write. 🚫 Do not seed a row — a seeded row proves only that the reader reads
+what this repository wrote.
 
 ---
 
@@ -290,8 +345,11 @@ named areas).
 **less urgent but not moot**: the console cannot write the file either way, so the question is now
 about the CLI's future, not the console's.
 
-🛑 **5 — OPEN. Is the knowledge graph fed, or retired?** ⚠️ **Also deferred by the freeze** (ADR I).
-A long-standing orphan either way.
+✅ **5 — ANSWERED 2026-08-03: neither fed as a store, nor retired as an idea.** Verbatim in
+`18_AGE_STUDIO.md` §5: _"I don’t think AGE should become a graph database product… You need graph
+thinking."_ 🚫 No Neo4j, no graph store; storage stays relational; the relationships are **rendered**
+as a graph. **ADR I remains ⏸️ DEFERRED** by the §0.5 freeze, and that deferral is now correct for a
+second reason: it was never the missing piece.
 
 ✅ **6 — ANSWERED 2026-08-03: start the J→K→L track NOW, in parallel.** Verbatim in §0.4. The owner's
 reasoning is recorded because it is stronger than the ADR's own: _"you are one step away from somebody
