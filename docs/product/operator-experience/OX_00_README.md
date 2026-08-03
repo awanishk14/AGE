@@ -10,7 +10,8 @@
 > ⚠️ **Read [`../18_AGE_STUDIO.md`](../18_AGE_STUDIO.md) first.** The Product Owner corrected the
 > framing on 2026-08-03: the console **is the product**, not a feature that follows the architecture.
 > Doc 18 records that inversion, maps this program's S1–S13 onto the Studio workspaces, fixes the
-> **V1 read-only / V2 workspace** line, and moves **identity to second in the order**.
+> **V1 / V2 workspace** line (⚠️ **no longer a read/write line — see ADR-0057 D4's three action
+> classes**), and moves **identity to second in the order**.
 > 🚫 It authorizes no code, and 🚫 it does not amend ADR-0057's `Proposed` status.
 
 ## Why this exists
@@ -97,11 +98,16 @@ none, and 🚫 it must never be described as proving the console is unreachable.
    most load-bearing rendering rule in the program.
 3. **A low score is a correct result.** No screen offers an affordance that improves a score. There
    is no "boost", no "recalculate", no cap to raise. The console cannot make AGE more confident.
-4. **The console is READ-ONLY and performs no write at all.** _(Product Owner, 2026-08-03 — ADR-0057
-   D4 as amended.)_ It is a window, and nothing else: ✅ View · Browse · Inspect · Understand ·
-   🚫 never Modify, Execute, Approve or Delete. Reads travel over a connection **structurally
-   incapable of writing**. 🛑 A future write surface requires a **NEW ADR**, and 🚫 may not be reached
-   by increments.
+4. **Three action classes, not "read-only."** _(Product Owner, 2026-08-03 — **ADR-0057 §0.7 and D4**,
+   which 🚫 RETIRED the term "read-only" as ambiguous.)_ ✅ **Platform Administration** (create
+   organization, invite members, create client, configure integrations) and ✅ **Knowledge Authoring**
+   (discovery questionnaire, generate BIF, manual notes, attach evidence) are **allowed in V1**.
+   🚫 **Business Execution** — RankOps, MCP Ads, publishing, campaigns, **any action affecting an
+   external system** — is **refused**. The invariant, verbatim: **"Human-authored knowledge is
+   permitted. System-initiated execution remains prohibited until the execution layer is enabled."**
+   ⚠️ **Anything scheduled, queued, backgrounded or acted on AGE's own initiative is class 3 even if
+   its effect is purely internal.** 🛑 Opening class 3 requires **ADR L**, and 🚫 may not be reached
+   by increments. ⚠️ **Read D4 before applying this — it is the canonical definition.**
 5. **Peer products are shown, never absorbed** (ADR-0053). AGE displays what a peer product's public
    contract returns and reasons over it. It renders no peer product's UI and reimplements no peer
    product's screens.

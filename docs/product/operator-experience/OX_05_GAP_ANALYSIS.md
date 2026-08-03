@@ -36,11 +36,14 @@
 ⚠️ **Amended 2026-08-03: G-14 is now on the critical path by owner decision** — the J→K→L track starts
 **now, in parallel**, and Identity is one of the three named areas of primary effort under the
 architecture freeze. 🚫 Loopback-only is what made deferring G-14 _survivable_, never what made it
-_unnecessary_, and ⚠️ the console being **read-only does not discharge it**: a surface that cannot
-write can still read the wrong tenant's snapshots.
+_unnecessary_, and ⚠️ **no action-class rule discharges it**: a surface that never writes can still read the wrong
+tenant's snapshots. ⚠️ **The 2026-08-03 clarification (ADR-0057 §0.7) made this SHARPER, not softer** —
+now that Platform Administration and Knowledge Authoring are allowed, a mis-scoped call can **write**
+under the wrong tenant too, so 🚫 the "lower blast radius" argument no longer applies.
 
-⏸️ **Deferred by the freeze:** G-8 (peers) and G-11 (knowledge graph). 🚫 **Moot under read-only:**
-G-13 (console-authored records) and the console half of G-5.
+⏸️ **Deferred by the freeze:** G-8 (peers) and G-11 (knowledge graph).
+🛑 **G-13 and the console half of G-5 are NO LONGER MOOT** — they were moot only while the console
+could not write, and ADR-0057 §0.7 reversed that. They are **live gaps again.**
 
 ---
 
@@ -150,7 +153,12 @@ render an empty graph and imply AGE knows more than it does.
 
 ---
 
-## G-13 — Live organization onboarding 🟡 — 🚫 **MOOT for the console (read-only, 2026-08-03)**
+## G-13 — Live organization onboarding 🟡 — 🛑 **REOPENED 2026-08-03 (ADR-0057 §0.7)**
+
+⚠️ Previously marked moot because the console could not write. **Create Organization and Create Client
+are now Platform Administration, an ✅ allowed class**, so this gap is live and must be designed rather
+than dismissed. 🛑 **Invite Members is NOT unblocked by it** — there is no identity to invite anyone
+into, and 🚫 an invitation must never be treated as an access grant (ADR-0057 §0.7 note 1).
 
 Records are hand-authored files. A console-driven flow is possible **only outside the repository**, and
 🚫 records are never committed — not even redacted or masked. ⚠️ Visibility is **not** a control: the

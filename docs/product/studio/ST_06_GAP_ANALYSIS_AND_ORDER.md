@@ -36,6 +36,10 @@ forbids.
 
 Each milestone is shippable, honest on its own, and 🚫 depends on nothing later.
 
+⚠️ **Updated 2026-08-03 (ADR-0057 §0.7).** The three action classes changed **which milestones are
+possible**, not their order: authoring is no longer the blocker for M2, and a **new M2b** (create
+client) becomes buildable. 🚫 M3 onward is unchanged — none of it was gated on the write permission.
+
 ### M1 — Make the shell tell the truth about itself _(no acceptance, no database, no decision)_
 
 1. **System Status indicator** (ADR-0058 D6) — 🚫 Identity never green; 🚫 "Last onboarding" reads
@@ -50,7 +54,16 @@ Each milestone is shippable, honest on its own, and 🚫 depends on nothing late
 5. Add `rationale` to `DiscoveryQuestion` — 🚫 the "why this matters" copy belongs on the contract,
    never in a component, or the CLI and the console explain the same question differently.
 6. **Discovery S4** — 9 sections, 17 questions, real validation, progress counting **answered**,
-   🛑 submission **disabled** with the reason on screen.
+   🛑 submission **disabled** with the reason on screen. ⚠️ **The reason changed** — it is no longer
+   "the console is read-only" (✅ authoring is class 2) but **ADR-0054 D6's five conditions** and
+   **ADR-0057 §6 q4**, and the screen must say _that_.
+
+### M2b — Create Client _(now permitted: ADR-0057 D4 class 1)_
+
+6b. **A create-client affordance on S2**, writing the operator's record file. 🚫 Outside the
+repository, 🚫 path never defaulted (ADR-0054 D2), 🚫 never committed (ADR-0053 D3), 🚫 no delete
+and 🚫 no edit. 🛑 **Create Organization does NOT come with it** — there is no tenant aggregate,
+and the band on S2 stays **derived** (ADR-0058 D4).
 
 ### M3 — The operator's own onboarding run _(not the architect's)_
 
@@ -89,11 +102,14 @@ Each milestone is shippable, honest on its own, and 🚫 depends on nothing late
 🛑 **These are the Product Owner's. Every one of them gates work above, and 🚫 none may be resolved by
 building a screen that assumes an answer.**
 
-1. **Does the console stay read-only?** You answered _"strictly READ-ONLY"_ on 2026-08-03, and the
-   journey you have now described opens with **create organization → invite members → create client →
-   submit discovery** — four writes. ⚠️ Both cannot be true. The read-only answer is what currently
-   makes "no authentication yet" coherent (ADR-0057 D2's whole argument), so 🚫 relaxing it is not a
-   small change: it makes authentication a precondition rather than a deferral (ADR-0053 dissent 1).
+1. ✅ **ANSWERED 2026-08-03 — ADR-0057 §0.7, the three action classes.** _"The previous 'read-only'
+   statement was intended to prohibit autonomous execution, not operator-authored data entry."_
+   ✅ Platform Administration and ✅ Knowledge Authoring are allowed; 🚫 Business Execution is refused.
+   ⚠️ **The consequence flagged when this was asked still holds:** the read-only answer was what made
+   "no authentication yet" coherent, so allowing writes 🛑 **moves authentication from a deferral toward
+   a precondition** (ADR-0053 dissent 1; ADR-0058 D7). 🚫 It does not become urgent the moment a write
+   ships — it becomes urgent the moment a **second person** can reach the surface, which is why
+   **Invite Members is the one class-1 item that must not ship before ADR K.**
 2. **Is the tenant boundary the organization or the client?** ADR-0058 §6 q1. It changes the
    entitlement type and the shape of every scoped read.
 3. **Is execution re-introduced?** ADR-0057 q3. Screen S10 does not exist as a product until this is

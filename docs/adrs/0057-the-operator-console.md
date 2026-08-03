@@ -4,8 +4,10 @@ Status: **Accepted** — by the **Product Owner**, 2026-08-03, in their own word
 🚫 **NOT self-accepted.** The architect proposed it and did not accept it; the acceptance is quoted
 verbatim in §0.6 and was given in a message that also directed the work that follows it.
 ⚠️ **Acceptance authorizes the console. It does NOT discharge ADR-0055 D7** (the operator’s own
-write), 🚫 does not reopen D4’s withdrawn write permission, and 🚫 does not answer open questions
-2, 3 and 4, which remain stops (§6).
+write), and 🚫 does not answer open questions 2, 3 and 4, which remain stops (§6).
+⚠️ **CLARIFIED 2026-08-03 — §0.7 and a rewritten D4.** The term **“read-only” is RETIRED**; the rule
+is the **three action classes**: ✅ Platform Administration · ✅ Knowledge Authoring ·
+🚫 **Business Execution refused.** 🚫 Do not cite §0.4’s “strictly READ-ONLY” as current.
 Date: 2026-08-03
 Relates to: ADR-0026 D4 (absence is a limitation, never negative evidence), ADR-0027 (readiness is a
 separate named entry point, never a gate on `run`), ADR-0046 D5 (RLS is coherence, not authorization)
@@ -56,6 +58,11 @@ different trust model, and it must never be promoted into Doc 07's product.
 
 ### 0.4 The Product Owner's answers to open questions 1 and 6 (2026-08-03)
 
+> 🛑 **THE ANSWER TO QUESTION 1 BELOW IS SUPERSEDED BY §0.7** — "strictly read-only" was clarified
+> the same day to mean **no autonomous execution**, not **no operator-authored data entry**.
+> ⚠️ It is kept verbatim because it is the record and because its _reasoning_ still binds; 🚫 do not
+> cite it as the current rule. **The answer to question 6 stands unchanged.**
+
 ⚠️ **This ADR is STILL `Status: Proposed`.** The Product Owner answered **two of the six** open
 questions in §6 and endorsed the reasoning, but 🚫 **did not accept the ADR**, and explicitly named
 that as correct: _"He refused to silently reinterpret your instruction. ADR-0057 is Proposed, not
@@ -76,9 +83,13 @@ acceptance, and do not self-accept on the strength of it.**
 > happens, D9 becomes a production problem instead of an architectural note. So I would not postpone
 > entitlement until after the UI."
 
-**Consequences, applied below:** D4 is amended to remove the conditional capture · D8 gains the
-read-only refusal · §6 questions 1 and 6 are struck as answered · `OX_07`'s **Wave 3 is deleted**
-and the J-track is promoted ahead of the console waves.
+**Consequences as applied at the time:** D4 was amended to remove the conditional capture · D8 gained
+the read-only refusal · §6 questions 1 and 6 were struck as answered · `OX_07`'s Wave 3 was deleted
+and the J-track promoted ahead of the console waves.
+🛑 **§0.7 then reversed the first, second and fourth of those.** D4 is rewritten around the three
+action classes, D8 refuses **class 3** rather than every write, and `OX_07`'s Wave 3 is **un-deleted**
+(and blocked on other grounds). ⚠️ **The J-track promotion stands, and is now more strongly
+justified**, not less.
 
 ⚠️ Four questions — **2 (which peer first), 3 (execution), 4 (the answer file), 5 (the knowledge
 graph)** — 🛑 **remain open and are still stops.**
@@ -129,7 +140,7 @@ flips `Status` with the Product Owner’s own note. 🚫 The architect never acc
 
 | ✅ Now authorized                                                    | 🚫 Still NOT authorized                                                 |
 | -------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| A local, loopback-only Operator Console exists (D1, D2)              | Any write of any kind (D4, D8)                                          |
+| A local, loopback-only Operator Console exists (D1, D2)              | Any class-3 Business Execution (D4, D8) — ⚠️ **§0.7 rewrote this row**  |
 | The Studio shell, navigation, layout and components (`OX_07` Wave 1) | Reading a real business’s snapshots — **ADR-0055 D7** is undischarged   |
 | Wiring screens to packages that need no database                     | Exposing the console off `127.0.0.1` (D2, D6, D7)                       |
 | Beginning the identity track as ADR J, `Status: Proposed`            | Treating `OperatorPrincipal` as an authorization decision (ADR-0053 D4) |
@@ -151,6 +162,52 @@ contract between product and engineering. That is the last planned document.
 skip one when it is.** Three are already known to be required and are unaffected by this
 instruction: **ADR J** (entitlement), **ADR B** (the console’s HTTP surface and how OX-INV-1 is
 enforced in code) and **ADR C** (where rendering logic lives, per the ADR-0048 precedent).
+
+### 0.7 The "read-only" clarification — three action classes (Product Owner, 2026-08-03)
+
+⚠️ **This SUPERSEDES §0.4's answer to open question 1 and rewrites D4.** Recorded verbatim:
+
+> "The previous 'read-only' statement was intended to prohibit autonomous execution, not
+> operator-authored data entry. Please update the Studio model accordingly. Distinguish three
+> categories: **Platform Administration (allowed in V1)** — Create Organization, Invite Members,
+> Create Client, Configure Integrations. **Knowledge Authoring (allowed in V1)** — Discovery
+> Questionnaire, Generate BIF, Manual Notes, Attach Evidence. **Business Execution (not allowed in
+> V1)** — Execute RankOps, Execute MCP Ads, Publish Content, Trigger Campaigns, Any action affecting
+> external systems. Update ADR-0057, the Operator Experience documents, and Studio documentation to
+> replace the ambiguous term 'read-only' with these three categories. The invariant is: **Human-authored
+> knowledge is permitted. System-initiated execution remains prohibited until the execution layer is
+> enabled.** No additional ADR is needed if this is merely a clarification of intent rather than a
+> change to the execution model."
+
+**Why no new ADR, stated plainly so the judgement can be checked.** The execution model is
+unchanged: the boundary AGE actually defends has always been _"nothing reaches an external system,
+and nothing acts on its own"_, and that boundary moves nowhere. What changed is a **term**:
+"read-only" was read as a statement about _bytes written_ when it was meant as a statement about
+_who initiates_. 🚫 The architect will not use this clarification to authorize anything outside the
+three lists above.
+
+⚠️ **But three consequences follow that a clarification does not make disappear, and 🚫 none may be
+absorbed silently:**
+
+1. 🛑 **"Invite Members" is a second person, and a second person needs authentication FIRST**
+   (ADR-0053 dissent 1; D3 above; ADR-0058 D7). ✅ **Authoring an invitation record is permitted.**
+   🚫 **An invitation must never grant access**, because there is nothing to grant it to and nothing
+   to check it with. Until ADR K exists, an invitation is **a written intention, not a credential**,
+   and Studio must say so on the screen that creates it.
+2. 🛑 **"Configure Integrations" means credentials for external systems, and AGE has no secret
+   store.** ✅ Non-secret configuration (which peer product, which account identifier) is permitted.
+   🚫 **No credential, token or API key may be captured, stored or committed** until a secret store
+   is decided — that is a genuine architectural gap and it will need its own ADR.
+3. ⚠️ **Writes make OX-INV-1 load-bearing in a way reads never did.** §0.4's _"a surface that cannot
+   write cannot be tricked into writing for the wrong tenant"_ is 🚫 **no longer true**, and the
+   refusal class it removed is **back**. Loopback remains **necessary, not sufficient**.
+
+⚠️ **What this does NOT repeal, named explicitly because a write permission invites the assumption:**
+🚫 ADR-0055 D7 (no read path until a real business has passed through the shipped CLI path — 🚫 do not
+seed a row) · 🚫 ADR-0054 D6's **five conditions** on `produceAndCapture`, and ADR-0046 D7 elsewhere ·
+🚫 ADR-0054 D2/D3 (an operator file's path is never defaulted; an unknown `clientId` refuses) ·
+🚫 ADR-0053 D4 (`OperatorPrincipal` is never an authorization decision) · 🚫 the BIF `Draft → Active`
+refusal, and every other item in D8 that is not a write.
 
 ---
 
@@ -202,26 +259,54 @@ carries.
 🚫 It must never be promoted into a multi-user surface by increments. The moment a second person can
 act, or the surface is reachable off the machine, **D6 and D7 below become mandatory first.**
 
-### D4 — **The console is READ-ONLY. It performs no write at all.** _(amended per §0.4)_
+### D4 — **The three action classes** _(rewritten per §0.7; supersedes the "read-only" formulation)_
 
-⚠️ **Amended 2026-08-03 by the Product Owner's answer to open question 1.** The earlier text
-permitted a confirmed capture "only if the owner answers question 1 affirmatively". The answer was
-**read-only**, so that permission is 🚫 **withdrawn**.
+🚫 **The term "read-only" is RETIRED and must not be used of the console anywhere.** It was
+ambiguous in exactly the way that matters: it named a property of _bytes_ when the Product Owner
+meant a property of _who initiates_. ⚠️ **This section is the canonical definition** — every other
+document points here rather than restating it, so that there is one place to change.
 
-Version 1 is **View · Browse · Inspect · Understand**, and 🚫 **never Modify, Execute, Approve or
-Delete.** The console opens **no write connection of any kind** — reads travel over a connection
-**structurally incapable of writing**, not a writable one used politely.
+**THE INVARIANT** (Product Owner, verbatim, §0.7):
 
-🚫 It does not capture. 🚫 It does not write the answer file. 🚫 It does not author a client record.
-🚫 It has no authority over any data. 🚫 Nothing scheduled, backgrounded or automated.
+> **Human-authored knowledge is permitted. System-initiated execution remains prohibited until the
+> execution layer is enabled.**
 
-⚠️ **The CLI remains the only write surface**, and the owner's reason is the load-bearing part:
-_"the UI should first prove that it can accurately represent AGE's thinking. Only then should it
-become an action surface."_ 🛑 **Any future write requires a NEW ADR** — 🚫 it may not be reached by
-increments, and 🚫 "the operator confirmed it" is not a substitute for that ADR.
+| Class                           | V1             | Contains                                                                                                              | The test that decides membership                                                                |
+| ------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **1 · Platform Administration** | ✅ **Allowed** | Create Organization · Invite Members · Create Client · Configure Integrations                                         | Writes AGE's own record of **who and what it is working for**. Effect stops at AGE's storage.   |
+| **2 · Knowledge Authoring**     | ✅ **Allowed** | Discovery Questionnaire · Generate BIF · Manual Notes · Attach Evidence                                               | A **human** states or supplies something AGE then reasons over. Effect stops at AGE's storage.  |
+| **3 · Business Execution**      | 🚫 **REFUSED** | Execute RankOps · Execute MCP Ads · Publish Content · Trigger Campaigns · **any action affecting an external system** | Something happens **outside AGE**, or happens **without a human initiating it at that moment**. |
 
-✅ **This makes OX-INV-1 materially easier to hold** and removes an entire refusal class: a surface
-that cannot write cannot be tricked into writing for the wrong tenant.
+⚠️ **Two independent tests put an action in class 3, and either one alone is sufficient:**
+
+1. **Does anything change outside AGE?** Then it is execution, however small, however reversible,
+   and 🚫 however clearly the operator asked for it.
+2. **Did a human initiate this _specific_ act, now?** If it is scheduled, queued, retried,
+   backgrounded, triggered by a state change, or performed on the operator's behalf "because the
+   BIF said so" — 🚫 it is execution even if its effect is entirely internal.
+
+🚫 **Test 2 is the one that will be argued away.** An autosave loop, a "keep the BIF fresh" job, a
+recompute-on-open, an agent acting on a recommendation: each writes only AGE's own data and each is
+**refused**. The invariant says _human-authored_, and a scheduler is not a human.
+
+🚫 **Still refused inside the allowed classes** — an allowed class is a permission to _author_, never
+a permission to bypass a decision that has nothing to do with writing: 🚫 no approval or execution
+affordance anywhere (class 3) · 🚫 no `Draft → Active` promotion · 🚫 no snapshot edit, delete,
+restore, version or "set current" (they are **append-only**) · 🚫 no score improved, recomputed,
+overridden or capped · 🚫 no placeholder-filling and no fabricated provenance · 🚫 no `clientId`,
+`organizationId` or `OperatorPrincipal` defaulted · 🚫 no credential or API key stored (§0.7, note 2) ·
+🛑 **no read of a real business's snapshot until ADR-0055 D7 is discharged, and 🚫 no seeded row.**
+
+⚠️ **The reason the Product Owner gave for the original answer still binds and is not repealed by
+this rewrite:** _"the UI should first prove that it can accurately represent AGE's thinking. Only
+then should it become an action surface."_ Class 3 is the action surface, and it stays shut.
+🛑 **Opening it requires ADR L** — 🚫 it may not be reached by increments, and 🚫 "the operator
+confirmed it" is not a substitute for that ADR.
+
+⚠️ **A write connection now exists**, so 🚫 the claim that reads travel over a connection structurally
+incapable of writing 🚫 **no longer describes the console.** The refusal class §0.4 believed it had
+removed — being tricked into writing for the wrong tenant — is **back**, and it is bounded only by
+OX-INV-1 and the entitlement work of ADR-0058. ⚠️ Loopback is **necessary, not sufficient**.
 
 ### D5 — Rendering rules that are invariants, not styling
 
@@ -255,9 +340,10 @@ caller who can still assert any scope.
 
 ### D8 — Categorical refusals
 
-🚫 **No write of any kind, and no writable connection opened** (D4 as amended) · no capture · no
-answer-file authoring · no approval or execution affordance · 🚫 **no authentication or second user
-modelled** · no non-loopback bind · no BIF `Draft → Active`
+🚫 **No class-3 action of any kind** (D4 as rewritten by §0.7) — 🚫 nothing reaching an external
+system, and 🚫 nothing scheduled, queued, retried, backgrounded or performed on the operator's
+behalf · no approval or execution affordance · 🚫 **no authentication or second user
+modelled, and 🚫 an invitation is never an access grant** · no non-loopback bind · no BIF `Draft → Active`
 promotion · no placeholder-filling · no score improved, recomputed, overridden or capped · unknown
 never converted into good or bad · no snapshot edited, deleted or versioned · no write to a peer
 product and no peer UI rendered · no fabricated provenance, sections, scores or conclusions · nothing
@@ -332,8 +418,11 @@ ADR-0054 D6's five conditions are untouched.
 
 These are stops, not architect decisions.
 
-✅ **1 — ANSWERED 2026-08-03: strictly READ-ONLY.** Verbatim in §0.4. D4 is amended, D8 gains the
-refusal, and `OX_07`'s Wave 3 is deleted. 🚫 Do not reopen it by increments.
+✅ **1 — ANSWERED 2026-08-03, then CLARIFIED the same day. ⚠️ Read §0.7, NOT §0.4.** The answer is
+**not** "read-only": it is the **three action classes** of D4 — Platform Administration ✅ and
+Knowledge Authoring ✅ are allowed in V1; **Business Execution 🚫 is refused** until the execution
+layer is enabled. 🚫 Do not cite §0.4's "strictly READ-ONLY" as current, and 🚫 do not reopen class 3
+by increments.
 
 🛑 **2 — OPEN. Which peer product is first?** Dissent 3 is deliberately open — RankOps is unfinished,
 so mcp-ads may be right. ⚠️ **Now also deferred by the §0.5 freeze** (ADR H is outside the three
@@ -341,9 +430,11 @@ named areas).
 
 🛑 **3 — OPEN. Is execution re-introduced?** The revert of PRs #41–#61 was deliberate.
 
-🛑 **4 — OPEN. Does the answer file remain the author of record?** ⚠️ The read-only answer makes this
-**less urgent but not moot**: the console cannot write the file either way, so the question is now
-about the CLI's future, not the console's.
+🛑 **4 — OPEN, and ⚠️ §0.7 made it URGENT again.** Does the answer file remain the author of record?
+Knowledge Authoring is now an allowed class, so the console **can** author discovery answers — which
+means there are about to be **two** authors of the same knowledge, the file and the console. 🚫 That
+must be answered before Discovery's submit is enabled, or AGE acquires a second, invisible source of
+truth (`ST_03` F4). ⚠️ **An allowed action class is not an answer to this question.**
 
 ✅ **5 — ANSWERED 2026-08-03: neither fed as a store, nor retired as an idea.** Verbatim in
 `18_AGE_STUDIO.md` §5: _"I don’t think AGE should become a graph database product… You need graph

@@ -92,19 +92,22 @@ The Product Owner has stated both of the following, on the same day, and **both 
 They are not in conflict. They are **V1 and V2**, and the boundary between them is not a feature
 boundary — it is the point at which AGE stops being able to name who acted.
 
-|             | **Studio V1 — the honest mirror**                                            | **Studio V2 — the workspace**                             |
-| ----------- | ---------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Trust model | One operator, one machine, loopback only                                     | Multiple people, multiple organisations, networked        |
-| Actions     | **Read only** (⚠️ see §2.1 — an _operator workflow_ is a separate class)     | Author · approve · execute                                |
-| Identity    | 🚫 None. `OperatorPrincipal` is a **label**, never an authorization decision | Authenticated, entitled, attributed                       |
-| Gate        | **ADR-0057** (`Proposed`)                                                    | **ADR J → K → L** (entitlement), 🚫 none written yet      |
-| Proves      | That AGE can represent its own thinking without lying                        | That AGE can be operated by someone other than its author |
+|             | **Studio V1 — the honest mirror**                                                                                     | **Studio V2 — the workspace**                             |
+| ----------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Trust model | One operator, one machine, loopback only                                                                              | Multiple people, multiple organisations, networked        |
+| Actions     | ✅ **Platform Administration + Knowledge Authoring** (ADR-0057 D4; 🚫 the term "read only" is **retired** — see §2.1) | 🚫 **Business Execution** · approve · execute             |
+| Identity    | 🚫 None. `OperatorPrincipal` is a **label**, never an authorization decision                                          | Authenticated, entitled, attributed                       |
+| Gate        | **ADR-0057** (`Proposed`)                                                                                             | **ADR J → K → L** (entitlement), 🚫 none written yet      |
+| Proves      | That AGE can represent its own thinking without lying                                                                 | That AGE can be operated by someone other than its author |
 
 ⚠️ **V1 is not a lesser Studio. It is the only version that can be built before identity exists**, and
 it answers the question the Product Owner actually asked — _"where are we seeing those intelligence"_.
 
-🚫 **V2 may not be reached by increments.** No V1 screen grows a write. A write needs a new ADR, and
-that ADR is blocked on entitlement, not on UI effort.
+🚫 **V2 may not be reached by increments.** ⚠️ **Restated 2026-08-03 (ADR-0057 §0.7), because the old
+wording is now wrong:** the line is 🚫 **not** "no V1 screen grows a write" — V1 screens _do_ write.
+The line is that 🚫 **no V1 screen grows a class-3 Business Execution affordance**, and 🚫 **no V1
+screen grows a second user.** Both need a new ADR (**L** and **K**), and both are blocked on
+entitlement, not on UI effort.
 
 ---
 
@@ -116,6 +119,14 @@ workflow. Therefore I am comfortable with the Discovery onboarding eventually mo
 after the architecture has been proven through the CLI path. Strategy approvals and execution
 approvals remain V2 capabilities."_
 
+⚠️ **SUPERSEDED AND EXTENDED 2026-08-03 by ADR-0057 §0.7**, which retired the term "read-only" and
+named **three canonical classes**. 🚫 **ADR-0057 D4 is the definition; the table below is kept because
+its reasoning is still the reason class 3 is shut.** The mapping is:
+✅ **Platform Administration** and ✅ **Knowledge Authoring** are **allowed in V1** — this is the old
+"V1.5" category, now authorized. 🚫 **Business Execution** stays refused. The invariant, verbatim:
+**"Human-authored knowledge is permitted. System-initiated execution remains prohibited until the
+execution layer is enabled."**
+
 This splits what was one category into two:
 
 | Class                                                                  | Examples                                                                                               | Version                                                                                     |
@@ -124,15 +135,17 @@ This splits what was one category into two:
 | **Operator workflow** — the operator describing a business to AGE      | Authoring/editing a discovery answer set; running capture for a business the operator already controls | **V1.5** — 🛑 after the CLI path has been proven (ADR-0055 D7), and 🚫 only under a NEW ADR |
 | **Business action** — AGE acting on the world, or on behalf of someone | Strategy approval, execution approval, dispatching work to a peer product                              | **V2** — 🛑 requires identity and entitlement first                                         |
 
-⚠️ **V1.5 is a real permission change and is 🚫 NOT authorized by this document.** ADR-0057 D4 was
-rewritten in #225 to withdraw the console’s write permission entirely, and D8 refuses **every**
-write. Restoring a narrow write needs its own `Status: Proposed` ADR that states the boundary in
-code, not in prose — 🚫 it may not be reached by relaxing D8, and 🚫 not by an increment.
+✅ **V1.5 IS NOW AUTHORIZED — by the Product Owner, 2026-08-03, recorded in ADR-0057 §0.7**, which
+clarified that _"read-only"_ was aimed at **autonomous execution**, not **operator-authored data
+entry**. 🚫 It was 🛑 correctly refused up to that point, and 🚫 nothing here authorized it — the
+owner did. ⚠️ **The three conditions below were NOT discharged by that clarification and still hold
+in full.**
 
 ⚠️ **Three conditions travel with V1.5, and none is discharged by this clarification:**
 
 1. 🛑 **The CLI path must have been proven first** — ADR-0054 D6/D7. _"after the architecture has
    been proven through the CLI path"_ is the Product Owner’s own precondition, not a preference.
+   ⚠️ **Still undischarged**: no real business has passed through the shipped path. 🚫 Do not seed a row.
 2. 🚫 **`produceAndCapture` stays bound by ADR-0054 D6’s five conditions** — local database the
    operator controls, scope from a loaded `ClientRecord`, explicit confirmation, `produceOnly`
    default, and **no background execution, scheduling or automation**. A browser form does not
@@ -158,8 +171,10 @@ multiple organizations."_ ⚠️ **Identity cannot be last.** Three reasons, in 
    authorization boundary** (ADR-0046 D5). Today one operator on one machine contains this. The
    moment a second person can log in, it is a live data-isolation defect between paying customers.
 
-⚠️ **Read-only does not discharge it.** A console that cannot write can still _read_ another tenant's
-snapshots. Read-only lowers blast radius; it does not remove the defect.
+⚠️ **No action-class rule discharges it.** A console that never writes can still _read_ another
+tenant's snapshots — and since ADR-0057 §0.7 allowed Platform Administration and Knowledge Authoring,
+a mis-scoped call can **write** under another tenant too. 🚫 The "it only lowers blast radius"
+consolation no longer applies.
 
 This is also what the Product Owner instructed on 2026-08-03: _"Start entitlement (J → K → L) in
 parallel. I agree… I would not postpone entitlement until after the UI."_ The corrected order simply
@@ -170,10 +185,10 @@ honours that instruction:
 | 1   | Studio information architecture               | ✅ Done — `07`, `OX_02`, `17_DESIGN_SYSTEM.md`, this doc                          |
 | 2   | **Identity & entitlement (ADR J → K → L)**    | 🚫 Not started. **Authorized to begin as `Proposed` ADRs**, in parallel, from now |
 | 3   | Frontend skeleton, no backend change          | 🛑 Blocked on **ADR-0057**                                                        |
-| 4   | Discovery UI — same schema, rendered as forms | 🛑 ADR-0057 · ⚠️ read-only in V1                                                  |
+| 4   | Discovery UI — same schema, rendered as forms | ✅ Class 2 authoring; 🛑 **submit** on §6 q4 + ADR-0054 D6                        |
 | 5   | Business Intelligence UI (BIF visualization)  | 🛑 ADR-0057 · ⚠️ **and ADR-0055 D7**                                              |
 | 6   | Evidence Explorer                             | 🛑 ADR-0057 · ADR-0055 D7                                                         |
-| 7   | Strategy Center                               | 🛑 ADR-0057 · ⚠️ read-only; approval is V2                                        |
+| 7   | Strategy Center                               | 🛑 ADR-0057 · ⚠️ **rendering only**; approval + execution are class 3, V2         |
 | 8   | Execution Center (RankOps, MCP Ads, …)        | 🛑 ADR-0057 · **ADR H is deferred by the freeze**                                 |
 
 ⚠️ **Track 2 moved from #8 to #2. Every other item keeps the Product Owner's order.**
@@ -254,7 +269,8 @@ fifty-seven ADRs.
 
 ✅ **Adopted:** _"Every backend capability should immediately gain a visible home inside Studio,
 even if that home initially renders mock or read-only data before full runtime integration is
-completed."_ A capability with no home in Studio is, to the customer, indistinguishable from a
+completed."_ ⚠️ (Verbatim; here _"read-only"_ describes **data**, not the action model — for actions
+see §2.1 and ADR-0057 D4.) A capability with no home in Studio is, to the customer, indistinguishable from a
 capability that does not exist — so from here, **a backend slice is not complete until its home
 exists.**
 

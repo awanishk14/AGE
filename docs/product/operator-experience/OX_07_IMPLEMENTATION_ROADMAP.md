@@ -69,15 +69,23 @@ reconstructing a BIF would mean inventing version history and audit actors.
 
 ---
 
-## Wave 3 — ~~Capture from the console~~ 🚫 **DELETED 2026-08-03**
+## Wave 3 — Capture from the console 🛑 **UN-DELETED 2026-08-03, and still BLOCKED — for different reasons**
 
-🛑 **The Product Owner answered decision 1: the console is strictly READ-ONLY.** This wave —
-answer-file write-back, dry run, confirmed capture — is **deleted, not deferred.** ADR-0057 D4 is
-amended and D8 now refuses every write categorically.
+⚠️ **This wave was deleted on the "strictly read-only" answer, and ADR-0057 §0.7 clarified that answer
+the same day:** it prohibited **autonomous execution**, not **operator-authored data entry**. Discovery
+authoring is **Knowledge Authoring**, an ✅ allowed class, so 🚫 the deletion no longer stands.
 
-Verbatim: _"✅ View ✅ Browse ✅ Inspect ✅ Understand ❌ Modify ❌ Execute ❌ Approve ❌ Delete.
-Because your CLI is already your trusted operator interface. The UI should first prove that it can
-accurately represent AGE's thinking. Only then should it become an action surface."_
+🛑 **But the wave does not simply return.** Its three parts are now blocked separately, and 🚫 they must
+not be treated as one item:
+
+| Part                         | Status                                                                                                        |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Author answers in the UI** | ✅ Allowed (class 2) — the rendering half is buildable today                                                  |
+| **Write the answer file**    | 🛑 Blocked on ADR-0057 §6 **q4** — 🚫 do not create a second author of the same knowledge                     |
+| **Confirmed capture**        | 🛑 Blocked on ADR-0054 D6's **five conditions**; 🚫 nothing dry-run, scheduled or automatic — that is class 3 |
+
+⚠️ **The owner's original reasoning still binds and is why class 3 stays shut:** _"the UI should first
+prove that it can accurately represent AGE's thinking. Only then should it become an action surface."_
 
 🚫 **Do not resurrect any part of this wave**, and 🚫 do not reach a write by increments — no
 capture-on-save, no "just the answer file", no "the operator confirmed it". 🛑 **A future write
@@ -156,10 +164,11 @@ The owner's reasoning, verbatim, because it is sharper than this document's own:
 entitlement function to become the **only producer** of a `ClientContext` for persistence **before**
 any networked surface — 🚫 **never retrofitted under one.**
 
-⚠️ **The read-only answer does not discharge J.** A console that cannot write can still _read_ the
-wrong tenant's snapshots, because scope is asserted by the caller and RLS only checks it against
-itself. 🚫 Do not treat read-only as making entitlement optional — it lowers the blast radius, it does
-not remove the defect.
+⚠️ **No action-class rule discharges J.** A console that never writes can still _read_ the wrong
+tenant's snapshots, because scope is asserted by the caller and RLS only checks it against itself.
+⚠️ **ADR-0057 §0.7 made this worse, not better:** with Platform Administration and Knowledge Authoring
+allowed, a mis-scoped call now **writes** under the wrong tenant. 🚫 The "it only lowers the blast
+radius" consolation is gone — J is the mitigation.
 
 🛑 **L (execution) remains blocked on open question 3**, which is still unanswered.
 
@@ -172,7 +181,7 @@ Slice 0 (operator's run) ─────────────┐
                                        ▼
 ADR-0057 ── B,C ── Wave 1 ── ADR A ── Wave 2 ──┬── Wave 4 ── ADR G ── Wave 6
                                                 └── ADR D ── Wave 5
-                                   🚫 Wave 3 DELETED — console is read-only
+                                   🛑 Wave 3 UN-DELETED (§0.7); blocked on q4 + D6
                                    ⏸️ ADR H → Wave 7, and ADR I, DEFERRED by the freeze
 
 ADR J ── ADR K ── ADR L     ← start NOW; J is the priority, L waits on question 3

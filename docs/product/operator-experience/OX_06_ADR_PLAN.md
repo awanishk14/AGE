@@ -26,8 +26,8 @@ ceiling. ADR-0055 and ADR-0056 were both accepted by the Product Owner, and neit
 **Written and proposed with this program.** `docs/adrs/0057-the-operator-console.md`.
 
 Decides: that a local operator surface exists at all · **OX-INV-1**, loopback by construction ·
-**that it is READ-ONLY and performs no write at all** (D4 as amended, per the owner's 2026-08-03
-answer) · that it is not a draft of Doc 07's product · the twelve screens and the four refusal
+**the three action classes** — ✅ Platform Administration and ✅ Knowledge Authoring allowed in V1,
+🚫 Business Execution refused (D4 as rewritten by §0.7; ⚠️ the term "read-only" is **retired**) · that it is not a draft of Doc 07's product · the twelve screens and the four refusal
 classes · that G-14 and G-15 are preconditions for anything non-loopback.
 
 ⚠️ **§0.4 records two answered open questions and §0.5 the architecture freeze — and 🚫 neither is an
@@ -94,16 +94,18 @@ grows.
 
 Carried from Bible §10 and the gaps. Each is a genuine product decision:
 
-1. ✅ **ANSWERED 2026-08-03 — strictly READ-ONLY.** 🚫 Every write class withdrawn; 🛑 a future write
-   surface requires a new ADR and 🚫 may not be reached by increments.
+1. ✅ **ANSWERED 2026-08-03, then CLARIFIED — the answer is the THREE ACTION CLASSES (ADR-0057 D4).**
+   ✅ Platform Administration · ✅ Knowledge Authoring · 🚫 **Business Execution refused.** 🛑 Opening
+   class 3 requires **ADR L** and 🚫 may not be reached by increments.
 2. **Which peer product is first?** Dissent 3 is open by design.
 3. **Is execution re-introduced?** The revert was deliberate.
-4. **Does the answer file remain the author of record, or does the console replace it?**
+4. 🛑 **Does the answer file remain the author of record, or does the console replace it?** ⚠️ **Now
+   urgent** — Knowledge Authoring is allowed, so both could author the same knowledge.
 5. **Is the knowledge graph fed, or retired?** It has been an orphan for a long time.
 6. ✅ **ANSWERED 2026-08-03 — start J→K→L NOW, in parallel.** The owner: _"you are one step away from
    somebody saying: 'Can my colleague also log in?' Once that happens, D9 becomes a production
-   problem instead of an architectural note."_ ⚠️ **Read-only does not discharge J** — a console that
-   cannot write can still _read_ the wrong tenant's snapshots, because scope is caller-asserted and
-   RLS only checks it against itself.
+   problem instead of an architectural note."_ ⚠️ **No action-class rule discharges J** — a console can
+   _read_ the wrong tenant's snapshots because scope is caller-asserted and RLS only checks it against
+   itself, and since §0.7 it can **write** under a wrong scope too.
 
 ⚠️ **Questions 2–5 remain 🛑 OPEN**, and 2 and 5 are additionally ⏸️ **deferred by the §0.5 freeze**.
