@@ -7,7 +7,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'AGE Studio',
-  description: 'Local operator console for AGE. Read-only.',
+  description: 'Local operator console for AGE. No business execution.',
 };
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
@@ -19,12 +19,19 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
           <div className="flex min-h-screen flex-1 flex-col">
             {/*
               ⚠️ The banner is not decoration. An operator must be able to tell,
-              from any screen, that this surface reads and never writes, and
-              that no business has been selected. 🚫 Do not hide it once screens
-              have content.
+              from any screen, what this surface may and may not do, and that no
+              business has been selected. 🚫 Do not hide it once screens have
+              content.
+
+              🚫 It must NOT say "read-only". ADR-0057 §0.7 retired that term:
+              Platform Administration and Knowledge Authoring are allowed, and it
+              is Business Execution — anything reaching an external system, and
+              anything AGE initiates itself — that is refused. Saying "read-only"
+              here would be the kind of confident falsehood this product exists
+              to refuse.
             */}
             <header className="border-b border-[hsl(var(--age-border))] px-8 py-3 text-xs text-[hsl(var(--age-text-muted))]">
-              Read-only · no business selected · nothing here is wired to real data yet
+              No business execution · no business selected · nothing here is wired to real data yet
             </header>
             <div className="flex-1">{children}</div>
           </div>

@@ -38,13 +38,18 @@ owner listed lives in a BIF, and no BIF has been read (ADR-0055 D7).
 [today]     operator edits their own record file (outside the repo) → age-capture onboard (CLI)
 ```
 
-**Stops immediately.** 🛑 Three independent blocks, and they must not be confused with each other:
+**Stops immediately.** ⚠️ **Updated 2026-08-03 (ADR-0057 §0.7): block 3 is GONE — and the flow still
+stops.** This is the clearest illustration of why the three blocks had to be kept apart:
 
-1. **No tenant model.** There is no organization aggregate to create into.
-2. **No identity.** "Invite members", roles and permissions have no principal to attach to.
-3. **The console is read-only** by the owner's own answer to ADR-0057 open question 1.
+1. 🛑 **No tenant model.** There is no organization aggregate to create into. **Still blocking.**
+2. 🛑 **No identity.** "Invite members", roles and permissions have no principal to attach to.
+   **Still blocking** — ✅ authoring an invitation record is allowed, but 🚫 an invitation is never an
+   access grant.
+3. ✅ **Resolved.** Create Organization and Create Client are **Platform Administration**, an allowed
+   class. The permission was never the deepest blocker.
 
-⚠️ Any one of these alone stops the flow. 🚫 Fixing the read-only answer does not unblock it.
+⚠️ **Exactly as predicted: relaxing the write answer did not unblock this flow.** 🚫 Do not read the
+clarification as making step 4 buildable.
 
 ## F4 · "Run discovery for this business"
 
@@ -53,15 +58,17 @@ Business → Discovery → answer 17 questions across 9 sections → validate �
                             ✅ real contract        ✅ real         🛑 DISABLED    🛑
 ```
 
-**Stops at submit.** The rendering, the progress, the validation and the resume _view_ are all
-buildable today against the real questionnaire. ⚠️ Enabling the button is **runtime-caller wiring** —
-the thing ADR-0054 §0.1d stopped — and needs its own decision (ADR-0058 §6 open question 3).
+**Stops at submit** — ⚠️ **but for narrower reasons since ADR-0057 §0.7.** Authoring answers is
+**Knowledge Authoring**, an ✅ allowed class, so 🚫 permission is no longer the blocker. Enabling the
+button is still **runtime-caller wiring** (ADR-0054 §0.1d), still bound by **ADR-0054 D6's five
+conditions**, and still waiting on **ADR-0057 §6 q4** (who authors the answers of record).
 
-⚠️ **"Resume later" has a subtlety worth stating:** resume state is the operator's answer file. A
-read-only console can _display_ progress from that file but 🚫 cannot save a half-finished answer to
-it. Until the write question is answered, "resume" means _"re-open and see what your file contains"_,
-not _"pick up where the browser left off"_. 🚫 Do not implement browser-local draft storage as a
-substitute — a draft that exists only in `localStorage` is a second, invisible source of truth.
+⚠️ **"Resume later" has a subtlety worth stating, and ADR-0057 §0.7 did NOT remove it.** Resume state
+is the operator's answer file. Authoring is now an ✅ allowed class, so the console _may_ write it —
+but 🛑 **§6 q4 is OPEN**: is the file still the author of record, or does the console replace it?
+Until that is answered, **two** authors of the same knowledge would exist. 🚫 Do not implement
+browser-local draft storage as a substitute — a draft that exists only in `localStorage` is a second,
+invisible source of truth, and it is the _worse_ answer to the same question.
 
 ## F5 · "Read the BIF and follow a claim to its evidence"
 

@@ -51,7 +51,7 @@ identity subsystem. ADR K.**
 **Question:** _What has AGE learned lately, and what needs me?_
 
 ```
-┌─ AGE Studio ────────────────────────── ○ no identity · read-only ─┐
+┌─ AGE Studio ──────────────── ○ no identity · no business execution ┐
 │ SYSTEM STATUS                                                     │
 │  Identity      ─ not established   (does not exist)               │
 │  Discovery     ◐ exists · not wired                               │
@@ -104,8 +104,11 @@ runtime at all**, not merely no endpoint.
 └───────────────────────────────────────────────────────────┘
 ```
 
-🚫 **No "Create client" button** — the console is read-only and a client is created by the operator's
-own file. 🚫 The organization band is not clickable, has no count badge implying completeness, and
+✅ **A "Create client" button is now permitted** — Platform Administration (ADR-0057 D4 class 1).
+🚫 **Three refusals travel with it:** the record file is written **outside the repository** and its path
+is 🚫 never defaulted (ADR-0054 D2) · 🚫 **a real client record is NEVER committed** (ADR-0053 D3) ·
+🚫 **no delete, and no edit** — neither is named in class 1. ⚠️ Until a tenant model exists, 🚫 there is
+no "Create organization" here: the band is **derived** (ADR-0058 D4). 🚫 The organization band is not clickable, has no count badge implying completeness, and
 🚫 never appears with nothing under it. ⚠️ Per-business Discovery/BIF columns read **"Not assessed"**,
 not "0%" — nothing has read the capture store.
 

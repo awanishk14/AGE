@@ -12,20 +12,23 @@
 
 **Data ownership.** Exactly four owners, and no screen may blur them:
 
-| Owner                         | Holds                                             | Console's relationship                                    |
-| ----------------------------- | ------------------------------------------------- | --------------------------------------------------------- |
-| The **operator's filesystem** | Answer file, client record file                   | 🚫 **Reads only** — writes nothing                        |
-| **PostgreSQL** (`age_app`)    | Snapshots, append-only                            | 🚫 **Reads only**, over a connection incapable of writing |
-| **Pure packages**             | Every derivation — mapping, scoring, capabilities | Calls; never reimplements                                 |
-| **Peer products**             | Their own data                                    | Requests over a public contract; never stores as its own  |
+| Owner                         | Holds                                             | Console's relationship                                   |
+| ----------------------------- | ------------------------------------------------- | -------------------------------------------------------- |
+| The **operator's filesystem** | Answer file, client record file                   | ⚠️ Reads; **may author** under ADR-0057 D4 class 1/2     |
+| **PostgreSQL** (`age_app`)    | Snapshots, append-only                            | Reads; 🚫 **append-only, never edit/delete/version**     |
+| **Pure packages**             | Every derivation — mapping, scoring, capabilities | Calls; never reimplements                                |
+| **Peer products**             | Their own data                                    | Requests over a public contract; never stores as its own |
 
-**Persistence.** The console persists nothing of its own. It has no tables, no cache, no session
-store, no local storage of business data. Every screen is a projection of one of the four owners
-above.
+**Persistence.** 🚫 **The console persists nothing OF ITS OWN.** It has no tables, no cache, no
+session store, no local storage of business data. Every screen is a projection of one of the four
+owners above. ⚠️ **Authoring under ADR-0057 D4 writes to an OWNER, never to a console-private
+store** — a draft that lives only in the browser is a second, invisible source of truth.
 
 **Refresh.** All screens are **request-scoped and pull-only**. There is no polling, no websocket, no
 subscription, no timer. This is not a performance decision — 🚫 ADR-0054 D6 condition 5 forbids
-background execution, scheduling and automation, and a poller is all three.
+background execution, scheduling and automation, and a poller is all three. ⚠️ **Unchanged by the
+2026-08-03 clarification:** anything on a timer is **class 3** by ADR-0057 D4's _who initiates_ test,
+however internal its effect.
 
 **Events.** The system has **no event bus** and this program does not introduce one. "Events" below
 means _user-initiated interactions_, nothing more.
@@ -66,9 +69,12 @@ an error and not an empty dashboard.
 | **Refresh**       | On request; re-read from disk                                              |
 | **Relationships** | → S3                                                                       |
 
-🚫 **No create/edit/delete affordance.** The record file is authored by the operator in their editor.
-A console that wrote client records would be the first step toward records living in the repo, which
-ADR-0053 D3 forbids absolutely.
+⚠️ **Rewritten 2026-08-03 (ADR-0057 §0.7).** **Create Client is Platform Administration, an ✅ allowed
+class**, so a create affordance is permitted. 🚫 **Three refusals survive unchanged and are the whole
+safety of it:** the record file stays **outside the repository** (ADR-0054 D2 — 🚫 never defaulted,
+🚫 relative paths refused) · 🚫 **a real client record is NEVER committed**, not even redacted
+(ADR-0053 D3) · 🚫 **no delete**. ⚠️ Editing an existing record is 🚫 **not** authorized here — it is
+neither named in D4 class 1 nor separable from record history.
 
 ⚠️ A missing, unreadable, empty or malformed file is a **refusal**, never an empty list. Degrading to
 "no records" would make every later lookup report "unknown client" for the wrong reason.
@@ -101,9 +107,9 @@ differ, and differing is correct.
 | **Inputs**        | `DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE` (`age-business-discovery` / `2026.1`); the operator's answer file                                                 |
 | **Outputs**       | Per-question answer state — **answered / omitted**, never "empty"; validation refusals naming question ids; the produced profile and its scores on a dry run |
 | **Dependencies**  | `@age/discovery-answer-file`, `parseDiscoveryAnswerFile`, `produceScoredBifContext`, `@age/operator-file-policy`                                             |
-| **Events**        | Load file · validate · dry run. 🚫 **No edit, no omit-toggle, no capture** — read-only (2026-08-03)                                                          |
+| **Events**        | Load file · validate · **author answers** (✅ class 2, ADR-0057 §0.7) · dry run. 🚫 **No capture** — 🛑 D6's five conditions + §6 q4                         |
 | **Ownership**     | The operator's file                                                                                                                                          |
-| **Persistence**   | 🚫 **None.** The console never writes the answer file; the operator edits it in their own editor                                                             |
+| **Persistence**   | 🛑 **Undecided — ADR-0057 §6 q4 is OPEN.** Authoring is ✅ allowed, but 🚫 who owns the answer of record is unanswered; 🚫 no browser-local draft store      |
 | **Refresh**       | On request                                                                                                                                                   |
 | **Relationships** | → S5 (the BIF it produces), S11 (the snapshot it appends)                                                                                                    |
 
@@ -115,10 +121,13 @@ produce exactly the inflated completeness score the refusal exists to prevent.
 must be outside the repository root, and relative paths are refused outright rather than resolved,
 because `path.resolve` reads `cwd`.
 
-🚫 **There is no write on this screen, and no write anywhere in the console** (ADR-0057 D4 as amended,
-2026-08-03). Capture stays in the CLI, where ADR-0054 D6's five conditions are already enforced.
-🚫 No capture-on-save, no autosave, no scheduling — and 🚫 no "read-only form" that later grows a
-submit.
+⚠️ **Rewritten 2026-08-03 by ADR-0057 §0.7.** Discovery is **Knowledge Authoring**, an ✅ allowed
+class — so this screen may author answers. 🚫 But **submit stays disabled** on independent grounds:
+capture runs under ADR-0054 D6's **five conditions**, and 🛑 ADR-0057 §6 **q4 is open** — the answer
+file and the console would be two authors of the same knowledge.
+🚫 **No capture-on-save, no autosave, no scheduling, no background recompute** — those are class 3 by
+the _who initiates_ test, however internal their effect. ⚠️ A "save draft" that writes anywhere other
+than the answer of record is a second source of truth; 🚫 do not implement one in `localStorage`.
 ⚠️ **Omission is still a first-class rendering state** even though it is no longer a control: an
 unanswered question renders **"omitted"**, 🚫 never "empty".
 
@@ -133,7 +142,7 @@ unanswered question renders **"omitted"**, 🚫 never "empty".
 | **Dependencies**  | `@age/bif` section models; the snapshot codec                                                                     |
 | **Events**        | Select section; open a field's provenance                                                                         |
 | **Ownership**     | PostgreSQL                                                                                                        |
-| **Persistence**   | None — **read-only, structurally**                                                                                |
+| **Persistence**   | None — 🚫 **no write on this screen** (the BIF is corrected by a new snapshot)                                    |
 | **Refresh**       | On request                                                                                                        |
 | **Relationships** | → S6 per field, → S7, → S11                                                                                       |
 
@@ -296,7 +305,7 @@ product unreachable" are different claims.
 | **Inputs**        | Listener bind address; database target **host only**; questionnaire id and version; record file path; package versions; the refusal log |
 | **Outputs**       | Whether **OX-INV-1** holds; whether the database target is loopback; what the console refused and why                                   |
 | **Dependencies**  | `assertLocalDatabaseTarget`; the composition root                                                                                       |
-| **Events**        | None. Read-only                                                                                                                         |
+| **Events**        | None. 🚫 No write here                                                                                                                  |
 | **Ownership**     | Process configuration                                                                                                                   |
 | **Persistence**   | None                                                                                                                                    |
 | **Refresh**       | On request                                                                                                                              |

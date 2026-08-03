@@ -82,9 +82,16 @@ they touch:
 - **ADR-0055 D7** — no read path until one real business has passed through the shipped CLI path.
   🚫 Do not seed a row. This blocks every screen that reads a snapshot.
 - **ADR-0057 D2 (OX-INV-1)** — Studio binds loopback or refuses. No flag, no override.
-- **ADR-0057 open question 1, answered** — the console is **strictly READ-ONLY**. ⚠️ The owner's
-  journey contains writes (create organization, invite members, create client, submit discovery).
-  `ST_06` §4 states plainly which ones need that answer revisited; 🚫 none may be built by increments.
+- **ADR-0057 open question 1, answered then CLARIFIED (§0.7) — the THREE ACTION CLASSES of D4.**
+  🚫 The term "read-only" is **retired**. ✅ **Platform Administration** (create organization, invite
+  members, create client, configure integrations) and ✅ **Knowledge Authoring** (discovery, generate
+  BIF, manual notes, attach evidence) are **allowed in V1**. 🚫 **Business Execution** — RankOps, MCP
+  Ads, publishing, campaigns, **anything affecting an external system** — is **refused**, and 🚫 so is
+  anything scheduled, queued or acted on AGE's own initiative, however internal its effect.
+  **Invariant:** _"Human-authored knowledge is permitted. System-initiated execution remains prohibited
+  until the execution layer is enabled."_ ⚠️ Three things this does **not** unblock: 🛑 **Invite
+  Members grants no access** (no identity to grant it to — §0.7 note 1) · 🛑 **no credential storage**
+  (§0.7 note 2) · 🛑 **ADR-0055 D7 and ADR-0054 D6 are untouched.**
 - **ADR-0058 D2/D7 (`Proposed`)** — there is no authenticated identity; the entitlement answer is
   "not established". This blocks **Login**, which is step 1 of the owner's journey.
 - **ADR-0058 D4 (`Proposed`)** — Organizations is a derived band, not a route.

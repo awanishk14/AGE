@@ -175,19 +175,26 @@ a second opinion.**
 
 The class is a property of the action, not of the operator. ⚠️ **There were four; there is now one.**
 
-| Class                                    | Meaning                                 | Examples                               |
-| ---------------------------------------- | --------------------------------------- | -------------------------------------- |
-| **Read**                                 | No effect                               | Everything on S3, S5–S12               |
-| ~~**Local author**~~ 🚫 **WITHDRAWN**    | Would write an operator-owned file      | —                                      |
-| ~~**Confirmed write**~~ 🚫 **WITHDRAWN** | Would append a snapshot                 | —                                      |
-| **Refused**                              | Structurally unavailable in the console | Everything in §6 — and now every write |
+⚠️ **REWRITTEN 2026-08-03 by ADR-0057 §0.7 — read D4 there, which is canonical.** This table twice
+said the wrong thing (first two write classes, then none); it now mirrors the owner's own categories.
 
-⚠️ **Amended 2026-08-03: there is exactly ONE action class left, Read.** The Product Owner answered
-open question 1 — _"✅ View ✅ Browse ✅ Inspect ✅ Understand ❌ Modify ❌ Execute ❌ Approve ❌ Delete"_ —
-so both write classes are 🚫 **withdrawn**, not deferred. The console opens **no write connection of
-any kind**. 🚫 No capture, no answer-file authoring, no capture-on-save, no "just the answer file",
-and 🚫 "the operator confirmed it" is not a substitute for the 🛑 **NEW ADR** any future write would
-require.
+| Class                           | Meaning                                                                                                | V1                         |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------- |
+| **Read**                        | No effect                                                                                              | ✅                         |
+| **1 · Platform Administration** | Create organization · invite members · create client · configure integrations                          | ✅ allowed                 |
+| **2 · Knowledge Authoring**     | Discovery questionnaire · generate BIF · manual notes · attach evidence                                | ✅ allowed                 |
+| **3 · Business Execution**      | RankOps · MCP Ads · publish · campaigns · **anything external**, and **anything AGE initiates itself** | 🚫 **REFUSED**             |
+| **Refused**                     | Structurally unavailable in the console                                                                | Everything in §6 + class 3 |
+
+**The invariant, verbatim:** _"Human-authored knowledge is permitted. System-initiated execution
+remains prohibited until the execution layer is enabled."_
+
+🚫 **What an allowed class does NOT license:** 🛑 an invitation that grants access (there is no
+identity — ADR-0057 §0.7 note 1) · 🛑 storing a credential (no secret store — note 2) · 🛑 capture
+outside ADR-0054 D6's five conditions · 🛑 reading a real snapshot before ADR-0055 D7 · 🚫 anything
+autosaved, scheduled, backgrounded or recomputed on AGE's own initiative, **however internal its
+effect** — that is class 3 by the _who initiates_ test. 🚫 "The operator confirmed it" is not a
+substitute for the 🛑 **ADR L** that class 3 requires.
 
 ### What is immutable
 
@@ -303,12 +310,17 @@ holds it. If no, AGE holds only the reference.
 
 These are stops, listed here and carried into Phase 6.
 
-1. ✅ **ANSWERED 2026-08-03 — strictly READ-ONLY.** The Product Owner: _"YES. Very strongly… Because
-   your CLI is already your trusted operator interface. The UI should first prove that it can
-   accurately represent AGE's thinking. Only then should it become an action surface."_ 🚫 Every write
-   class is withdrawn; 🛑 a future write needs a new ADR.
-2. ✅ **MOOT, by 1.** The answer file remains the sole author of record, because the console cannot
-   write it. 🚫 Do not revive this as a "read-only form" that later grows a submit.
+1. ✅ **ANSWERED 2026-08-03, then CLARIFIED the same day — ⚠️ the answer is the THREE ACTION CLASSES
+   of ADR-0057 D4, not "read-only", which is 🚫 RETIRED as ambiguous.** ✅ Platform Administration and
+   ✅ Knowledge Authoring are allowed in V1; 🚫 **Business Execution is refused.** The invariant,
+   verbatim: **"Human-authored knowledge is permitted. System-initiated execution remains prohibited
+   until the execution layer is enabled."** ⚠️ The original reasoning still binds — _"the UI should
+   first prove that it can accurately represent AGE's thinking. Only then should it become an action
+   surface"_ — and it is **class 3** that stays shut. 🛑 Opening it needs **ADR L**.
+2. 🛑 **REOPENED by the clarification — it was moot only while the console could not write.** Now that
+   Knowledge Authoring is allowed, the answer file and the console are **two authors of the same
+   knowledge**. ⚠️ This must be answered **before Discovery's submit is enabled** (ADR-0057 §6 q4),
+   or AGE acquires a second, invisible source of truth. 🚫 An allowed action class is not an answer.
 3. **Does History diff two snapshots, or only list them?** Diffing implies a comparison semantics
    nothing in the repository currently defines.
 4. **What does the console do when zero peer products are reachable?** Showing nothing and showing

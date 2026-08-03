@@ -57,14 +57,16 @@ design error:
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Organizations** as a route | `organizationId` has no aggregate and 🚫 **no place where it may be typed** — `--organization-id` is refused by name (ADR-0054 D2). A level you can navigate _into_ is a level you can _select_, and a selectable scope is a typed scope. It is a **derived grouping band** on S2 (ADR-0058 D4). ⚠️ An organization with no client records is not an empty organization — it is **not a thing**, and must not render as a heading with nothing under it. |
 | **Settings**                 | There is nothing to configure that is not either an operator-file path (which is never defaulted, ADR-0054 D2) or a policy that must not be configurable (OX-INV-1 admits no override). A Settings screen is where a refusal goes to become a checkbox.                                                                                                                                                                                                  |
-| **Administration**           | Implies role and permission management over a multi-user product. There is no identity (ADR-0058 D2) and the console is read-only.                                                                                                                                                                                                                                                                                                                       |
+| **Administration**           | Implies role and permission management over a multi-user product. 🚫 **Still refused after ADR-0057 §0.7**: creating an organization or authoring an invitation is Platform Administration ✅, but **roles and permissions govern a second person**, and there is no identity to attach one to (ADR-0058 D2). ⚠️ An invitation is a written intention, 🚫 never an access grant.                                                                         |
 | **A global search**          | Would need an index across scopes the entitlement layer does not yet bound. It returns after ADR-0058's successor.                                                                                                                                                                                                                                                                                                                                       |
 
-⚠️ **The owner's journey asks for organization creation, member invites, roles, permissions,
-subscriptions and usage** (step 3). Every one of those is a **write** to a **tenant model that does
-not exist**, gated behind an **identity that does not exist**, on a console that is **strictly
-read-only** by the owner's own earlier answer. `ST_06` §4 treats this as the single largest decision
-in the set. 🚫 It is not resolved here and must not be built by increments.
+⚠️ **Rewritten 2026-08-03 (ADR-0057 §0.7).** The owner's step 3 asks for organization creation,
+member invites, roles, permissions, subscriptions and usage. ✅ **The write permission is no longer the
+blocker** — these are Platform Administration. 🛑 **Two blockers remain and neither is a permission:**
+there is **no tenant model** to create into, and **no identity** for roles, permissions or an invited
+member to attach to. ⚠️ So _create organization_ and _create client_ become buildable once a tenant
+model exists, while **roles, permissions and member access wait on ADR K.** 🚫 Do not build an
+invitation that grants anything.
 
 ## 4. Persistent chrome
 
@@ -75,8 +77,10 @@ Present on every screen, at every level:
    it reads **"Not read"** until something has actually read the capture store.
 2. **The scope line** — the current `clientId` and its derived `organizationId`, or the words
    **"No business selected"**. 🚫 Never a blank, never a placeholder name.
-3. **The trust banner** — _"Read-only · local operator console · no authenticated identity · access
-   is limited by the loopback bind only."_ 🚫 It does not disappear on scroll and 🚫 it is not
+3. **The trust banner** — _"Local operator console · no authenticated identity · access is limited by
+   the loopback bind only · no business execution."_ ⚠️ **It no longer says "read-only"** — that would
+   now be a lie (ADR-0057 §0.7). It names what is actually true: nobody is authenticated, and 🚫 no
+   class-3 action can be taken. 🚫 It does not disappear on scroll and 🚫 it is not
    dismissible, because the condition it describes does not go away.
 
 ## 5. Deep links, refresh and resume
@@ -84,6 +88,7 @@ Present on every screen, at every level:
 - Every subject route is **bookmarkable** and re-resolves its `clientId` on load.
 - 🚫 An unresolvable id **refuses by position**, naming neither the record's contents nor the other
   clients' ids (ADR-0054 D3).
-- Discovery **resumes** (the owner asked for it). ⚠️ Resume state is answer-file state; it is the
-  operator's own file and 🚫 it is never written by the console under the read-only answer. See
-  `ST_06` §4.
+- Discovery **resumes** (the owner asked for it). ⚠️ Resume state is answer-file state. Authoring it is
+  now an ✅ allowed class, but 🛑 **ADR-0057 §6 q4 is OPEN** — until it is answered, the console and the
+  answer file would be **two authors of the same knowledge**. 🚫 Do not resolve that with browser-local
+  draft storage. See `ST_06` §4.
