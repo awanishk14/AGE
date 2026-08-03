@@ -74,3 +74,5 @@ These are referenced for context and **must not be changed** by Product Bible ed
 | 14  | [Configuration Model](./14_CONFIGURATION_MODEL.md)     | Defines configuration scopes, defaults, overrides and secret handling across the platform.                          |
 | 15  | [Product Roadmap](./15_PRODUCT_ROADMAP.md)             | The product-facing roadmap, aligned to the architecture phases and implementation epics.                            |
 | 16  | [Glossary](./16_GLOSSARY.md)                           | Canonical definitions of terms used throughout the Product Bible and architecture.                                  |
+| 17  | [Design System](./17_DESIGN_SYSTEM.md)                 | `Proposed`. How every AGE screen looks and behaves — and why a component may never make an absence look present.    |
+| 18  | [AGE Studio](./18_AGE_STUDIO.md)                       | `Proposed`. The Studio is the product; V1 is read-only; identity moves to second in the order. Authorizes no code.  |

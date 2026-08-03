@@ -4,6 +4,12 @@
 > contradict another. **Status: Proposed in full — none of it is authorized to be built.**
 > The governing decision request is **ADR-0057**.
 
+> ⚠️ **Read [`../18_AGE_STUDIO.md`](../18_AGE_STUDIO.md) first.** The Product Owner corrected the
+> framing on 2026-08-03: the console **is the product**, not a feature that follows the architecture.
+> Doc 18 records that inversion, maps this program's S1–S13 onto the Studio workspaces, fixes the
+> **V1 read-only / V2 workspace** line, and moves **identity to second in the order**.
+> 🚫 It authorizes no code, and 🚫 it does not amend ADR-0057's `Proposed` status.
+
 ## Why this exists
 
 Everything AGE knows is currently behind code. A real business's discovery answers go in as a JSON
