@@ -1,14 +1,23 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE } from '@age/business-discovery-contracts';
+import {
+  DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
+  buildProfileFromAnswers,
+  produceScoredBifContext,
+  type DiscoveryAnswer,
+} from '@age/business-discovery-contracts';
 import {
   ClientRecordFileError,
   loadClientRecordFile,
+  parseOperatorPrincipal,
   type ClientRecord,
 } from '@age/client-registry';
+import { loadDiscoveryAnswerFile } from '@age/discovery-answer-file';
 import {
   answerFileNameFor,
+  presentGeneratedBif,
+  type GeneratedBifView,
   appendClientRecord,
   canSubmit,
   renderClientRecordFile,
@@ -435,6 +444,177 @@ export function submitDiscoveryAnswers(clientId: string, draft: DiscoveryDraft):
       kind: 'refused',
       reason: 'The answer file could not be written to the discovery workspace.',
     };
+  }
+}
+
+/**
+ * ────────────────────────────────────────────────────────────────────────────
+ * GENERATING A BIF
+ *
+ * ⚠️ Class 2 (Knowledge Authoring) under ADR-0057 D4, which names "generate BIF"
+ * explicitly — and human-initiated, which is the half that matters. The operator
+ * presses a button and the chain runs once, in the foreground.
+ *
+ * 🚫 IT MUST NEVER RUN ON PAGE LOAD. A recompute-on-open is class 3 even though
+ * its effect is entirely internal, and it is the exact case CLAUDE.md names as
+ * the one that gets argued away. The viewer therefore renders "no BIF has been
+ * generated" until a press, and 🚫 no route may call this from a server
+ * component's render path.
+ *
+ * 🚫 NOTHING IS PERSISTED, AND NOTHING HERE CAN PERSIST. This calls the pure
+ * `produceScoredBifContext` — the same function the CLI's `produceOnly` mode
+ * calls, reached without the capture orchestrator, so there is no import path to
+ * `@age/business-discovery-capture` or `@age/persistence` at all.
+ * `produceAndCapture` is unreachable from the console, ADR-0054 D6's five
+ * conditions are untouched, and ADR-0046 D7 is not repealed. Storing a snapshot
+ * remains the operator's own `age-capture onboard --capture --confirm` run
+ * against their own local database.
+ *
+ * ⚠️ IT READS THE ANSWER FILE, NOT THE DRAFT. A draft is unfinished by
+ * definition; scoring one would report a business on answers the operator had
+ * not finished giving. If Discovery has not been submitted, this refuses.
+ * ────────────────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * The message of a thrown value, without assuming there was one.
+ *
+ * 🚫 Never `String(error)`: for a non-Error that prints `[object Object]`, which
+ * a screen would show the operator as though it were a reason.
+ */
+function messageOf(error: unknown): string {
+  return error instanceof Error && error.message.length > 0
+    ? error.message
+    : 'The BIF could not be produced, and the failure was not recognised.';
+}
+
+export type GenerateBifOutcome =
+  | {
+      readonly kind: 'generated';
+      readonly view: GeneratedBifView;
+      /** Echoed back so the operator can see the scope was DERIVED, not typed. */
+      readonly organizationId: string;
+    }
+  | { readonly kind: 'not-configured'; readonly variable: string }
+  | { readonly kind: 'no-answer-file' }
+  | { readonly kind: 'refused'; readonly reason: string };
+
+/**
+ * Produce a scored BIF from the answer file this console wrote.
+ *
+ * ⚠️ `changedBy` is a required parameter with NO default. ADR-0053 D4: an
+ * `OperatorPrincipal` is never defaulted, generated or inferred — there is no
+ * `SYSTEM_PRINCIPAL` to fall back to, and a generated one would put a name into
+ * provenance that nobody claimed.
+ *
+ * ⚠️ Scope comes from the client RECORD, never from the URL or a form. The
+ * `clientId` in the path selects a record; the `organizationId` is read off that
+ * record, which is D6 condition 1 and the reason there is no field to type one
+ * into.
+ */
+export function generateBifFromAnswerFile(clientId: string, changedBy: string): GenerateBifOutcome {
+  let principal: string;
+  try {
+    // 🚫 Parsed, never coerced. "who to record", not "who may act" — this is not
+    // an authorization decision and must never become one.
+    principal = parseOperatorPrincipal(changedBy);
+  } catch (error) {
+    return { kind: 'refused', reason: messageOf(error) };
+  }
+
+  const scope = resolveBusinessScope(clientId);
+  if (scope.kind === 'not-configured') {
+    return { kind: 'not-configured', variable: scope.variable };
+  }
+  if (scope.kind === 'refused') {
+    return { kind: 'refused', reason: scope.reason };
+  }
+  if (scope.kind === 'unknown-client') {
+    return {
+      kind: 'refused',
+      reason:
+        'That business is not in the client record file, so there is no scope to produce a BIF ' +
+        'under. Nothing is guessed and no organization is inferred.',
+    };
+  }
+
+  const workspace = resolveWorkspaceDirectory();
+  if (workspace.kind !== 'ready') {
+    return workspace;
+  }
+
+  let answerFilePath: string;
+  try {
+    answerFilePath = join(workspace.directory, answerFileNameFor(clientId));
+  } catch (error) {
+    if (error instanceof UnsafeClientIdError) {
+      return { kind: 'refused', reason: error.message };
+    }
+    throw error;
+  }
+
+  if (!existsSync(answerFilePath)) {
+    // ⚠️ A distinct state, not a refusal and not an empty BIF: Discovery has
+    // simply not been submitted yet. 🚫 Degrading to "no answers" would produce
+    // a BIF that merely looks sparse, hiding that nothing was read at all.
+    return { kind: 'no-answer-file' };
+  }
+
+  let answers: readonly DiscoveryAnswer[];
+  try {
+    // ⚠️ The SAME loader the CLI uses, including its outside-the-repository
+    // check. 🚫 A second reader would drift, and the drifted one is the surface
+    // nobody runs the CLI against.
+    answers = loadDiscoveryAnswerFile({
+      path: answerFilePath,
+      repositoryRoot: repositoryRoot(),
+      questionnaire: STUDIO_QUESTIONNAIRE,
+      // 🚫 The system error is swallowed and replaced. Node's read failures
+      // embed the full path, and the loader puts the message it is given into a
+      // refusal the screen shows — that would print the operator's own
+      // directory layout onto a page.
+      readFileText: (path: string) => {
+        try {
+          return readFileSync(path, 'utf8');
+        } catch {
+          throw new Error('the file could not be opened');
+        }
+      },
+    });
+  } catch (error) {
+    return { kind: 'refused', reason: messageOf(error) };
+  }
+
+  // ⚠️ ONE INSTANT, NOT TWO — the CLI's rule, repeated. The profile's
+  // `capturedAt` and the mapper's `constructedAt` come from a single read of the
+  // clock, so no artefact of one press can claim to precede another.
+  const instant = new Date();
+
+  try {
+    // 🚫 TRANSCRIPTION ONLY. The mapper copies answer text verbatim, omits every
+    // field it has no answer for and infers nothing (ADR-0050 D2). A low score
+    // for a first real client is a CORRECT result (ADR-0054 D7) — 🚫 nothing
+    // here may reach for a cap, a weight or a predicate to improve it.
+    const profile = buildProfileFromAnswers(answers, STUDIO_QUESTIONNAIRE, {
+      id: `${clientId}-discovery`,
+      capturedAt: instant.toISOString(),
+    });
+
+    const { context, mappingMetadata, scoringMetadata } = produceScoredBifContext(profile, {
+      // The single authoritative source, read off the record.
+      organizationId: scope.client.organizationId,
+      constructedAt: instant,
+      changedBy: principal,
+      questionnaire: STUDIO_QUESTIONNAIRE,
+    });
+
+    return {
+      kind: 'generated',
+      view: presentGeneratedBif(context, mappingMetadata, scoringMetadata),
+      organizationId: scope.client.organizationId,
+    };
+  } catch (error) {
+    return { kind: 'refused', reason: messageOf(error) };
   }
 }
 

@@ -17,6 +17,7 @@
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
+    "@age/bif": "workspace:*",
     "@age/client-registry": "workspace:*",
     "@age/business-discovery-contracts": "workspace:*",
     "@age/discovery-answer-file": "workspace:*"

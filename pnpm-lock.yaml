@@ -685,6 +685,9 @@ importers:
 
   packages/studio-shell:
     dependencies:
+      '@age/bif':
+        specifier: workspace:*
+        version: link:../bif
       '@age/business-discovery-contracts':
         specifier: workspace:*
         version: link:../business-discovery-contracts

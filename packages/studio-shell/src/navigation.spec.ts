@@ -48,8 +48,14 @@ describe('STUDIO_AREAS', () => {
 
   /**
    * ⚠️ Updated because something was genuinely wired — 🚫 never to make a screen
-   * look finished. Businesses reads the operator record file and Diagnostics
-   * reports the console's own state; both render a real result.
+   * look finished. Businesses reads the operator record file, Diagnostics
+   * reports the console's own state, Discovery reads and writes the operator's
+   * own files, and the BIF screen produces a real BIF from the answer file this
+   * console wrote. Each renders a real result.
+   *
+   * 🚫 The BIF flip is NOT a claim that stored snapshots work: nothing has read
+   * the capture store (ADR-0055 D7) and no row was seeded. The screen reports
+   * every stored fact as `not-assessed`.
    *
    * ⚠️ Every OTHER area must stay unwired. This test exists to make flipping one
    * a deliberate, visible act rather than a side effect of a screen edit.
@@ -58,7 +64,7 @@ describe('STUDIO_AREAS', () => {
     expect(everyAreaIsUnwired()).toBe(false);
 
     const wired = STUDIO_AREAS.filter((a) => a.wiring === 'wired').map((a) => a.id);
-    expect(wired).toEqual(['businesses', 'discovery', 'diagnostics']);
+    expect(wired).toEqual(['businesses', 'discovery', 'bif', 'diagnostics']);
   });
 
   /**

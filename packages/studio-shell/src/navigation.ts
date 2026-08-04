@@ -86,10 +86,11 @@ export interface StudioArea {
 }
 
 /**
- * ⚠️ Two areas are now `wired` — Businesses and Diagnostics — because each reads
- * a real source and can render a real result. Everything else is `not-wired`,
- * and that is still the honest state: the subject areas are blocked on ADR-0055
- * D7, the operator's own capture run.
+ * ⚠️ Four areas are now `wired` — Businesses, Diagnostics, Discovery and the
+ * BIF — because each reads a real source and can render a real result.
+ * Everything else is `not-wired`, and that is still the honest state: those
+ * areas read a STORED projection, and nothing has read the capture store
+ * (ADR-0055 D7, the operator's own capture run).
  *
  * 🚫 Do not flip a `wiring` to `wired` to make a screen look finished, and 🚫 do
  * not seed a row to justify flipping one. `wired` means the screen reads the
@@ -133,10 +134,14 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
     route: '/b/:clientId/bif',
     level: 'subject',
     screen: 'S5',
-    wiring: 'not-wired',
+    // ⚠️ `wired` because the screen reads a real source and can produce a real
+    // result: the answer file this console wrote, through the same
+    // Discovery→BIF mapping and scoring the CLI runs.
+    // 🚫 It is NOT a claim that the STORED half works. Nothing has read the
+    // capture store (ADR-0055 D7), and the screen reports every stored fact as
+    // `not-assessed` rather than as a zero. 🚫 No row was seeded to flip this.
+    wiring: 'wired',
     question: 'What does AGE believe about this business, section by section?',
-    notWiredBecause:
-      'Reads a stored snapshot projection. Blocked on ADR-0055 D7 — one real business must pass through the CLI capture path first. A row must not be seeded to unblock it.',
   },
   {
     id: 'evidence',
