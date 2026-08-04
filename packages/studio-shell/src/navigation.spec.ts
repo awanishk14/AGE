@@ -57,6 +57,10 @@ describe('STUDIO_AREAS', () => {
    * the capture store (ADR-0055 D7) and no row was seeded. The screen reports
    * every stored fact as `not-assessed`.
    *
+   * 🚫 The Evidence flip is NOT a claim that any evidence has been checked.
+   * Nothing is opened, fetched or contacted — the screen reads the answer file
+   * and reports that every belief of a first discovery run is unsupported.
+   *
    * ⚠️ Every OTHER area must stay unwired. This test exists to make flipping one
    * a deliberate, visible act rather than a side effect of a screen edit.
    */
@@ -64,7 +68,7 @@ describe('STUDIO_AREAS', () => {
     expect(everyAreaIsUnwired()).toBe(false);
 
     const wired = STUDIO_AREAS.filter((a) => a.wiring === 'wired').map((a) => a.id);
-    expect(wired).toEqual(['businesses', 'discovery', 'bif', 'diagnostics']);
+    expect(wired).toEqual(['businesses', 'discovery', 'bif', 'evidence', 'diagnostics']);
   });
 
   /**

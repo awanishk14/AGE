@@ -91,6 +91,16 @@ export {
 } from './bif-view';
 
 export {
+  evidenceNotAssessedFacets,
+  presentEvidence,
+  type BeliefSupportView,
+  type EvidenceNotAssessedFacet,
+  type EvidenceView,
+  type NamedEvidenceView,
+  type RecordedAnswerView,
+} from './evidence-view';
+
+export {
   appendClientRecord,
   CLIENT_RECORD_DRAFT_FIELDS,
   clientRecordDraftFromFormEntries,

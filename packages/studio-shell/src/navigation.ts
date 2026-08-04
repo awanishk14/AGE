@@ -86,8 +86,8 @@ export interface StudioArea {
 }
 
 /**
- * ⚠️ Four areas are now `wired` — Businesses, Diagnostics, Discovery and the
- * BIF — because each reads a real source and can render a real result.
+ * ⚠️ Five areas are now `wired` — Businesses, Diagnostics, Discovery, the BIF
+ * and Evidence — because each reads a real source and can render a real result.
  * Everything else is `not-wired`, and that is still the honest state: those
  * areas read a STORED projection, and nothing has read the capture store
  * (ADR-0055 D7, the operator's own capture run).
@@ -149,9 +149,13 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
     route: '/b/:clientId/evidence',
     level: 'subject',
     screen: 'S6',
-    wiring: 'not-wired',
+    // ⚠️ `wired` because the screen reads a real source: the answer file this
+    // console wrote, and the mapper's own account of what it could and could not
+    // carry. 🚫 It is NOT a claim that any evidence has been checked — nothing
+    // is fetched, opened or contacted, and the screen reports every belief of a
+    // first discovery run as unsupported because that is what it is.
+    wiring: 'wired',
     question: 'What supports each belief, and which beliefs are unsupported?',
-    notWiredBecause: 'Blocked on ADR-0055 D7, as above.',
   },
   {
     id: 'contradictions',
