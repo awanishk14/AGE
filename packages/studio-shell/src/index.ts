@@ -77,6 +77,20 @@ export {
 } from './discovery-draft';
 
 export {
+  fieldStateOf,
+  presentGeneratedBif,
+  renderFieldValue,
+  storedHistoryFacets,
+  type BifFieldView,
+  type BifOmittedSectionView,
+  type BifScoreSet,
+  type BifSectionView,
+  type BifUnmappedFieldView,
+  type GeneratedBifView,
+  type StoredHistoryFacet,
+} from './bif-view';
+
+export {
   appendClientRecord,
   CLIENT_RECORD_DRAFT_FIELDS,
   clientRecordDraftFromFormEntries,
