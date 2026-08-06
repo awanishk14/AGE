@@ -105,10 +105,16 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
     route: '/',
     level: 'console',
     screen: 'S1',
-    wiring: 'not-wired',
+    // ⚠️ `wired` because its own recorded blocker was DISCHARGED, not waived:
+    // the dashboard "has nothing truthful to compose until at least one of
+    // [the areas] is wired", and five now are. Leaving that sentence up would
+    // have made the console's front page the one screen stating something
+    // untrue about itself.
+    // 🚫 It is NOT a claim that the panels have data. Every aggregate AGE has
+    // not measured renders `not-assessed` with its reason — 🚫 never as a zero,
+    // never as "all clear", and 🚫 never by running a producer on page load.
+    wiring: 'wired',
     question: 'What changed, what is waiting, and what is broken?',
-    notWiredBecause:
-      'The dashboard is composed from the areas below. It has nothing truthful to compose until at least one of them is wired.',
   },
   {
     id: 'businesses',

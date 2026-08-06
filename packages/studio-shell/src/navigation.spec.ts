@@ -61,6 +61,12 @@ describe('STUDIO_AREAS', () => {
    * Nothing is opened, fetched or contacted — the screen reads the answer file
    * and reports that every belief of a first discovery run is unsupported.
    *
+   * 🚫 The Dashboard flip is NOT a claim that its panels have data. Its own
+   * recorded blocker — "nothing truthful to compose until at least one of them
+   * is wired" — was discharged by the five below. Every aggregate AGE has not
+   * measured still renders `not-assessed` with its reason, and 🚫 nothing is
+   * produced on page load to fill one.
+   *
    * ⚠️ Every OTHER area must stay unwired. This test exists to make flipping one
    * a deliberate, visible act rather than a side effect of a screen edit.
    */
@@ -68,7 +74,7 @@ describe('STUDIO_AREAS', () => {
     expect(everyAreaIsUnwired()).toBe(false);
 
     const wired = STUDIO_AREAS.filter((a) => a.wiring === 'wired').map((a) => a.id);
-    expect(wired).toEqual(['businesses', 'discovery', 'bif', 'evidence', 'diagnostics']);
+    expect(wired).toEqual(['home', 'businesses', 'discovery', 'bif', 'evidence', 'diagnostics']);
   });
 
   /**
