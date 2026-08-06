@@ -91,6 +91,14 @@ export {
 } from './bif-view';
 
 export {
+  dashboardCoverage,
+  presentDashboard,
+  type AreaCoverageRow,
+  type DashboardPanel,
+  type DashboardView,
+} from './dashboard-view';
+
+export {
   evidenceNotAssessedFacets,
   presentEvidence,
   type BeliefSupportView,
