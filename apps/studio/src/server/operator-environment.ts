@@ -16,7 +16,9 @@ import {
 import { loadDiscoveryAnswerFile } from '@age/discovery-answer-file';
 import {
   answerFileNameFor,
+  presentEvidence,
   presentGeneratedBif,
+  type EvidenceView,
   type GeneratedBifView,
   appendClientRecord,
   canSubmit,
@@ -485,7 +487,7 @@ export function submitDiscoveryAnswers(clientId: string, draft: DiscoveryDraft):
 function messageOf(error: unknown): string {
   return error instanceof Error && error.message.length > 0
     ? error.message
-    : 'The BIF could not be produced, and the failure was not recognised.';
+    : 'The request could not be completed, and the failure was not recognised.';
 }
 
 export type GenerateBifOutcome =
@@ -611,6 +613,120 @@ export function generateBifFromAnswerFile(clientId: string, changedBy: string): 
     return {
       kind: 'generated',
       view: presentGeneratedBif(context, mappingMetadata, scoringMetadata),
+      organizationId: scope.client.organizationId,
+    };
+  } catch (error) {
+    return { kind: 'refused', reason: messageOf(error) };
+  }
+}
+
+export type EvidenceOutcome =
+  | {
+      readonly kind: 'assembled';
+      readonly view: EvidenceView;
+      /** Echoed back so the operator can see the scope was DERIVED, not typed. */
+      readonly organizationId: string;
+    }
+  | { readonly kind: 'not-configured'; readonly variable: string }
+  | { readonly kind: 'no-answer-file' }
+  | { readonly kind: 'refused'; readonly reason: string };
+
+/**
+ * Assemble the evidence ledger for a business.
+ *
+ * ⚠️ It runs the SAME chain as the BIF screen rather than reading a BIF from
+ * anywhere: nothing has read the capture store (ADR-0055 D7), so there is no
+ * stored BIF to attach evidence to, and 🚫 no row is seeded to give it one.
+ *
+ * ⚠️ Like the BIF screen this is an ACTION, never page data. Producing on open
+ * would make opening the screen the act, and a recompute-on-open is class 3
+ * under ADR-0057 D4 even though its effect is entirely internal.
+ *
+ * 🚫 NOTHING IS RETRIEVED. No listed document is opened, no address is fetched
+ * and no external system is contacted — those are class 3 twice over, and the
+ * screen states that as a refusal rather than as a pending feature.
+ */
+export function assembleEvidence(clientId: string, changedBy: string): EvidenceOutcome {
+  let principal: string;
+  try {
+    principal = parseOperatorPrincipal(changedBy);
+  } catch (error) {
+    return { kind: 'refused', reason: messageOf(error) };
+  }
+
+  const scope = resolveBusinessScope(clientId);
+  if (scope.kind === 'not-configured') {
+    return { kind: 'not-configured', variable: scope.variable };
+  }
+  if (scope.kind === 'refused') {
+    return { kind: 'refused', reason: scope.reason };
+  }
+  if (scope.kind === 'unknown-client') {
+    return {
+      kind: 'refused',
+      reason:
+        'That business is not in the client record file, so there is no scope to assemble evidence ' +
+        'under. Nothing is guessed and no organization is inferred.',
+    };
+  }
+
+  const workspace = resolveWorkspaceDirectory();
+  if (workspace.kind !== 'ready') {
+    return workspace;
+  }
+
+  let answerFilePath: string;
+  try {
+    answerFilePath = join(workspace.directory, answerFileNameFor(clientId));
+  } catch (error) {
+    if (error instanceof UnsafeClientIdError) {
+      return { kind: 'refused', reason: error.message };
+    }
+    throw error;
+  }
+
+  if (!existsSync(answerFilePath)) {
+    return { kind: 'no-answer-file' };
+  }
+
+  let answers: readonly DiscoveryAnswer[];
+  try {
+    answers = loadDiscoveryAnswerFile({
+      path: answerFilePath,
+      repositoryRoot: repositoryRoot(),
+      questionnaire: STUDIO_QUESTIONNAIRE,
+      // 🚫 The system error is swallowed, for the same reason as above: Node's
+      // read failures embed the full path.
+      readFileText: (path: string) => {
+        try {
+          return readFileSync(path, 'utf8');
+        } catch {
+          throw new Error('the file could not be opened');
+        }
+      },
+    });
+  } catch (error) {
+    return { kind: 'refused', reason: messageOf(error) };
+  }
+
+  const instant = new Date();
+
+  try {
+    const profile = buildProfileFromAnswers(answers, STUDIO_QUESTIONNAIRE, {
+      id: `${clientId}-discovery`,
+      capturedAt: instant.toISOString(),
+    });
+
+    const { context, mappingMetadata } = produceScoredBifContext(profile, {
+      organizationId: scope.client.organizationId,
+      constructedAt: instant,
+      changedBy: principal,
+      questionnaire: STUDIO_QUESTIONNAIRE,
+    });
+
+    return {
+      kind: 'assembled',
+      view: presentEvidence(profile, context, mappingMetadata, STUDIO_QUESTIONNAIRE),
       organizationId: scope.client.organizationId,
     };
   } catch (error) {
