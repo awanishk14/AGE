@@ -248,9 +248,14 @@ strongest differentiator in the product and has **no runtime whatsoever**.
 🚫 **AGE must never silently pick a winner**, and 🚫 a "suggested resolution" must never be generated
 without an engine that can be pointed at. ⚠️ Unknown is never converted into good or bad.
 
-**Pkg** `@age/research-intelligence-engine` ⚠️ types only — it defines `EvidenceConflict` and nothing
-computes one · **API** — · **RT** **GAP — the contradiction detector does not exist** · **Model**
-`EvidenceConflict` ✅
+**Pkg** `@age/intelligence` — `detectContradictions` is implemented · **API** — · **RT** in-process ·
+**Model** `EvidenceConflict` ✅
+
+⚠️ **CORRECTED (#240).** The detector exists; 🚫 do not build another. The gap is **evidence
+extraction** — AGE holds no `Evidence` records, so the detector's preconditions (an extracted signal
+with a polarity, and an entity link) are never met. **S7 shipped in #240** and refuses to run the
+detector, reporting which preconditions the capture fails to meet. 🚫 An empty detector result must
+never be rendered as "no contradictions".
 
 ---
 
