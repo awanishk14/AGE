@@ -24,11 +24,42 @@ import { DiscoveryAnswerFileError, parseDiscoveryAnswerFile } from '@age/discove
 /** A single drafted value. `list` questions hold an array; the rest a string. */
 export type DiscoveryDraftValue = string | readonly string[];
 
+/**
+ * Why a question has deliberately not been answered (ADR-0059 D6 item 3).
+ *
+ * ⚠️ These are the operator's own words about their own pass through the form,
+ * and they are NOT answers. Before this existed, three different situations
+ * collapsed into one blank field: not yet reached, does not apply, and asked but
+ * unknown. The operator could not tell them apart on their second sitting, so
+ * every blank had to be re-read.
+ *
+ * 🚫 A skip is NEVER written to the Answer File, and 🚫 never satisfies a
+ * required question. See `renderAnswerFile` and `summarizeDiscoveryProgress`.
+ */
+export type DiscoverySkipReason = 'not-applicable' | 'unknown';
+
+export const DISCOVERY_SKIP_REASONS: readonly DiscoverySkipReason[] = Object.freeze([
+  'not-applicable',
+  'unknown',
+]);
+
+export function isDiscoverySkipReason(value: unknown): value is DiscoverySkipReason {
+  return DISCOVERY_SKIP_REASONS.includes(value as DiscoverySkipReason);
+}
+
 export interface DiscoveryDraft {
   readonly questionnaireId: string;
   readonly questionnaireVersion: string;
   /** Answered questions only. 🚫 An unanswered question is ABSENT, never ''. */
   readonly answers: Readonly<Record<string, DiscoveryDraftValue>>;
+  /**
+   * Questions the operator deliberately passed over, and why.
+   *
+   * ⚠️ MUTUALLY EXCLUSIVE with `answers` by construction: recording an answer
+   * clears any skip, and recording a skip clears any answer. A question that
+   * was both would be a question AGE could describe two ways.
+   */
+  readonly skips: Readonly<Record<string, DiscoverySkipReason>>;
 }
 
 /**
@@ -47,6 +78,7 @@ export function emptyDraft(questionnaire: BusinessDiscoveryQuestionnaire): Disco
     questionnaireId: questionnaire.id,
     questionnaireVersion: questionnaire.version,
     answers: {},
+    skips: {},
   };
 }
 
@@ -76,7 +108,41 @@ export function applyDraftAnswer(
     answers[questionId] = Array.isArray(cleaned) ? Object.freeze([...cleaned]) : cleaned;
   }
 
-  return { ...draft, answers };
+  // ⚠️ An answer supersedes a skip. The operator marked it "don't know yet" and
+  // then typed the answer; leaving the skip would make the form keep saying they
+  // do not know something they just told it.
+  const skips = { ...draft.skips };
+  if (!isEmpty) delete skips[questionId];
+
+  return { ...draft, answers, skips };
+}
+
+/**
+ * Record — or clear — a deliberate skip, immutably.
+ *
+ * ⚠️ Passing `undefined` clears it, and clearing is not the same as answering:
+ * the question returns to *not yet reached*, which is exactly where it was.
+ *
+ * 🚫 Recording a skip DELETES any answer. It has to: the operator is saying the
+ * question does not apply, and an answer left behind under that statement is a
+ * value AGE would still transcribe into the profile.
+ */
+export function applyDraftSkip(
+  draft: DiscoveryDraft,
+  questionId: string,
+  reason: DiscoverySkipReason | undefined,
+): DiscoveryDraft {
+  const skips = { ...draft.skips };
+  const answers = { ...draft.answers };
+
+  if (reason === undefined) {
+    delete skips[questionId];
+  } else {
+    skips[questionId] = reason;
+    delete answers[questionId];
+  }
+
+  return { ...draft, answers, skips };
 }
 
 /**
@@ -86,6 +152,19 @@ export function applyDraftAnswer(
  * the operator happened to fill them in, so re-saving an unchanged draft
  * produces byte-identical output. 🚫 No timestamp, no author, no id — nothing
  * that would make two saves of the same answers differ.
+ *
+ * 🛑 SKIPS ARE DELIBERATELY ABSENT FROM THIS FILE, and their absence is the
+ * point (ADR-0059 D8: D6 changes nothing about the Answer File's meaning). A
+ * skipped question is a question with no answer, and the canonical file already
+ * says that perfectly by omitting it. Writing skips here would invent a third
+ * kind of entry that every consumer — the CLI, the parser, the mapper, every
+ * score — would have to be taught to read, in exchange for nothing: the profile
+ * cannot act on "not applicable" any differently from "absent".
+ *
+ * ⚠️ What the skip buys is entirely the operator's: the console stops asking,
+ * and their second sitting can tell *not yet reached* from *deliberately
+ * passed over*. That belongs in the draft, which is theirs, not in the artifact,
+ * which is the business's.
  */
 export function renderAnswerFile(
   draft: DiscoveryDraft,
@@ -164,9 +243,24 @@ export function validateDraft(
 export interface DiscoveryProgress {
   readonly answered: number;
   readonly total: number;
+  /**
+   * Questions the operator deliberately passed over.
+   *
+   * 🚫 NEVER folded into `answered`. A form that counted skips as progress
+   * would let an operator reach "17 of 17" having stated nothing, and the
+   * number on the screen would then mean the opposite of what it says.
+   */
+  readonly skipped: number;
+  /** Neither answered nor skipped — not yet reached. */
+  readonly open: number;
   readonly requiredAnswered: number;
   readonly requiredTotal: number;
-  /** Required questions still unanswered, in questionnaire order. */
+  /**
+   * Required questions still unanswered, in questionnaire order.
+   *
+   * ⚠️ A SKIPPED required question is still here. A skip is the operator's note
+   * to themselves; it is not permission for the Answer File to go out short.
+   */
   readonly missingRequired: readonly BusinessDiscoveryQuestionnaireQuestion[];
 }
 
@@ -176,16 +270,62 @@ export function summarizeDiscoveryProgress(
 ): DiscoveryProgress {
   const questions = orderedQuestions(questionnaire);
   const answered = questions.filter((question) => draft.answers[question.id] !== undefined);
+  const skipped = questions.filter(
+    (question) =>
+      draft.answers[question.id] === undefined && draft.skips[question.id] !== undefined,
+  );
   const required = questions.filter((question) => question.required);
   const missingRequired = required.filter((question) => draft.answers[question.id] === undefined);
 
   return {
     answered: answered.length,
     total: questions.length,
+    skipped: skipped.length,
+    open: questions.length - answered.length - skipped.length,
     requiredAnswered: required.length - missingRequired.length,
     requiredTotal: required.length,
     missingRequired,
   };
+}
+
+/** One section's own count, so the operator can see where they are. */
+export interface DiscoverySectionProgress {
+  readonly sectionId: string;
+  readonly name: string;
+  readonly answered: number;
+  readonly skipped: number;
+  readonly total: number;
+  readonly requiredOutstanding: number;
+}
+
+/**
+ * Per-section progress, in questionnaire order.
+ *
+ * 🚫 This is still a COUNT OF FIELDS, not a score and not a readiness. A section
+ * whose every question is answered is not a section AGE has verified — see
+ * `DiscoveryProgress`.
+ */
+export function summarizeDiscoverySections(
+  draft: DiscoveryDraft,
+  questionnaire: BusinessDiscoveryQuestionnaire,
+): readonly DiscoverySectionProgress[] {
+  return questionnaire.sections.map((section) => {
+    const answered = section.questions.filter((q) => draft.answers[q.id] !== undefined);
+    const skipped = section.questions.filter(
+      (q) => draft.answers[q.id] === undefined && draft.skips[q.id] !== undefined,
+    );
+
+    return {
+      sectionId: section.id,
+      name: section.name,
+      answered: answered.length,
+      skipped: skipped.length,
+      total: section.questions.length,
+      requiredOutstanding: section.questions.filter(
+        (q) => q.required && draft.answers[q.id] === undefined,
+      ).length,
+    };
+  });
 }
 
 /**
@@ -214,12 +354,24 @@ export function canSubmit(
  * entries and never infers a kind — the kind is declared on the QUESTION
  * (ADR-0050 D2, ADR-0051 D2/D3). A `list` question's entries are separated by
  * the operator, one per line, because they chose where the boundaries are.
+ *
+ * 🚫 A skip field carrying anything other than a declared reason is IGNORED,
+ * not coerced. The form is the only thing that writes these, so an unrecognised
+ * value means something went wrong — and guessing which skip was meant would be
+ * this module inventing the operator's intent.
  */
+export const DISCOVERY_SKIP_FIELD_PREFIX = 'skip:';
+
 export function draftFromFormEntries(
   entries: Readonly<Record<string, string>>,
   questionnaire: BusinessDiscoveryQuestionnaire,
 ): DiscoveryDraft {
   return orderedQuestions(questionnaire).reduce((draft, question) => {
+    const skip = entries[`${DISCOVERY_SKIP_FIELD_PREFIX}${question.id}`];
+    if (isDiscoverySkipReason(skip)) {
+      return applyDraftSkip(draft, question.id, skip);
+    }
+
     const raw = entries[question.id];
     if (raw === undefined) {
       return draft;
@@ -227,6 +379,14 @@ export function draftFromFormEntries(
 
     return applyDraftAnswer(draft, question.id, isListQuestion(question) ? raw.split('\n') : raw);
   }, emptyDraft(questionnaire));
+}
+
+/** The reason this question was passed over, if it was. */
+export function skipReasonOf(
+  draft: DiscoveryDraft,
+  questionId: string,
+): DiscoverySkipReason | undefined {
+  return draft.answers[questionId] === undefined ? draft.skips[questionId] : undefined;
 }
 
 /** Render a drafted value back into what the form field should show. */
@@ -322,10 +482,47 @@ export function parseDiscoveryDraft(
     answers[questionId] = value;
   }
 
+  /**
+   * ⚠️ `skips` is OPTIONAL on read and absent means none.
+   *
+   * Drafts written before skips existed have no such key, and the operator who
+   * wrote one must not be told their saved work is unreadable because a later
+   * version of the console learned a new state. 🚫 But an unrecognised skip
+   * REASON is refused, not dropped — the same rule as an unknown question id,
+   * for the same reason.
+   */
+  const skips: Record<string, DiscoverySkipReason> = {};
+  const rawSkips = record.skips;
+  if (rawSkips !== undefined) {
+    if (typeof rawSkips !== 'object' || rawSkips === null || Array.isArray(rawSkips)) {
+      throw new DiscoveryDraftError('The saved draft has a "skips" value that is not an object.');
+    }
+
+    for (const [questionId, reason] of Object.entries(rawSkips as Record<string, unknown>)) {
+      if (!questions.has(questionId)) {
+        throw new DiscoveryDraftError(
+          `The saved draft skips "${questionId}", which is not a question in this questionnaire.`,
+        );
+      }
+      if (!isDiscoverySkipReason(reason)) {
+        throw new DiscoveryDraftError(
+          `The saved draft skips "${questionId}" for a reason this questionnaire does not define.`,
+        );
+      }
+      // ⚠️ An answer wins. The two are mutually exclusive by construction in
+      // memory, so a file holding both was edited by hand — and the answer is
+      // the one that carries the business's words.
+      if (answers[questionId] === undefined) {
+        skips[questionId] = reason;
+      }
+    }
+  }
+
   return {
     questionnaireId: questionnaire.id,
     questionnaireVersion: questionnaire.version,
     answers,
+    skips,
   };
 }
 
@@ -335,10 +532,17 @@ export function renderDiscoveryDraft(
   questionnaire: BusinessDiscoveryQuestionnaire,
 ): string {
   const answers: Record<string, DiscoveryDraftValue> = {};
+  const skips: Record<string, DiscoverySkipReason> = {};
   for (const question of orderedQuestions(questionnaire)) {
     const value = draft.answers[question.id];
     if (value !== undefined) {
       answers[question.id] = value;
+      continue;
+    }
+
+    const reason = draft.skips[question.id];
+    if (reason !== undefined) {
+      skips[question.id] = reason;
     }
   }
 
@@ -347,6 +551,7 @@ export function renderDiscoveryDraft(
       questionnaireId: draft.questionnaireId,
       questionnaireVersion: draft.questionnaireVersion,
       answers,
+      skips,
     },
     undefined,
     2,
