@@ -4,6 +4,7 @@ import { storedHistoryFacets } from '@age/studio-shell';
 
 import { BifPanel } from './bif-panel';
 import { StateChip } from './state-chip';
+import { SubjectAreaNav } from './subject-area-nav';
 import { generateBifAction } from '@/server/bif-actions';
 import { resolveBusinessScope } from '@/server/operator-environment';
 
@@ -102,6 +103,7 @@ export function BifScreen({ clientId }: { readonly clientId: string }) {
           ))}
         </ul>
       </section>
+      <SubjectAreaNav clientId={clientId} currentAreaId="bif" />
     </main>
   );
 }

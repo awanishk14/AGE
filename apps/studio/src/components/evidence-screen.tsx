@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { EvidencePanel } from './evidence-panel';
+import { SubjectAreaNav } from './subject-area-nav';
 import { assembleEvidenceAction } from '@/server/evidence-actions';
 import { resolveBusinessScope } from '@/server/operator-environment';
 
@@ -72,6 +73,7 @@ export function EvidenceScreen({ clientId }: { readonly clientId: string }) {
       </p>
 
       <EvidencePanel clientId={clientId} assemble={assembleEvidenceAction} />
+      <SubjectAreaNav clientId={clientId} currentAreaId="evidence" />
     </main>
   );
 }
