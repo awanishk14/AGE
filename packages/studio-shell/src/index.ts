@@ -59,9 +59,15 @@ export {
 
 export {
   applyDraftAnswer,
+  applyDraftSkip,
   canSubmit,
   draftFromFormEntries,
   fieldValueOf,
+  isDiscoverySkipReason,
+  skipReasonOf,
+  summarizeDiscoverySections,
+  DISCOVERY_SKIP_FIELD_PREFIX,
+  DISCOVERY_SKIP_REASONS,
   DiscoveryDraftError,
   emptyDraft,
   isListQuestion,
@@ -73,8 +79,12 @@ export {
   type DiscoveryDraft,
   type DiscoveryDraftValue,
   type DiscoveryProgress,
+  type DiscoverySectionProgress,
+  type DiscoverySkipReason,
   type DraftValidation,
 } from './discovery-draft';
+
+export { rationaleFor, EXPLAINED_SIGNALS, type QuestionRationale } from './discovery-rationale';
 
 export {
   fieldStateOf,

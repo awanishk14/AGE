@@ -60,6 +60,155 @@ body {
  * they are what makes the states distinguishable without colour. 🚫 Do not
  * remove either to make the interface tidier.
  */
+/*
+ * ─── THE TWO VOICES ────────────────────────────────────────────────────────
+ *
+ * The console has exactly two speakers and they must never be mistaken for each
+ * other. The OPERATOR writes prose, in the reading face, in the wide column.
+ * AGE annotates, in the utility mono face, in the margin, behind a rule.
+ *
+ * ⚠️ This is not styling. It is the product's central claim made visible: AGE
+ * never writes in the operator's column. 🚫 Do not set an AGE annotation in the
+ * body face to make a screen look calmer — the moment the two voices share a
+ * treatment, a reader cannot tell what they said from what the machine said.
+ */
+:root {
+  --age-font-body:
+    ui-sans-serif, system-ui, 'Segoe UI', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --age-font-utility:
+    ui-monospace, 'Cascadia Mono', 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+}
+
+body {
+  font-family: var(--age-font-body);
+}
+
+/* AGE's voice. Small, monospaced, behind a rule, never inside the field. */
+.age-note {
+  font-family: var(--age-font-utility);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  color: hsl(var(--age-text-muted));
+  border-left: 2px solid hsl(var(--age-border));
+  padding-left: 0.75rem;
+}
+
+.age-note strong {
+  font-weight: 600;
+  color: hsl(var(--age-text));
+}
+
+/* An eyebrow. Encodes a real label — a section name, a state — never decoration. */
+.age-eyebrow {
+  font-family: var(--age-font-utility);
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: hsl(var(--age-text-muted));
+}
+
+/* The operator's own writing. Deliberately larger than the machine's. */
+.age-field {
+  font-family: var(--age-font-body);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  width: 100%;
+  background: transparent;
+  color: hsl(var(--age-text));
+  border: 0;
+  border-bottom: 1px solid hsl(var(--age-border));
+  border-radius: 0;
+  padding: 0.5rem 0 0.5rem 0;
+  resize: vertical;
+}
+
+.age-field:focus-visible {
+  outline: 0;
+  border-bottom-color: hsl(var(--age-text));
+  box-shadow: 0 1px 0 0 hsl(var(--age-text));
+}
+
+.age-field::placeholder {
+  color: hsl(var(--age-text-muted));
+  opacity: 0.6;
+}
+
+/*
+ * ─── THE TALLY ─────────────────────────────────────────────────────────────
+ *
+ * 🛑 ONE CELL PER QUESTION. Not a percentage, not a fraction of a bar.
+ *
+ * ⚠️ This is the whole reason it is built this way: a continuous bar can be read
+ * as "how ready is this business", and it is not that — it counts fields
+ * someone typed into. A row of discrete cells can only be counted, and counting
+ * it gives the true number. 🚫 Do not replace it with a percentage bar.
+ */
+.age-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.age-tally-cell {
+  width: 1.125rem;
+  height: 0.375rem;
+  border-radius: 1px;
+  border: 1px solid hsl(var(--age-border));
+}
+
+.age-tally-cell[data-cell='answered'] {
+  background: hsl(var(--age-known));
+  border-color: hsl(var(--age-known));
+}
+
+/* Skipped is HATCHED, never filled — it is not progress and must not look it. */
+.age-tally-cell[data-cell='skipped'] {
+  border-color: hsl(var(--age-unknown));
+  background: repeating-linear-gradient(-45deg, hsl(var(--age-unknown)) 0 1px, transparent 1px 3px);
+}
+
+/* A skip chip. Pressed state carries a glyph, so it survives greyscale. */
+.age-chip {
+  font-family: var(--age-font-utility);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  border: 1px solid hsl(var(--age-border));
+  border-radius: 999px;
+  padding: 0.125rem 0.625rem;
+  color: hsl(var(--age-text-muted));
+  background: transparent;
+  cursor: pointer;
+}
+
+.age-chip:hover {
+  border-color: hsl(var(--age-text-muted));
+  color: hsl(var(--age-text));
+}
+
+.age-chip[aria-pressed='true'] {
+  border-color: hsl(var(--age-unknown));
+  border-style: dashed;
+  color: hsl(var(--age-unknown));
+}
+
+.age-chip[aria-pressed='true']::before {
+  content: '✓ ';
+  font-weight: 700;
+}
+
+.age-chip:focus-visible {
+  outline: 2px solid hsl(var(--age-text));
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 .age-state {
   display: inline-flex;
   align-items: center;

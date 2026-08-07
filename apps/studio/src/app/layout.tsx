@@ -30,8 +30,18 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
               here would be the kind of confident falsehood this product exists
               to refuse.
             */}
+            {/*
+              ⚠️ CORRECTED 2026-08-07. It used to end "nothing here is wired to
+              real data yet". That stopped being true eight slices ago — the
+              console reads the operator's own client record and their own
+              answer files — and a banner that understates what a surface does
+              is the same failure as one that overstates it. An operator who
+              read it while looking at their own business's answers would have
+              to decide which of the two the console was lying about.
+            */}
             <header className="border-b border-[hsl(var(--age-border))] px-8 py-3 text-xs text-[hsl(var(--age-text-muted))]">
-              No business execution · no business selected · nothing here is wired to real data yet
+              No business execution · runs on your machine, against files you named · nothing is
+              sent anywhere
             </header>
             <div className="flex-1">{children}</div>
           </div>

@@ -54,8 +54,29 @@ export function DiscoveryScreen({ clientId }: { readonly clientId: string }) {
 
   const outcome = readDiscoveryDraft(clientId);
 
+  /**
+   * ADR-0059 D6 item 5 — the ONLY facts offered, and they are offered, not
+   * filled in.
+   *
+   * 🚫 EXHAUSTIVE. The record states a display name and an organization id and
+   * nothing else about the business, so nothing else appears here. 🚫 Never a
+   * guess derived from either — no industry from the name, no market from the
+   * organization. The `ClientRecord` is deliberately not the ADR-0009 `Client`
+   * aggregate and carries no business attributes to mine.
+   *
+   * ⚠️ The business name is the only question a record fact can answer, because
+   * it is the only question whose answer the record literally already holds.
+   */
+  const recordFacts = [
+    {
+      questionId: 'bi-name',
+      value: scope.client.displayName,
+      source: 'the client record you created',
+    },
+  ];
+
   return (
-    <main className="max-w-3xl p-8">
+    <main className="max-w-6xl p-8">
       <p className="text-xs text-[hsl(var(--age-text-muted))]">
         <Link href={{ pathname: '/businesses' }} className="underline underline-offset-2">
           Businesses
@@ -80,6 +101,7 @@ export function DiscoveryScreen({ clientId }: { readonly clientId: string }) {
           questionnaire={STUDIO_QUESTIONNAIRE}
           initialDraft={outcome.draft}
           everSaved={outcome.everSaved}
+          recordFacts={recordFacts}
           save={saveDiscoveryDraftAction}
           submit={submitDiscoveryAction}
         />
