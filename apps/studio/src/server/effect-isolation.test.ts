@@ -89,6 +89,38 @@ describe('apps/studio effect isolation', () => {
     expect(offenders).toEqual([]);
   });
 
+  /**
+   * 🚫 `@age/demo-runtime` is never imported bare.
+   *
+   * ⚠️ Its index exports `runAllCapabilities` and the demo fixtures. Running a
+   * capability against a real business is class 3 under ADR-0057 D4, and a demo
+   * fixture rendered beside a real client's name is an invented value about that
+   * client. The console reaches only the `/context-readiness` subpath, which
+   * carries neither.
+   *
+   * ⚠️ Scans EVERY file including the effect module — this one has no exemption,
+   * because the effect module is exactly where the shortcut would be taken.
+   */
+  it('never reaches the demo runtime index, only the readiness subpath', () => {
+    let scanned = 0;
+    const offenders: string[] = [];
+    // ⚠️ Matches the bare specifier only. `@age/demo-runtime/context-readiness`
+    // contains the package name as a prefix, so a plain `includes` would report
+    // the permitted import as a violation and the guard would be deleted.
+    const bare = /from\s+'@age\/demo-runtime'/;
+
+    for (const file of files) {
+      scanned += 1;
+      const source = withoutComments(readFileSync(file, 'utf8'));
+      if (bare.test(source)) {
+        offenders.push(`${file.slice(srcDir.length)} imports @age/demo-runtime bare`);
+      }
+    }
+
+    expect(scanned).toBe(files.length);
+    expect(offenders).toEqual([]);
+  });
+
   it('confirms the one effect module actually performs the effects', () => {
     // ⚠️ Otherwise this guard would keep passing after the effects moved
     // somewhere it does not scan, and report that as compliance.

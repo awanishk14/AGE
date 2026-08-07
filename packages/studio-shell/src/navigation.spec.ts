@@ -67,6 +67,11 @@ describe('STUDIO_AREAS', () => {
    * measured still renders `not-assessed` with its reason, and 🚫 nothing is
    * produced on page load to fill one.
    *
+   * 🚫 The Intelligence flip is NOT a claim that anything has been produced. No
+   * capability has ever been run for a real business, and the screen says so as
+   * `not-assessed` rather than reporting zero outputs. Only the readiness half
+   * of its question is answered, by the capabilities' own assessors.
+   *
    * ⚠️ Every OTHER area must stay unwired. This test exists to make flipping one
    * a deliberate, visible act rather than a side effect of a screen edit.
    */
@@ -74,7 +79,15 @@ describe('STUDIO_AREAS', () => {
     expect(everyAreaIsUnwired()).toBe(false);
 
     const wired = STUDIO_AREAS.filter((a) => a.wiring === 'wired').map((a) => a.id);
-    expect(wired).toEqual(['home', 'businesses', 'discovery', 'bif', 'evidence', 'diagnostics']);
+    expect(wired).toEqual([
+      'home',
+      'businesses',
+      'discovery',
+      'bif',
+      'evidence',
+      'intelligence',
+      'diagnostics',
+    ]);
   });
 
   /**
