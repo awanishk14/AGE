@@ -15,8 +15,21 @@ import { describe, expect, it } from 'vitest';
 const SRC = join(__dirname, '..');
 const REPO_ROOT = join(SRC, '..', '..', '..');
 
+/**
+ * ⚠️ Built output and installed packages are excluded by SEGMENT, not by
+ * substring: a package named `distribution` must still be scanned.
+ *
+ * 🛑 THEY ARE PRUNED DURING THE WALK, NOT FILTERED AFTERWARDS. Filtering
+ * afterwards still `stat`s every file under `node_modules` — including the
+ * `vitest.config.ts.timestamp-*.mjs` files that other vitest processes create
+ * and delete while this one is walking. That race made CI fail with an ENOENT
+ * on a path this guard has no interest in, twice, on docs-only changes.
+ */
+const EXCLUDED_SEGMENTS = new Set(['node_modules', 'dist']);
+
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
+    if (EXCLUDED_SEGMENTS.has(entry)) return [];
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) return sourceFiles(full);
     return full.endsWith('.ts') && !full.endsWith('.spec.ts') ? [full] : [];
@@ -80,13 +93,16 @@ describe('@age/operator-file-policy is pure', () => {
 describe('the outside-the-repository rule exists in exactly one place', () => {
   const ROOTS = ['packages', 'apps'].map((dir) => join(REPO_ROOT, dir)).filter(existsSync);
 
-  // ⚠️ Built output is excluded by SEGMENT, not by substring: a package named
-  // `distribution` must still be scanned.
-  const EXCLUDED_SEGMENTS = new Set(['node_modules', 'dist']);
+  const files = ROOTS.flatMap((root) => sourceFiles(root));
 
-  const files = ROOTS.flatMap((root) => sourceFiles(root)).filter(
-    (file) => !file.split(/[\\/]/).some((segment) => EXCLUDED_SEGMENTS.has(segment)),
-  );
+  it('excluded nothing it should have scanned, and scanned nothing excluded', () => {
+    // ⚠️ The pruning now happens inside the walk, so this asserts the OUTCOME
+    // rather than trusting it: a prune that swallowed the tree would fail the
+    // count below, and a prune that missed would show up here.
+    expect(
+      files.filter((file) => file.split(/[\\/]/).some((segment) => EXCLUDED_SEGMENTS.has(segment))),
+    ).toEqual([]);
+  });
 
   it('found the repository source tree to scan', () => {
     expect(ROOTS.length).toBe(2);
