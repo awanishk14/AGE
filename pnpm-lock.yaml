@@ -188,6 +188,9 @@ importers:
       '@age/operator-file-policy':
         specifier: workspace:*
         version: link:../../packages/operator-file-policy
+      '@age/operator-workspace':
+        specifier: workspace:*
+        version: link:../../packages/operator-workspace
       '@age/studio-shell':
         specifier: workspace:*
         version: link:../../packages/studio-shell
@@ -591,6 +594,34 @@ importers:
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(terser@5.48.0)
 
   packages/operator-file-policy:
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(terser@5.48.0)
+
+  packages/operator-workspace:
+    dependencies:
+      '@age/business-discovery-contracts':
+        specifier: workspace:*
+        version: link:../business-discovery-contracts
+      '@age/capability-kit':
+        specifier: workspace:*
+        version: link:../capability-kit
+      '@age/client-registry':
+        specifier: workspace:*
+        version: link:../client-registry
+      '@age/demo-runtime':
+        specifier: workspace:*
+        version: link:../demo-runtime
+      '@age/discovery-answer-file':
+        specifier: workspace:*
+        version: link:../discovery-answer-file
+      '@age/operator-file-policy':
+        specifier: workspace:*
+        version: link:../operator-file-policy
+      '@age/studio-shell':
+        specifier: workspace:*
+        version: link:../studio-shell
     devDependencies:
       vitest:
         specifier: ^2.1.1
