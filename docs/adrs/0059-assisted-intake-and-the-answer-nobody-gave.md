@@ -1,6 +1,7 @@
 # ADR-0059 — Assisted intake, and the answer nobody gave
 
-Status: **Proposed** — 🛑 **a decision request. Do NOT self-accept it.**
+Status: **D6 Accepted** (2026-08-07, by the Product Owner — see §0.1b) · **D1–D5 and D7 remain
+`Proposed`** — 🛑 still a decision request, and 🚫 still not self-acceptable.
 Date: 2026-08-07
 Relates to: ADR-0049 **D2** (no default parameter — the pipeline must stay falsifiable), ADR-0050
 **D2** (the mapper **TRANSCRIBES and never INFERS**), ADR-0051 (the enum is on the **question**,
@@ -43,6 +44,44 @@ hard boundary by name:
 
 ⚠️ This ADR is the _shape_ of assisted intake. It authorizes **no code** on acceptance except what
 **D8** names exhaustively.
+
+### 0.1b Acceptance — D6 only, in the Product Owner's own words (2026-08-07)
+
+> _"And ADR-0059 is still waiting on you; D6 is the part that would make filling this in less
+> painful next time., go ahead then iplement it"_
+
+That is an acceptance of **D6 and nothing else**. Read against **D8**, it authorizes exactly: _"the
+five items in D6, in `apps/studio`, with no change to the answer file's meaning."_
+
+🚫 **It is NOT an acceptance of D1, D2, D3, D4, D5 or D7**, all of which stay `Proposed`. In
+particular it authorizes **no** source reading of any kind — no local file, no PDF, no URL, no
+widget — **no** model call, and **no** change to any score's definition. A later session must not
+read this acceptance as momentum for the rest of the ADR; §0.2 exists precisely because that is the
+failure mode this split was designed to prevent.
+
+⚠️ **Not self-accepted.** The Product Owner accepted in their own words, quoted above, and this
+`Status` flip is a separate PR from the ADR's own (the §7 convention: #88→#89, #93→#94, …).
+
+### 0.1c Erratum — D6 item 4 was wrong about autosave, and is corrected below
+
+**D6 item 4 as originally written said "🚫 Not autosave — autosave is class 3 under ADR-0057 D4 and
+stays refused." That was an error of fact by the ADR's own author, and it is corrected in D6.**
+
+Autosave of the operator's discovery draft was **put to the Product Owner and permitted on
+2026-08-03**, and has shipped since. Their words are recorded in
+`apps/studio/src/components/discovery-form.tsx`:
+
+> _"This is not AGE making a business decision; it's simply preserving the operator's draft."_
+
+The reasoning holds and is already written into `canSubmit`'s contract in
+`packages/studio-shell/src/discovery-draft.ts`: preserving keystrokes the operator already typed
+initiates nothing and decides nothing, so it is not class 3. What **is** class 3, and remains
+refused, is anything that would **submit** on the operator's behalf — no timer, no on-blur, no
+submit-when-complete.
+
+🚫 **Do not remove working autosave on the strength of the erratum.** An ADR written after a
+decision does not repeal it, and this one did not intend to: item 4's subject was always _save and
+resume_, which autosave already delivers.
 
 ### 0.2 The complaint is correct, and it is two complaints
 
@@ -171,8 +210,11 @@ Wholly within **class 2** (Knowledge Authoring, ADR-0057 D4) and crossing nothin
    because it reads as a form rather than as an interview with a purpose.
 3. **Explicit skip** — "not applicable" and "don't know yet" as _recorded_ answers distinct from
    _unanswered_. ⚠️ This is honesty, not convenience: today those three states collapse into blank.
-4. **Save and resume** — an explicit operator-pressed **Save draft**. 🚫 **Not autosave** — autosave
-   is class 3 under ADR-0057 D4 and stays refused.
+4. **Save and resume** — the operator can stop and come back without losing what they typed.
+   ⚠️ **CORRECTED — see §0.1c.** This item originally said autosave was class 3 and refused. That
+   was wrong: the Product Owner permitted draft autosave on 2026-08-03 and it has shipped since.
+   🚫 Do not remove it. What stays refused is anything that would **submit** on the operator's
+   behalf — no timer, no on-blur, no submit-when-complete.
 5. **Prefill only what a record already states** — the business's display name and organization come
    from the resolved `ClientRecord`. 🚫 Nothing else. 🚫 Never a guess from the name of the business.
 
@@ -195,8 +237,9 @@ On acceptance of **D1–D2, D4 routes 1–2, D6, D7**: additionally, a local sou
 produces candidates and writes **only** human-accepted answers, with provenance.
 
 🚫 **Nothing else.** In particular, acceptance authorizes **no** URL fetch (D4.3), **no** widget
-(D4.4), **no** model call (D5), **no** vendor integration, **no** autosave, and **no** change to any
-score's definition.
+(D4.4), **no** model call (D5), **no** vendor integration, and **no** change to any score's
+definition. ⚠️ This list originally also said "no autosave" — struck, per the §0.1c erratum:
+autosave was already permitted on 2026-08-03 and this ADR never had standing to repeal it.
 
 ---
 
