@@ -4,6 +4,13 @@ Status: **Proposed** · measured against `main` at **`1d43f6f`**, 2026-08-03.
 🚫 Authorizes no code. ⚠️ **Re-measure before citing** — a matrix is a claim about the repo, and a
 stale one is exactly the kind of confident falsehood this product exists to refuse.
 
+> 🛑 **THIS MATRIX IS STALE AND IS KNOWN TO BE STALE.** Eight Studio slices have shipped since
+> `1d43f6f` (#229–#240), and every console-level area plus `businesses`, `discovery`, `bif`,
+> `evidence`, `intelligence` and `contradictions` is now wired. ⚠️ **This very PR corrects a factual
+> error the matrix carried** — it recorded that no contradiction detector existed, and
+> `detectContradictions` exists and works. 🚫 **Do not plan from a row without re-measuring it**;
+> that error would have sent a session building something the repo already has.
+
 ---
 
 ## Legend
