@@ -1,7 +1,8 @@
 # ADR-0058 — Identity, entitlement, and the scope nobody may type
 
-Status: **Proposed** — 🛑 **a decision request. Do NOT self-accept it.**
-Date: 2026-08-03
+Status: **Accepted** — by the Product Owner on 2026-08-07. 🚫 **NOT self-accepted** (see §0.1b).
+⚠️ Acceptance authorizes **only** what D8 names, and it **did not** answer §6's three open questions.
+Date: 2026-08-03 · Accepted: 2026-08-07
 This is **ADR J** of the J→K→L track the Product Owner opened in ADR-0057 §0.4 open question 6:
 _"you are one step away from somebody saying 'can my colleague also log in?' Once that happens, D9
 becomes a production problem instead of an architectural note."_
@@ -44,6 +45,32 @@ decisions the architect can reason to. Three things here are not:
    a second person. D7 states plainly what is still owed and refuses to let a screen discharge it.
 
 ⚠️ This ADR is the _shape_ of identity. It authorizes **no code** on acceptance except what D8 names.
+
+### 0.1b Acceptance — the Product Owner's own words, 2026-08-07
+
+> _"its accepted, move to next task"_
+
+🚫 **NOT self-accepted.** The acceptance is the Product Owner's, recorded verbatim above.
+
+⚠️ **THE NOTE IS TERSE, AND THIS SECTION EXISTS SO THAT TERSENESS IS NEVER READ AS BREADTH.** Three
+bounds hold, and 🚫 none of them may be relaxed by citing "the owner accepted ADR-0058":
+
+1. **Acceptance authorizes exactly what D8 lists and nothing else.** 🚫 No identity provider, 🚫 no
+   session, 🚫 no login screen, 🚫 no database read, 🚫 no change to `apps/web`. Of D8's three items,
+   items 2 and 3 (the System Status model and its rendering, the Businesses screen with the D4 band)
+   **already shipped** under ADR-0057 and are hereby ratified rather than newly permitted. **The only
+   item this acceptance actually opens is D8 item 1** — the entitlement question as types and one
+   pure function, **with no caller**.
+2. 🛑 **§6's three open questions are NOT answered by this note and remain open.** In particular Q1 —
+   _is the tenant boundary the organization, or the client?_ — is unanswered, so D1's assumption
+   (the organization, per `07_UI_NAVIGATION.md`) stands **as written and as an assumption**. ⚠️ If
+   the real answer is the client, D4's band is still correct but the entitlement **type** changes.
+   🚫 Do not build anything that would be expensive to re-key on that answer, and 🚫 do not treat the
+   assumption as decided in a later ADR's "relates to" line.
+3. 🛑 **§5 is unchanged: recorded is NOT authorized.** The identity **provider** and session (ADR K),
+   the entitlement **store**, multi-operator Studio and anything in `07_UI_NAVIGATION` each still
+   need their own `Status: Proposed` ADR. ⚠️ ADR-0055 **D7 remains undischarged** — this acceptance
+   does not touch it, and 🚫 an entitlement function does not make a read path permissible.
 
 ### 0.2 The finding that made this urgent, in one paragraph
 
@@ -236,6 +263,10 @@ the runtime-caller wiring that ADR-0054 §0.1d stopped.
 
 ## 7. Acceptance
 
-🛑 **This ADR is `Status: Proposed`. It must NOT be self-accepted.** The precedent stands: merge this
-PR to record it, the **Product Owner** accepts in their own words, then a **separate** PR flips
-`Status` with that note verbatim.
+✅ **Accepted by the Product Owner on 2026-08-07**, in their own words, recorded verbatim in §0.1b.
+🚫 **It was not self-accepted.** The precedent was followed exactly: a PR recorded the
+`Proposed` ADR (PR **#230**, `1d43f6f`), the Product Owner accepted, and a **separate** PR flipped
+`Status` with the note verbatim and nothing added to it.
+
+⚠️ **Read §0.1b before acting on this acceptance.** It authorizes **D8 item 1 only** in practice, it
+leaves §6's three open questions open, and it discharges nothing in §5 or in ADR-0055 D7.
