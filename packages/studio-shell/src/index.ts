@@ -99,6 +99,13 @@ export {
 } from './dashboard-view';
 
 export {
+  presentContradictions,
+  type ContradictionPreconditionView,
+  type ContradictionsNotAssessedFacet,
+  type ContradictionsView,
+} from './contradictions-view';
+
+export {
   evidenceNotAssessedFacets,
   presentEvidence,
   type BeliefSupportView,

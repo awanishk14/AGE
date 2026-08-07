@@ -17,9 +17,11 @@ import { loadDiscoveryAnswerFile } from '@age/discovery-answer-file';
 import {
   answerFileNameFor,
   presentCapabilityReadiness,
+  presentContradictions,
   presentEvidence,
   presentGeneratedBif,
   type CapabilityReadinessView,
+  type ContradictionsView,
   type EvidenceView,
   type GeneratedBifView,
   appendClientRecord,
@@ -739,6 +741,48 @@ export function assembleEvidence(clientId: string, changedBy: string): EvidenceO
   } catch (error) {
     return { kind: 'refused', reason: messageOf(error) };
   }
+}
+
+export type ContradictionsOutcome =
+  | {
+      readonly kind: 'reported';
+      readonly view: ContradictionsView;
+      /** Echoed back so the operator can see the scope was DERIVED, not typed. */
+      readonly organizationId: string;
+    }
+  | { readonly kind: 'not-configured'; readonly variable: string }
+  | { readonly kind: 'no-answer-file' }
+  | { readonly kind: 'refused'; readonly reason: string };
+
+/**
+ * Report why AGE cannot yet say whether it disagrees with itself.
+ *
+ * 🛑 THE DETECTOR IS NOT RUN AND THIS FUNCTION CANNOT RUN IT.
+ * `detectContradictions` is real and would return an empty set over an empty
+ * evidence list; showing that as a result would tell the operator AGE checked a
+ * real business and found nothing wrong with it. Nothing checked it.
+ *
+ * ⚠️ It composes the EVIDENCE account rather than building a second one — a
+ * second answer to an answered question is a second answer that can disagree.
+ * Every refusal, missing-file and unconfigured branch is therefore the evidence
+ * screen's, unchanged.
+ *
+ * ⚠️ An ACTION, never page data, for the same reason as the screens above: a
+ * recompute-on-open is class 3 under ADR-0057 D4 even though its effect is
+ * entirely internal.
+ */
+export function reportContradictions(clientId: string, changedBy: string): ContradictionsOutcome {
+  const evidence = assembleEvidence(clientId, changedBy);
+
+  if (evidence.kind !== 'assembled') {
+    return evidence;
+  }
+
+  return {
+    kind: 'reported',
+    view: presentContradictions(evidence.view),
+    organizationId: evidence.organizationId,
+  };
 }
 
 export type CapabilityReadinessOutcome =
