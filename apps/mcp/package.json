@@ -1,0 +1,30 @@
+{
+  "name": "@age/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/mcp-protocol.ts",
+  "types": "./src/mcp-protocol.ts",
+  "bin": {
+    "age-mcp": "./dist/bin/age-mcp.cjs"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/bundle.mjs",
+    "bundle": "node scripts/bundle.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "clean": "rimraf dist .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@age/operator-workspace": "workspace:*",
+    "@age/studio-shell": "workspace:*"
+  },
+  "devDependencies": {
+    "ts-loader": "^9.5.1",
+    "vitest": "^2.1.1",
+    "webpack": "^5.97.1",
+    "webpack-node-externals": "^3.0.0"
+  }
+}
