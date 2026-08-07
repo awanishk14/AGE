@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { IntelligencePanel } from './intelligence-panel';
+import { SubjectAreaNav } from './subject-area-nav';
 import { assessCapabilityReadinessAction } from '@/server/intelligence-actions';
 import { resolveBusinessScope } from '@/server/operator-environment';
 
@@ -77,6 +78,7 @@ export function IntelligenceScreen({ clientId }: { readonly clientId: string }) 
       </p>
 
       <IntelligencePanel clientId={clientId} assess={assessCapabilityReadinessAction} />
+      <SubjectAreaNav clientId={clientId} currentAreaId="intelligence" />
     </main>
   );
 }

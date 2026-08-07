@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { ContradictionsPanel } from './contradictions-panel';
+import { SubjectAreaNav } from './subject-area-nav';
 import { reportContradictionsAction } from '@/server/contradictions-actions';
 import { resolveBusinessScope } from '@/server/operator-environment';
 
@@ -71,6 +72,7 @@ export function ContradictionsScreen({ clientId }: { readonly clientId: string }
       </p>
 
       <ContradictionsPanel clientId={clientId} report={reportContradictionsAction} />
+      <SubjectAreaNav clientId={clientId} currentAreaId="contradictions" />
     </main>
   );
 }

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { STUDIO_AREAS } from '@age/studio-shell';
 
 import { DiscoveryForm } from './discovery-form';
+import { SubjectAreaNav } from './subject-area-nav';
 import { saveDiscoveryDraftAction, submitDiscoveryAction } from '@/server/discovery-actions';
 import {
   readDiscoveryDraft,
@@ -113,6 +114,7 @@ export function DiscoveryScreen({ clientId }: { readonly clientId: string }) {
           </p>
         </section>
       )}
+      <SubjectAreaNav clientId={clientId} currentAreaId="discovery" />
     </main>
   );
 }

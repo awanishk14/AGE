@@ -1,8 +1,9 @@
 import Link from 'next/link';
 
-import { areaHref, areasForLevel, STUDIO_AREAS } from '@age/studio-shell';
+import { STUDIO_AREAS } from '@age/studio-shell';
 
 import { StateChip } from './state-chip';
+import { SubjectAreaNav } from './subject-area-nav';
 import { resolveBusinessScope, type BusinessScope } from '@/server/operator-environment';
 
 /**
@@ -80,25 +81,12 @@ export function SubjectAreaScreen({
         </p>
       </section>
 
-      <nav className="mt-6">
-        <p className="text-[0.6875rem] font-semibold uppercase tracking-wider text-[hsl(var(--age-text-muted))]">
-          Other areas for this business
-        </p>
-        <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-          {areasForLevel('subject')
-            .filter((candidate) => candidate.id !== area.id)
-            .map((candidate) => (
-              <li key={candidate.id}>
-                <Link
-                  href={{ pathname: areaHref(candidate, scope.client.clientId) }}
-                  className="text-xs text-[hsl(var(--age-text-muted))] underline underline-offset-2 hover:text-[hsl(var(--age-text))]"
-                >
-                  {candidate.label}
-                </Link>
-              </li>
-            ))}
-        </ul>
-      </nav>
+      {/*
+        ⚠️ The shared implementation, not a copy. This screen had the only
+        working "other areas" nav while the five WIRED screens had none; the
+        fix was to extract it, not to duplicate it into five more places.
+      */}
+      <SubjectAreaNav clientId={scope.client.clientId} currentAreaId={area.id} />
     </main>
   );
 }
