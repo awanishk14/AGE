@@ -109,6 +109,15 @@ export {
 } from './evidence-view';
 
 export {
+  intelligenceNotAssessedFacets,
+  presentCapabilityReadiness,
+  type CapabilityReadinessRowView,
+  type CapabilityReadinessView,
+  type IntelligenceNotAssessedFacet,
+  type ReadinessThresholdView,
+} from './intelligence-view';
+
+export {
   appendClientRecord,
   CLIENT_RECORD_DRAFT_FIELDS,
   clientRecordDraftFromFormEntries,

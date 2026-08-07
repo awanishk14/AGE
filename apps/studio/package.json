@@ -14,7 +14,9 @@
   },
   "dependencies": {
     "@age/business-discovery-contracts": "workspace:*",
+    "@age/capability-kit": "workspace:*",
     "@age/client-registry": "workspace:*",
+    "@age/demo-runtime": "workspace:*",
     "@age/discovery-answer-file": "workspace:*",
     "@age/operator-file-policy": "workspace:*",
     "@age/studio-shell": "workspace:*",

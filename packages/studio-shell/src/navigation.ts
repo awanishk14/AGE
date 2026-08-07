@@ -179,9 +179,16 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
     route: '/b/:clientId/intelligence',
     level: 'subject',
     screen: 'S8',
-    wiring: 'not-wired',
+    // ⚠️ `wired` because HALF the question has a real answer: three capabilities
+    // publish an ADR-0027 readiness assessment, and each one runs over a context
+    // built from the answer file this console wrote.
+    // 🚫 It is NOT a claim that anything has been PRODUCED. No capability has
+    // been run for a real business — that is refused, not pending — and the
+    // screen reports the produced half as `not-assessed` rather than as zero
+    // output. 🚫 It reads no stored context: ADR-0055 D7 is untouched and no row
+    // was seeded to flip this.
+    wiring: 'wired',
     question: 'What did the capabilities produce, and were they ready to run?',
-    notWiredBecause: 'Blocked on ADR-0055 D7, as above.',
   },
   {
     id: 'strategy',

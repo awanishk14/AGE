@@ -16,8 +16,10 @@ import {
 import { loadDiscoveryAnswerFile } from '@age/discovery-answer-file';
 import {
   answerFileNameFor,
+  presentCapabilityReadiness,
   presentEvidence,
   presentGeneratedBif,
+  type CapabilityReadinessView,
   type EvidenceView,
   type GeneratedBifView,
   appendClientRecord,
@@ -43,6 +45,11 @@ import {
   assertOperatorFilePathOutsideRepository,
   OperatorFilePathRefusedError,
 } from '@age/operator-file-policy';
+import { ClientContext } from '@age/capability-kit';
+// ⚠️ The SUBPATH, deliberately. `@age/demo-runtime`'s index also exports
+// `runAllCapabilities` and the demo fixtures; 🚫 neither may become reachable
+// from the console, and a source guard enforces the distinction.
+import { buildContextReadinessReport } from '@age/demo-runtime/context-readiness';
 
 /**
  * The ONE module in `apps/studio` that performs an effect.
@@ -727,6 +734,133 @@ export function assembleEvidence(clientId: string, changedBy: string): EvidenceO
     return {
       kind: 'assembled',
       view: presentEvidence(profile, context, mappingMetadata, STUDIO_QUESTIONNAIRE),
+      organizationId: scope.client.organizationId,
+    };
+  } catch (error) {
+    return { kind: 'refused', reason: messageOf(error) };
+  }
+}
+
+export type CapabilityReadinessOutcome =
+  | {
+      readonly kind: 'assessed';
+      readonly view: CapabilityReadinessView;
+      /** Echoed back so the operator can see the scope was DERIVED, not typed. */
+      readonly organizationId: string;
+    }
+  | { readonly kind: 'not-configured'; readonly variable: string }
+  | { readonly kind: 'no-answer-file' }
+  | { readonly kind: 'refused'; readonly reason: string };
+
+/**
+ * Assess how far the captured context carries each capability.
+ *
+ * ⚠️ IT ASSESSES; IT DOES NOT RUN. `buildContextReadinessReport` calls the three
+ * ADR-0027 assessors and nothing else — 🚫 `runAllCapabilities` is not imported,
+ * not reachable, and not merely unused. Running a capability against a real
+ * business is a decision nobody has taken, and readiness has never gated `run`
+ * in either direction (ADR-0047).
+ *
+ * ⚠️ Like the BIF and Evidence screens this is an ACTION, never page data. A
+ * recompute-on-open is class 3 under ADR-0057 D4 even though its effect is
+ * entirely internal, and a test asserts the action is not called on mount.
+ *
+ * ⚠️ It runs the SAME chain over the SAME answer file as those two screens
+ * rather than reading a stored BIF: nothing has read the capture store
+ * (ADR-0055 D7), and 🚫 no row is seeded to give it one. The context assessed
+ * here is built in memory and discarded, which the screen states.
+ */
+export function assessCapabilityReadiness(
+  clientId: string,
+  changedBy: string,
+): CapabilityReadinessOutcome {
+  let principal: string;
+  try {
+    principal = parseOperatorPrincipal(changedBy);
+  } catch (error) {
+    return { kind: 'refused', reason: messageOf(error) };
+  }
+
+  const scope = resolveBusinessScope(clientId);
+  if (scope.kind === 'not-configured') {
+    return { kind: 'not-configured', variable: scope.variable };
+  }
+  if (scope.kind === 'refused') {
+    return { kind: 'refused', reason: scope.reason };
+  }
+  if (scope.kind === 'unknown-client') {
+    return {
+      kind: 'refused',
+      reason:
+        'That business is not in the client record file, so there is no scope to assess readiness ' +
+        'under. Nothing is guessed and no organization is inferred.',
+    };
+  }
+
+  const workspace = resolveWorkspaceDirectory();
+  if (workspace.kind !== 'ready') {
+    return workspace;
+  }
+
+  let answerFilePath: string;
+  try {
+    answerFilePath = join(workspace.directory, answerFileNameFor(clientId));
+  } catch (error) {
+    if (error instanceof UnsafeClientIdError) {
+      return { kind: 'refused', reason: error.message };
+    }
+    throw error;
+  }
+
+  if (!existsSync(answerFilePath)) {
+    return { kind: 'no-answer-file' };
+  }
+
+  let answers: readonly DiscoveryAnswer[];
+  try {
+    answers = loadDiscoveryAnswerFile({
+      path: answerFilePath,
+      repositoryRoot: repositoryRoot(),
+      questionnaire: STUDIO_QUESTIONNAIRE,
+      // 🚫 The system error is swallowed: Node's read failures embed the full path.
+      readFileText: (path: string) => {
+        try {
+          return readFileSync(path, 'utf8');
+        } catch {
+          throw new Error('the file could not be opened');
+        }
+      },
+    });
+  } catch (error) {
+    return { kind: 'refused', reason: messageOf(error) };
+  }
+
+  const instant = new Date();
+
+  try {
+    const profile = buildProfileFromAnswers(answers, STUDIO_QUESTIONNAIRE, {
+      id: `${clientId}-discovery`,
+      capturedAt: instant.toISOString(),
+    });
+
+    const { context } = produceScoredBifContext(profile, {
+      organizationId: scope.client.organizationId,
+      constructedAt: instant,
+      changedBy: principal,
+      questionnaire: STUDIO_QUESTIONNAIRE,
+    });
+
+    const report = buildContextReadinessReport(context, {
+      producedAt: instant,
+      // ⚠️ Both components come off the resolved record. 🚫 Neither is typed by
+      // the operator and neither is defaulted — ADR-0054 D2 refuses a typed
+      // scope by name.
+      clientContext: new ClientContext(scope.client.clientId, scope.client.organizationId),
+    });
+
+    return {
+      kind: 'assessed',
+      view: presentCapabilityReadiness(report),
       organizationId: scope.client.organizationId,
     };
   } catch (error) {
