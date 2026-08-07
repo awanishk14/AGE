@@ -169,9 +169,14 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
     route: '/b/:clientId/contradictions',
     level: 'subject',
     screen: 'S7',
-    wiring: 'not-wired',
+    // ⚠️ Wired because the screen renders a REAL result — and the real result is
+    // that the detector cannot run. 🚫 It is NOT a claim that this business has
+    // been checked for consistency. `detectContradictions` exists and would
+    // return an empty set over an empty evidence list; the screen refuses to run
+    // it and reports which of its preconditions the capture fails to meet.
+    // 🛑 ADR-0055 D7 is untouched and no row was seeded.
+    wiring: 'wired',
     question: 'Where does AGE disagree with itself?',
-    notWiredBecause: 'Blocked on ADR-0055 D7, as above.',
   },
   {
     id: 'intelligence',

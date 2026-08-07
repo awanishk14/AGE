@@ -72,6 +72,12 @@ describe('STUDIO_AREAS', () => {
    * `not-assessed` rather than reporting zero outputs. Only the readiness half
    * of its question is answered, by the capabilities' own assessors.
    *
+   * 🚫 The Contradictions flip is NOT a claim that this business has been
+   * checked for consistency. `detectContradictions` exists and would return an
+   * empty set over an empty evidence list; the screen refuses to run it and
+   * reports which of its preconditions the capture fails to meet. Its own
+   * outcome is `not-run` and every facet is `not-assessed`.
+   *
    * ⚠️ Every OTHER area must stay unwired. This test exists to make flipping one
    * a deliberate, visible act rather than a side effect of a screen edit.
    */
@@ -85,6 +91,7 @@ describe('STUDIO_AREAS', () => {
       'discovery',
       'bif',
       'evidence',
+      'contradictions',
       'intelligence',
       'diagnostics',
     ]);
