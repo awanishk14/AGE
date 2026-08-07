@@ -83,6 +83,15 @@ and the band on S2 stays **derived** (ADR-0058 D4).
     is the differentiator, it needs only evidence (which M4 provides), and 🚫 it cannot be faked in a
     UI rule. **Contradictions S7.**
 
+    > ⚠️ **CORRECTED (#240) — THE DETECTOR ALREADY EXISTS.** `detectContradictions` is implemented
+    > and tested in `packages/capabilities/intelligence`. 🚫 **Do not write a second one.** What M5
+    > actually needs is **evidence extraction**: discovery records a source as _text attached to
+    > nothing_, so AGE holds zero `Evidence` records, and the detector's real preconditions — an
+    > extracted signal with a polarity, and an entity link — are never met. Until something produces
+    > `Evidence`, the detector returns an empty set for a reason that has nothing to do with the
+    > business. **S7 is shipped (#240) and reports exactly that**, refusing to run the detector
+    > rather than printing an empty result.
+
 ### M6 — Graph, then strategy
 
 12. **BIF→graph projection + Knowledge Graph S8.** 🚫 Every edge carries its evidence; an unsupported
@@ -115,7 +124,9 @@ building a screen that assumes an answer.**
 3. **Is execution re-introduced?** ADR-0057 q3. Screen S10 does not exist as a product until this is
    answered.
 4. **Which peer product is first?** ADR-0057 q2.
-5. **Which engine is written first?** M5 proposes the contradiction detector. ⚠️ The alternative case
+5. **Which engine is written first?** M5 proposes the contradiction detector. ⚠️ **CORRECTED
+   (#240): that engine exists.** The live form of this question is whether **evidence extraction**
+   or the strategy engine comes first — see the M5 correction above. ⚠️ The alternative case
    for the strategy engine is real — it is what a client pays for. The case against is that a strategy
    over unvalidated beliefs is precisely the confident falsehood AGE exists to refuse, and the
    contradiction detector is what makes the beliefs trustworthy. 🚫 This is recorded as a
