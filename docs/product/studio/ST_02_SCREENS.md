@@ -126,15 +126,31 @@ current channels — is **exactly the BIF's shape**, and none of it is stored ou
 So this screen is a **projection of S5**, not a separate record. 🚫 Do not create a second business
 model to fill it; that is how two sources of truth start.
 
-**Pkg** `@age/client-registry` (name + ids only) · **API** — · **RT** — · **Model** `ClientRecord` ✅
-for identity, **GAP** for every business attribute — they live in a BIF that has no runtime.
+**Pkg** `@age/client-registry` + `@age/studio-shell` `business-profile-view.ts` · **API** — ·
+**RT** — · **Model** `ClientRecord` ✅ for identity.
+
+⚠️ **SHIPPED 2026-08-08 (#257), at `/b/[clientId]`.** The previous revision recorded a **GAP** for
+every business attribute. That gap is 🚫 **not closed and was never meant to be**: the screen shows
+**no business attribute at all** and links to S5 for them, which is what "a projection, not a
+record" means in practice. What it adds is the parent the nine subject routes never had, and one
+honest fact — whether a discovery **draft** was found.
+
+🚫 It calls **no producer**. `generateBifFromAnswerFile` needs an operator principal, and ADR-0053 D4
+refuses a defaulted, generated or inferred one — a page that merely _loads_ has nobody to name. So
+the screen says plainly that a saved draft is 🚫 **not** submitted answers, rather than implying
+Discovery is finished. 🚫 **No aggregate**: no "profile completeness", no "N of 9 ready", no
+percentage — the areas differ in what they measure, and a guard asserts the view carries no number.
 
 ---
 
 ## S4 · Discovery
 
 **Question:** _What has this business told us, and what is still missing?_
-**Status: ✅ BUILDABLE TODAY (rendering + validation). 🛑 Submission stays DISABLED.**
+**Status: ✅ SHIPPED (rendering, validation AND submission).** ⚠️ **CORRECTED 2026-08-08:** this
+line read _"🛑 Submission stays DISABLED"_, which has been false since #250 — the console writes the
+answer file itself (Knowledge Authoring, class 1 under ADR-0057 D4). ⚠️ The path is **never
+defaulted** (ADR-0054 D2) and an incomplete draft is **refused, not padded**. 🚫 This is still not
+`produceAndCapture` — ADR-0046 D7 stands.
 
 The questionnaire is real: **9 sections, 17 questions**, with per-question `entryKind` enums.
 
