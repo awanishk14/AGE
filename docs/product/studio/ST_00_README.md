@@ -37,7 +37,14 @@ where the architecture's real shape becomes visible.
 
 ## 2. The finding that dominates every other
 
-AGE has an **extensive contract layer and almost no runtime**. Measured on `main` at `1d43f6f`:
+AGE has an **extensive contract layer and almost no runtime**. First measured on `main` at
+`1d43f6f`; ⚠️ **re-counted at `aa2a69f` on 2026-08-08 and every row below is UNCHANGED** — 212 files,
+0 exported functions, fifteen slices later.
+
+⚠️ **But the consequence changed, and `ST_05` is where that is recorded.** Two of these packages no
+longer block a screen: `@age/bif` and `@age/evidence-contracts` are now reached through functions
+that live **elsewhere** (`produceScoredBifContext`, `@age/operator-workspace`). 🚫 Do not read a `0`
+in this table as "that screen is impossible" — read `ST_05`'s row for the real obstacle.
 
 | Package                             |   Files | Exported functions |
 | ----------------------------------- | ------: | -----------------: |
