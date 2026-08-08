@@ -32,6 +32,7 @@ const CORE_MODULES = [
   'onboarding-runner.ts',
   'inspect-arguments.ts',
   'inspect-runner.ts',
+  'assess-runner.ts',
   'local-database-target.ts',
   'capture-cli.ts',
   'index.ts',

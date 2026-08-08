@@ -120,9 +120,18 @@ importers:
       '@age/business-discovery-contracts':
         specifier: workspace:*
         version: link:../../packages/business-discovery-contracts
+      '@age/capability-intelligence':
+        specifier: workspace:*
+        version: link:../../packages/capabilities/intelligence
       '@age/capability-kit':
         specifier: workspace:*
         version: link:../../packages/capability-kit
+      '@age/capability-market-discovery':
+        specifier: workspace:*
+        version: link:../../packages/capabilities/market-discovery
+      '@age/capability-revenue':
+        specifier: workspace:*
+        version: link:../../packages/capabilities/revenue
       '@age/client-registry':
         specifier: workspace:*
         version: link:../../packages/client-registry
