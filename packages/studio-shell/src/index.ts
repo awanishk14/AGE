@@ -30,6 +30,7 @@ export {
   areaHref,
   areaNeedsClientId,
   areasForLevel,
+  businessProfileHref,
   CLIENT_ID_PARAMETER,
   everyAreaIsUnwired,
   matchAreaRoute,
@@ -42,6 +43,17 @@ export {
   type MatchedRoute,
   type StudioArea,
 } from './navigation';
+
+export {
+  presentBusinessProfile,
+  type DiscoveryDraftPresence,
+  type BusinessIdentityInput,
+  type BusinessProfileInput,
+  type BusinessProfileView,
+  type CaptureStatusView,
+  type IdentityFactView,
+  type ProfileAreaView,
+} from './business-profile-view';
 
 export {
   CLIENT_RECORD_FILE_VARIABLE,

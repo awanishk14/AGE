@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   areaByRoute,
+  areaHref,
   areasForLevel,
+  businessProfileHref,
+  MissingClientScopeError,
   everyAreaIsUnwired,
   REFUSED_AREAS,
   STUDIO_AREAS,
@@ -172,5 +175,32 @@ describe('areaByRoute', () => {
   it('returns undefined for an unknown route rather than a fallback area', () => {
     expect(areaByRoute('/organizations')).toBeUndefined();
     expect(areaByRoute('/nope')).toBeUndefined();
+  });
+});
+
+describe('businessProfileHref', () => {
+  it('is the parent of every subject route', () => {
+    const href = businessProfileHref('acme');
+
+    expect(href).toBe('/b/acme');
+    // ⚠️ Every subject route must sit UNDER it. A profile that is not the
+    // prefix of its children is not their parent, whatever the design says.
+    let checked = 0;
+    for (const area of areasForLevel('subject')) {
+      expect(areaHref(area, 'acme').startsWith(`${href}/`)).toBe(true);
+      checked += 1;
+    }
+    expect(checked).toBeGreaterThanOrEqual(9);
+  });
+
+  it('encodes the business, exactly as areaHref does', () => {
+    expect(businessProfileHref('a b/c')).toBe(`/b/${encodeURIComponent('a b/c')}`);
+  });
+
+  it('refuses a missing scope rather than addressing every business', () => {
+    // 🚫 `/b` with no id is not "all businesses" — it is a page that means
+    // nothing, and returning it would send the operator somewhere blank.
+    expect(() => businessProfileHref('')).toThrow(MissingClientScopeError);
+    expect(() => businessProfileHref('   ')).toThrow(MissingClientScopeError);
   });
 });

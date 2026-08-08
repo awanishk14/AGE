@@ -309,6 +309,27 @@ export function areaHref(area: StudioArea, clientId?: string): string {
   return area.route.replace(CLIENT_ID_PARAMETER, encodeURIComponent(clientId));
 }
 
+/**
+ * The href for the Business Profile — the parent of every subject area.
+ *
+ * ⚠️ THE ONE PLACE THE SUBJECT ROOT IS BUILT. 🚫 Do not concatenate
+ * `${SUBJECT_ROUTE_PREFIX}/${clientId}` anywhere else: the copy that gets
+ * written in a component is the one that forgets to encode, and a business id
+ * with a slash in it would then address a different screen entirely.
+ *
+ * ⚠️ It refuses a missing scope for the same reason `areaHref` does — a profile
+ * with no business is not a page, it is a guess.
+ *
+ * @throws {MissingClientScopeError} when no business is selected.
+ */
+export function businessProfileHref(clientId: string): string {
+  if (clientId.trim() === '') {
+    throw new MissingClientScopeError('business-profile');
+  }
+
+  return `${SUBJECT_ROUTE_PREFIX}/${encodeURIComponent(clientId)}`;
+}
+
 export interface MatchedRoute {
   readonly area: StudioArea;
   /** Present only for subject-level routes. */
