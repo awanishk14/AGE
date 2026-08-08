@@ -163,5 +163,6 @@ Accepted and **deliberately left open**.
    business through it.** The suite drives an injected runtime; the actual local run is the
    operator's to perform. 🚫 **Do not mark this item resolved until a real row has been written and
    read back.**
-4. 🚫 **vTEST and Doctor at Door are the live test clients and their names must never be committed**
-   (D3). ⚠️ mcp-ads touches **live spend**; its safety rules are not optional.
+4. 🚫 **The operator's live client names must never be committed** (D3). ⚠️ They are held as
+   **digests** in `@age/client-registry`'s `forbidden-client-names.ts` and 🚫 never spelled out —
+   the guard used to list them, which made the rule its own exception. ⚠️ mcp-ads touches **live spend**; its safety rules are not optional.

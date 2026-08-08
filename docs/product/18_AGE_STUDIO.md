@@ -288,8 +288,8 @@ Therefore an unwired Studio home renders one of two things, and 🚫 never a thi
 | The **frozen, obviously-fictional demo scenario**, labelled as such (`DEMO_SCENARIO_METADATA`, `constructedAt` 2026-01-01) | Plausible-looking placeholder data for a **real** business             |
 | An empty state that says what would appear here and what it needs                                                          | A skeleton/shimmer that implies data is arriving when nothing is wired |
 
-⚠️ **Obvious fictionality is the guard** — the same rule that keeps `vTEST` and `Doctor at Door`
-out of the fixtures (ADR-0053 D3). 🚫 Do not "make the mock more realistic."
+⚠️ **Obvious fictionality is the guard** — the same rule that keeps the operator's live
+client names out of the fixtures (ADR-0053 D3). 🚫 Do not "make the mock more realistic."
 
 ⚠️ **`17_DESIGN_SYSTEM.md` §4’s four states apply to the home itself:** _known_, _unattributed_,
 _unknown_ and **_not assessed_** are four states that must never share a visual treatment. An

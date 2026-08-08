@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { containsForbiddenClientName } from '../forbidden-client-names';
 import { FICTIONAL_CLIENT_RECORDS, FICTIONAL_MARKER } from '../fixtures/fictional-clients';
 
 /**
@@ -45,12 +46,16 @@ describe('committed client fixtures stay obviously fictional', () => {
   it('names no real client of the operator', () => {
     // 🚫 Not even redacted or masked: a masked ad-account id is still an
     // assertion about who the operator's clients are.
-    const source = readFileSync(FIXTURE, 'utf8').toLowerCase();
-    const serialized = JSON.stringify(FICTIONAL_CLIENT_RECORDS).toLowerCase();
-    for (const forbidden of ['vtest', 'doctor at door', 'doctor-at-door', 'doctoratdoor']) {
-      expect(serialized).not.toContain(forbidden);
-      expect(source).not.toContain(forbidden);
-    }
+    //
+    // ⚠️ THE NAMES ARE NOT SPELLED OUT HERE. They used to be, which made this
+    // guard the leak it exists to prevent — a committed file listing the
+    // operator's live clients. They are now digests; see
+    // `forbidden-client-names.ts` for what that does and does not buy.
+    const source = readFileSync(FIXTURE, 'utf8');
+    const serialized = JSON.stringify(FICTIONAL_CLIENT_RECORDS);
+
+    expect(containsForbiddenClientName(source)).toBe(false);
+    expect(containsForbiddenClientName(serialized)).toBe(false);
   });
 
   it('carries no value that looks like a real Google Ads or Meta account id', () => {

@@ -28,7 +28,10 @@ import {
  * first minute with the product.
  *
  * 🚫 No fixture here names a real client — obvious fictionality is the guard
- * (ADR-0053 D3), and 🚫 vTEST and Doctor at Door must never appear in a commit.
+ * (ADR-0053 D3), and 🚫 the operator's live client names must never appear in a
+ * commit. ⚠️ They are 🚫 NOT restated here: `@age/client-registry`'s
+ * `forbidden-client-names.ts` holds them as digests precisely so a comment
+ * about the rule stops being a place the rule is broken.
  */
 
 const RECORD_FILE = join(FIXTURE_OPERATOR_DIRECTORY, 'clients.json');
