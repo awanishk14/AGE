@@ -10,6 +10,7 @@ import {
   type CaptureConnectionEnvironment,
 } from './capture-connection-target';
 import type { CaptureConnection } from './capture-runner';
+import type { SnapshotReadConnection } from './inspect-runner';
 import { assertLocalDatabaseTarget } from './local-database-target';
 
 /**
@@ -134,4 +135,54 @@ export function openLocalPrismaCaptureConnection(
   assertLocalDatabaseTarget(url);
 
   return openPrismaCaptureConnection({ ...options, datasourceUrl: url });
+}
+
+/**
+ * The read half of the same chain, narrowed on the way out (ADR-0055 D2).
+ *
+ * ⚠️ IT RETURNS A FAÇADE, NOT THE REPOSITORY. `ScopedScoredBifSnapshotRepository`
+ * implements the whole four-method port, `append` included. Handing it to a
+ * command whose entire premise is that it cannot write would make the premise a
+ * convention — true only for as long as nobody typed `.append(`. The two reads
+ * are bound out individually and the repository itself never escapes this
+ * function, so `inspect` holds no reference that could write.
+ *
+ * 🚫 `listSeries` IS NOT BOUND EITHER, and that is a separate refusal from the
+ * one above. Cross-snapshot reading — a series listing, a diff, "what changed
+ * since last capture" — is ADR-0055 §5 item 1: **recorded, NOT authorized**. It
+ * needs its own `Proposed` ADR, and it would be one flag on this façade away
+ * from existing, which is exactly why the flag is not here.
+ *
+ * ⚠️ LOCAL-ONLY, on the same reasoning as the writer above and for a reason that
+ * survives the direction change: reading is not harmless. A remote target here
+ * would pull a real client's stored business context onto whatever machine ran
+ * the command. `assertLocalDatabaseTarget` therefore runs ABOVE
+ * `new PrismaClient(` — and ⚠️ a loopback host remains NECESSARY, NOT
+ * SUFFICIENT: an SSH tunnel from `localhost:5432` to a shared server passes it.
+ *
+ * ⚠️ IT CONNECTS AS `age_app`, the non-owner role, through the same
+ * `resolveConnectionUrl` — so this read is subject to the row-level policies
+ * rather than exempt from them. 🚫 That still does not make RLS an authorization
+ * boundary (ADR-0046 D5, ADR-0055 D9): the policy checks the row against the
+ * scope the transaction ASKED for, never against an entitlement to it. The
+ * boundary here is that the scope came from the operator's client record.
+ */
+export function openLocalPrismaSnapshotReadConnection(
+  options: CaptureConnectionOptions = {},
+): SnapshotReadConnection {
+  const url = options.datasourceUrl ?? resolveConnectionUrl(options.environment ?? process.env);
+
+  assertLocalDatabaseTarget(url);
+
+  const client = new PrismaClient({ datasources: { db: { url } } });
+
+  const repository = new ScopedScoredBifSnapshotRepository(
+    new PrismaScoredBifSnapshotScopeRunner(client),
+  );
+
+  return {
+    findBySnapshotId: (key) => repository.findBySnapshotId(key),
+    findLatest: (key) => repository.findLatest(key),
+    close: () => client.$disconnect(),
+  };
 }

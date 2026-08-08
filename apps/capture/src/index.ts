@@ -47,7 +47,13 @@ export type { OnboardingCommand, ParsedOnboardingArguments } from './onboarding-
 export { ONBOARDING_EXIT_CODES, runOnboarding } from './onboarding-runner';
 export type { OnboardingRunResult, OnboardingRuntime } from './onboarding-runner';
 
-export { ONBOARDING_SUBCOMMAND, runCli } from './capture-cli';
+export { parseInspectArguments } from './inspect-arguments';
+export type { InspectCommand, ParsedInspectArguments } from './inspect-arguments';
+
+export { INSPECT_EXIT_CODES, runInspect } from './inspect-runner';
+export type { InspectRunResult, InspectRuntime, SnapshotReadConnection } from './inspect-runner';
+
+export { INSPECT_SUBCOMMAND, ONBOARDING_SUBCOMMAND, runCli } from './capture-cli';
 export type { CaptureCliRuntime } from './capture-cli';
 
 /**

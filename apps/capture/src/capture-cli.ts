@@ -1,4 +1,5 @@
 import { runCapture, type CaptureRunResult, type CaptureRuntime } from './capture-runner';
+import { runInspect, type InspectRuntime } from './inspect-runner';
 import { runOnboarding, type OnboardingRuntime } from './onboarding-runner';
 
 /**
@@ -23,11 +24,21 @@ import { runOnboarding, type OnboardingRuntime } from './onboarding-runner';
  * mistyped `onbard` silently running something that writes.
  */
 
-/** The effects both commands need. `main.ts` supplies the real ones. */
-export type CaptureCliRuntime = CaptureRuntime & OnboardingRuntime;
+/** The effects all three commands need. `main.ts` supplies the real ones. */
+export type CaptureCliRuntime = CaptureRuntime & OnboardingRuntime & InspectRuntime;
 
 /** The subcommand that runs the ADR-0054 D6 onboarding flow. */
 export const ONBOARDING_SUBCOMMAND = 'onboard';
+
+/**
+ * The subcommand that reads one stored snapshot back (ADR-0055 D1).
+ *
+ * ⚠️ A THIRD BRANCH, NOT A MODE ON EITHER EXISTING ONE. `--read` on
+ * `age-capture` would put a read and a write behind the same parser and the same
+ * runtime, and the runtime is where the append handle lives. A separate branch
+ * is what lets `runInspect` take a runtime that has no way to write at all.
+ */
+export const INSPECT_SUBCOMMAND = 'inspect';
 
 export async function runCli(
   argv: readonly string[],
@@ -35,6 +46,10 @@ export async function runCli(
 ): Promise<CaptureRunResult> {
   if (argv[0] === ONBOARDING_SUBCOMMAND) {
     return runOnboarding(argv.slice(1), runtime);
+  }
+
+  if (argv[0] === INSPECT_SUBCOMMAND) {
+    return runInspect(argv.slice(1), runtime);
   }
 
   return runCapture(argv, runtime);
