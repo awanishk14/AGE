@@ -63,12 +63,26 @@ export function presentSystemStatus(input: SystemStatusInput): readonly StatusFa
   return Object.freeze([
     Object.freeze({
       id: 'bind',
-      label: 'Bound to',
+      label: 'Configured to bind',
       value: `${input.bindHost}:${String(input.bindPort)}`,
       state: 'known' as EpistemicState,
+      // 🛑 THIS READ "The console refuses to start on a non-loopback host" AND
+      // THAT SENTENCE WAS FALSE ON `main`: `assertLoopbackBindHost` had no
+      // production caller, so nothing refused anything at startup. It was
+      // rendered as `known` — a claim about code that did not exist, shown to
+      // an operator as verified fact.
+      //
+      // ⚠️ IT NOW DESCRIBES ONLY WHAT IS ACTUALLY CHECKED: the start command
+      // pins a loopback host, a guard holds that pin, and the value shown is
+      // passed through the same policy. 🚫 It must NOT say "refuses to start"
+      // again unless a startup refusal really runs, and 🚫 it must never claim
+      // the console is unreachable.
       detail:
-        'The console refuses to start on a non-loopback host. That is necessary, not sufficient — ' +
-        'a proxy or tunnel in front of this listener would still expose it, and AGE cannot see that from here.',
+        'This is the host the console is configured to bind — pinned in its start command and ' +
+        'checked against the one loopback policy. AGE cannot observe the socket it actually ' +
+        'bound, so this is a configuration fact, not a measurement. Loopback is necessary, not ' +
+        'sufficient: a proxy, tunnel or published container port in front of this listener ' +
+        'defeats it entirely, and AGE cannot see that from here.',
     }),
     Object.freeze({
       id: 'identity',
