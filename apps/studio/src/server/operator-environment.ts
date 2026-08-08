@@ -13,7 +13,12 @@ import {
   writeDiscoveryDraft as writeDiscoveryDraftIn,
   type OperatorWorkspaceRuntime,
 } from '@age/operator-workspace';
-import type { ClientRecordDraft, DiscoveryDraft } from '@age/studio-shell';
+import {
+  assertLoopbackBindHost,
+  DEFAULT_STUDIO_BIND_HOST,
+  type ClientRecordDraft,
+  type DiscoveryDraft,
+} from '@age/studio-shell';
 
 /**
  * The ONE module in `apps/studio` that performs an effect.
@@ -111,9 +116,30 @@ export function assessCapabilityReadiness(clientId: string, changedBy: string) {
   return assessCapabilityReadinessIn(CONSOLE_RUNTIME, clientId, changedBy);
 }
 
-/** The host the console was started on. Reported as a fact, never as a promise. */
+/**
+ * The host the console is CONFIGURED to bind. 🚫 Not the socket it actually
+ * bound — nothing here can observe that, and this function must never be
+ * described as if it could.
+ *
+ * 🛑 THIS READ `process.env.AGE_STUDIO_HOST ?? '127.0.0.1'` AND THAT WAS A
+ * DEFECT ON `main`, in two compounding ways:
+ *
+ *   1. It was an **environment override of the bind host**, which ADR-0057 D2
+ *      refuses by name ("no flag, no environment override"). The guard that
+ *      enforces D2 scanned `package.json` and `project.json` only, so an env
+ *      read in this file was its blind spot and reached `main` unseen.
+ *   2. The value is what the console DISPLAYS as "Bound to". An unchecked
+ *      override therefore let the console **report a host no policy had
+ *      accepted** — and the System Status detail beside it asserted a refusal
+ *      that no code performed.
+ *
+ * ⚠️ It is now derived from the ONE policy: the same pinned constant the start
+ * commands use, passed through the same assertion that guards them. 🚫 Do not
+ * reintroduce a parameter, a flag or an environment read here — a reported
+ * value that the policy never saw is the whole defect.
+ */
 export function boundHost(): string {
-  return process.env.AGE_STUDIO_HOST ?? '127.0.0.1';
+  return assertLoopbackBindHost(DEFAULT_STUDIO_BIND_HOST);
 }
 
 /** The port the console was started on. */

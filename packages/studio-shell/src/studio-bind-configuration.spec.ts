@@ -36,6 +36,15 @@ const startCommands = (): readonly { source: string; command: string }[] => {
   return found;
 };
 
+/**
+ * Source with block and line comments removed.
+ *
+ * ⚠️ Needed because the modules these guards scan EXPLAIN the rules they obey,
+ * and an explanation that names a banned token would otherwise fail the scan.
+ */
+const withoutComments = (text: string): string =>
+  text.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+
 const hostOf = (command: string): string | undefined => {
   const match = /(?:-H|--hostname)\s+(\S+)/.exec(command);
   return match?.[1];
@@ -89,5 +98,39 @@ describe('AGE Studio bind configuration', () => {
       expect(text).not.toMatch(/STUDIO_HOST|HOSTNAME=/);
       expect(text).not.toMatch(/0\.0\.0\.0/);
     }
+  });
+
+  /**
+   * 🛑 THE GUARD ABOVE SCANNED THE MANIFESTS ONLY, AND THE APP'S OWN SOURCE WAS
+   * ITS BLIND SPOT. `AGE_STUDIO_HOST` was read in
+   * `apps/studio/src/server/operator-environment.ts` and reached `main`: an
+   * environment override of the bind host, which ADR-0057 D2 refuses by name
+   * ("no flag, no environment override"), invisible to a scan of two JSON
+   * files.
+   *
+   * ⚠️ The value that was read there is the value the console DISPLAYS as
+   * "Bound to". An override of it is therefore not merely a configuration leak
+   * — it lets the console report a host that no policy ever checked.
+   */
+  it('reads no bind-host override in the console source either', () => {
+    // ⚠️ COMMENTS ARE STRIPPED FIRST. The module documents the defect it used
+    // to carry, and naming `AGE_STUDIO_HOST` in that explanation would match
+    // this scan — a file's own account of a rule must not trip the rule
+    // (`vitest-worker-cap.spec.ts` carries the same note).
+    const code = withoutComments(repoFile('apps/studio/src/server/operator-environment.ts'));
+    expect(code).not.toMatch(/AGE_STUDIO_HOST/);
+    expect(code).not.toMatch(/allowRemote/i);
+    expect(code).not.toMatch(/0\.0\.0\.0/);
+  });
+
+  /**
+   * ⚠️ THE POSITIVE HALF: the negative scan above is satisfied by a file that
+   * reports nothing at all. The console must still derive its reported host
+   * from the ONE policy, so the value on screen is a value the policy accepted.
+   */
+  it('derives the reported bind host from the one policy', () => {
+    const text = repoFile('apps/studio/src/server/operator-environment.ts');
+    expect(text).toMatch(/assertLoopbackBindHost/);
+    expect(text).toMatch(/DEFAULT_STUDIO_BIND_HOST/);
   });
 });
