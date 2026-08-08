@@ -27,7 +27,13 @@ runtime, in its own single effects module, guarded separately.
 
 ---
 
-## 2. 🛠️ PENDING — the two frontends, and what has to be checked
+## 2. ✅ CHECKED 2026-08-08 (at `main` `d396dc5`) — the two frontends
+
+> ⚠️ **The result of this verification is §2c below. Read it before re-running any of the boxes:
+> every architect-checkable item passed, two findings were recorded, and 🚫 NO CODE WAS CHANGED.**
+> The boxes are kept as written so a later session can re-run them, 🚫 not because they are pending.
+> 🛑 The parts that need the operator's own machine and the operator's own files are still
+> outstanding and are 🚫 not the architect's — they are named individually in §2c.
 
 Both items below are **verification work, not new features**. Neither authorizes a widening, and
 🚫 neither is a reason to add a screen, a route or a tool.
@@ -94,6 +100,89 @@ onboarding run**. No real business has yet passed through the shipped capture pa
 drives an injected runtime, so the suite proves the **shape**, not the run. 🚫 **DO NOT SEED A ROW**
 to unblock `history`; a seeded row does not substitute for it, and `apps/mcp` deliberately cannot
 perform it either (`onboard` is omitted pending ADR-0060 §6 Q1).
+
+### 2c. ✅ The verification result — 2026-08-08, at `main` `d396dc5`
+
+**How it was checked.** `apps/api` was started and `GET /demo/capabilities` fetched live; the payload
+was read field by field. `apps/web` (12 tests) and `apps/studio` (108 tests) were run and pass. The
+`contradictions` chain was read in source end to end: `reportContradictions` →
+`presentContradictions` → `ContradictionsPanel`. 🚫 No code was changed by this verification.
+
+**The live payload matches the frozen baseline exactly:** 6 capabilities · 6 pending approvals ·
+accounting invariant `true` · `sideEffectsPerformed: false` · **98/63 intake vs 12/17 BIF** ·
+**7 populated + 5 omitted** sections · `bifStatus: Draft`. ⚠️ Recorded here as a measurement, so a
+later drift is visible against a date rather than against the document that asserts the rule.
+
+#### §2a — the demo frontend: every checkable item PASSED
+
+- ✅ **Four scores, four figures.** Rendered in two separately-headed boxes ("properties of the
+  interview" / "properties of what was produced"), with a note that they are never interchangeable.
+  Two tests pin it, including one asserting **no sum, average or headline number** is derived.
+- ✅ **Omitted sections render with their reason** — _"Limitations of the intake — not findings
+  about the business"_ — 🚫 not as `0`, not as absence. Two tests, one of them pinning **neutral
+  styling** so the block can never become an alarm.
+- ✅ **Readiness rows carry no aggregate and no ordering.** The payload's readiness object has
+  exactly two keys (`incommensurabilityNotice`, `entries`) — 🚫 there is no aggregate to render.
+  Rows are emitted in fixed registry order; five tests cover ranking, per-row denominators, the
+  non-adopter placeholder and the colour scale. ⚠️ Live payload confirms the three non-adopters
+  (`Growth`, `Authority`, `Operations`) arrive with `state: undefined` and render their declaration
+  and nothing else — 🚫 no dash, no "N/A", no chip.
+- ✅ **The page names itself as the demo** — _"AGE — In-Memory Capability Demo … against local
+  fixtures"_ — and the fixture business is transparently fictional.
+- ✅ **Nothing implies execution.** `humanApprovedExecution` and `sideEffectsPerformed: false` are
+  rendered as boolean invariants, which is the one thing `Notice`'s emerald/amber pair is allowed
+  to paint.
+
+**Finding A (recorded, 🚫 deliberately NOT changed) — the word "read-only" survives on the demo
+surface**, in `apps/web/src/app/demo/page.tsx` ("Read-only demo. Nothing here is executed") and in
+`DEMO_DESCRIPTION` (`apps/api/.../demo.service.ts:24`). ⚠️ The §2a box said the #232/#246 banner rule
+applies here. **On inspection it does not, and the difference matters:** ADR-0057 §0.7 retired
+"read-only" for the **console**, where it was _false_ (the console writes the operator's files) and
+where it stood in for the real refusal (Business Execution). On `/demo` the sentence is **literally
+true** — nothing is persisted — and the execution fact is stated separately in the same breath, so
+the term is not carrying a claim it cannot support. 🚫 It is therefore left alone. ⚠️ **Two rules
+follow, and both matter:** 🚫 the demo's wording must NEVER be imported into `apps/studio`, and
+🚫 a future session must not "fix" it here by pattern-match — `CLAUDE.md` §8 itself describes the
+demo track as read-only.
+
+**Finding B (latent, 🚫 no change) — "ran, produced nothing" is currently unreachable, not
+unhandled.** The live payload gives every one of the six capabilities `1` accepted, `1` rejected and
+`1` duplicate, so `ItemList`'s `(none)` branch never renders. ⚠️ The page also has **no "did not
+run" state at all** — a card exists only for a capability that ran — so no ambiguity is on screen
+today. 🛑 But the distinction is unprotected: if a capability ever returns nothing, `(none)` is what
+would render, and it would be the only thing on the page that could be read either way. ⚠️ Whoever
+first produces an empty run must render it as _"ran, produced nothing"_ explicitly.
+
+#### §2b — the real frontend: the `contradictions` screen READS CORRECTLY
+
+⚠️ Read hardest, as instructed, and it holds — the danger is designed against rather than avoided:
+
+- ✅ **`outcome` is the single-member union `'not-run'`.** There is no `'consistent'` member to
+  render, so 🚫 no future edit can print a clean bill of health by accident. The panel's heading is
+  literally **"The detector was not run"**, chipped `not-assessed`, above a paragraph saying an
+  empty result _"would be read as a clean bill of health … Nothing about this business has been
+  checked."_
+- ✅ **No count of contradictions, no "0 found", no green tick.** The two counts shown are _sources
+  recorded_ and _of those, readable by the detector_ — deliberately kept apart so the second cannot
+  read as "the operator recorded nothing".
+- ✅ **`carriesDetectableSignal` is DERIVED, not hard-coded `false`** — if evidence ever gains a
+  signal it becomes visible there, which is the seam that forces a rewrite rather than a silent
+  start to reporting results.
+- ✅ **`unmet` and `unevaluable` get different words** ("Not present" / "Could not be checked"), so
+  🚫 _"we could not look"_ is never presented as _"we looked"_.
+- ✅ **Nothing happens on mount** (class 2 — a human initiates the act), 🚫 **no principal is ever
+  defaulted**, `not-configured` **names the missing variable** rather than saying "no businesses",
+  and an untouched session reads _"That is not a statement about this business."_
+- ✅ Ten tests pin exactly these, including **"never prints a clean bill of health"** and **"reports
+  a missing answer file as nothing recorded, not as nothing wrong"**. `apps/studio`: **108 pass.**
+
+🛑 **STILL OUTSTANDING, and 🚫 NOT THE ARCHITECT'S:** the rest of §2b is a walk over the operator's
+**own** files on the operator's **own** machine — that a record file exists at the path they named,
+that a draft and a submitted answer file exist for a real business, and what each screen says on
+that data. 🚫 The architect cannot perform it without reading a real client's records, which
+ADR-0053 D3 refuses. ⚠️ **A low first score is a CORRECT result** (ADR-0054 D7) — 🚫 do not "help"
+it with a cap, a threshold or an inferring mapper. 🛑 The **ADR-0055 D6/D7 onboarding run** remains
+the one outstanding operator action, and 🚫 **DO NOT SEED A ROW** in its place.
 
 ---
 
