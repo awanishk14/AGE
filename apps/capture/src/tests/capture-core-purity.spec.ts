@@ -30,6 +30,8 @@ const CORE_MODULES = [
   'driver-failure-label.ts',
   'onboarding-arguments.ts',
   'onboarding-runner.ts',
+  'inspect-arguments.ts',
+  'inspect-runner.ts',
   'local-database-target.ts',
   'capture-cli.ts',
   'index.ts',

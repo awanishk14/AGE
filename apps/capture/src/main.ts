@@ -46,6 +46,17 @@ const runtime: CaptureCliRuntime = {
 
     return openLocalPrismaCaptureConnection();
   },
+  /**
+   * ADR-0055 D2 — the read door. A THIRD door, and the narrow one: what comes
+   * back carries two reads and a close, and no `append` for `inspect` to reach.
+   * Lazy for the same reason as the two above — `produceOnly` must still need no
+   * `@prisma/client` at all.
+   */
+  openSnapshotReadConnection: async () => {
+    const { openLocalPrismaSnapshotReadConnection } = await import('./capture-composition');
+
+    return openLocalPrismaSnapshotReadConnection();
+  },
 };
 
 export async function main(argv: readonly string[]): Promise<number> {
