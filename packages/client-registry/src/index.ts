@@ -43,3 +43,12 @@ export {
 } from './load-client-record-file';
 
 export { FICTIONAL_CLIENT_RECORDS, FICTIONAL_MARKER } from './fixtures/fictional-clients';
+
+/**
+ * 🚫 `forbidden-client-names.ts` IS DELIBERATELY NOT EXPORTED HERE (ADR-0053 D3's
+ * guard, holding the names it guards as digests). It imports `node:crypto`, and
+ * this barrel is reached from `@age/studio-shell` by a browser bundle — exporting
+ * it broke `studio:build` with `Module not found: node:crypto`, which is the
+ * honest signal that a test-only guard does not belong on a package's public
+ * surface. The one guard that needs it imports it by relative path.
+ */
