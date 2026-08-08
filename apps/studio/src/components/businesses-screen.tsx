@@ -3,6 +3,7 @@ import Link from 'next/link';
 import {
   areaHref,
   areasForLevel,
+  businessProfileHref,
   countBusinesses,
   type BusinessesView,
   type OrganizationBand,
@@ -149,7 +150,12 @@ function Band({ band }: { readonly band: OrganizationBand }) {
         {band.clients.map((client) => (
           <li key={client.clientId} className="p-3">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="text-sm font-medium">{client.displayName}</span>
+              <Link
+                href={{ pathname: businessProfileHref(client.clientId) }}
+                className="text-sm font-medium underline underline-offset-2"
+              >
+                {client.displayName}
+              </Link>
               <span className="font-mono text-xs text-[hsl(var(--age-text-muted))]">
                 {client.clientId}
               </span>
