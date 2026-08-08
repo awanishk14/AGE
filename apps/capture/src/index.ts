@@ -53,7 +53,15 @@ export type { InspectCommand, ParsedInspectArguments } from './inspect-arguments
 export { INSPECT_EXIT_CODES, runInspect } from './inspect-runner';
 export type { InspectRunResult, InspectRuntime, SnapshotReadConnection } from './inspect-runner';
 
-export { INSPECT_SUBCOMMAND, ONBOARDING_SUBCOMMAND, runCli } from './capture-cli';
+export { ASSESS_EXIT_CODES, runAssess } from './assess-runner';
+export type { AssessRunResult, AssessRuntime } from './assess-runner';
+
+export {
+  ASSESS_SUBCOMMAND,
+  INSPECT_SUBCOMMAND,
+  ONBOARDING_SUBCOMMAND,
+  runCli,
+} from './capture-cli';
 export type { CaptureCliRuntime } from './capture-cli';
 
 /**

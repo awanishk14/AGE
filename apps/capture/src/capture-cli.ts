@@ -1,3 +1,4 @@
+import { runAssess, type AssessRuntime } from './assess-runner';
 import { runCapture, type CaptureRunResult, type CaptureRuntime } from './capture-runner';
 import { runInspect, type InspectRuntime } from './inspect-runner';
 import { runOnboarding, type OnboardingRuntime } from './onboarding-runner';
@@ -24,8 +25,8 @@ import { runOnboarding, type OnboardingRuntime } from './onboarding-runner';
  * mistyped `onbard` silently running something that writes.
  */
 
-/** The effects all three commands need. `main.ts` supplies the real ones. */
-export type CaptureCliRuntime = CaptureRuntime & OnboardingRuntime & InspectRuntime;
+/** The effects all four commands need. `main.ts` supplies the real ones. */
+export type CaptureCliRuntime = CaptureRuntime & OnboardingRuntime & InspectRuntime & AssessRuntime;
 
 /** The subcommand that runs the ADR-0054 D6 onboarding flow. */
 export const ONBOARDING_SUBCOMMAND = 'onboard';
@@ -40,6 +41,18 @@ export const ONBOARDING_SUBCOMMAND = 'onboard';
  */
 export const INSPECT_SUBCOMMAND = 'inspect';
 
+/**
+ * The subcommand that assesses one stored snapshot (ADR-0063 D1).
+ *
+ * 🚫 A FOURTH BRANCH, AND NOT A FLAG ON `inspect`. ADR-0055 D4 refused readiness
+ * inside `inspect`'s printer so that "show me what was stored" could never start
+ * editorialising about it; that reasoning is unchanged. A separate command whose
+ * whole declared purpose is the assessment does not weaken it — the operator
+ * chooses which of the two questions they are asking, and the answer never
+ * arrives unasked.
+ */
+export const ASSESS_SUBCOMMAND = 'assess';
+
 export async function runCli(
   argv: readonly string[],
   runtime: CaptureCliRuntime,
@@ -50,6 +63,10 @@ export async function runCli(
 
   if (argv[0] === INSPECT_SUBCOMMAND) {
     return runInspect(argv.slice(1), runtime);
+  }
+
+  if (argv[0] === ASSESS_SUBCOMMAND) {
+    return runAssess(argv.slice(1), runtime);
   }
 
   return runCapture(argv, runtime);
