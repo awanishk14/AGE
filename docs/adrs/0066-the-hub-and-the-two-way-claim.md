@@ -266,8 +266,27 @@ ingest endpoint shipped before that call is an unauthenticated write to a client
 **After slice 6 the goal is demonstrable end to end on one machine, with zero deployment and zero
 reversal of any shipped decision.**
 
-⚠️ **Slice 1 is discharged for D1 and D2 only** (§0.1, §0.3). 🚫 Slices 3–6 stay unauthorized until
-D3–D7 are accepted; slice **2** is authorized now.
+⚠️ **Slice 1 is discharged for D1 and D2 only** (§0.1, §0.3).
+
+✅ **SLICE 2 IS SHIPPED — PR #283, `main` `d8c13d8`.**
+`buildProfileAndFieldProvenanceFromAnswers` returns the profile **and**, as a separate value,
+which question and which `AnswerProvenance` produced each structured field.
+`buildProfileFromAnswers` delegates and returns only the profile, so every scorer, the BIF mapper
+and the readiness layer are unchanged and still have nothing to condition on. The channel has
+**no slot on any profile type**, so **AGE-INV-PROV-1 holds by shape**, not only by discipline.
+🚫 It is **not** `fieldEvidence` and must never be folded into it (§0.3c, §3).
+**AGE-INV-PROV-1 was made to fail**: teaching the scorer to read `answer.provenance.kind` broke
+three guards by name — the intake score, the BIF context, and the static scan of the four
+scoring/BIF modules — and was restored with a targeted inverse edit.
+
+⚠️ **ERRATUM RECORDED BY THAT SLICE — the PROFILE itself is not byte-identical across differing
+provenance, and that is CORRECT.** `DiscoveryAnswer` has carried a required `provenance` since
+#268, so a captured answer's origin travels inside `profile.sections[].answers[]`. 🚫 Do not "fix"
+that by stripping it: the answer is the operator's own record of what was said and how it arrived.
+AGE-INV-PROV-1 is about **scores and results**, exactly as the owner worded it — and it is pinned
+in the harder place, with the difference sitting where every scorer could reach it and none does.
+
+🚫 Slices 3–6 stay unauthorized until D3–D7 are accepted.
 
 The deployed app service shipped in #281 (§0.2). Everything else network-facing — the **ingest
 endpoint**, login, the session store rows — still sits behind D7 and behind §7 Q4, and 🚫 an ingest
