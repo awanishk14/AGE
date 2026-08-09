@@ -171,40 +171,67 @@ describe('the entitlement question exists in exactly one place', () => {
 });
 
 /**
- * 🛑 ADR-0058 D8: acceptance authorizes the question "with no caller". This is
- * that sentence made checkable.
+ * 🛑 ADR-0058 D8: acceptance authorizes the question "with no caller".
  *
- * ⚠️ When a caller is eventually authorized, it will be by an ADR that says so —
- * and deleting this guard is then a deliberate, reviewable act rather than an
- * omission nobody noticed.
+ * ⚠️ **DELIBERATELY NARROWED IN THE ADR-0061 A4 SLICE, AND 🚫 NOT DELETED.** A4
+ * derives the deployed workspace root "from the authenticated organization",
+ * which requires `@age/tenant-workspace` to import the SESSION TYPE. That import
+ * is authorized by A4 in those words. What A4 does 🚫 **not** authorize is a
+ * caller of the DECISION — no middleware, no route guard, no read path — so the
+ * guard now pins `askEntitlement` itself, which is the thing ADR-0058 D8 and
+ * 🛑 the still-undischarged ADR-0055 D7 actually care about.
+ *
+ * ⚠️ The package-import scan is kept and narrowed to an ALLOW-LIST of one, so a
+ * second importer is still a failure rather than a silently widened rule.
  */
-describe('@age/entitlement has no caller', () => {
+describe('askEntitlement has no caller', () => {
   const OUTSIDE = REPO_FILES.filter((file) => !file.startsWith(join(SRC, '..')));
+
+  const AUTHORIZED_IMPORTERS = ['tenant-workspace'];
 
   it('found files outside this package to scan', () => {
     expect(OUTSIDE.length).toBeGreaterThan(50);
     expect(OUTSIDE.length).toBeLessThan(REPO_FILES.length);
   });
 
-  it('is imported by nothing', () => {
+  it('the decision itself is called by nothing', () => {
+    // 🛑 THE LOAD-BEARING ONE. Importing the session type places a file; calling
+    // this decides who may read it, and nothing is authorized to do that yet.
+    // ⚠️ The scan is for the CALL — `askEntitlement(` — not for the bare name.
+    // The authorized package's own guard asserts that it never reaches for this
+    // decision, and naming the thing it refuses is how it does that.
     let examined = 0;
-    const importers: string[] = [];
+    const callers: string[] = [];
     for (const file of OUTSIDE) {
       examined += 1;
-      if (stripComments(readFileSync(file, 'utf8')).includes('@age/entitlement')) {
-        importers.push(file);
+      if (stripComments(readFileSync(file, 'utf8')).includes('askEntitlement(')) {
+        callers.push(file);
       }
     }
     expect(examined).toBe(OUTSIDE.length);
-    expect(importers).toEqual([]);
+    expect(callers).toEqual([]);
   });
 
-  it('is depended on by no package manifest', () => {
+  it('is imported by exactly the one package ADR-0061 A4 authorizes', () => {
+    const importers = OUTSIDE.filter((file) =>
+      stripComments(readFileSync(file, 'utf8')).includes('@age/entitlement'),
+    );
+
+    for (const importer of importers) {
+      expect(
+        AUTHORIZED_IMPORTERS.some((pkg) => importer.includes(join('packages', pkg))),
+        `${importer} imports @age/entitlement without an ADR authorizing it`,
+      ).toBe(true);
+    }
+  });
+
+  it('is depended on by no unauthorized package manifest', () => {
     const manifests = ROOTS.flatMap((root) => packageManifests(root));
 
     expect(manifests.length).toBeGreaterThan(10);
     for (const manifest of manifests) {
       if (manifest === join(SRC, '..', 'package.json')) continue;
+      if (AUTHORIZED_IMPORTERS.some((pkg) => manifest.includes(join('packages', pkg)))) continue;
       expect(readFileSync(manifest, 'utf8')).not.toContain('@age/entitlement');
     }
   });
