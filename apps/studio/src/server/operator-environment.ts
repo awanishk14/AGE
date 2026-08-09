@@ -1,17 +1,21 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
+import { openLocalPrismaSnapshotReadConnection } from '@age/capture/composition';
 import {
   assembleEvidence as assembleEvidenceIn,
   assessCapabilityReadiness as assessCapabilityReadinessIn,
   createClientRecord as createClientRecordIn,
   generateBifFromAnswerFile as generateBifFromAnswerFileIn,
+  narrowSnapshotRead,
   readBusinessesView as readBusinessesViewIn,
   readDiscoveryDraft as readDiscoveryDraftIn,
+  readStoredSnapshot as readStoredSnapshotIn,
   reportContradictions as reportContradictionsIn,
   resolveBusinessScope as resolveBusinessScopeIn,
   submitDiscoveryAnswers as submitDiscoveryAnswersIn,
   writeDiscoveryDraft as writeDiscoveryDraftIn,
   type OperatorWorkspaceRuntime,
+  type StoredSnapshotOutcome,
 } from '@age/operator-workspace';
 import {
   assertLoopbackBindHost,
@@ -70,6 +74,7 @@ export {
   type CreateClientOutcome,
   type DiscoveryWorkspaceOutcome,
   type DraftOutcome,
+  type StoredSnapshotOutcome,
   type EvidenceOutcome,
   type GenerateBifOutcome,
   type SaveOutcome,
@@ -114,6 +119,39 @@ export function reportContradictions(clientId: string, changedBy: string) {
 
 export function assessCapabilityReadiness(clientId: string, changedBy: string) {
   return assessCapabilityReadinessIn(CONSOLE_RUNTIME, clientId, changedBy);
+}
+
+/**
+ * The stored row, read back (ADR-0064 D1).
+ *
+ * ⚠️ THE ONLY PLACE `apps/studio` REACHES THE SNAPSHOT STORE, and it reaches it
+ * through the ADR-0055 D2 read façade rather than a repository, a Prisma client
+ * or `@age/persistence`. The façade binds out two reads and a close; the
+ * repository never escapes the function that built it, so there is no append
+ * path here to take.
+ *
+ * 🚫 NARROWED FURTHER, on purpose. `narrowSnapshotRead` drops
+ * `findBySnapshotId` before the port leaves this module: addressing a snapshot
+ * by id is how a surface begins comparing two of them, and cross-snapshot
+ * reading is ADR-0055 §5 item 1 — recorded, NOT authorized.
+ *
+ * ⚠️ THE CONNECTION IS OPENED LAZILY, inside a thunk. The operation resolves
+ * the business FIRST and only calls this when there is a scope to read under, so
+ * an unknown business never opens a database connection.
+ *
+ * 🚫 READ-ONLY, AND NOT MERELY BY CONVENTION (ADR-0064 D2). Nothing here writes
+ * a row, and 🛑 no screen may seed one to make this panel look populated.
+ */
+export function readStoredSnapshot(
+  clientId: string,
+  bifId: string,
+): Promise<StoredSnapshotOutcome> {
+  return readStoredSnapshotIn(
+    CONSOLE_RUNTIME,
+    () => narrowSnapshotRead(openLocalPrismaSnapshotReadConnection()),
+    clientId,
+    bifId,
+  );
 }
 
 /**

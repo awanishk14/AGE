@@ -175,3 +175,13 @@ export {
   type StatusFacet,
   type SystemStatusInput,
 } from './system-status';
+
+export {
+  ANSWER_FILE_PROVENANCE,
+  buildStoredSnapshotView,
+  STORED_SNAPSHOT_PROVENANCE,
+  TWO_ANSWERS_NOTICE,
+  type StoredSnapshotAbsentScoreView,
+  type StoredSnapshotSectionView,
+  type StoredSnapshotView,
+} from './stored-snapshot-view';

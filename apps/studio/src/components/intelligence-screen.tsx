@@ -1,8 +1,12 @@
 import Link from 'next/link';
 
+import { ANSWER_FILE_PROVENANCE, STORED_SNAPSHOT_PROVENANCE } from '@age/studio-shell';
+
 import { IntelligencePanel } from './intelligence-panel';
+import { StoredSnapshotPanel } from './stored-snapshot-panel';
 import { SubjectAreaNav } from './subject-area-nav';
 import { assessCapabilityReadinessAction } from '@/server/intelligence-actions';
+import { readStoredSnapshotAction } from '@/server/snapshot-actions';
 import { resolveBusinessScope } from '@/server/operator-environment';
 
 /**
@@ -77,7 +81,25 @@ export function IntelligenceScreen({ clientId }: { readonly clientId: string }) 
         says it would need.
       </p>
 
+      {/*
+        ⚠️ THE ANSWER FILE'S PROVENANCE IS NAMED ON THE PANEL THAT READS IT, and
+        the stored row's on the panel below. Before ADR-0064 both answers were
+        called "readiness" and neither said which document it came from.
+      */}
+      <p className="mt-6 text-xs font-semibold uppercase tracking-wider text-[hsl(var(--age-text-muted))]">
+        {ANSWER_FILE_PROVENANCE}
+      </p>
       <IntelligencePanel clientId={clientId} assess={assessCapabilityReadinessAction} />
+
+      {/*
+        🛑 SHOWN SEPARATELY, NEVER MERGED (ADR-0064 D3). The two panels are two
+        questions; nothing between them reconciles, diffs or prefers one.
+      */}
+      <p className="mt-10 text-xs font-semibold uppercase tracking-wider text-[hsl(var(--age-text-muted))]">
+        {STORED_SNAPSHOT_PROVENANCE}
+      </p>
+      <StoredSnapshotPanel clientId={clientId} read={readStoredSnapshotAction} />
+
       <SubjectAreaNav clientId={clientId} currentAreaId="intelligence" />
     </main>
   );
