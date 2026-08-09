@@ -81,3 +81,35 @@ export function acceptVerifiedSession(session: VerifiedSession): VerifiedSession
     accountId: session.accountId,
   });
 }
+
+declare const AUTHENTICATED_ORGANIZATION: unique symbol;
+
+/**
+ * An organization identifier that came from a verified session — ADR-0061 A4.
+ *
+ * ⚠️ **IT IS A STRING THAT CANNOT BE WRITTEN DOWN.** A plain `string` parameter
+ * accepts a URL segment, a form field and a header just as happily as a session
+ * does, and a user-supplied path segment is a traversal into another tenant's
+ * files. Making the type unforgeable moves "never from a request parameter" from
+ * a sentence in an ADR into something the compiler refuses.
+ *
+ * 🚫 The only honest way to obtain one is `authenticatedOrganizationIdOf`. A cast
+ * would defeat it, so a guard asserts no cast to this type exists outside this
+ * module.
+ */
+export type AuthenticatedOrganizationId = string & {
+  readonly [AUTHENTICATED_ORGANIZATION]: true;
+};
+
+/**
+ * The one way to obtain an {@link AuthenticatedOrganizationId}.
+ *
+ * ⚠️ It re-accepts the session first, so a hand-built object literal with a blank
+ * organization cannot become an authenticated identifier by passing through
+ * here.
+ */
+export function authenticatedOrganizationIdOf(
+  session: VerifiedSession,
+): AuthenticatedOrganizationId {
+  return acceptVerifiedSession(session).organizationId as AuthenticatedOrganizationId;
+}

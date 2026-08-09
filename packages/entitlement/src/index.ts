@@ -15,7 +15,9 @@
 
 export {
   acceptVerifiedSession,
+  authenticatedOrganizationIdOf,
   SessionRefusedError,
+  type AuthenticatedOrganizationId,
   type VerifiedSession,
 } from './verified-session';
 
