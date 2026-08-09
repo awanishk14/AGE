@@ -1,7 +1,7 @@
 # ADR-0059 — Assisted intake, and the answer nobody gave
 
-Status: **D6 Accepted** (2026-08-07, by the Product Owner — see §0.1b) · **D1–D5 and D7 remain
-`Proposed`** — 🛑 still a decision request, and 🚫 still not self-acceptable.
+Status: **Accepted in full** — D6 on 2026-08-07 (§0.1b), **D1–D5 and D7 on 2026-08-09** (§0.1d),
+both by the Product Owner in their own words. 🚫 Neither acceptance was self-accepted.
 Date: 2026-08-07
 Relates to: ADR-0049 **D2** (no default parameter — the pipeline must stay falsifiable), ADR-0050
 **D2** (the mapper **TRANSCRIBES and never INFERS**), ADR-0051 (the enum is on the **question**,
@@ -61,6 +61,31 @@ failure mode this split was designed to prevent.
 
 ⚠️ **Not self-accepted.** The Product Owner accepted in their own words, quoted above, and this
 `Status` flip is a separate PR from the ADR's own (the §7 convention: #88→#89, #93→#94, …).
+
+### 0.1d Acceptance of D1–D5 and D7, in the Product Owner's own words (2026-08-09)
+
+> _"al 3 need the work, plan and complete all 3, and then we deploy it on vps"_
+
+⚠️ **The "3" are ADR-0059, ADR-0061 and ADR-0064**, named in the table the owner was answering.
+This is therefore an acceptance of **everything in this ADR that was still `Proposed`: D1, D2, D3,
+D4, D5 and D7.** 🚫 Not self-accepted.
+
+🛑 **THIS IS THE LARGEST WIDENING OF THE §3 HARD BOUNDARIES IN THE PROJECT'S HISTORY, AND IT IS
+DELIBERATE.** D4 authorizes **URL fetching** and D5 authorizes a **model call** — two things every
+prior ADR refused by name. 🚫 They are authorized **only inside the shapes D1–D3 and D7 define**,
+and those shapes are the entire safety story:
+
+- 🚫 **D1 — assisted intake PROPOSES; it never ANSWERS.** A proposal is not an answer until a
+  human accepts it. 🚫 There is no "accept all".
+- 🚫 **D2 — every answer carries how it was obtained, never defaulted.** An extracted answer that
+  cannot say where it came from is a fabricated answer.
+- 🚫 **D3 — extraction confidence NEVER becomes discovery confidence.** They are different
+  quantities and 🚫 must never be multiplied, averaged or copied into one another.
+- 🚫 **D7 — an empty extraction is NOT "no information".** It is `not-extracted` with a reason,
+  never an empty answer and never a zero.
+
+⚠️ **D8 still governs scope.** It names exhaustively what acceptance authorizes; 🚫 this note does
+not add to it, and 🚫 §5 remains _recorded, not authorized_.
 
 ### 0.1c Erratum — D6 item 4 was wrong about autosave, and is corrected below
 

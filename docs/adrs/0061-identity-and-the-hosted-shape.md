@@ -1,9 +1,11 @@
 # ADR-0061 — ADR K: identity, and the hosted shape it is the precondition for
 
-Status: **Proposed** — 🚫 **MUST NOT be self-accepted.**
-⚠️ **THIS ADR AUTHORIZES NOTHING.** It exists to make the SaaS path a _decision the Product Owner can
-take_, rather than a blocker the architect keeps citing. 🚫 No code follows from it while it is
-`Proposed` — not a login screen, not a session, not a deployment, not a schema change.
+Status: **Accepted** (2026-08-09, by the Product Owner — see §0.1b), **with Q2–Q6 and the §5 open
+question answered in §2b.** 🚫 Not self-accepted.
+⚠️ **The SaaS build has started.** §4's sequencing is no longer hypothetical and 🚫 is not
+negotiable: **Q1 → Q2 → Q3 before any deployment work, and Q4/Q5 before any real client's data
+leaves the operator's machine.** 🚫 Deploying first and adding identity after is the one failure
+mode this ADR was written to make visible.
 ⚠️ This is the **"ADR K"** referred to by ADR-0058 §5 and named as the precondition in ADR-0060 §0.2.
 Date: 2026-08-08
 Relates to: ADR-0046 **D5** (RLS is coherence, NOT authorization), ADR-0053 **D4** (the operator
@@ -13,6 +15,29 @@ ceiling — recorded, not scheduled), ADR-0057 **D2** (the loopback invariant) a
 action classes), ADR-0058 **D1** (principal ≠ entitlement ≠ scope), **D2** (the three-valued answer),
 **D8** (what its acceptance authorized) and **§6 Q1** (the tenant boundary, unanswered),
 ADR-0060 **D1/D6** (the local surface, and the database rule left untouched).
+
+---
+
+## 0.1b Acceptance, in the Product Owner's own words (2026-08-09)
+
+> _"al 3 need the work, plan and complete all 3, and then we deploy it on vps"_
+
+⚠️ **The "3" are ADR-0059, ADR-0061 and ADR-0064**, named in the table the owner was answering, and
+_"we deploy it on vps"_ is the instruction that starts the SaaS build. 🚫 Not self-accepted.
+
+⚠️ **The acceptance delegates Q2–Q6 rather than answering them.** They are answered in **§2b**, by
+the architect under the standing mandate — and each answer says plainly that it is an architect's
+answer, so a later reader cannot mistake it for the owner's. 🛑 **Two are the owner's to overrule
+on grounds no architect can weigh** and are marked as such: **A2** (which identity provider — a cost
+and vendor decision) and **A5** (that a real client's data now lives on a server the operator does
+not physically hold).
+
+🛑 **§3's list of what acceptance does NOT authorize is UNCHANGED and is not softened here:**
+🚫 no Business Execution (ADR-0057 D4 class 3 is refused, not postponed, and hosting does not
+change that) · 🚫 no committing of real client records (ADR-0053 D3 + ADR-0065) · 🚫 no promoting
+a BIF status · 🚫 RLS is never authorization. ⚠️ The **model call** that §3 refused is now
+authorized — but by **ADR-0059 D5**, accepted the same day, and 🚫 only in the shape D1–D3/D7 give
+it.
 
 ---
 
@@ -107,6 +132,119 @@ authorized" rule).
 
 ---
 
+## 2b. The answers (architect's, under the delegation in §0.1b)
+
+🛑 **Each answer below is a STOP that has been cleared, not a question that turned out not to
+matter.** 🚫 None may be widened by an implementation PR; each names what it does **not** settle.
+
+### A0 — The §5 open question, answered FIRST because it frames every other answer
+
+**The hosted product is AGE Studio deployed, not a peer product.** 🚫 A peer product would double
+every screen, and the screens are the product (the #231 master direction).
+
+⚠️ **But the loopback assumption that shaped those screens is replaced, not carried over.** The
+console names files on the operator's disk. Deployed, it names files in a **workspace root derived
+from the session** (A4). ⚠️ **That is a real change to what a screen means**, which is why A4 is a
+separate answer rather than a detail of this one.
+
+### A2 — What authenticates, and what AGE trusts
+
+**AGE trusts a verified session and nothing else.** The session is minted by an authentication layer
+that owns credential verification; AGE's own code never compares a password.
+
+🛑 **`OperatorPrincipal` IS NOT PROMOTED, and this is the load-bearing half of the answer.** It
+stays caller-asserted **provenance** — _who says they did this_ — and 🚫 is never evidence of _who
+may do this_. ADR-0058 D2's six guards stand unchanged. ⚠️ A session and a principal are different
+values with different trust, and 🚫 a slice that lets one be constructed from the other has
+reintroduced the exact bypass this refuses.
+
+⚠️ **Implementation, as a default the owner may overrule:** an OIDC-capable authentication layer with
+its own store; sessions in Postgres (🚫 not a bearer token the client holds and replays past
+revocation); **argon2id** if a credential provider is used at all. The seam is what matters: AGE
+consumes _"this request carries a verified subject"_, so the provider can be swapped for a hosted IdP
+without touching a screen.
+
+🛑 **THIS DISCHARGES ADR-0053 §2.1 DISSENT 1**, deferred four times: authentication now precedes a
+second person touching the system. 🚫 It lands BEFORE deployment, not after.
+
+### A3 — The real `granted` / `denied` arms
+
+`Authentication` gains an authenticated arm; `askEntitlement` gains real `granted` and `denied`.
+
+⚠️ **The `switch` will stop compiling, and that is the design working.** 🚫 Do not add a `default`
+arm to make it compile — enumerate the new arm deliberately.
+
+🛑 **THE THREE-VALUED ANSWER SURVIVES.** `not-established` is an **epistemic state** and 🚫 must
+never collapse into `denied`: _"nobody has looked"_ and _"we looked and refused"_ are different
+facts, and conflating them is what invites a bypass. 🚫 No `allowAll`, no `SYSTEM_PRINCIPAL`, no
+`entitlementOrDefault`, no dev-mode, no bypass — the six guards stay.
+
+⚠️ **`EntitlementSubject`'s symmetry test is DELIBERATELY CHANGED in the slice that builds this,
+citing ADR-0062 D1** (the tenant is the organization). 🚫 It is never quietly deleted.
+
+### A4 — Where the operator's files live when the operator is not at the machine
+
+**The workspace root is derived from the authenticated organization, and 🚫 never from a request
+parameter.**
+
+⚠️ **ADR-0054 D2's rule is preserved by being restated, not dropped.** Its point was that a path is
+never _ambient_ — never `cwd`, never a default, never a search. Deployed, the non-ambient source is
+the **session**. 🚫 A path segment arriving in a URL, a form field or a header is user input, and a
+user-supplied path segment is a traversal into another tenant's files.
+
+🚫 **`assertOperatorFilePathOutsideRepository` keeps its ONE implementation** (ADR-0054 D3). The
+deployed root is an additional constraint on top of it, 🚫 not a second copy that relaxes it.
+
+⚠️ **This does not settle who may READ the object** — that is A2 and A3, exactly as §2 Q4 warned.
+Object storage is 🚫 not an answer to this question.
+
+### A5 — The database rule: 🛑 ADR-0055 D6 IS REVISITED, DELIBERATELY, AND THIS IS THE OWNER'S CALL
+
+🛑 **State the consequence before the mechanism: a real client's data will live on a server the
+operator does not physically hold.** That is precisely what D6 refused, it is a genuine reduction in
+safety, and 🚫 it must never be described as anything else. The owner instructed the deployment
+knowing the product carries their clients' data; 🚫 this ADR records the trade rather than hiding
+it.
+
+**The deployed database is the VPS's own Postgres, reachable only over the VPS's loopback or a
+private interface, 🚫 never exposed publicly.**
+
+🛑 **NOT A FLAG, NOT AN `allowRemote` PARAMETER, NOT A QUIETLY-PERMITTING SECOND FUNCTION** — §2 Q5
+refuses all three by name, because _"the copy that gets relaxed still passes its own tests"_. It is a
+**separate named deployment composition** whose identity is explicit in its name and which 🚫 cannot
+be selected by an environment variable alone.
+
+⚠️ **`assertLocalDatabaseTarget` KEEPS ITS TEETH on the local operator path**, which 🚫 is not
+deleted and 🚫 is not the same code path. ⚠️ Its named evasion still stands: an SSH tunnel from
+`localhost:5432` to a shared server _is_ loopback and 🚫 is still forbidden — the deployed
+composition is honest about being remote instead of disguising itself as local.
+
+### A6 — The security ceiling: 🛑 DISCHARGED BEFORE THE FIRST NON-OPERATOR LOGIN, NOT AFTER
+
+**ADR-0055 D9's items become a gate on the deployment slice.** 🛑 Each must be shipped and **made
+to fail** before a second human is given a URL:
+
+1. **Transport** — TLS terminated in front of the app; 🚫 no plaintext origin reachable publicly.
+2. **Secrets** — from the environment or a secret file, 🚫 never committed, and 🚫 absent at
+   startup is a **refusal**, never a default.
+3. **Session cookies** — `HttpOnly`, `Secure`, `SameSite`, server-side revocation.
+4. **Rate limiting** on the authentication path specifically.
+5. **Tenant isolation, TESTED** — a test proving organization A cannot read organization B's row.
+   🚫 RLS is **coherence, not authorization** (ADR-0046 D5), and 🚫 the test must not be written
+   against RLS as though it were the boundary.
+6. **Audit** — who logged in, and what was read, retrievable.
+
+⚠️ **"Recorded" is not "addressed".** 🚫 An item ticked without a failing-then-passing test is not
+discharged.
+
+### What §2b does NOT settle
+
+🚫 Business Execution (class 3, refused) · 🚫 multi-organization data sharing · 🚫 client
+self-service logins (ADR-0062 D2 records them; 🚫 it does not authorize them) · 🚫 any change to
+what a score means · 🚫 making the repository public.
+
+---
+
 ## 3. What acceptance would authorize — and what it would still not
 
 ⚠️ Written now so that a future acceptance cannot be read more broadly than it was given.
@@ -124,8 +262,11 @@ unnoticed in 2026-08-02) · promoting a **BIF status** · treating **RLS** as au
 
 ## 4. Sequencing
 
-🛑 **This ADR is not the next piece of work, by the Product Owner's own instruction.** ADR-0060's D8
-items are. This one is picked up when the SaaS build starts.
+⚠️ **SUPERSEDED BY EVENTS, 2026-08-09.** This paragraph said _"this ADR is not the next piece of
+work, by the Product Owner's own instruction — it is picked up when the SaaS build starts."_
+✅ ADR-0060's D8 items are all discharged, and **the owner has now started the SaaS build** (§0.1b).
+🚫 The original sentence is kept above so the change of instruction is visible rather than
+overwritten.
 
 ⚠️ **The order is not negotiable when it does start:** Q1 → Q2 → Q3 before any deployment work, and
 Q4/Q5 before any real client's data leaves the operator's machine. 🚫 Deploying first and adding
