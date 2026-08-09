@@ -1,7 +1,8 @@
 # ADR-0061 — ADR K: identity, and the hosted shape it is the precondition for
 
-Status: **Accepted** (2026-08-09, by the Product Owner — see §0.1b), **with Q2–Q6 and the §5 open
-question answered in §2b.** 🚫 Not self-accepted.
+Status: **Accepted** (2026-08-09, by the Product Owner — see §0.1b), **with Q2–Q6 open** and
+**§5 ANSWERED on 2026-08-09 — the hosted product is the DEMO, 🛑 not Studio (see §5).**
+🚫 Not self-accepted.
 ⚠️ **The SaaS build has started.** §4's sequencing is no longer hypothetical and 🚫 is not
 negotiable: **Q1 → Q2 → Q3 before any deployment work, and Q4/Q5 before any real client's data
 leaves the operator's machine.** 🚫 Deploying first and adding identity after is the one failure
@@ -275,7 +276,34 @@ already permanent, because anyone who found the URL was an operator.
 
 ---
 
-## 5. Open question about this ADR itself
+## 5. ✅ ANSWERED (2026-08-09, by the Product Owner) — the hosted product is the DEMO, not Studio
+
+> The Product Owner chose the demo frontend, after being shown the three options and their costs,
+> with the words _"lets go with your recommendation"_ (recommendation = host `apps/web` +
+> `apps/api`, the read-only demo). See ADR-0066 §0.2.
+
+**§5-A. The hosted product is `apps/web` + `apps/api` — the read-only demo, over the fixed,
+deliberately fictional profile.** Both already have Dockerfiles; 🚫 no invariant is reversed.
+
+**§5-B. 🛑 AGE STUDIO IS NOT DEPLOYED, AND "we deployed" MUST NEVER BE READ AS "Studio is
+deployed".** ADR-0057 **OX-INV-1 stands unamended** — `apps/studio` still gets no Dockerfile, still
+binds loopback only, and the test asserting the Dockerfile's absence stays. Deploying Studio would
+be a **reversal**, needing its own ADR and the six auth slices that are still uncalled.
+
+**§5-C. 🚫 The hosted demo shows NO real business.** It renders the frozen fixture and nothing
+else. There is no parameter by which a visitor supplies a company — 🚫 do not add one, and 🚫 do
+not "make the fixture more realistic" (ADR-0053 D3: obvious fictionality **is** the guard).
+
+**§5-D. Therefore the hosted demo needs no login, and 🚫 must not grow one.** It protects nothing
+private because it holds nothing private. ⚠️ A login on this surface would be the first step
+toward §5-B by accident.
+
+⚠️ **Q2–Q6 remain open.** §5's answer does not answer them; it narrows what they are answering
+_for_.
+
+---
+
+## 5b. The question as originally posed (superseded by §5 above)
 
 Should the hosted product be **AGE Studio deployed**, or a **different product** that shares the
 packages? ⚠️ The console was built under a loopback invariant that shaped its every screen — including
