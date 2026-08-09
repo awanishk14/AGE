@@ -187,7 +187,11 @@ describe('the entitlement question exists in exactly one place', () => {
 describe('askEntitlement has no caller', () => {
   const OUTSIDE = REPO_FILES.filter((file) => !file.startsWith(join(SRC, '..')));
 
-  const AUTHORIZED_IMPORTERS = ['tenant-workspace'];
+  // ⚠️ WIDENED BY ONE IN THE A2 SESSION-STORE SLICE, AND 🚫 STILL AN ALLOW-LIST.
+  // `@age/session-store` turns a stored row into a `VerifiedSession` — A2's own
+  // words — which is again the SESSION TYPE, never the decision. Its own guard
+  // asserts it contains no `askEntitlement`.
+  const AUTHORIZED_IMPORTERS = ['tenant-workspace', 'session-store'];
 
   it('found files outside this package to scan', () => {
     expect(OUTSIDE.length).toBeGreaterThan(50);
@@ -212,7 +216,7 @@ describe('askEntitlement has no caller', () => {
     expect(callers).toEqual([]);
   });
 
-  it('is imported by exactly the one package ADR-0061 A4 authorizes', () => {
+  it('is imported by exactly the packages ADR-0061 A2 and A4 authorize', () => {
     const importers = OUTSIDE.filter((file) =>
       stripComments(readFileSync(file, 'utf8')).includes('@age/entitlement'),
     );
