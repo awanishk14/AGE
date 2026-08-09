@@ -7,6 +7,7 @@ import {
   getEvidencedFieldPaths,
   validateBusinessDiscoveryFieldEvidence,
 } from '../field-provenance';
+import { STATED_ANSWER_PROVENANCE } from '../answer-provenance';
 import { businessDiscoveryProfileSchema } from '../business-discovery-profile';
 import { SAMPLE_BUSINESS_DISCOVERY_PROFILE } from '../sample-profile';
 import { DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE } from '../default-questionnaire';
@@ -140,7 +141,12 @@ describe('Business Discovery field-level provenance', () => {
               },
             ],
             answers: [
-              { questionId: 'bi-name', value: 'Provenance Co', evidenceSourceIds: ['ev-ghost'] },
+              {
+                questionId: 'bi-name',
+                value: 'Provenance Co',
+                provenance: STATED_ANSWER_PROVENANCE,
+                evidenceSourceIds: ['ev-ghost'],
+              },
             ],
           },
         ],

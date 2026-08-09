@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import { presentContradictions } from './contradictions-view';
 import { presentEvidence, type EvidenceView, type NamedEvidenceView } from './evidence-view';
+import { STATED_ANSWER_PROVENANCE } from '@age/business-discovery-contracts';
 
 /**
  * ⚠️ Driven through the REAL chain — answers → profile → scored context → the
@@ -22,9 +23,17 @@ import { presentEvidence, type EvidenceView, type NamedEvidenceView } from './ev
  * (ADR-0053 D3).
  */
 const ANSWERS: readonly DiscoveryAnswer[] = [
-  { questionId: 'bi-name', value: 'Fictional Kite Repair' },
-  { questionId: 'bi-industry', value: 'Entirely made-up kite maintenance' },
-  { questionId: 'gc-goals', value: 'Repair more imaginary kites' },
+  { questionId: 'bi-name', value: 'Fictional Kite Repair', provenance: STATED_ANSWER_PROVENANCE },
+  {
+    questionId: 'bi-industry',
+    value: 'Entirely made-up kite maintenance',
+    provenance: STATED_ANSWER_PROVENANCE,
+  },
+  {
+    questionId: 'gc-goals',
+    value: 'Repair more imaginary kites',
+    provenance: STATED_ANSWER_PROVENANCE,
+  },
 ];
 
 function realEvidence(): EvidenceView {

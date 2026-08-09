@@ -1,9 +1,10 @@
 import { describeJsonParseFailure } from '@age/operator-file-policy';
 
-import type {
-  BusinessDiscoveryQuestionnaire,
-  BusinessDiscoveryQuestionnaireQuestion,
-  DiscoveryAnswer,
+import {
+  STATED_ANSWER_PROVENANCE,
+  type BusinessDiscoveryQuestionnaire,
+  type BusinessDiscoveryQuestionnaireQuestion,
+  type DiscoveryAnswer,
 } from '@age/business-discovery-contracts';
 
 /**
@@ -262,10 +263,24 @@ export function parseDiscoveryAnswerFile(
 
     const evidenceSourceIds = validateEvidenceSourceIds(entry.evidenceSourceIds, questionId);
 
+    // ⚠️ ADR-0059 D2, AND THE ONE PLACE THE `stated` PROVENANCE IS A STATEMENT
+    // OF FACT RATHER THAN A DEFAULT. This file is authored by a human, by hand,
+    // under ADR-0054 D1. There is no other way for a sentence to get into it:
+    // `ALLOWED_ANSWER_KEYS` has no `provenance`, so a file CANNOT claim its
+    // answers were confirmed from a source, and an extraction surface must
+    // therefore hand its accepted candidates to whatever writes them — never
+    // to this parser.
+    //
+    // 🚫 Do not "support" a provenance key here to save that work. The moment a
+    // file can assert `confirmed-from-source`, the assertion is unverifiable:
+    // nothing in the file records that a human ever saw the candidate, which is
+    // the entire content of D1.
+    const provenance = STATED_ANSWER_PROVENANCE;
+
     return Object.freeze(
       evidenceSourceIds === undefined
-        ? { questionId, value }
-        : { questionId, value, evidenceSourceIds },
+        ? { questionId, value, provenance }
+        : { questionId, value, provenance, evidenceSourceIds },
     );
   });
 

@@ -2,6 +2,7 @@ import {
   DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
   type BusinessDiscoveryQuestionnaire,
 } from '@age/business-discovery-contracts';
+import { STATED_ANSWER_PROVENANCE } from '@age/business-discovery-contracts';
 import { describe, expect, it } from 'vitest';
 
 import { DiscoveryAnswerFileError, parseDiscoveryAnswerFile } from '../parse-discovery-answer-file';
@@ -37,7 +38,13 @@ describe('parseDiscoveryAnswerFile', () => {
         file([{ questionId: 'bi-name', value: 'Example Fictional Co' }]),
         Q,
       );
-      expect(answers).toEqual([{ questionId: 'bi-name', value: 'Example Fictional Co' }]);
+      expect(answers).toEqual([
+        {
+          questionId: 'bi-name',
+          value: 'Example Fictional Co',
+          provenance: STATED_ANSWER_PROVENANCE,
+        },
+      ]);
     });
 
     it('accepts an empty answer set — absence is not an error', () => {
@@ -235,6 +242,30 @@ describe('parseDiscoveryAnswerFile', () => {
       ).toThrow(/bi-name/);
     });
 
+    it('refuses a file that tries to declare its own provenance', () => {
+      // 🛑 ADR-0059 D1/D2. A hand-authored file asserting
+      // `confirmed-from-source` would be asserting that a human reviewed and
+      // accepted a candidate — and nothing in the file records that any human
+      // ever saw one. The claim would be unverifiable, so the key does not
+      // exist and the file is refused rather than trusted.
+      //
+      // ⚠️ This is why the parser is entitled to say `stated`: it is the only
+      // thing a file of this shape CAN be. If a provenance key is ever added
+      // here, that entitlement is gone and this comment is the record of it.
+      expect(() =>
+        parseDiscoveryAnswerFile(
+          file([
+            {
+              questionId: 'bi-name',
+              value: 'Example Fictional Co',
+              provenance: { kind: 'confirmed-from-source' },
+            },
+          ]),
+          Q,
+        ),
+      ).toThrow(/provenance/);
+    });
+
     it('refuses a missing questionId', () => {
       expect(() => parseDiscoveryAnswerFile(file([{ value: 'x' }]), Q)).toThrow(
         DiscoveryAnswerFileError,
@@ -296,7 +327,7 @@ describe('parseDiscoveryAnswerFile', () => {
 
     it('accepts a declared choice', () => {
       expect(parseDiscoveryAnswerFile(choiceFile('b2b'), CHOICE_Q)).toEqual([
-        { questionId: 'fx-model', value: 'b2b' },
+        { questionId: 'fx-model', value: 'b2b', provenance: STATED_ANSWER_PROVENANCE },
       ]);
     });
 

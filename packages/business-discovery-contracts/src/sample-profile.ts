@@ -1,3 +1,4 @@
+import { STATED_ANSWER_PROVENANCE } from './answer-provenance';
 import type { BusinessDiscoveryProfile } from './business-discovery-profile';
 
 /**
@@ -34,7 +35,12 @@ export const SAMPLE_BUSINESS_DISCOVERY_PROFILE: BusinessDiscoveryProfile = {
         },
       ],
       answers: [
-        { questionId: 'bi-name', value: 'Northwind Ledger', evidenceSourceIds: ['ev-kickoff'] },
+        {
+          questionId: 'bi-name',
+          value: 'Northwind Ledger',
+          provenance: STATED_ANSWER_PROVENANCE,
+          evidenceSourceIds: ['ev-kickoff'],
+        },
       ],
     },
   ],
