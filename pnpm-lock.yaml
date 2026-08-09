@@ -769,6 +769,16 @@ importers:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(terser@5.48.0)
 
+  packages/session-cookie:
+    dependencies:
+      '@age/session-store':
+        specifier: workspace:*
+        version: link:../session-store
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(terser@5.48.0)
+
   packages/session-store:
     dependencies:
       '@age/entitlement':
