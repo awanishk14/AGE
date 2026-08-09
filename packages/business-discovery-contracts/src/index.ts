@@ -102,8 +102,31 @@ export {
   PROFILE_SIGNAL_TARGETS,
   TRANSCRIBED_PROFILE_SIGNALS,
   buildProfileFromAnswers,
+  buildProfileAndFieldProvenanceFromAnswers,
 } from './build-profile-from-answers';
-export type { BuildProfileFromAnswersOptions } from './build-profile-from-answers';
+export type {
+  BuildProfileFromAnswersOptions,
+  ProfileAndFieldProvenance,
+} from './build-profile-from-answers';
+
+// Field ORIGIN, on a channel the scorers cannot see (ADR-0066 D2). 🛑 This is
+// NOT `fieldEvidence` and must never be folded into it: `fieldEvidence` is read
+// by completeness scoring and by the BIF mapper, so provenance placed there
+// would move a score. AGE-INV-PROV-1 — identical facts with different
+// provenance produce byte-identical scoring and BIF results — is protected by
+// SHAPE here (the channel has no slot on any profile type) as well as by a
+// regression guard. 🚫 It carries no number, and "provenance alone never
+// changes a score".
+export {
+  profileFieldProvenanceSchema,
+  profileFieldProvenanceEntrySchema,
+  fieldProvenanceEntriesFor,
+  fieldPathsWithRecordedProvenance,
+} from './profile-field-provenance';
+export type {
+  ProfileFieldProvenance,
+  ProfileFieldProvenanceEntry,
+} from './profile-field-provenance';
 
 // Questionnaire validation (pure, deterministic completeness check).
 export {
