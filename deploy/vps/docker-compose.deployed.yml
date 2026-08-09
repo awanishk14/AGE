@@ -1,0 +1,73 @@
+# AGE — the DEPLOYED composition (ADR-0061 A5 and A6 item 1).
+#
+# 🛑 THIS IS A SEPARATE NAMED COMPOSITION, NOT A MODE OF THE ROOT ONE. ADR-0061
+# A5 refuses a flag, an `allowRemote` parameter and a quietly-permitting second
+# function by name, "because the copy that gets relaxed still passes its own
+# tests". Running this file is a deliberate act with a name; 🚫 no environment
+# variable set against the root `docker-compose.yml` can select it.
+#
+# 🛑 A REAL CLIENT'S DATA WILL LIVE HERE, ON A SERVER THE OPERATOR DOES NOT
+# PHYSICALLY HOLD. That is exactly what ADR-0055 D6 refused, the Product Owner
+# made the call knowingly, and 🚫 nothing here may be read as saying otherwise.
+#
+# 🛑 THERE IS NO APPLICATION SERVICE HERE, DELIBERATELY, AND THIS COMPOSITION
+# THEREFORE DOES NOT YET SERVE ANYTHING. Two live facts forbid inventing one:
+# 🚫 `apps/studio` must never get a Dockerfile (ADR-0057, OX-INV-1 — a published
+# container port in front of a loopback listener is the case the invariant
+# cannot see, and a test asserts the absence), and ⚠️ ADR-0061 §5's question —
+# whether the hosted product is AGE Studio deployed or a different product — is
+# OPEN and is the Product Owner's. Adding a service here would answer it
+# silently. `AGE_APP_UPSTREAM` is required instead, so this composition REFUSES
+# TO START until a named app exists rather than starting half-deployed.
+#
+# ⚠️ TLS IS TERMINATED IN FRONT, AND NOTHING BEHIND IT IS PUBLICLY REACHABLE.
+# Only `edge` publishes to the world. 🚫 Do not add a `ports:` entry to any other
+# service, and 🚫 do not widen one to `0.0.0.0` — a certificate in front of a
+# reachable plaintext port decorates a door nobody has to use.
+#
+# ⚠️ EVERY SECRET IS REQUIRED AT STARTUP (A6 item 2). The `:?` form means absent
+# is a REFUSAL TO START; 🚫 never `:-` — a default password is a published one.
+# 🚫 No secret is committed: values come from an env file that is never tracked.
+
+services:
+  edge:
+    # ⚠️ The ONLY service the world can reach. It terminates TLS and speaks
+    # plaintext only on the composition's internal network.
+    image: caddy:2-alpine
+    container_name: age-edge
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      AGE_PUBLIC_HOST: ${AGE_PUBLIC_HOST:?the public host must be stated}
+      AGE_APP_UPSTREAM: ${AGE_APP_UPSTREAM:?no application is deployed yet — see the header}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - age_deployed_caddy_data:/data
+      - age_deployed_caddy_config:/config
+
+  postgres:
+    # ⚠️ A5 — the VPS's OWN Postgres, published to this host's loopback ONLY.
+    # 🚫 Never '5432:5432': that form binds every interface on the machine.
+    image: postgres:16-alpine
+    container_name: age-deployed-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?the database user must be stated}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?absent at startup is a refusal}
+      POSTGRES_DB: ${POSTGRES_DB:?the database name must be stated}
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - age_deployed_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  age_deployed_postgres_data:
+  age_deployed_caddy_data:
+  age_deployed_caddy_config:
