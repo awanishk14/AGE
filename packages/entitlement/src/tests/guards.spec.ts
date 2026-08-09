@@ -197,7 +197,16 @@ describe('askEntitlement has no caller', () => {
   // SESSION TYPE, 🚫 never the decision. Its own guard asserts it contains no
   // `askEntitlement`, and the load-bearing test below is unchanged: the CALL
   // still has no caller anywhere in the repository.
-  const AUTHORIZED_IMPORTERS = ['tenant-workspace', 'session-store', 'tenant-isolation'];
+  // ⚠️ WIDENED BY ONE AGAIN IN THE A6 ITEM 6 SLICE, AND 🚫 STILL AN ALLOW-LIST.
+  // `@age/audit-trail` scopes an audit QUESTION to the organization the session
+  // speaks for — an audit read is a read — so it needs the same session type.
+  // 🚫 Never the decision: its own guard asserts it contains no `askEntitlement`.
+  const AUTHORIZED_IMPORTERS = [
+    'tenant-workspace',
+    'session-store',
+    'tenant-isolation',
+    'audit-trail',
+  ];
 
   it('found files outside this package to scan', () => {
     expect(OUTSIDE.length).toBeGreaterThan(50);
