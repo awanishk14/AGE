@@ -1,10 +1,33 @@
 # ADR-0066 — The hub, and what "two-way" may and may not mean
 
-Status: **Proposed** (2026-08-09, by the architect — this is a **decision request**, not a
-self-acceptance; §7 lists what only the Product Owner may answer)
+Status: **D1 Accepted** (2026-08-09, by the Product Owner — see §0.1). **D2–D7 remain `Proposed`**
+— a **decision request**, not a self-acceptance; §7 lists what is still only the Product Owner's.
 
 Supersedes: nothing. Depends on: ADR-0053 D3/D5, ADR-0054 D7, ADR-0057 D4 + OX-INV-1,
 ADR-0059 D3/D4.2/D4.3/D5, ADR-0061 §5, ADR-0062 D1–D3.
+
+---
+
+## 0.1 The Product Owner's answer to §7 Q2, verbatim
+
+> _"i want it only read back"_
+>
+> — the Product Owner, 2026-08-09, answering **§7 Q2** ("read-back or write-back?").
+
+**This accepts D1 and nothing else.** ⚠️ It is not an acceptance of D2–D7, and 🚫 it does not
+answer §7 Q1 (which product is hosted — ADR-0061 §5), Q3 (plain text only, or PDFs) or Q4 (a
+second operator, or the business owner). Those three remain open and remain the owner's.
+
+**What D1 now forbids, as an accepted decision:**
+
+- 🛑 **AGE has NO outbound write surface to any external system.** No slice may add one — not a
+  CRM update, not an ad change, not a calendar write, not a "sync back", and 🚫 not a
+  "preview" or "dry run" of one (still class 3 under ADR-0057 D4).
+- 🚫 **"Two-way" is never to be re-read as write-back** by a later slice, document or council.
+  Reopening it needs a fresh `Proposed` ADR carrying its own authorization model and its own
+  liability answer — 🚫 it is not a residual and not a to-do.
+- ⚠️ Tools benefit from one another **through AGE's read surface only**. Every tool pulls the
+  unified picture; 🚫 no tool is pushed to.
 
 ---
 
