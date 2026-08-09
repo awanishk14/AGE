@@ -11,13 +11,16 @@
  * `openLocalPrismaCaptureConnection` reason, unchanged: **the copy that gets
  * relaxed still passes its own tests.**
  *
- * 🚫 THERE IS NO CALLER, DELIBERATELY, AND A GUARD ASSERTS THAT. ADR-0058 D8
- * authorizes the question as types and one pure function and nothing else — no
- * middleware, no route guard, no session, no read path. Wiring this into a query
- * would silently discharge ADR-0055 D7, which is 🛑 still undischarged.
+ * 🚫 THERE IS STILL NO CALLER, DELIBERATELY, AND A GUARD STILL ASSERTS THAT.
+ * ADR-0061 A3 authorizes the DECISION — an authenticated arm and real `granted`
+ * and `denied` answers — and 🚫 it does not authorize a middleware, a route
+ * guard, a session store or a read path. Each of those is its own slice, and
+ * wiring this into a query would silently discharge ADR-0055 D7.
  *
  * Pure: no clock, no ids, no randomness, no I/O.
  */
+
+import { acceptVerifiedSession, type VerifiedSession } from './verified-session';
 
 /**
  * The three-valued answer (ADR-0058 D2).
@@ -38,21 +41,26 @@ export type EntitlementAnswer = 'granted' | 'denied' | 'not-established';
 /**
  * What the caller has managed to prove about who is asking.
  *
- * ⚠️ THIS TYPE HAS EXACTLY ONE INHABITANT TODAY, AND THAT IS THE POINT. There is
- * no identity provider and no session (ADR-0058 §5 — recorded is not
- * authorized), so `none` is the only thing a caller can honestly construct.
+ * ⚠️ **THE SECOND ARM ARRIVED WITH ADR-0061 A2, AND IT COST WHAT IT WAS MEANT TO
+ * COST** — the `switch` below stopped compiling until every arm was answered
+ * deliberately, and 🚫 **no `default` arm was added to silence it** (A3). A
+ * `default` would answer a question nobody had thought about, which is the whole
+ * mechanism this union exists to prevent.
+ *
+ * 🚫 An authentication is a VERIFIED SESSION or it is NOTHING. There is no
+ * `trusted-caller` arm, no `local` arm and no `development` arm: A2 is explicit
+ * that AGE trusts a verified session and nothing else.
  *
  * 🚫 An `OperatorPrincipal` IS NOT AN AUTHENTICATION AND MUST NEVER BE ACCEPTED
- * HERE (ADR-0053 D4). It is caller-asserted provenance — it says a named human
- * acted, and it is believed. Passing it in as proof of identity would make the
- * caller grant itself access by naming itself, which is the same error class as
- * letting a record grant access to itself.
- *
- * ⚠️ When authentication arrives it adds an arm here, and every `switch` over
- * this union becomes a compile error until it is revisited. That is the intended
- * cost.
+ * HERE (ADR-0053 D4, unchanged by A2 — the principal is NOT promoted). It is
+ * caller-asserted provenance: it says a named human acted, and it is believed.
+ * Passing it in as proof of identity would make the caller grant itself access
+ * by naming itself, which is the same error class as letting a record grant
+ * access to itself.
  */
-export type Authentication = { readonly kind: 'none' };
+export type Authentication =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'verified-session'; readonly session: VerifiedSession };
 
 /** The only authentication anyone can construct today. */
 export const NO_AUTHENTICATION: Authentication = Object.freeze({ kind: 'none' });
@@ -60,14 +68,19 @@ export const NO_AUTHENTICATION: Authentication = Object.freeze({ kind: 'none' })
 /**
  * What the caller wants to act on.
  *
- * 🛑 THE TWO ARMS ARE NOT A DECISION ABOUT THE TENANT BOUNDARY. ADR-0058 §6
- * open question 1 — _is the tenant boundary the organization, or the client?_ —
- * is 🛑 **UNANSWERED**, and the Product Owner's acceptance did not answer it
- * (§0.1b). Both arms exist so the question can be ASKED about either without
- * this module quietly picking the answer, and 🚫 neither arm is privileged.
+ * 🛑 **THE BOUNDARY HAS NOW BEEN CHOSEN, AND THE TWO ARMS ARE NO LONGER
+ * SYMMETRIC** — ADR-0062 **D1**: the tenant is the ORGANIZATION. ADR-0058 §6
+ * open question 1 is answered, by the Product Owner and not by this module.
  *
- * ⚠️ A test asserts both arms produce the SAME answer, which is what makes the
- * claim "no boundary has been chosen" checkable rather than merely stated.
+ * ⚠️ The symmetry test that pinned "no boundary has been chosen" was therefore
+ * **deliberately changed in this slice, citing ADR-0062 D1** (ADR-0061 A3).
+ * 🚫 It was not quietly deleted — it now pins the asymmetry and says why, so the
+ * choice stays as checkable as its absence used to be.
+ *
+ * 🚫 The `client` arm is NOT the organization arm with extra filtering
+ * (ADR-0062 D2). A client is a SUBJECT of isolation inside a tenant, and which
+ * tenant a given client belongs to is a fact held by the client registry — not
+ * one this module may infer, and 🚫 not one a caller may assert by passing it in.
  */
 export type EntitlementSubject =
   | { readonly kind: 'organization'; readonly organizationId: string }
@@ -98,14 +111,46 @@ const NOT_ESTABLISHED_BECAUSE =
   'Access is limited by the loopback bind only (ADR-0057 D2), which is necessary and not sufficient.';
 
 /**
+ * ⚠️ Both session-answer sentences name a RELATIONSHIP and 🚫 never an
+ * identifier. A decision is logged; an identifier in a decision is a real
+ * organization's name in a log file (ADR-0054 D3).
+ */
+const GRANTED_BECAUSE =
+  'The verified session speaks for this organization, which is the tenant (ADR-0062 D1).';
+
+const DENIED_BECAUSE =
+  'The verified session speaks for a different organization. This is a decision AGE made ' +
+  'after looking, not an absence of information.';
+
+/**
+ * 🛑 A CLIENT SUBJECT IS `not-established` EVEN WITH A VERIFIED SESSION, and
+ * that is not a shortcut. Answering it needs the client-to-organization binding
+ * from the client registry; taking it from the caller would let the caller
+ * choose the answer, and inferring it here would make the inner boundary "the
+ * organization query, minus some rows" — the one shape ADR-0062 D2 refuses by
+ * name. 🚫 It must never be softened into `denied`: AGE has not looked.
+ */
+const CLIENT_NOT_ESTABLISHED_BECAUSE =
+  'AGE cannot say whether this session may act on that client, because the client-to-organization ' +
+  'binding is not available to this decision. The session establishes an organization only, and ' +
+  'no authenticated identity exists for a client (ADR-0062 D2).';
+
+/**
  * Ask the entitlement question.
  *
  * 🚫 THERE IS NO DEFAULT ARM, NO `allowAll`, NO `SYSTEM_PRINCIPAL`, NO
- * `entitlementOrDefault` AND NO DEV-MODE BYPASS (ADR-0058 D2). While there is no
- * authenticated principal the answer is `not-established`, and it does not
- * depend on the subject — because depending on the subject would be the scope
- * granting access to itself (D1), the more tempting error and the more dangerous
- * one.
+ * `entitlementOrDefault` AND NO DEV-MODE BYPASS (ADR-0058 D2, ADR-0061 A3).
+ * Every arm of both unions is enumerated; adding an arm to either must break the
+ * build, and a `default` here would silently answer a question nobody asked.
+ *
+ * ⚠️ WITHOUT A SESSION THE ANSWER IS `not-established` AND DOES NOT DEPEND ON
+ * THE SUBJECT — depending on the subject would be the scope granting access to
+ * itself (ADR-0058 D1), the more tempting error and the more dangerous one.
+ *
+ * ⚠️ WITH A SESSION THE ANSWER DEPENDS ON THE ORGANIZATION AND NOTHING ELSE. It
+ * is decided by comparing the session's tenant with the subject's, and 🚫 the
+ * session grants nothing beyond it — ADR-0062 D3: admin is never a bypass, and
+ * there is no arm here for one to arrive through.
  */
 export function askEntitlement(question: EntitlementQuestion): EntitlementDecision {
   switch (question.authentication.kind) {
@@ -114,5 +159,23 @@ export function askEntitlement(question: EntitlementQuestion): EntitlementDecisi
         answer: 'not-established' as EntitlementAnswer,
         because: NOT_ESTABLISHED_BECAUSE,
       });
+    case 'verified-session': {
+      // ⚠️ Re-accepted at the point of USE, not merely at the point of
+      // construction. A caller can build the object literal itself, and a blank
+      // organization would otherwise compare equal to a blank subject.
+      const session = acceptVerifiedSession(question.authentication.session);
+
+      switch (question.subject.kind) {
+        case 'organization':
+          return question.subject.organizationId === session.organizationId
+            ? Object.freeze({ answer: 'granted' as EntitlementAnswer, because: GRANTED_BECAUSE })
+            : Object.freeze({ answer: 'denied' as EntitlementAnswer, because: DENIED_BECAUSE });
+        case 'client':
+          return Object.freeze({
+            answer: 'not-established' as EntitlementAnswer,
+            because: CLIENT_NOT_ESTABLISHED_BECAUSE,
+          });
+      }
+    }
   }
 }

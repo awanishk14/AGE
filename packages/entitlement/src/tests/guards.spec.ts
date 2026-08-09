@@ -120,16 +120,52 @@ describe('the entitlement question exists in exactly one place', () => {
   });
 
   it('carries none of the bypasses ADR-0058 D2 refuses by name', () => {
+    // ⚠️ WIDENED IN THE ADR-0061 A3 SLICE from one file to every source file in
+    // the package. A second module now exists, and a bypass added to the newer
+    // one would have passed a guard that only ever read the older one.
+    const scanned = sourceFiles(SRC).filter((file) => !file.endsWith('.spec.ts'));
+
+    expect(scanned.length).toBeGreaterThanOrEqual(3);
+
+    for (const file of scanned) {
+      const source = stripComments(readFileSync(file, 'utf8'));
+      for (const bypass of [
+        'allowAll',
+        'SYSTEM_PRINCIPAL',
+        'entitlementOrDefault',
+        'devMode',
+        'bypass',
+        'OperatorPrincipal',
+        'isAdmin',
+        'role',
+      ]) {
+        expect(source, `${file} must not contain ${bypass}`).not.toContain(bypass);
+      }
+    }
+  });
+
+  it('enumerates every arm and adds no default (ADR-0061 A3)', () => {
+    // 🛑 A `default` arm silences the compile error that adding an
+    // authentication kind is SUPPOSED to cause. A3 refuses it by name, so the
+    // absence is asserted rather than assumed.
     const source = stripComments(readFileSync(join(SRC, 'entitlement-question.ts'), 'utf8'));
-    for (const bypass of [
-      'allowAll',
-      'SYSTEM_PRINCIPAL',
-      'entitlementOrDefault',
-      'devMode',
-      'bypass',
-      'OperatorPrincipal',
-    ]) {
-      expect(source).not.toContain(bypass);
+
+    expect(source).not.toMatch(/\bdefault\s*:/);
+    expect(source).toContain("case 'verified-session':");
+    expect(source).toContain("case 'none':");
+  });
+
+  it('issues, stores and verifies no session (ADR-0061 A2)', () => {
+    // 🚫 A session store is entirely effects, and this package performs none.
+    // The purity scan above already bans the I/O; these ban the VOCABULARY, so
+    // that a store cannot begin as "just the pure part" of one.
+    for (const file of sourceFiles(SRC).filter((file) => !file.endsWith('.spec.ts'))) {
+      const source = stripComments(readFileSync(file, 'utf8'));
+      for (const token of ['argon2', 'bcrypt', 'password', 'cookie', 'token', 'issueSession']) {
+        expect(source.toLowerCase(), `${file} must not contain ${token}`).not.toContain(
+          token.toLowerCase(),
+        );
+      }
     }
   });
 });
