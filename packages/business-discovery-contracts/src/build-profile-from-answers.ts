@@ -20,6 +20,11 @@ import {
   type BusinessDiscoveryQuestionnaireQuestion,
   type ProfileSignal,
 } from './questionnaire';
+import { PROFILE_SIGNAL_TO_FIELD_PATH } from './field-provenance';
+import type {
+  ProfileFieldProvenance,
+  ProfileFieldProvenanceEntry,
+} from './profile-field-provenance';
 
 /**
  * buildProfileFromAnswers — the producing direction (ADR-0050).
@@ -160,12 +165,38 @@ function toDiscoveryQuestion(question: BusinessDiscoveryQuestionnaireQuestion): 
 }
 
 /**
- * buildProfileFromAnswers — map a questionnaire answer set to a
- * `BusinessDiscoveryProfile` by transcription only.
+ * A profile and, on a SEPARATE channel, where each of its structured fields came
+ * from (ADR-0066 D2).
  *
- * @throws if `answers` is not an array, if `questionnaire` has no sections, if
- * `options.id` or `options.capturedAt` is missing or blank, or if no answer
- * supplies a business name.
+ * ⚠️ Two values, never one. `fieldProvenance` has no slot on
+ * `BusinessDiscoveryProfile` and is never folded into `fieldEvidence`, so
+ * AGE-INV-PROV-1 — identical facts with different provenance produce
+ * byte-identical scores — holds by SHAPE and not only by test.
+ */
+export interface ProfileAndFieldProvenance {
+  readonly profile: BusinessDiscoveryProfile;
+  readonly fieldProvenance: ProfileFieldProvenance;
+}
+
+/**
+ * buildProfileAndFieldProvenanceFromAnswers — map a questionnaire answer set to
+ * a `BusinessDiscoveryProfile` by transcription only, AND record, on a separate
+ * channel, which question and which `AnswerProvenance` produced each structured
+ * field.
+ *
+ * ⚠️ ONE TRAVERSAL, ONE ROUTING TABLE. The provenance is recorded at the exact
+ * point the value is written, from `PROFILE_SIGNAL_TARGETS` and
+ * `PROFILE_SIGNAL_TO_FIELD_PATH` — 🚫 never by a second pass over the finished
+ * profile, which could report an origin for a field the mapper did not actually
+ * write, and would drift the first time either table changed.
+ *
+ * 🚫 It records ORIGIN, never worth. Nothing here reads the provenance's `kind`,
+ * branches on it, counts it, or lets it change what is written: an answer typed
+ * by the client and an answer confirmed against a document produce the SAME
+ * profile, byte for byte (AGE-INV-PROV-1).
+ *
+ * @throws exactly as `buildProfileFromAnswers` does — the checks are these, and
+ * the messages keep that name because it is the entry point callers use.
  *
  * ⚠️ The business-name throw is NOT "an unanswered question is an error" —
  * ADR-0050 D4 says the opposite and this function honours it: every other
@@ -174,11 +205,11 @@ function toDiscoveryQuestion(question: BusinessDiscoveryQuestionnaireQuestion): 
  * makes required and non-empty, so without it there is no valid profile to
  * return and the only alternative would be to invent one.
  */
-export function buildProfileFromAnswers(
+export function buildProfileAndFieldProvenanceFromAnswers(
   answers: readonly DiscoveryAnswer[],
   questionnaire: BusinessDiscoveryQuestionnaire,
   options: BuildProfileFromAnswersOptions,
-): BusinessDiscoveryProfile {
+): ProfileAndFieldProvenance {
   if (!Array.isArray(answers)) {
     throw new TypeError('buildProfileFromAnswers requires an answers array');
   }
@@ -279,6 +310,9 @@ export function buildProfileFromAnswers(
   const offerings: Offering[] = [];
   const evidenceSources: EvidenceSourceRef[] = [];
   const sections: DiscoverySection[] = [];
+  // 🚫 A SEPARATE accumulator, never a field on anything above. Nothing below
+  // reads it back, so it cannot influence a single transcribed value.
+  const provenanceEntries: ProfileFieldProvenanceEntry[] = [];
 
   for (const section of questionnaire.sections) {
     const sectionAnswers: DiscoveryAnswer[] = [];
@@ -300,6 +334,21 @@ export function buildProfileFromAnswers(
 
       const target = PROFILE_SIGNAL_TARGETS[question.satisfiedBy];
       const values = answerValues(answer);
+
+      // ADR-0066 D2 — recorded HERE, at the point the field is written, and
+      // only for signals that reach a nameable field. `evidenceSources` has no
+      // entry in `PROFILE_SIGNAL_TO_FIELD_PATH` (an evidence list citing its own
+      // origin is circular) and an `untranscribable` target writes nothing at
+      // all, so neither may claim a field's origin.
+      const fieldPath = PROFILE_SIGNAL_TO_FIELD_PATH[question.satisfiedBy];
+      if (fieldPath !== undefined && target.kind !== 'untranscribable') {
+        provenanceEntries.push({
+          fieldPath,
+          questionId: question.id,
+          // 🚫 Copied, never inspected: no branch below sees this value.
+          provenance: answer.provenance,
+        });
+      }
 
       switch (target.kind) {
         case 'scalar': {
@@ -386,7 +435,7 @@ export function buildProfileFromAnswers(
     return value === undefined ? {} : { [field]: value };
   };
 
-  return {
+  const profile: BusinessDiscoveryProfile = {
     id: options.id,
     businessName,
     ...optionalScalar('industry'),
@@ -419,6 +468,32 @@ export function buildProfileFromAnswers(
 
     capturedAt: options.capturedAt,
   };
+
+  return {
+    profile,
+    fieldProvenance: { profileId: options.id, entries: provenanceEntries },
+  };
+}
+
+/**
+ * buildProfileFromAnswers — map a questionnaire answer set to a
+ * `BusinessDiscoveryProfile` by transcription only.
+ *
+ * ⚠️ The profile alone, deliberately. Every scorer, the BIF mapper and the
+ * readiness layer call THIS one, and it hands them nothing to condition on:
+ * provenance is available only to a caller that asks for it BY NAME, through
+ * `buildProfileAndFieldProvenanceFromAnswers` (ADR-0066 D2, AGE-INV-PROV-1).
+ *
+ * @throws if `answers` is not an array, if `questionnaire` has no sections, if
+ * `options.id` or `options.capturedAt` is missing or blank, or if no answer
+ * supplies a business name.
+ */
+export function buildProfileFromAnswers(
+  answers: readonly DiscoveryAnswer[],
+  questionnaire: BusinessDiscoveryQuestionnaire,
+  options: BuildProfileFromAnswersOptions,
+): BusinessDiscoveryProfile {
+  return buildProfileAndFieldProvenanceFromAnswers(answers, questionnaire, options).profile;
 }
 
 /** The closed signal set this module routes, for the drift guard. */
