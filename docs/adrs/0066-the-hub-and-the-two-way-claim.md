@@ -29,6 +29,33 @@ second operator, or the business owner). Those three remain open and remain the 
 - ⚠️ Tools benefit from one another **through AGE's read surface only**. Every tool pulls the
   unified picture; 🚫 no tool is pushed to.
 
+## 0.2 The Product Owner's answers to §7 Q1, Q3 and Q4 (2026-08-09)
+
+> _"lets go with your recommendation and post client meeting i will confirm on business owner
+> thing"_
+>
+> — the Product Owner, 2026-08-09, after being shown all three questions with their options and
+> costs. Earlier in the same exchange: _"we had also planned a demo frontend to be hosted to show
+> client"_ — the fact that decided Q1.
+
+The recommendation accepted was, verbatim in substance:
+
+**Q1 — ANSWERED. Host `apps/web` + `apps/api`, the read-only demo.** 🛑 Not Studio. Recorded as the
+answer to **ADR-0061 §5**, where it now lives in full (§5-A to §5-D). ⚠️ The consequence most
+easily lost: **the hosted demo shows a fictional business, never a prospect's own**, and 🚫 must
+not grow a login or an input by which a visitor supplies a company.
+
+**Q3 — ANSWERED. Plain text first; the PDF/DOCX decoder is the NEXT slice, not this one.**
+⚠️ Ordering rationale, on the record: text-only proves the provenance chain with nothing to blame
+but our own code. 🚫 ADR-0059 D4.2 is **not** thereby discharged — the decoder still needs its own
+ADR naming the library.
+
+**Q4 — DEFERRED BY THE OWNER, and 🛑 deferred is not answered.** The build proceeds on **"a second
+operator"**. 🚫 No slice may assume, prepare for, or half-build a **business-owner login** — that
+would answer Q4 in code, and ADR-0062 D2 makes a client a _subject_ of isolation, **recorded, not
+authorized**. ⚠️ The owner will confirm after a client meeting; 🚫 do not treat silence as
+"operator, settled" and 🚫 do not treat the plan as permission to start it.
+
 ---
 
 ## 1. The goal, restated in the owner's words and then corrected

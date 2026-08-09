@@ -10,15 +10,19 @@
 # PHYSICALLY HOLD. That is exactly what ADR-0055 D6 refused, the Product Owner
 # made the call knowingly, and 🚫 nothing here may be read as saying otherwise.
 #
-# 🛑 THERE IS NO APPLICATION SERVICE HERE, DELIBERATELY, AND THIS COMPOSITION
-# THEREFORE DOES NOT YET SERVE ANYTHING. Two live facts forbid inventing one:
-# 🚫 `apps/studio` must never get a Dockerfile (ADR-0057, OX-INV-1 — a published
-# container port in front of a loopback listener is the case the invariant
-# cannot see, and a test asserts the absence), and ⚠️ ADR-0061 §5's question —
-# whether the hosted product is AGE Studio deployed or a different product — is
-# OPEN and is the Product Owner's. Adding a service here would answer it
-# silently. `AGE_APP_UPSTREAM` is required instead, so this composition REFUSES
-# TO START until a named app exists rather than starting half-deployed.
+# 🛑 THE HOSTED PRODUCT IS THE READ-ONLY DEMO, AND 🚫 IT IS NOT AGE STUDIO.
+# ADR-0061 §5 was ANSWERED by the Product Owner on 2026-08-09 (§5-A to §5-D):
+# the deployed app is `apps/web` + `apps/api`, serving the frozen, deliberately
+# fictional demo profile.
+# 🚫 `apps/studio` STILL gets no Dockerfile and STILL binds loopback only —
+# ADR-0057 OX-INV-1 stands UNAMENDED and a test asserts the absence. Deploying
+# the console would be a REVERSAL needing its own ADR and the six auth slices
+# that remain uncalled. 🚫 "We deployed" must never be read as "Studio is
+# deployed".
+# 🚫 THIS SURFACE HOLDS NO REAL BUSINESS AND NO CLIENT DATA — the demo renders
+# one fixed fixture and takes no input naming a company. It therefore needs no
+# login, and 🚫 must not grow one: a login here would be the first step toward
+# deploying the console by accident (§5-D).
 #
 # ⚠️ TLS IS TERMINATED IN FRONT, AND NOTHING BEHIND IT IS PUBLICLY REACHABLE.
 # Only `edge` publishes to the world. 🚫 Do not add a `ports:` entry to any other
@@ -41,15 +45,47 @@ services:
       - '443:443'
     environment:
       AGE_PUBLIC_HOST: ${AGE_PUBLIC_HOST:?the public host must be stated}
-      AGE_APP_UPSTREAM: ${AGE_APP_UPSTREAM:?no application is deployed yet — see the header}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - age_deployed_caddy_data:/data
       - age_deployed_caddy_config:/config
+    depends_on:
+      - web
+      - api
+
+  web:
+    # ⚠️ THE DEMO FRONT END. 🚫 No `ports:` — it is reachable ONLY through
+    # `edge`, on the composition's internal network.
+    # ⚠️ `NEXT_PUBLIC_API_URL` is a BUILD ARG, not a runtime variable: the demo
+    # page is a client component, so the value is compiled into the bundle.
+    # 🚫 '/api' is relative ON PURPOSE — the image carries no hostname, and the
+    # browser's request never leaves the terminator to reach a plaintext port.
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api
+    container_name: age-deployed-web
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  api:
+    # ⚠️ Serves exactly two routes — `GET /health` and `GET /demo/capabilities`,
+    # the latter over the frozen fixture. 🚫 No published port, and 🚫 no
+    # database credential: the demo reads no database, and a credential it has
+    # no use for is one a compromise inherits for free.
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    container_name: age-deployed-api
+    restart: unless-stopped
 
   postgres:
     # ⚠️ A5 — the VPS's OWN Postgres, published to this host's loopback ONLY.
     # 🚫 Never '5432:5432': that form binds every interface on the machine.
+    # ⚠️ Nothing deployed here reads it yet (§5-C); it is the store the operator
+    # track will use once a slice needs it.
     image: postgres:16-alpine
     container_name: age-deployed-postgres
     restart: unless-stopped
