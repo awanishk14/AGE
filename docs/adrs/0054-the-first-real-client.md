@@ -313,7 +313,8 @@ than accepting free-form JSON. ⚠️ It remains true that the operator can answ
 nothing will notice. That is a limitation of the slice, not a defect of the design, and it is the
 price of not building a form.
 
-**Dissent 3 — vTEST is the operator's own test client, so "a real business" overstates it.**
+**Dissent 3 — the first nominated client is the operator's own test client, so "a real business"
+overstates it.**
 Genuine. The answers will be real, but the client is one the operator controls and is unusually
 tolerant of a bad result. ⚠️ **Deliberately left open**: the honest test is whether the output is
 useful, and the user is the only one who can judge that (§3, last bullet).
