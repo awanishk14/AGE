@@ -38,3 +38,11 @@ export {
   type SaveOutcome,
   type SubmitOutcome,
 } from './operator-workspace';
+
+export {
+  narrowSnapshotRead,
+  readStoredSnapshot,
+  type OpenSnapshotRead,
+  type SnapshotReadPort,
+  type StoredSnapshotOutcome,
+} from './stored-snapshot';

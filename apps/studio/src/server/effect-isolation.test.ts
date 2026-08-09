@@ -35,6 +35,12 @@ const BANNED = [
   'localStorage',
   '@prisma/client',
   '@age/persistence',
+  // ⚠️ ADR-0064 D1 NARROWED THIS LIST, IT DID NOT DELETE FROM IT. The console
+  // may now read the stored row — through the ADR-0055 D2 façade, from the one
+  // effect module, and nowhere else. 🚫 A screen, a client component or a
+  // second server module importing the composition entry point is how a read
+  // surface acquires a live connection it was never meant to hold.
+  '@age/capture/composition',
 ];
 
 function sourceFiles(directory: string): readonly string[] {
@@ -128,5 +134,30 @@ describe('apps/studio effect isolation', () => {
 
     expect(source).toContain('process.env');
     expect(source).toContain('node:fs');
+  });
+
+  /**
+   * 🚫 The snapshot store is reached through the ADR-0055 D2 façade and NOTHING
+   * ELSE.
+   *
+   * ⚠️ MADE TO FAIL BEFORE IT WAS TRUSTED: importing `@age/capture/composition`
+   * into `intelligence-screen.tsx` names that file, and dropping
+   * `narrowSnapshotRead` from the effect module fails the second assertion.
+   * 🚫 Narrowing, not deleting — the console reads one row and cannot address a
+   * second by id (ADR-0055 §5 item 1).
+   */
+  it('reads the snapshot store only through the narrowed façade', () => {
+    const raw = readFileSync(`${srcDir}${EFFECT_MODULE}`, 'utf8');
+    // ⚠️ The negative assertions read the STRIPPED source: the module's own
+    // explanation of why it drops `findBySnapshotId` names it, and a guard that
+    // fails on its own documentation gets deleted rather than fixed.
+    const source = withoutComments(raw);
+
+    expect(source).toContain("from '@age/capture/composition'");
+    expect(source).toContain('narrowSnapshotRead(');
+    // 🚫 Never a repository, never a Prisma client, never an append.
+    expect(source).not.toContain('ScopedScoredBifSnapshotRepository');
+    expect(source).not.toContain('new PrismaClient(');
+    expect(source).not.toContain('findBySnapshotId');
   });
 });

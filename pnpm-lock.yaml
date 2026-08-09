@@ -207,6 +207,9 @@ importers:
       '@age/capability-kit':
         specifier: workspace:*
         version: link:../../packages/capability-kit
+      '@age/capture':
+        specifier: workspace:*
+        version: link:../capture
       '@age/client-registry':
         specifier: workspace:*
         version: link:../../packages/client-registry
