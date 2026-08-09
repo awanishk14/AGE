@@ -5,6 +5,7 @@ import {
   questionnaireValidationResultSchema,
   validateProfileAgainstQuestionnaire,
   DISCOVERY_SECTION_IDS,
+  STATED_ANSWER_PROVENANCE,
 } from '../index';
 import type { BusinessDiscoveryProfile, BusinessDiscoveryQuestionnaire } from '../index';
 
@@ -138,7 +139,13 @@ describe('@age/business-discovery-contracts — questionnaire validation', () =>
           id: 'business-identity',
           name: 'Business Identity',
           questions: [],
-          answers: [{ questionId: 'bi-industry', value: 'B2B SaaS' }],
+          answers: [
+            {
+              questionId: 'bi-industry',
+              value: 'B2B SaaS',
+              provenance: STATED_ANSWER_PROVENANCE,
+            },
+          ],
         },
       ],
     };
@@ -157,7 +164,13 @@ describe('@age/business-discovery-contracts — questionnaire validation', () =>
           id: 'business-identity',
           name: 'Business Identity',
           questions: [],
-          answers: [{ questionId: 'bi-industry', value: '   ' }],
+          answers: [
+            {
+              questionId: 'bi-industry',
+              value: '   ',
+              provenance: STATED_ANSWER_PROVENANCE,
+            },
+          ],
         },
       ],
     };

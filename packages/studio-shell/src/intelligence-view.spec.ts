@@ -12,6 +12,7 @@ import { buildContextReadinessReport } from '@age/demo-runtime/context-readiness
 import { describe, expect, it } from 'vitest';
 
 import { intelligenceNotAssessedFacets, presentCapabilityReadiness } from './intelligence-view';
+import { STATED_ANSWER_PROVENANCE } from '@age/business-discovery-contracts';
 
 /**
  * ⚠️ Driven through the REAL chain — answers → profile → scored context → the
@@ -24,9 +25,17 @@ import { intelligenceNotAssessedFacets, presentCapabilityReadiness } from './int
  * (ADR-0053 D3).
  */
 const ANSWERS: readonly DiscoveryAnswer[] = [
-  { questionId: 'bi-name', value: 'Fictional Kite Repair' },
-  { questionId: 'bi-industry', value: 'Entirely made-up kite maintenance' },
-  { questionId: 'gc-goals', value: 'Repair more imaginary kites' },
+  { questionId: 'bi-name', value: 'Fictional Kite Repair', provenance: STATED_ANSWER_PROVENANCE },
+  {
+    questionId: 'bi-industry',
+    value: 'Entirely made-up kite maintenance',
+    provenance: STATED_ANSWER_PROVENANCE,
+  },
+  {
+    questionId: 'gc-goals',
+    value: 'Repair more imaginary kites',
+    provenance: STATED_ANSWER_PROVENANCE,
+  },
 ];
 
 function presented() {

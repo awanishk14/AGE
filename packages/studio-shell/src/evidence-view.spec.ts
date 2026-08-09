@@ -10,6 +10,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { evidenceNotAssessedFacets, presentEvidence } from './evidence-view';
+import { STATED_ANSWER_PROVENANCE } from '@age/business-discovery-contracts';
 
 /**
  * ⚠️ Driven through the REAL chain — the same reason as `bif-view.spec.ts`. A
@@ -20,13 +21,37 @@ import { evidenceNotAssessedFacets, presentEvidence } from './evidence-view';
  * (ADR-0053 D3).
  */
 const ANSWERS: readonly DiscoveryAnswer[] = [
-  { questionId: 'bi-name', value: 'Fictional Kite Repair' },
-  { questionId: 'bi-industry', value: 'Entirely made-up kite maintenance' },
-  { questionId: 'gc-goals', value: 'Repair more imaginary kites' },
-  { questionId: 'ev-documents', value: ['An invented brand guide'] },
-  { questionId: 'ev-urls', value: ['https://example.invalid/nothing-is-fetched'] },
-  { questionId: 'ev-statements', value: ['The fictional owner said kites fly'] },
-  { questionId: 'ev-assumptions', value: 'We assume imaginary kites keep breaking' },
+  { questionId: 'bi-name', value: 'Fictional Kite Repair', provenance: STATED_ANSWER_PROVENANCE },
+  {
+    questionId: 'bi-industry',
+    value: 'Entirely made-up kite maintenance',
+    provenance: STATED_ANSWER_PROVENANCE,
+  },
+  {
+    questionId: 'gc-goals',
+    value: 'Repair more imaginary kites',
+    provenance: STATED_ANSWER_PROVENANCE,
+  },
+  {
+    questionId: 'ev-documents',
+    value: ['An invented brand guide'],
+    provenance: STATED_ANSWER_PROVENANCE,
+  },
+  {
+    questionId: 'ev-urls',
+    value: ['https://example.invalid/nothing-is-fetched'],
+    provenance: STATED_ANSWER_PROVENANCE,
+  },
+  {
+    questionId: 'ev-statements',
+    value: ['The fictional owner said kites fly'],
+    provenance: STATED_ANSWER_PROVENANCE,
+  },
+  {
+    questionId: 'ev-assumptions',
+    value: 'We assume imaginary kites keep breaking',
+    provenance: STATED_ANSWER_PROVENANCE,
+  },
 ];
 
 function presented(answers: readonly DiscoveryAnswer[] = ANSWERS) {
@@ -78,8 +103,16 @@ describe('presentEvidence — named sources', () => {
 
   it('lists nothing when the operator named nothing, and invents no source', () => {
     const view = presented([
-      { questionId: 'bi-name', value: 'Fictional Kite Repair' },
-      { questionId: 'gc-goals', value: 'Repair more imaginary kites' },
+      {
+        questionId: 'bi-name',
+        value: 'Fictional Kite Repair',
+        provenance: STATED_ANSWER_PROVENANCE,
+      },
+      {
+        questionId: 'gc-goals',
+        value: 'Repair more imaginary kites',
+        provenance: STATED_ANSWER_PROVENANCE,
+      },
     ]);
     expect(view.namedEvidence).toEqual([]);
   });

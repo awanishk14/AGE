@@ -23,6 +23,7 @@
         {
           "questionId": "bi-name",
           "value": "Northwind Ledger",
+          "provenance": { "kind": "stated" },
           "evidenceSourceIds": ["ev-kickoff"]
         }
       ]

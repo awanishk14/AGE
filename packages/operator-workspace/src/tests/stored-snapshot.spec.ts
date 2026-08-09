@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { createClientRecord } from '../operator-workspace';
 import { narrowSnapshotRead, readStoredSnapshot, type SnapshotReadPort } from '../stored-snapshot';
 import { createInMemoryRuntime, FIXTURE_OPERATOR_DIRECTORY } from './in-memory-runtime';
+import { STATED_ANSWER_PROVENANCE } from '@age/business-discovery-contracts';
 
 /**
  * ADR-0064, exercised.
@@ -38,7 +39,7 @@ const DRAFT = Object.freeze({
 
 function storedRecord(): ScoredBifSnapshotRecord {
   const answers: readonly DiscoveryAnswer[] = [
-    { questionId: 'bi-name', value: 'Fictional Kite Repair' },
+    { questionId: 'bi-name', value: 'Fictional Kite Repair', provenance: STATED_ANSWER_PROVENANCE },
   ];
 
   const profile = buildProfileFromAnswers(answers, DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE, {

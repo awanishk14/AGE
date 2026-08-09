@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
   PROFILE_SIGNALS,
+  STATED_ANSWER_PROVENANCE,
   PROFILE_SIGNAL_TARGETS,
   TRANSCRIBED_PROFILE_SIGNALS,
   buildProfileFromAnswers,
@@ -30,7 +31,15 @@ function questionIdFor(signal: string): string {
 }
 
 function answer(signal: string, value: string | readonly string[]): DiscoveryAnswer {
-  return { questionId: questionIdFor(signal), value };
+  return { questionId: questionIdFor(signal), value, provenance: STATED_ANSWER_PROVENANCE };
+}
+
+/** The same, for a question named by id rather than by signal. */
+function stated(questionId: string, value: string | readonly string[]): DiscoveryAnswer {
+  // ⚠️ Named in every fixture rather than defaulted: ADR-0059 D2 is only
+  // falsifiable if a site that forgot to say how its answer was obtained fails
+  // to compile.
+  return { questionId, value, provenance: STATED_ANSWER_PROVENANCE };
 }
 
 const NAME_ANSWER = answer('businessName', 'Northwind Trading');
@@ -67,8 +76,8 @@ describe('buildProfileFromAnswers (ADR-0050)', () => {
       const profile = buildProfileFromAnswers(
         [
           NAME_ANSWER,
-          { questionId: 'off-products', value: ['Roasted beans'] },
-          { questionId: 'ev-urls', value: ['https://example.com/deck'] },
+          stated('off-products', ['Roasted beans']),
+          stated('ev-urls', ['https://example.com/deck']),
           answer('segments', ['Cafés']),
           answer('competitors', ['BeanCo']),
           answer('goals', ['Double revenue next year']),
@@ -91,7 +100,7 @@ describe('buildProfileFromAnswers (ADR-0050)', () => {
       expect(noSignal).toBeDefined();
 
       const profile = buildProfileFromAnswers(
-        [NAME_ANSWER, { questionId: noSignal!.id, value: 'Some free text' }],
+        [NAME_ANSWER, stated(noSignal!.id, 'Some free text')],
         DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
         OPTIONS,
       );
@@ -191,9 +200,9 @@ describe('buildProfileFromAnswers (ADR-0050)', () => {
       const profile = buildProfileFromAnswers(
         [
           NAME_ANSWER,
-          { questionId: 'off-products', value: ['Wholesale beans'] },
-          { questionId: 'off-services', value: ['Barista training'] },
-          { questionId: 'ev-statements', value: ['Founder interview'] },
+          stated('off-products', ['Wholesale beans']),
+          stated('off-services', ['Barista training']),
+          stated('ev-statements', ['Founder interview']),
         ],
         DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
         OPTIONS,
@@ -337,6 +346,7 @@ describe('buildProfileFromAnswers (ADR-0050)', () => {
       const answers = SIGNAL_QUESTIONS.map((question) => ({
         questionId: question.id,
         value: question.kind === 'list' ? [`${question.id} value`] : `${question.id} value`,
+        provenance: STATED_ANSWER_PROVENANCE,
       }));
       const profile = buildProfileFromAnswers(
         answers,
@@ -348,7 +358,7 @@ describe('buildProfileFromAnswers (ADR-0050)', () => {
 
     it('ignores an answer to a question the questionnaire does not define', () => {
       const profile = buildProfileFromAnswers(
-        [NAME_ANSWER, { questionId: 'not-a-question', value: 'orphan' }],
+        [NAME_ANSWER, stated('not-a-question', 'orphan')],
         DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
         OPTIONS,
       );
@@ -473,6 +483,7 @@ describe('buildProfileFromAnswers (ADR-0050)', () => {
       const answers = SIGNAL_QUESTIONS.map((question) => ({
         questionId: question.id,
         value: question.kind === 'list' ? [`${question.id} value`] : `${question.id} value`,
+        provenance: STATED_ANSWER_PROVENANCE,
       }));
       const profile = buildProfileFromAnswers(
         answers,
@@ -521,6 +532,7 @@ describe('buildProfileFromAnswers (ADR-0050)', () => {
       const answers = SIGNAL_QUESTIONS.map((question) => ({
         questionId: question.id,
         value: question.kind === 'list' ? [`${question.id} value`] : `${question.id} value`,
+        provenance: STATED_ANSWER_PROVENANCE,
       }));
       const profile = buildProfileFromAnswers(
         answers,

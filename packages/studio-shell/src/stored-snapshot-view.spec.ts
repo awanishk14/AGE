@@ -15,6 +15,7 @@ import {
   TWO_ANSWERS_NOTICE,
   buildStoredSnapshotView,
 } from './stored-snapshot-view';
+import { STATED_ANSWER_PROVENANCE } from '@age/business-discovery-contracts';
 
 /**
  * ⚠️ Driven through the REAL produce chain and the REAL record normalizer, not a
@@ -27,8 +28,12 @@ import {
  */
 function storedFixture(): ScoredBifSnapshotRecord {
   const answers: readonly DiscoveryAnswer[] = [
-    { questionId: 'bi-name', value: 'Fictional Kite Repair' },
-    { questionId: 'bi-industry', value: 'Entirely made-up kite maintenance' },
+    { questionId: 'bi-name', value: 'Fictional Kite Repair', provenance: STATED_ANSWER_PROVENANCE },
+    {
+      questionId: 'bi-industry',
+      value: 'Entirely made-up kite maintenance',
+      provenance: STATED_ANSWER_PROVENANCE,
+    },
   ];
 
   const profile = buildProfileFromAnswers(answers, DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE, {

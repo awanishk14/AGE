@@ -1,5 +1,6 @@
 import { DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE } from '@age/business-discovery-contracts';
 import { OperatorFilePathRefusedError } from '@age/operator-file-policy';
+import { STATED_ANSWER_PROVENANCE } from '@age/business-discovery-contracts';
 import { describe, expect, it } from 'vitest';
 
 import { loadDiscoveryAnswerFile } from '../load-discovery-answer-file';
@@ -42,7 +43,16 @@ describe('loadDiscoveryAnswerFile', () => {
     });
 
     expect(seen).toEqual([OUTSIDE]);
-    expect(answers).toEqual([{ questionId: 'bi-name', value: 'Example Fictional Co' }]);
+    // ⚠️ ADR-0059 D2 — the loaded answer says how it was obtained. An
+    // operator-authored file is `stated` by construction: the file format has no
+    // provenance key, so nothing else can get into it.
+    expect(answers).toEqual([
+      {
+        questionId: 'bi-name',
+        value: 'Example Fictional Co',
+        provenance: STATED_ANSWER_PROVENANCE,
+      },
+    ]);
   });
 
   it('refuses an in-repository path BEFORE reading anything', () => {

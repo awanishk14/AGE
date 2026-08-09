@@ -50,6 +50,19 @@ export type { DiscoveryGap } from './discovery-gap';
 export { discoveryQuestionSchema } from './discovery-question';
 export type { DiscoveryQuestion } from './discovery-question';
 
+export {
+  answerProvenanceSchema,
+  confirmedFromSourceAnswerProvenanceSchema,
+  describeAnswerProvenance,
+  statedAnswerProvenanceSchema,
+  STATED_ANSWER_PROVENANCE,
+} from './answer-provenance';
+export type {
+  AnswerProvenance,
+  ConfirmedFromSourceAnswerProvenance,
+  StatedAnswerProvenance,
+} from './answer-provenance';
+
 export { discoveryAnswerSchema } from './discovery-answer';
 export type { DiscoveryAnswer } from './discovery-answer';
 

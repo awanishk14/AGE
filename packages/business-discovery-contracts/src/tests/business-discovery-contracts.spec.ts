@@ -9,6 +9,7 @@ import {
   discoveryGapSchema,
   discoverySectionIdSchema,
   DISCOVERY_SECTION_IDS,
+  STATED_ANSWER_PROVENANCE,
 } from '../index';
 import type {
   BusinessDiscoveryProfile,
@@ -79,7 +80,14 @@ describe('@age/business-discovery-contracts — profile validation', () => {
               kind: 'text',
             },
           ],
-          answers: [{ questionId: 'q-1', value: 'Acme CRM', evidenceSourceIds: ['ev-1'] }],
+          answers: [
+            {
+              questionId: 'q-1',
+              value: 'Acme CRM',
+              provenance: STATED_ANSWER_PROVENANCE,
+              evidenceSourceIds: ['ev-1'],
+            },
+          ],
         },
       ],
     });
