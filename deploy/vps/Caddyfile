@@ -8,21 +8,30 @@
 # (`acceptForwardedTransport`). Two independent statements of the same rule, on
 # purpose: the redirect is a courtesy, the refusal is the boundary.
 #
-# 🛑 THE UPSTREAM IS NOT NAMED HERE, AND NO APPLICATION IS DEPLOYED YET.
-# `AGE_APP_UPSTREAM` is required at startup by the composition, because
-# `apps/studio` may not have a Dockerfile (ADR-0057, OX-INV-1) and ADR-0061 §5's
-# question — which product is hosted — is the Product Owner's and still open.
-# ⚠️ When it is answered, the upstream is an internal name on the composition's
-# own network: 🚫 never a published port, 🚫 never an address on this host.
+# 🛑 THE UPSTREAMS ARE THE DEMO, 🚫 NOT AGE STUDIO (ADR-0061 §5-A/§5-B).
+# ⚠️ Both are INTERNAL SERVICE NAMES on the composition's own network:
+# 🚫 never a published port, 🚫 never an address on this host, 🚫 never a name
+# a client supplies.
 
 {$AGE_PUBLIC_HOST} {
 	encode gzip
 
+	# ⚠️ `/api/*` is stripped before it reaches the API, so the browser's
+	# same-origin `/api/demo/capabilities` arrives as `/demo/capabilities`.
+	# 🚫 The API is not otherwise reachable: it publishes no port of its own.
+	handle_path /api/* {
+		reverse_proxy api:4000 {
+			header_up X-Forwarded-Proto https
+		}
+	}
+
 	# ⚠️ `X-Forwarded-Proto` is set HERE, on every request, overwriting whatever
 	# the client sent. 🚫 It is never passed through: a client-supplied value is
 	# a claim, not evidence.
-	reverse_proxy {$AGE_APP_UPSTREAM} {
-		header_up X-Forwarded-Proto https
+	handle {
+		reverse_proxy web:3000 {
+			header_up X-Forwarded-Proto https
+		}
 	}
 
 	header {

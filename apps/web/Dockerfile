@@ -7,6 +7,13 @@ RUN corepack enable
 WORKDIR /app
 
 FROM base AS build
+# ⚠️ NEXT_PUBLIC_* IS INLINED AT BUILD TIME, NOT READ AT RUNTIME — the demo page
+# is a client component, so the browser gets whatever value was compiled in.
+# 🚫 Setting this as a runtime `environment:` entry does nothing at all.
+# ⚠️ The deployed composition passes '/api', a SAME-ORIGIN relative path, so the
+# image carries no hostname and the browser never leaves the terminator.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @age/web... build

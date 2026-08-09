@@ -43,6 +43,9 @@ function publishedPorts(source: string): string[] {
 
 const BODY = bodyLines(COMPOSE).join('\n');
 
+/** The two app services only — 🚫 never the database's own stanza. */
+const APP_SECTION = BODY.slice(BODY.indexOf('  web:'), BODY.indexOf('  postgres:'));
+
 describe('this is a separate named composition, not a mode of the root one', () => {
   it('exists where its name says it does', () => {
     expect(existsSync(COMPOSE_PATH)).toBe(true);
@@ -90,7 +93,10 @@ describe('nothing behind the terminator is publicly reachable', () => {
 
 describe('an absent secret is a refusal to start', () => {
   it('found variables to examine', () => {
-    expect(COMPOSE.match(/\$\{[A-Z_]+/g)?.length).toBeGreaterThanOrEqual(6);
+    // ⚠️ 5 since ADR-0061 §5 was answered: `AGE_APP_UPSTREAM` existed only to
+    // make the composition refuse to start while the hosted product was
+    // undecided. The apps are named now, so the variable is gone, not defaulted.
+    expect(COMPOSE.match(/\$\{[A-Z_]+/g)?.length).toBeGreaterThanOrEqual(5);
   });
 
   it('defaults nothing', () => {
@@ -111,19 +117,62 @@ describe('an absent secret is a refusal to start', () => {
   });
 });
 
-describe('no application is deployed here yet, and that is deliberate', () => {
-  it('names no application service and builds no image', () => {
-    // 🛑 `apps/studio` may not have a Dockerfile (ADR-0057, OX-INV-1), and
-    // ADR-0061 §5's question — which product is hosted — is the owner's, still
-    // open. A service here would answer it silently.
+describe('the hosted product is the demo, and it is not AGE Studio', () => {
+  it('deploys the demo front end and the demo API', () => {
+    // ADR-0061 §5-A, answered by the Product Owner on 2026-08-09.
+    expect(BODY).toContain('dockerfile: apps/web/Dockerfile');
+    expect(BODY).toContain('dockerfile: apps/api/Dockerfile');
+    expect(existsSync(join(REPO, 'apps', 'web', 'Dockerfile'))).toBe(true);
+    expect(existsSync(join(REPO, 'apps', 'api', 'Dockerfile'))).toBe(true);
+  });
+
+  it('🛑 does not deploy the console, and could not', () => {
+    // 🚫 ADR-0057 OX-INV-1 stands UNAMENDED. Deploying Studio is a REVERSAL,
+    // not an extension, and needs its own ADR.
     expect(BODY).not.toContain('apps/studio');
-    expect(bodyLines(COMPOSE).some((line) => line.trim().startsWith('build:'))).toBe(false);
+    expect(CADDY).not.toContain('studio');
     expect(existsSync(join(REPO, 'apps', 'studio', 'Dockerfile'))).toBe(false);
   });
 
-  it('refuses to start rather than serving half a deployment', () => {
-    expect(COMPOSE).toContain('${AGE_APP_UPSTREAM:?');
-    expect(CADDY).toContain('reverse_proxy {$AGE_APP_UPSTREAM}');
+  it('reaches the app only through the terminator', () => {
+    // 🚫 Neither app publishes a port; both are internal service names.
+    expect(CADDY).toContain('reverse_proxy web:3000');
+    expect(CADDY).toContain('reverse_proxy api:4000');
+    for (const port of publishedPorts(COMPOSE)) {
+      expect(port.includes(':3000') || port.includes(':4000'), port).toBe(false);
+    }
+  });
+
+  it('found the app services to examine', () => {
+    // ⚠️ An empty slice would let both scans below report compliance.
+    expect(APP_SECTION.length).toBeGreaterThan(100);
+    expect(APP_SECTION).toContain('web:');
+    expect(APP_SECTION).toContain('api:');
+  });
+
+  it('hands the public surface no database credential', () => {
+    // ⚠️ The demo reads no database. A credential it has no use for is a
+    // credential a compromise inherits for free.
+    expect(APP_SECTION).not.toContain('DATABASE_URL');
+    expect(APP_SECTION).not.toContain('POSTGRES_PASSWORD');
+  });
+
+  it('🚫 grows no login on a surface that protects nothing', () => {
+    // ⚠️ ADR-0061 §5-D — a login here is the first step toward deploying the
+    // console by accident. The demo holds one fictional business and no client.
+    for (const token of ['session', 'cookie', 'auth', 'login', 'password']) {
+      expect(APP_SECTION.toLowerCase(), token).not.toContain(token);
+    }
+  });
+
+  it('compiles the API base in as a relative path, not a hostname', () => {
+    // ⚠️ NEXT_PUBLIC_* is inlined at BUILD time — a runtime `environment:`
+    // entry would do nothing at all, silently.
+    expect(BODY).toContain('NEXT_PUBLIC_API_URL: /api');
+    expect(readFileSync(join(REPO, 'apps', 'web', 'Dockerfile'), 'utf8')).toContain(
+      'ARG NEXT_PUBLIC_API_URL',
+    );
+    expect(CADDY).toContain('handle_path /api/*');
   });
 });
 
