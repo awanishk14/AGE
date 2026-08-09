@@ -1,7 +1,8 @@
 # ADR-0066 — The hub, and what "two-way" may and may not mean
 
-Status: **D1 Accepted** (2026-08-09, by the Product Owner — see §0.1). **D2–D7 remain `Proposed`**
-— a **decision request**, not a self-acceptance; §7 lists what is still only the Product Owner's.
+Status: **D1 and D2 Accepted** (2026-08-09, by the Product Owner — see §0.1 and §0.3).
+**D3–D7 remain `Proposed`** — a **decision request**, not a self-acceptance; §7 lists what is still
+only the Product Owner's.
 
 Supersedes: nothing. Depends on: ADR-0053 D3/D5, ADR-0054 D7, ADR-0057 D4 + OX-INV-1,
 ADR-0059 D3/D4.2/D4.3/D5, ADR-0061 §5, ADR-0062 D1–D3.
@@ -55,6 +56,97 @@ operator"**. 🚫 No slice may assume, prepare for, or half-build a **business-o
 would answer Q4 in code, and ADR-0062 D2 makes a client a _subject_ of isolation, **recorded, not
 authorized**. ⚠️ The owner will confirm after a client meeting; 🚫 do not treat silence as
 "operator, settled" and 🚫 do not treat the plan as permission to start it.
+
+## 0.3 The Product Owner's acceptance of D2, verbatim (2026-08-09)
+
+> _"I accept D2._
+>
+> _The architectural principle is: provenance is metadata about origin, not evidence of truth and
+> not a scoring input._
+>
+> _A document saying something does not, by itself, make that statement more trustworthy than the
+> same statement supplied directly by the client. Therefore provenance must travel on a separate
+> channel and must not influence scoring, BIF reasoning, confidence, or any other semantic result._
+>
+> _I specifically accept the proposed invariant that identical profile facts with different
+> provenance must produce byte-identical scores/results. Please make that a hard regression guard._
+>
+> _One wording change: don't say "documents will never make a score go up." Say "provenance alone
+> never changes a score." A future ADR may define how actual source content can become evidence,
+> but that would be a separate reasoning/evidence decision and must never happen implicitly because
+> a provenance record exists._
+>
+> _Proceed with D2 on that basis."_
+>
+> — the Product Owner, 2026-08-09, answering **§7 Q5** (D2).
+
+**This accepts D2 and nothing else.** ⚠️ 🚫 It does not accept D3–D7, and 🚫 it does not answer §7
+Q4 (still deferred).
+
+### 0.3a ⚠️ THE WORDING CORRECTION IS BINDING, AND THE OLD PHRASING IS WRONG
+
+🚫 **Never write, in an ADR, a comment, a UI string or a handover: _"a document can never raise a
+score."_** That is **too broad** and would pre-empt a decision the Product Owner has deliberately
+left open. ✅ **The correct sentence, and the only one to use, is:**
+
+> **Provenance alone never changes a score.**
+
+⚠️ The difference is the whole point. **Provenance is a record that a claim came from somewhere.**
+It is not a reading of what that somewhere _says_. A future ADR may decide that the **content** of
+a source constitutes **evidence** for or against a claim — that is a legitimate, separate
+reasoning/evidence decision, and 🛑 it must be taken **explicitly, in its own ADR**. 🚫 It must
+never happen **implicitly, as a side effect of a provenance record existing**.
+
+### 0.3b The four layers, and the direction they run
+
+The Product Owner named the separation this decision protects. **It is one direction only:**
+
+```
+PROVENANCE   where did this claim originate?
+     ↓
+EVIDENCE     what supports or contradicts this claim?
+     ↓
+REASONING    what should AGE conclude?
+     ↓
+SCORE        what does the current model calculate?
+```
+
+🚫 **A layer never reaches back up.** 🚫 `SOURCE ≠ EVIDENCE ≠ CONFIDENCE`, and collapsing any two of
+them into one is the failure this ADR exists to prevent. ⚠️ Two consequences that are easy to lose:
+
+- 🚫 **A client-typed answer is NOT less trustworthy for having no document behind it.** The
+  asymmetry runs both ways: extraction does not promote, and typing does not demote.
+- ⚠️ The value bought is **temporal**: richer provenance can be added later **without silently
+  changing the meaning of scores already recorded**. A score from last month must still mean what
+  it meant last month.
+
+### 0.3c The invariant is a HARD REGRESSION GUARD, not a test that happens to exist
+
+At the owner's explicit instruction, D2's invariant is promoted from "a test asserts" to a
+**standing architectural invariant**, on the same footing as ADR-0057 OX-INV-1:
+
+> **AGE-INV-PROV-1 — Identical profile facts with different provenance MUST produce byte-identical
+> scoring and BIF results.**
+
+🚫 It is not an implementation detail of one slice and 🚫 must not be relaxed, narrowed to a subset
+of fields, or deleted when a later slice finds it inconvenient. ⚠️ Per the project's own rule, it is
+evidence **only once it has been made to fail** — the slice that lands it must mutate the channel so
+a score moves, show the guard naming that, and restore.
+
+### 0.3d 🚫 What §0.3 does NOT authorize
+
+The Product Owner's note also set out a longer direction — a fact's full journey
+(`Client → Source → Claim → Evidence → Reasoning → Result`, and later
+`Claim → Strategy → Action → Outcome → Feedback`), and the position that AGE's relationships are a
+**semantic graph** that 🚫 does **not** justify adopting a graph database (Neo4j) before a real
+workload demonstrates a relational/document model cannot serve it — _"don't optimize the storage
+engine before you've discovered the actual query patterns."_
+
+⚠️ **That is recorded as direction and as a standing constraint on storage choices. 🚫 It is NOT an
+authorization.** 🚫 No slice may build an evidence layer, a reasoning layer, a strategy/action/
+outcome loop, or a new store from these lines. Each needs its own `Proposed` ADR. 🛑 In particular,
+**introducing a graph database is refused by default** and would need an ADR carrying the
+demonstrated workload that requires it.
 
 ---
 
@@ -124,10 +216,16 @@ importers**. Wiring it is tempting and would be wrong today, because:
    it to carry provenance would **move the pinned 98/63 vs 12/17 baseline** (ADR-0054 D7) and
    would convert "a document said it" into "we are more confident" — refused by ADR-0059 D3.
 
-**D2. Answer provenance travels on a channel the scorers cannot see.** It is carried alongside the
-profile, never inside `fieldEvidence` and never inside `evidenceSources`. A test asserts that a
-profile built from a mixed stated/confirmed answer set yields **byte-identical scores** to one
-built from the same answers all marked `stated`.
+**D2. Answer provenance travels on a channel the scorers cannot see.** ✅ **Accepted 2026-08-09 —
+see §0.3.** It is carried alongside the profile, never inside `fieldEvidence` and never inside
+`evidenceSources`. **AGE-INV-PROV-1** (§0.3c) is the hard guard: a profile built from a mixed
+stated/confirmed answer set yields **byte-identical** scoring and BIF results to one built from the
+same answers all marked `stated`.
+
+⚠️ **The accepted principle, in the owner's words: _provenance is metadata about origin, not
+evidence of truth and not a scoring input._** It must not influence scoring, BIF reasoning,
+confidence, **or any other semantic result**. 🚫 The rule is **not** "a document can never raise a
+score" — see §0.3a for why that phrasing is wrong and what to say instead.
 
 **D3. A source that cannot be named is not a source.** An answer whose provenance is
 `confirmed-from-source` must carry its `sourceId`, `locator` and `confirmedBy`, or it is refused —
@@ -168,8 +266,12 @@ ingest endpoint shipped before that call is an unauthenticated write to a client
 **After slice 6 the goal is demonstrable end to end on one machine, with zero deployment and zero
 reversal of any shipped decision.**
 
-Everything network-facing — the ingest endpoint, login, the session store rows, the deployed app
-service — sits **after** §7 Q1 and is blocked on the owner, not on work.
+⚠️ **Slice 1 is discharged for D1 and D2 only** (§0.1, §0.3). 🚫 Slices 3–6 stay unauthorized until
+D3–D7 are accepted; slice **2** is authorized now.
+
+The deployed app service shipped in #281 (§0.2). Everything else network-facing — the **ingest
+endpoint**, login, the session store rows — still sits behind D7 and behind §7 Q4, and 🚫 an ingest
+endpoint before `askEntitlement` has a caller is an unauthenticated write to a client's record.
 
 ---
 
@@ -188,13 +290,18 @@ that is runtime state outside the repo and remains unverified here.
 
 ## 7. 🛑 Questions only the Product Owner may answer
 
-1. **ADR-0061 §5 — which product is hosted?** Still open. Blocks every network slice. 🚫 Not to be
-   answered in code.
-2. **Does "all other tools benefit from each other" mean read-back (D1) or write-back?** If
-   write-back, D1 is wrong and a much larger ADR is owed. My recommendation is read-back.
-3. **Is a plain-text-only pilot acceptable?** Real businesses send PDFs; ADR-0059 D4.2 refuses
-   them by name until a decoder is chosen. This decides whether the second source is realistic or
-   a demo.
+1. **ADR-0061 §5 — which product is hosted?** ✅ **ANSWERED 2026-08-09 (§0.2)** — the read-only
+   demo (`apps/web` + `apps/api`), 🛑 **not** Studio. Recorded in full at ADR-0061 §5-A to §5-D.
+2. **Does "all other tools benefit from each other" mean read-back (D1) or write-back?**
+   ✅ **ANSWERED — read-back (§0.1).** 🛑 D1 accepted; write-back is refused.
+3. **Is a plain-text-only pilot acceptable?** ✅ **ANSWERED — yes, plain text first (§0.2).**
+   🚫 ADR-0059 D4.2 is **not** thereby discharged; the decoder still needs its own ADR.
 4. **Does "a real human other than the developer" mean a second operator, or the business owner?**
    ADR-0062 D2 makes a client a _subject_ of isolation, recorded but not authorized. The answer
-   changes slice 7 entirely.
+   changes slice 7 entirely. 🛑 **DEFERRED by the owner pending a client meeting** (§0.2) —
+   🚫 deferred is not answered.
+5. **Is D2 the right channel for provenance?** ✅ **ANSWERED — accepted 2026-08-09 (§0.3)**, with a
+   binding wording correction (§0.3a) and the invariant promoted to **AGE-INV-PROV-1** (§0.3c).
+
+⚠️ **Q1, Q2, Q3 and Q5 are answered. Q4 is deferred. D3–D7 are still `Proposed`** — 🚫 slices 3–6
+are not authorized by this ADR's acceptance of D2.
