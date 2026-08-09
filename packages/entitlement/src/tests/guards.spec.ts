@@ -191,7 +191,13 @@ describe('askEntitlement has no caller', () => {
   // `@age/session-store` turns a stored row into a `VerifiedSession` — A2's own
   // words — which is again the SESSION TYPE, never the decision. Its own guard
   // asserts it contains no `askEntitlement`.
-  const AUTHORIZED_IMPORTERS = ['tenant-workspace', 'session-store'];
+  // ⚠️ WIDENED BY ONE AGAIN IN THE A6 ITEM 5 SLICE, AND 🚫 STILL AN ALLOW-LIST.
+  // `@age/tenant-isolation` compares a requested organization against the one
+  // the session speaks for, so it needs `AuthenticatedOrganizationId` — the
+  // SESSION TYPE, 🚫 never the decision. Its own guard asserts it contains no
+  // `askEntitlement`, and the load-bearing test below is unchanged: the CALL
+  // still has no caller anywhere in the repository.
+  const AUTHORIZED_IMPORTERS = ['tenant-workspace', 'session-store', 'tenant-isolation'];
 
   it('found files outside this package to scan', () => {
     expect(OUTSIDE.length).toBeGreaterThan(50);
