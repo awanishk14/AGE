@@ -318,6 +318,22 @@ importers:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(terser@5.48.0)
 
+  packages/assisted-intake:
+    dependencies:
+      '@age/business-discovery-contracts':
+        specifier: workspace:*
+        version: link:../business-discovery-contracts
+      '@age/operator-file-policy':
+        specifier: workspace:*
+        version: link:../operator-file-policy
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(terser@5.48.0)
+
   packages/authority-contracts:
     dependencies:
       '@age/capability-kit':
