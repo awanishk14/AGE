@@ -1,0 +1,39 @@
+# The terminator (ADR-0061 A6 item 1).
+#
+# ⚠️ TLS is terminated HERE and nowhere else. Caddy obtains and renews the
+# certificate itself, so 🚫 there is no manual expiry to forget.
+#
+# ⚠️ Plaintext is not served — it is redirected before anything is read, and the
+# app behind still refuses a request whose forwarded protocol is not `https`
+# (`acceptForwardedTransport`). Two independent statements of the same rule, on
+# purpose: the redirect is a courtesy, the refusal is the boundary.
+#
+# 🛑 THE UPSTREAM IS NOT NAMED HERE, AND NO APPLICATION IS DEPLOYED YET.
+# `AGE_APP_UPSTREAM` is required at startup by the composition, because
+# `apps/studio` may not have a Dockerfile (ADR-0057, OX-INV-1) and ADR-0061 §5's
+# question — which product is hosted — is the Product Owner's and still open.
+# ⚠️ When it is answered, the upstream is an internal name on the composition's
+# own network: 🚫 never a published port, 🚫 never an address on this host.
+
+{$AGE_PUBLIC_HOST} {
+	encode gzip
+
+	# ⚠️ `X-Forwarded-Proto` is set HERE, on every request, overwriting whatever
+	# the client sent. 🚫 It is never passed through: a client-supplied value is
+	# a claim, not evidence.
+	reverse_proxy {$AGE_APP_UPSTREAM} {
+		header_up X-Forwarded-Proto https
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
+
+http://{$AGE_PUBLIC_HOST} {
+	redir https://{host}{uri} permanent
+}
