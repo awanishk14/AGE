@@ -1,6 +1,6 @@
 # ADR-0064 — The stored row and the screen
 
-- **Status:** Proposed
+- **Status:** Accepted (2026-08-09, by the Product Owner — see §0.1b)
 - **Date:** 2026-08-09
 - **Supersedes:** nothing
 - **Superseded by:** nothing
@@ -13,6 +13,25 @@
 ---
 
 ## 0. How this decision was reached
+
+### 0.1b Acceptance, in the Product Owner's own words (2026-08-09)
+
+> _"al 3 need the work, plan and complete all 3, and then we deploy it on vps"_
+
+⚠️ **NOT self-accepted.** §0.1 below explains at length why this ADR could not be self-accepted: it
+asks to narrow **ADR-0055 D1**, an owner-Accepted refusal whose operative words are _"and no other
+surface"_. That objection is now discharged the only way it could be — by the owner narrowing their
+own refusal.
+
+⚠️ **What this acceptance covers, exhaustively: D1 through D7 as written.** 🚫 It does not widen
+them. In particular 🚫 **D3 still holds** — the two provenances are shown separately and **NEVER
+merged**, and a disagreement between the answer file and the stored row is **DISPLAYED, never
+resolved**. 🚫 **D7 still holds**: this authorizes no identity, no second human and no hosted
+surface. Those arrive through **ADR-0061**, separately accepted on the same day, and 🚫 this ADR is
+not the vehicle for them.
+
+🚫 **ADR-0055 D1 is narrowed, NOT repealed.** The console may read through the ADR-0055 D2 façade
+and nothing else; the effect-isolation guard is **narrowed, never deleted** (D1).
 
 ### 0.1 🛑 THIS ADR IS NOT SELF-ACCEPTED, AND MUST NOT BE
 
