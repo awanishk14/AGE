@@ -1,0 +1,35 @@
+/**
+ * `@age/session-store` — ADR-0061 **A2**'s rules, and nothing that performs them.
+ *
+ * 🚫 **IT STORES NOTHING, DESPITE THE NAME.** It opens no database, mints no
+ * token, reads no clock and verifies no credential. It is the SHAPE of a session
+ * row and the decisions that make an unusable one impossible to mistake for a
+ * usable one. Persisting the rows is the next slice; minting a token is an
+ * effect and belongs to a composition root.
+ *
+ * 🚫 **A SESSION IS NOT AN `OperatorPrincipal`** (ADR-0053 D4, ADR-0058 D1), and
+ * 🚫 **carries no role, no `isAdmin` and no permission list** (ADR-0062 D3).
+ * Admin is never a bypass, and a flag on a session is how a bypass arrives.
+ *
+ * 🚫 **NOTHING HERE IS AN AUTHORIZATION.** A usable session says who is asking,
+ * never what they may do — that is `askEntitlement` (A3).
+ */
+
+export {
+  assessSession,
+  assertSessionTokenShape,
+  hashSessionToken,
+  SESSION_TOKEN_HEX_LENGTH,
+  SessionRefusedError,
+  SessionStoreRefusedError,
+  sessionTokenHashesMatch,
+  type SessionAssessment,
+  type SessionRecord,
+  type VerifiedSession,
+} from './session-record';
+
+export {
+  MAXIMUM_SESSION_LIFETIME_SECONDS,
+  MINIMUM_SESSION_LIFETIME_SECONDS,
+  sessionExpiryFrom,
+} from './session-lifetime';
