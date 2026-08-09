@@ -156,8 +156,8 @@ Accepted and **deliberately left open**.
    (the recommendation), or does AGE build its own ads execution and call mcp-ads underneath?
 3. ⚠️ **Not one real business has passed through AGE.** ~200 merged PRs, six capabilities, a frozen
    architecture — and every surface is fed by **one frozen sample profile**. The falsifiable test
-   offered to the user: **by the end of slice B, vTEST's real answers should produce a stored profile
-   you can look at.** If that has not happened, the problem is the **method**, not the next slice.
+   offered to the user: **by the end of slice B, a nominated live client's real answers should produce
+   a stored profile you can look at.** If that has not happened, the problem is the **method**, not the next slice.
    ⚠️ **Slice B has now shipped the PATH (#214/#215/#216/#217 — see
    `ADR0054_FIRST_REAL_CLIENT_TRACK_CHECKPOINT.md`), which is NOT the same as having passed a real
    business through it.** The suite drives an injected runtime; the actual local run is the

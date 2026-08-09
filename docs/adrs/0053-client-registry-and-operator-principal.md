@@ -48,15 +48,41 @@ alongside it, verbatim in substance: several tools exist — `Rankops` (Google S
 Analytics and more, ready imminently), `ai-website-projects` (where all website creation and
 updating happens), `mcp-ads-server` (running live Google and Meta ads for all clients) — and
 _"i needed something that governs everything and separate tools dont take indepednrt decision but
-share knowledge."_ Two live clients were nominated for all live testing: **vTEST** and
-**Doctor at Door**. Execution will be driven by **Claude in the user's terminal**; a SaaS model is
-explicitly **later, not now**.
+share knowledge."_ **Two live clients were nominated for all live testing**; 🚫 their names are
+not recorded here (see the redaction note in §0.3). Execution will be driven by **Claude in the
+user's terminal**; a SaaS model is explicitly **later, not now**.
 
 ⚠️ This is not a new direction. `AGE_SYSTEM_MAP.md` §1 already reserves the **Execution Layer** for
 exactly these systems, and `11_INTEGRATION_CATALOG.md` §2 already classifies them: mcp-ads is a
 **Hybrid** integration, RankOps and the website projects are principally **Source** integrations.
 What was missing was never the layer. It was the **shared identity** that lets three tools be about
 the same business.
+
+### 0.2b 🛑 REDACTION NOTE — two live client names were removed from this ADR on 2026-08-09
+
+⚠️ **This ADR named the operator's two live clients in prose, in §0.2 and in §1, from the day it was
+written.** Its own **D3** says real client records are never committed — _"not even a redacted or
+partially-masked one"_ — and the guard shipped for D3 (#259) scans only the committed fixtures in
+`@age/client-registry`. Nothing scanned prose, so the ADR that states the rule was breaking it for
+seven days. It was flagged to the Product Owner on 2026-08-08 and redacted on their instruction.
+
+⚠️ **WHAT CHANGED AND WHAT DID NOT.** Two noun phrases were replaced by _"the two nominated live
+clients"_. 🚫 **No decision, no dissent, no consequence and no reasoning was altered** — the names
+were never load-bearing, which is precisely why they should never have been there. The count
+("two") is retained because it carries no identity and D4's reasoning refers to it.
+
+🛑 **THIS DOES NOT REMOVE THE NAMES FROM THE REPOSITORY'S HISTORY, AND NOTHING CLAIMS IT DOES.**
+They remain in every commit from this ADR's own until this one, readable by `git log -p`, by any
+existing clone, and by anything that indexed the repository while it was public. 🚫 **History was
+deliberately NOT rewritten** (ADR-0065 D3): a force-push would break every clone and every merge
+base to remove data that mirrors and forks already hold, buying an appearance of erasure rather
+than erasure. ⚠️ **Redacting forward is worth doing on its own terms — it stops the leak growing and
+removes it from the readable surface — and it is 🚫 not a claim that the names were recovered.**
+
+⚠️ **The policy this redaction follows, and the guard that now scans every tracked file rather than
+only the fixtures, is ADR-0065.**
+
+---
 
 ### 0.3 ADR-0052 was withdrawn, not merged
 
@@ -83,10 +109,11 @@ the repo passes the same frozen constant, `demoContext = new ClientContext('clie
 
 Consequently:
 
-- Nothing in AGE can be _about_ vTEST. There is no value to pass.
-- Nothing in AGE knows that vTEST in AGE, the vTEST client in RankOps, the vTEST customer in Google
-  Ads and `ai-website-projects/vtest` are **one business**. That correspondence exists only in the
-  operator's head, which is precisely the fragmentation AGE exists to remove.
+- Nothing in AGE can be _about_ a nominated live client. There is no value to pass.
+- Nothing in AGE knows that a given client in AGE, the same client in RankOps, the same customer in
+  Google Ads and that client's directory under `ai-website-projects` are **one business**. That
+  correspondence exists only in the operator's head, which is precisely the fragmentation AGE
+  exists to remove.
 - `changedBy` on every `FieldVersion` has no honest value, so no real BIF can be produced
   (ADR-0050 D5/D7).
 
@@ -140,7 +167,7 @@ checked against a list. New tools will be added, and adding one must not require
 roster and their ad-account and property identifiers.
 
 Therefore the package ships **the shape, the validation and the resolution logic** plus clearly
-fictional fixtures used by its own tests. **Concrete records for vTEST and Doctor at Door are
+fictional fixtures used by its own tests. **Concrete records for the two nominated live clients are
 supplied from a local, gitignored source and are not part of the repository.**
 
 🚫 Do not "make the demo more realistic" by committing a real client. 🚫 Do not commit a redacted or
@@ -291,6 +318,6 @@ avoiding the user rather than serving them.**
 mcp-ads (live and stable) rather than the discovery input path, and this ADR quietly assumes the
 input path goes first. **Answer:** accepted as a genuine open question and deliberately left open.
 This slice is a precondition for **both** — neither an mcp-ads adapter nor a discovery capture can
-be scoped to vTEST without a `ClientRecord`. ⚠️ The order of C (evidence in) versus B (understanding
+be scoped to a live client without a `ClientRecord`. ⚠️ The order of C (evidence in) versus B (understanding
 in) is **not decided here** and must be decided on its own evidence, not inherited from this ADR's
 narrative order.
