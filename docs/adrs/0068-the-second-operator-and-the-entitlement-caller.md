@@ -1,13 +1,112 @@
 # ADR-0068 — The second operator, and the caller `askEntitlement` has never had
 
-Status: **Proposed** (2026-08-10). 🚫 **NOT self-accepted, and 🚫 nothing here authorizes code.**
-This is a decision request. It is raised because ADR-0066 §7 Q4 is now **answered** — the first
-real human after the developer is **a second operator** (§0.6) — while every fence in front of
-slice 7 is still standing, and two of them are fences only the Product Owner may lower.
+Status: **Accepted** (2026-08-11), §5 A and B both answered by the Product Owner — see §0.1.
+🚫 **NOT self-accepted.** It was raised as a decision request because ADR-0066 §7 Q4 is
+**answered** — the first real human after the developer is **a second operator** (§0.6) — while
+every fence in front of slice 7 was still standing, and two of them are fences only the Product
+Owner may lower. ⚠️ **Those two are now lowered, together with exactly what §7's consequences
+require to stand them up — and 🚫 nothing else. Read §0.1b for what was lowered and §0.1c for what
+was NOT, before writing a line of slice 7.**
 
 Depends on: ADR-0066 D7 + §0.5d + §0.6–§0.6c, ADR-0055 A2/D6/D7, ADR-0061 A2/A3, ADR-0062 D1–D3,
 ADR-0058 D1/D2, ADR-0053 D4, ADR-0046 D5, ADR-0057 D4.
 Supersedes: nothing.
+
+---
+
+## 0.1 The Product Owner's answer to §5 (2026-08-11)
+
+⚠️ **This ADR was 🚫 NOT self-accepted.** §5 A and §5 B were put to the Product Owner as the two
+questions they were written to be, and the Product Owner answered both. ⚠️ **The answer was given
+as a selection from the four (A) and two (B) shapes §5 offered, 🚫 not as free prose**, so what is
+recorded below is the selected option quoted **verbatim as the owner read it**. 🚫 This is not a
+paraphrase, and 🚫 it is not the architect restating his own recommendation as an answer.
+
+**Question A — how does an operator prove who they are? → A1, the operator-provisioned token:**
+
+> **An operator-provisioned token**, issued out of band by the developer, hashed at rest, with a
+> required absolute expiry. No password, no reset flow, no email. Cheapest; entirely adequate for
+> two people; 🚫 unusable for a tenth operator.
+
+**Question B — who provisions Operator 2, and is that a code path or an act? → an act:**
+
+> If it is an act — the developer inserting one row deliberately, once — then AGE ships **no**
+> provisioning code, and the first second-operator account is an event with a date, exactly as
+> ADR-0055 D7's first capture write was meant to be.
+
+### 0.1a The architect's recommendation and the owner's answer agree — and that is a fact, not a confirmation
+
+⚠️ §5 offered **A1 + B-as-an-act** as a recommendation, explicitly _"offered as a recommendation
+and 🚫 not as a decision"_, and the owner selected exactly that. ⚠️ **Agreement here is not
+independent corroboration** — the owner chose from shapes the architect wrote, so the framing was
+the architect's. Recorded plainly (finding 7): a recommendation the owner adopts remains a
+recommendation the owner adopted, 🚫 never evidence that the recommendation was independently
+correct. If the shapes were wrong, this acceptance carries that error forward.
+
+### 0.1b What this acceptance lowers — only what §7's consequences require, and 🚫 nothing else
+
+⚠️ The measure is **§7**, read narrowly: what is lowered is exactly what is needed to produce
+_"an authenticated principal, and `askEntitlement`'s first real caller, on a read path"_, and
+🚫 nothing beyond it.
+
+- ✅ **The §3 stop condition on the session store is crossed ONCE, deliberately, with the owner's
+  answer on the record** — the rows, and therefore a Postgres model, a migration and an RLS
+  policy, for **the session store only**. 🚫 This is not general schema authorization: any other
+  table, including a draft table, is a **separate** decision (ADR-0067).
+- ✅ **`askEntitlement` may gain its first real caller**, on a **READ** path, inside the V1
+  boundary. ⚠️ The guard asserting it has no caller is therefore replaced by the caller itself —
+  🚫 it is not deleted "temporarily" ahead of one, and 🚫 not relaxed to make room.
+- ✅ **A presented token may be VERIFIED on that read path**, and a verified request may carry the
+  resulting principal. ⚠️ This is stated explicitly because §6 banned _"no session cookie
+  issuance, no middleware"_ while the question was open, and A1 is unbuildable if verification has
+  nowhere to live — an operator must be able to present a credential and be refused or admitted.
+  🛑 **VERIFICATION IS NOT ISSUANCE.** With A1 the token is minted **out of band, by an act**
+  (§0.1a, B), so AGE **reads** a credential it never issued: 🚫 no login route, 🚫 no login screen,
+  🚫 no session-issuing endpoint, 🚫 no "sign in" of any kind. ⚠️ The exact placement is a design
+  question for the slice's PR and must be reviewable — 🚫 it is not licence for a general auth
+  framework, and 🚫 a middleware that grows an issuance path has left what was accepted here.
+
+### 0.1c What this acceptance does 🚫 NOT lower — read before writing a line of slice 7
+
+- 🚫 **No provisioning surface, of any kind.** B-as-an-act means AGE ships **no** account-creation
+  code: no route, no CLI subcommand, no seeding script, no "just for the first one" helper. The
+  first second-operator row is inserted by the developer, deliberately, once, and it is **an event
+  with a date**. ⚠️ A provisioning code path is a **write surface** (ADR-0057 D4) and was refused
+  here by name.
+- 🚫 **No login route, no login screen, no session issuance, no "sign in".** A1's token is minted
+  by an act, out of band; AGE only ever **verifies** one (§0.1b). ⚠️ A route that hands back a
+  session in exchange for anything is issuance, whatever it is called.
+- 🚫 **No second-operator UI and no operator switcher** — both refused by name in §6 and 🚫 not
+  reached by this acceptance. ⚠️ The proof §0.1d demands is a `denied`, 🚫 not a screen.
+- 🚫 **No password, no reset flow, no email, no lockout, no rotation** — A2 was not chosen, and
+  each of those arrives only with it. 🚫 No OIDC, no external identity provider, no new network
+  trust boundary (A3 was not chosen).
+- 🚫 **A1 is adequate for two people and NOT for ten** — the owner accepted that limit in the same
+  sentence that accepted the shape. 🚫 A tenth operator is a **new ADR**, and 🚫 the token model
+  must not be built "so it can grow later": _"future compatible"_ is the named failure mode
+  (§6, ADR-0066 §0.6).
+- 🚫 **ADR-0055 D7 remains undischarged** — this is a read path, 🚫 not a capture write, and 🚫 it
+  does not become one.
+- 🚫 **No business-owner anything** — independently refused (§6, ADR-0066 §0.6), untouched here.
+- 🚫 **The V1 boundary is unchanged**: read / browse / inspect / understand. A second operator
+  authorizes **no** business action and **no** write capability.
+- ⚠️ **RLS is still coherence, not authorization** (ADR-0046 D5). 🚫 Crossing the §3 condition to
+  write an RLS policy does 🚫 **not** turn that policy into the isolation proof.
+
+### 0.1d The acceptance criterion, unchanged by this acceptance
+
+🛑 **The proof is a real `denied`, raised BEFORE a query exists** (§4). 🚫 An empty result set is
+**not** a proof — it is indistinguishable from a business with no data. ⚠️ And ADR-0066 §0.6a
+still governs what "done" means: _"Operator 2 is not just another login screen. It is the first
+real proof that ADR-0055's entitlement problem has actually been solved."_ A slice 7 that ships a
+working token login while `askEntitlement` still has no real caller has 🚫 **not** shipped slice 7.
+
+### 0.1e What is authorized, precisely
+
+⚠️ **This acceptance authorizes the SHAPE, 🚫 not a slice.** Slice 7 is now buildable under the
+standing per-slice process — smallest slice, one branch, one PR, gates verified — and every
+boundary in §0.1c binds it. 🚫 Nothing here authorizes ADR-0067's question, which is separate and
+answered separately.
 
 ---
 
@@ -131,6 +230,16 @@ and a real second human — without inventing a credential model AGE will have t
 without shipping a provisioning surface before anyone has been provisioned.
 
 ## 6. What may proceed before this ADR is answered
+
+> ⚠️ **THIS SECTION IS SPENT — the ADR is answered (§0.1, 2026-08-11).** It is kept as the record
+> of what was refused while the question was open, 🚫 not as a live list. ⚠️ **Read §0.1b and
+> §0.1c instead**, which state exactly which bans were lifted — the session-store rows, the
+> `askEntitlement` caller, and **token verification** on the read path — and which remain in force
+> **unchanged**: 🚫 the login route and any session **issuance**, 🚫 the second-operator UI, 🚫 the
+> operator switcher, 🚫 any provisioning surface, and, independently, 🚫 business-owner anything.
+> 🛑 **The line below reading "no session cookie issuance, no middleware" is now PARTLY lifted and
+> partly not** — verification yes, issuance **no** (§0.1b). 🚫 Do not cite a lifted line here to
+> justify a banned one, and 🚫 do not read "no schema change" as still binding the session store.
 
 🚫 **Nothing that touches items 1–4 of §3.** Specifically, and by name:
 
