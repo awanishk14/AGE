@@ -28,6 +28,8 @@ export {
   type VerifiedSession,
 } from './session-record';
 
+export { normalizeSessionRecord } from './session-row';
+
 export {
   MAXIMUM_SESSION_LIFETIME_SECONDS,
   MINIMUM_SESSION_LIFETIME_SECONDS,

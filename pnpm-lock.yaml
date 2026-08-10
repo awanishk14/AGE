@@ -764,6 +764,9 @@ importers:
       '@age/scored-bif-snapshot-persistence':
         specifier: workspace:*
         version: link:../scored-bif-snapshot-persistence
+      '@age/session-store':
+        specifier: workspace:*
+        version: link:../session-store
       '@prisma/client':
         specifier: ^5.20.0
         version: 5.22.0(prisma@5.22.0)

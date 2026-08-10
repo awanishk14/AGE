@@ -33,6 +33,7 @@
     "@age/business-discovery-contracts": "workspace:*",
     "@age/capture": "workspace:*",
     "@age/scored-bif-snapshot-persistence": "workspace:*",
+    "@age/session-store": "workspace:*",
     "@prisma/client": "^5.20.0",
     "prisma": "^5.20.0",
     "vitest": "^2.1.1"
