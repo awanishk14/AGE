@@ -5,6 +5,7 @@ import {
   generateBifFromAnswerFile,
   readBusinessesView,
   readDiscoveryDraft,
+  readOperatorSourceDocument,
   reportContradictions,
   resolveBusinessScope,
   submitDiscoveryAnswers,
@@ -12,7 +13,12 @@ import {
   STUDIO_QUESTIONNAIRE,
   type OperatorWorkspaceRuntime,
 } from '@age/operator-workspace';
-import type { ClientRecordDraft, DiscoveryDraft } from '@age/studio-shell';
+import { sourceDocumentSchema, sourcePassageSchema } from '@age/assisted-intake';
+import {
+  recordPassageForQuestion,
+  type ClientRecordDraft,
+  type DiscoveryDraft,
+} from '@age/studio-shell';
 
 /**
  * The AGE tool surface, as a PURE function of its arguments (ADR-0060 D1/D3).
@@ -200,6 +206,79 @@ export const AGE_MCP_TOOLS: readonly AgeToolDescriptor[] = Object.freeze([
       'Assess what the capabilities would have to work with. ⚠️ A SEPARATE tool on purpose (ADR-0027) — 🚫 it is never a gate on any other tool, and a business that has not adopted something is `not-assessed`, never "not ready".',
     inputSchema: withClientId(CHANGED_BY, ['changedBy']),
   },
+  /**
+   * ⚠️ THE TWO TOOLS ADR-0066 D6 (slice 6) ADDS, AND ONLY THOSE TWO. They expose
+   * the assisted-intake path the console already has (slice 4), over the SAME
+   * implementation (ADR-0060 D2) — 🚫 not a new capability, and 🚫 not a third,
+   * bulk or automatic variant.
+   *
+   * 🛑 **NEITHER TAKES A `clientId`, AND THAT IS DELIBERATE.** Reading a
+   * document and accepting a passage happen against a file the operator named
+   * and a questionnaire AGE ships; 🚫 nothing about them is tenant-scoped, so
+   * neither accepts, persists, transforms or queues tenant-scoped data — which
+   * is what ADR-0066 D7 forbids until `askEntitlement` has a real caller.
+   */
+  {
+    name: 'age_read_source_document',
+    actionClass: 'knowledge-authoring',
+    description:
+      'Read ONE plain-text document the operator names, by absolute path, and show its own sentences verbatim. ⚠️ AGE decides nothing from it and matches no sentence to any question. A file that is not plain text comes back as `not-extracted` with its reason — 🚫 never as a document that happened to contain nothing.',
+    inputSchema: Object.freeze({
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description:
+            'Absolute path to the document, outside the repository working tree. 🚫 Never defaulted and never searched for — AGE reads the path it was given, or refuses.',
+        },
+        sourceId: {
+          type: 'string',
+          description:
+            'Stable identity for this source. Operator-supplied — 🚫 never generated, because it is what a confirmed answer points back to.',
+        },
+        label: {
+          type: 'string',
+          description:
+            'How the operator refers to this document. 🚫 Never derived from the document’s text.',
+        },
+      },
+      required: ['path', 'sourceId', 'label'],
+      additionalProperties: false,
+    }),
+  },
+  {
+    name: 'age_accept_source_passage',
+    actionClass: 'knowledge-authoring',
+    description:
+      'Record that a NAMED HUMAN accepted one passage of one source as the answer to one question. ⚠️ The result is held for this call only — AGE stores nothing, and the answer file is unchanged. 🚫 An unknown question id is refused, never matched to the nearest one.',
+    inputSchema: Object.freeze({
+      type: 'object',
+      properties: {
+        questionId: {
+          type: 'string',
+          description:
+            'A question id from `age_read_questionnaire`. 🚫 An id AGE does not know is refused.',
+        },
+        passage: {
+          type: 'object',
+          description:
+            'One passage, exactly as `age_read_source_document` returned it — `passageId`, `locator` and the document’s own `text`. 🚫 There is no bulk arm.',
+        },
+        source: {
+          type: 'object',
+          description:
+            'The document, exactly as `age_read_source_document` returned it. Its `sourceId` and the passage `locator` are what make the answer checkable afterwards.',
+        },
+        confirmedBy: {
+          type: 'string',
+          description:
+            'The human who accepted it, e.g. "operator:jane". Required — 🚫 never defaulted or inferred, because this records that a person confirmed something.',
+        },
+      },
+      required: ['questionId', 'passage', 'source', 'confirmedBy'],
+      additionalProperties: false,
+    }),
+  },
 ]);
 
 /**
@@ -289,6 +368,64 @@ export function callAgeTool(
     };
 
     return report(createClientRecord(runtime, draft));
+  }
+
+  if (name === 'age_read_source_document') {
+    for (const key of ['path', 'sourceId', 'label']) {
+      if (requiredString(args, key).kind === 'missing') {
+        return refuse(`'${key}' is required and must be a non-empty string`);
+      }
+    }
+
+    return report(
+      readOperatorSourceDocument(runtime, {
+        path: String(args.path),
+        sourceId: String(args.sourceId),
+        label: String(args.label),
+      }),
+    );
+  }
+
+  if (name === 'age_accept_source_passage') {
+    const questionId = requiredString(args, 'questionId');
+    if (questionId.kind === 'missing') {
+      return refuse("'questionId' is required and must be a non-empty string");
+    }
+
+    const confirmedBy = requiredString(args, 'confirmedBy');
+    if (confirmedBy.kind === 'missing') {
+      // 🚫 NOT DEFAULTED. This field records that a PERSON confirmed a passage;
+      // a generated value would attribute a human's judgement to nobody.
+      return refuse("'confirmedBy' is required and must be a non-empty string");
+    }
+
+    // ⚠️ VALIDATED AGAINST THE SAME SCHEMAS the acceptance path already uses.
+    // 🚫 Nothing is repaired, defaulted or coerced on the way through: a passage
+    // whose locator a caller dropped would produce an answer that could not be
+    // checked against the document afterwards.
+    const passage = sourcePassageSchema.safeParse(args.passage);
+    if (!passage.success) {
+      return refuse(
+        "'passage' must be a passage as `age_read_source_document` returned it, with `passageId`, `locator` and `text`",
+      );
+    }
+
+    const source = sourceDocumentSchema.safeParse(args.source);
+    if (!source.success) {
+      return refuse(
+        "'source' must be a document as `age_read_source_document` returned it, with `sourceId`, `label`, `kind`, `locator` and `text`",
+      );
+    }
+
+    return report(
+      recordPassageForQuestion({
+        questionnaire: STUDIO_QUESTIONNAIRE,
+        questionId: questionId.value,
+        passage: passage.data,
+        source: source.data,
+        confirmedBy: confirmedBy.value,
+      }),
+    );
   }
 
   const clientId = requiredString(args, 'clientId');
