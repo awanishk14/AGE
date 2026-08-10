@@ -184,6 +184,191 @@ describe('a draft nobody has started', () => {
   });
 });
 
+/**
+ * ADR-0066 D6, slice 6 — the two assisted-intake tools.
+ *
+ * 🚫 The document below is obviously fictional, by rule (ADR-0053 D3), and the
+ * "operator" is a fixture name, never a real person.
+ */
+describe('reading one source document over the tool surface', () => {
+  const DOCUMENT_PATH = join(FIXTURE_OPERATOR_DIRECTORY, 'fictional-kite-brief.txt');
+
+  function runtimeWithDocument(text: string) {
+    const runtime = createInMemoryRuntime(CONFIGURED);
+    runtime.files.set(DOCUMENT_PATH, text);
+    return runtime;
+  }
+
+  it('shows the document’s own sentences and claims nothing about the business', () => {
+    const result = callAgeTool(
+      runtimeWithDocument('Fictional Kite Repairs mends kites. It was founded by two people.'),
+      'age_read_source_document',
+      { path: DOCUMENT_PATH, sourceId: 'src-fictional-brief', label: 'A fictional brief' },
+    );
+
+    const body = payload(result);
+    expect(result.isError).toBeUndefined();
+    expect(body.kind).toBe('read');
+    expect(JSON.stringify(body)).toContain('Fictional Kite Repairs mends kites.');
+    expect(String(body.notice)).toContain('decided nothing about this business');
+  });
+
+  it('🚫 refuses a path it was not given rather than searching for one', () => {
+    // 🚫 ADR-0054 D2/D3: an operator file's path is never defaulted, and the
+    // working directory is never searched for one.
+    const runtime = runtimeWithDocument('Anything.');
+    const result = callAgeTool(runtime, 'age_read_source_document', {
+      sourceId: 'src-fictional-brief',
+      label: 'A fictional brief',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(payload(result).reason).toContain('path');
+    expect(runtime.calls.filter((call) => call.startsWith('readFileText'))).toEqual([]);
+  });
+
+  it('🚫 refuses a source it cannot identify, before reading anything', () => {
+    const runtime = runtimeWithDocument('Anything.');
+    const result = callAgeTool(runtime, 'age_read_source_document', {
+      path: DOCUMENT_PATH,
+      sourceId: 'src-fictional-brief',
+      label: '   ',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(runtime.calls.filter((call) => call.startsWith('readFileText'))).toEqual([]);
+  });
+
+  it('🚫 never surfaces the message that embeds the operator’s directory layout', () => {
+    // ⚠️ "Unreadable" is NOT "empty", and the system error carries the
+    // operator's own paths into a transcript a model keeps.
+    const result = callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_read_source_document', {
+      path: DOCUMENT_PATH,
+      sourceId: 'src-fictional-brief',
+      label: 'A fictional brief',
+    });
+
+    const text = result.content[0]?.text ?? '';
+    expect(result.isError).toBe(true);
+    expect(text).not.toContain('ENOENT');
+    expect(text).toContain('not the same as the document');
+  });
+});
+
+describe('accepting one passage over the tool surface', () => {
+  const SOURCE = Object.freeze({
+    sourceId: 'src-fictional-brief',
+    label: 'A fictional brief',
+    kind: 'plain-text',
+    locator: 'A fictional brief',
+    text: 'Fictional Kite Repairs mends kites.',
+  });
+
+  const PASSAGE = Object.freeze({
+    passageId: 'p-1',
+    locator: 'A fictional brief (sentence 1)',
+    text: 'Fictional Kite Repairs mends kites.',
+  });
+
+  function firstQuestionId(): string {
+    const questionnaire = payload(
+      callAgeTool(createInMemoryRuntime({}), 'age_read_questionnaire', {}),
+    ).questionnaire as { sections: { questions: { id: string }[] }[] };
+
+    return questionnaire.sections[0]?.questions[0]?.id ?? '';
+  }
+
+  it('records the acceptance, and says plainly that nothing was stored', () => {
+    // 🛑 `storage: 'not-stored'` IS THE HONEST ANSWER, not a defect. Durable
+    // draft storage is a separate decision (ADR-0066 §0.5a, ADR-0067
+    // `Proposed`), and 🚫 nothing here may learn how to write.
+    const runtime = createInMemoryRuntime(CONFIGURED);
+    const result = callAgeTool(runtime, 'age_accept_source_passage', {
+      questionId: firstQuestionId(),
+      passage: PASSAGE,
+      source: SOURCE,
+      confirmedBy: 'operator:fixture',
+    });
+
+    const body = payload(result);
+    expect(result.isError).toBeUndefined();
+    expect(body.kind).toBe('recorded');
+    expect(body.storage).toBe('not-stored');
+    expect(runtime.calls.filter((call) => call.startsWith('writeFileText'))).toEqual([]);
+  });
+
+  it('🚫 carries the full provenance, and never a bare `stated`', () => {
+    // 🛑 ADR-0066 §0.4c: all three of `sourceId`, `locator` and `confirmedBy`,
+    // or a refusal. 🚫 An incomplete provenance is NEVER downgraded to `stated`.
+    const body = payload(
+      callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_accept_source_passage', {
+        questionId: firstQuestionId(),
+        passage: PASSAGE,
+        source: SOURCE,
+        confirmedBy: 'operator:fixture',
+      }),
+    );
+
+    const serialised = JSON.stringify(body);
+    expect(serialised).toContain('confirmed-from-source');
+    expect(serialised).toContain('src-fictional-brief');
+    expect(serialised).toContain('A fictional brief (sentence 1)');
+    expect(serialised).toContain('operator:fixture');
+  });
+
+  it('🚫 refuses an unknown question rather than matching the nearest one', () => {
+    const result = callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_accept_source_passage', {
+      questionId: 'no-such-question',
+      passage: PASSAGE,
+      source: SOURCE,
+      confirmedBy: 'operator:fixture',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(payload(result).reason).toContain('refuses rather than choosing the closest');
+  });
+
+  it('🚫 refuses a passage whose locator was dropped, and repairs nothing', () => {
+    // ⚠️ An answer whose locator is missing could not be checked against the
+    // document afterwards, so it is refused rather than completed by AGE.
+    const result = callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_accept_source_passage', {
+      questionId: firstQuestionId(),
+      passage: { passageId: 'p-1', text: 'Fictional Kite Repairs mends kites.' },
+      source: SOURCE,
+      confirmedBy: 'operator:fixture',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(payload(result).reason).toContain('locator');
+  });
+
+  it('🚫 refuses a missing confirmedBy rather than attributing it to nobody', () => {
+    const result = callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_accept_source_passage', {
+      questionId: firstQuestionId(),
+      passage: PASSAGE,
+      source: SOURCE,
+    });
+
+    expect(result.isError).toBe(true);
+    expect(payload(result).reason).toContain('confirmedBy');
+  });
+
+  it('🚫 neither tool is tenant-scoped, so D7 is not crossed', () => {
+    // 🛑 ADR-0066 D7: no inbound surface may accept, persist, transform or queue
+    // TENANT-SCOPED data until `askEntitlement` has a real caller. Neither of
+    // these two takes a clientId at all.
+    const added = AGE_MCP_TOOLS.filter((tool) =>
+      ['age_read_source_document', 'age_accept_source_passage'].includes(tool.name),
+    );
+
+    expect(added).toHaveLength(2);
+    for (const tool of added) {
+      const properties = (tool.inputSchema as { properties: Record<string, unknown> }).properties;
+      expect(Object.keys(properties)).not.toContain('clientId');
+    }
+  });
+});
+
 describe('the questionnaire tool', () => {
   it('hands back the questions, so the authoring tools are usable at all', () => {
     const result = callAgeTool(createInMemoryRuntime({}), 'age_read_questionnaire', {});

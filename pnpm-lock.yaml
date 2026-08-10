@@ -179,6 +179,9 @@ importers:
 
   apps/mcp:
     dependencies:
+      '@age/assisted-intake':
+        specifier: workspace:*
+        version: link:../../packages/assisted-intake
       '@age/operator-workspace':
         specifier: workspace:*
         version: link:../../packages/operator-workspace

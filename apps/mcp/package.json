@@ -18,6 +18,7 @@
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
+    "@age/assisted-intake": "workspace:*",
     "@age/operator-workspace": "workspace:*",
     "@age/studio-shell": "workspace:*"
   },
