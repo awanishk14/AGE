@@ -72,3 +72,50 @@ model ScoredBifSnapshot {
   @@index([clientId, organizationId, bifId, capturedAt(sort: Desc), snapshotId(sort: Desc)], map: "scored_bif_snapshots_series_latest_idx")
   @@map("scored_bif_snapshots")
 }
+
+/// OperatorSession — the session-store rows (ADR-0061 A2, ADR-0068 §0.1b).
+///
+/// THIS IS THE ONE SCHEMA CROSSING ADR-0068 LOWERED, AND ONLY THIS STORE. It
+/// authorized "the session-store rows: model, migration and RLS" and nothing
+/// else; a second table arriving beside this one is a different decision and
+/// needs its own ADR.
+///
+/// AGE NEVER ISSUES A SESSION. Provisioning the second operator is an ACT
+/// performed out of band (ADR-0068 §0.1c refuses every provisioning surface by
+/// name), so this table is written by an operator with a database client and
+/// read by AGE. That is why the migration grants SELECT and nothing else:
+/// verification is not issuance, and a store AGE can only read cannot become an
+/// issuance path by someone adding one function.
+///
+/// THE RAW TOKEN IS NOT HERE. `tokenHash` is a SHA-256 digest and the column is
+/// unique, so one token identifies at most one session; a database dump yields
+/// no usable session. The reason the digest may be fast rather than argon2id is
+/// the token's 256 bits of entropy — see `@age/session-store`.
+///
+/// NO ROLE, NO `isAdmin`, NO PERMISSION LIST (ADR-0062 D3). Admin is never a
+/// bypass, and a column is how a bypass arrives: the check that reads it is
+/// added later, by someone who did not read the ADR. A session says WHO is
+/// asking; what they may do is `askEntitlement`.
+///
+/// TIME IS A STRING, for the reason ScoredBifSnapshot gives above: the caller's
+/// exact canonical ISO-8601 UTC instant, byte-identical on the way back, with
+/// lexicographic order already agreeing with chronological order. There is no
+/// `DEFAULT now()` anywhere here — a row that timestamps itself is a row the
+/// database issued.
+///
+/// `expiresAt` IS NOT NULLABLE. There is no "never expires": an absolute expiry
+/// is the one control that still works when nobody notices a session was
+/// stolen (ADR-0068's A1). `revokedAt` is nullable because "not revoked" is a
+/// real state, and revocation is never expressed by deleting the row.
+model OperatorSession {
+  sessionId      String  @id @map("session_id")
+  organizationId String  @map("organization_id")
+  accountId      String  @map("account_id")
+  tokenHash      String  @unique(map: "operator_sessions_token_hash_key") @map("token_hash")
+  issuedAt       String  @map("issued_at")
+  expiresAt      String  @map("expires_at")
+  revokedAt      String? @map("revoked_at")
+
+  @@index([organizationId], map: "operator_sessions_organization_idx")
+  @@map("operator_sessions")
+}
