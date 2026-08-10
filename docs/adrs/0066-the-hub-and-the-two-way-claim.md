@@ -177,6 +177,14 @@ demonstrated workload that requires it.
 **This accepts D3 and nothing else.** ⚠️ 🚫 It does not accept D4–D7, and 🚫 it does not answer §7
 Q4 (still deferred). 🚫 Slices 4–6 remain unauthorized.
 
+⚠️ **ONE SCOPE CORRECTION THE ARCHITECT OWES, AGAINST HIS OWN EARLIER FRAMING.** The owner's closing
+line — _"proceed with the slice 3 implementation under this rule"_ — accepts **the rule**, and the
+rule is D3's. But the slice tabled at §5 row 3 (_"the draft learns provenance"_) is authorized by
+**D4**, not D3, and 🛑 **D4 is still `Proposed`**. The architect had told the owner that accepting
+D3 unblocked slice 3; that was **wrong**, and it is corrected here rather than built on. ✅ What D3
+authorizes by itself is the **completeness rule enforced where answers enter** — see §5. 🚫 The
+draft does not grow a provenance store until D4 is accepted.
+
 ### 0.4a ⚠️ THE WORDING REFINEMENT IS BINDING — D3's OLD HEADING IS WRONG
 
 🚫 **Never write _"a source that cannot be named is not a source."_** That phrasing makes a claim
@@ -378,12 +386,23 @@ that by stripping it: the answer is the operator's own record of what was said a
 AGE-INV-PROV-1 is about **scores and results**, exactly as the owner worded it — and it is pinned
 in the harder place, with the difference sitting where every scorer could reach it and none does.
 
-✅ **D3 IS ACCEPTED (2026-08-10, §0.4), SO SLICE 3 IS AUTHORIZED** — the draft learns provenance,
-under D3's completeness rule and with the Answer File output byte-identical (D4's constraint on it
-is unaffected: D4 itself is still `Proposed`, so 🚫 the Answer File's `stated`-only parser and its
-hard-coded provenance must not change).
+✅ **D3 IS ACCEPTED (2026-08-10, §0.4) — AND IT AUTHORIZES THE REFUSAL RULE, 🚫 NOT THE TABLED
+SLICE 3.**
 
-🚫 **Slices 4–6 stay unauthorized until D4–D7 are accepted.**
+⚠️ **Read this row's authority column before building it.** The slice tabled at row 3 — _"the draft
+learns provenance"_ — is authorized by **D4**, which decides that the durable home for a confirmed
+answer is the extended draft. 🛑 **D4 is still `Proposed`**, so 🚫 the draft must not grow a
+provenance store, and 🚫 the Answer File's `stated`-only parser and its hard-coded
+`STATED_ANSWER_PROVENANCE` must not change.
+
+✅ **What D3 authorizes on its own is a slice the table did not name: the completeness rule enforced
+at the boundary.** A `confirmed-from-source` `AnswerProvenance` missing any of `sourceId`,
+`locator` or `confirmedBy` is **refused** where answers enter, with a message that names the missing
+component and 🚫 never echoes a client's words, a source's contents or an organization id
+(ADR-0054 D3, ADR-0065 D1). 🚫 It stores nothing, 🚫 changes no score, and 🚫 must leave the pinned
+98/63 vs 12/17 baseline and the Answer File byte-identical. That is the slice to build next.
+
+🚫 **Slices 4–6, and row 3 as tabled, stay unauthorized until D4–D7 are accepted.**
 
 The deployed app service shipped in #281 (§0.2). Everything else network-facing — the **ingest
 endpoint**, login, the session store rows — still sits behind D7 and behind §7 Q4, and 🚫 an ingest
