@@ -9,12 +9,14 @@ import {
   narrowSnapshotRead,
   readBusinessesView as readBusinessesViewIn,
   readDiscoveryDraft as readDiscoveryDraftIn,
+  readOperatorSourceDocument as readOperatorSourceDocumentIn,
   readStoredSnapshot as readStoredSnapshotIn,
   reportContradictions as reportContradictionsIn,
   resolveBusinessScope as resolveBusinessScopeIn,
   submitDiscoveryAnswers as submitDiscoveryAnswersIn,
   writeDiscoveryDraft as writeDiscoveryDraftIn,
   type OperatorWorkspaceRuntime,
+  type ReadOperatorSourceDocumentOptions,
   type StoredSnapshotOutcome,
 } from '@age/operator-workspace';
 import {
@@ -77,7 +79,9 @@ export {
   type StoredSnapshotOutcome,
   type EvidenceOutcome,
   type GenerateBifOutcome,
+  type ReadOperatorSourceDocumentOptions,
   type SaveOutcome,
+  type SourceDocumentOutcome,
   type SubmitOutcome,
 } from '@age/operator-workspace';
 
@@ -119,6 +123,18 @@ export function reportContradictions(clientId: string, changedBy: string) {
 
 export function assessCapabilityReadiness(clientId: string, changedBy: string) {
   return assessCapabilityReadinessIn(CONSOLE_RUNTIME, clientId, changedBy);
+}
+
+/**
+ * One operator-named source document, read (ADR-0066 D4, slice 4).
+ *
+ * 🚫 Nothing is fetched and nothing is decoded — a website URL is ADR-0059
+ * D4.3 and a PDF/DOCX decoder is D4.2, each refused pending its own ADR. The
+ * only capability handed down is `readFileText`; there is no writer on this
+ * path, so 🚫 the answer file cannot be touched from the Sources screen.
+ */
+export function readOperatorSourceDocument(options: ReadOperatorSourceDocumentOptions) {
+  return readOperatorSourceDocumentIn(CONSOLE_RUNTIME, options);
 }
 
 /**

@@ -39,6 +39,16 @@ export {
   type SubmitOutcome,
 } from './operator-workspace';
 
+/**
+ * ⚠️ The TENTH operation, added by **ADR-0066 D4** (slice 4) — 🚫 not a widening
+ * taken without one. See the module note.
+ */
+export {
+  readOperatorSourceDocument,
+  type ReadOperatorSourceDocumentOptions,
+  type SourceDocumentOutcome,
+} from './source-document';
+
 export {
   narrowSnapshotRead,
   readStoredSnapshot,

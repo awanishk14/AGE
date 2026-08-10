@@ -17,12 +17,14 @@
     "clean": "rimraf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
+    "@age/assisted-intake": "workspace:*",
     "@age/bif": "workspace:*",
     "@age/business-discovery-contracts": "workspace:*",
     "@age/capability-kit": "workspace:*",
     "@age/client-registry": "workspace:*",
     "@age/demo-runtime": "workspace:*",
-    "@age/discovery-answer-file": "workspace:*"
+    "@age/discovery-answer-file": "workspace:*",
+    "@age/intake-draft": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^2.1.1"

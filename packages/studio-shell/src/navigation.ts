@@ -135,6 +135,20 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
     question: 'What has the operator told AGE, and what is still unanswered?',
   },
   {
+    id: 'sources',
+    label: 'Sources',
+    route: '/b/:clientId/sources',
+    level: 'subject',
+    screen: 'S14',
+    // ⚠️ `wired` because the screen reads a real document the operator names and
+    // proposes that document's own passages, verbatim. 🚫 It is NOT a claim that
+    // an acceptance survives the request: `@age/intake-draft` persists nothing,
+    // durable draft storage is a separate decision (ADR-0066 §0.5a), and the
+    // screen says so in words rather than implying a save.
+    wiring: 'wired',
+    question: 'What did a document actually say, and who confirmed which sentence answers what?',
+  },
+  {
     id: 'bif',
     label: 'Business Information Framework',
     route: '/b/:clientId/bif',
