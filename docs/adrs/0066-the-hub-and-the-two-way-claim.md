@@ -3,8 +3,9 @@
 Status: **ACCEPTED IN FULL — D1–D7** (D1/D2 2026-08-09, D3 2026-08-10, **D4–D7 2026-08-10** — all
 seven by the Product Owner, 🚫 none self-accepted; see §0.1, §0.3, §0.4 and **§0.5**).
 ⚠️ **D4, D6 and D7 are accepted WITH BINDING CLARIFICATIONS** (§0.5a, §0.5c, §0.5d) — a
-clarification is part of the decision, 🚫 not commentary on it. 🛑 **§7 Q4 remains DEFERRED**, and
-🚫 the durable-storage mechanism for the draft is a **separate decision** (§0.5a).
+clarification is part of the decision, 🚫 not commentary on it. ✅ **§7 Q4 IS ANSWERED
+(2026-08-10, §0.6) — a SECOND OPERATOR**, and 🚫 the durable-storage mechanism for the draft is a
+**separate decision** (§0.5a).
 
 Supersedes: nothing. Depends on: ADR-0053 D3/D5, ADR-0054 D7, ADR-0057 D4 + OX-INV-1,
 ADR-0059 D3/D4.2/D4.3/D5, ADR-0061 §5, ADR-0062 D1–D3.
@@ -417,6 +418,96 @@ the acceptance itself, and 🚫 a later slice finding one of them inconvenient i
 
 ---
 
+## 0.6 The Product Owner answers §7 Q4, verbatim (2026-08-10)
+
+⚠️ **Q4 WAS DEFERRED PENDING A CLIENT MEETING AND IS NOW ANSWERED.** 🚫 It was not self-answered,
+and 🚫 it was not inferred from the plan. The owner's words:
+
+> **A second operator.** The pilot human is another operator on our side, using AGE Studio. There
+> is no business-owner login in this scope.
+>
+> The pilot should prove that AGE can safely support a second human operator working against the
+> same organization, with identity, entitlement and isolation enforced correctly.
+>
+> Keep the existing principle from ADR-0062 D2: the business/client is a subject of the system, not
+> an authorized principal. A client record does not become an identity merely because the business
+> may eventually see AGE.
+>
+> Do not add any preparatory code, routes, models, permissions, UI, or abstractions for
+> business-owner login. If we later decide that a business owner should access AGE directly, that
+> must be a separate ADR and implementation decision.
+>
+> This decision is specifically about who the first real human other than the developer is for the
+> pilot: another operator.
+>
+> Also keep the current V1 boundary intact: read/browse/inspect/understand. Do not interpret
+> "second operator" as authorization for business actions or write capabilities beyond whatever has
+> already been separately accepted.
+
+### 0.6a Why, in the owner's words — and the one line that changes how slice 7 is judged
+
+> It gives AGE a very important real-world test without prematurely turning AGE into a
+> customer-facing SaaS product. The progression becomes:
+> **Developer → Operator 1 → Operator 2 → potentially Business Owner later**, and each step proves
+> something different.
+
+| Stage              | What it proves                                           |
+| ------------------ | -------------------------------------------------------- |
+| **Developer**      | AGE works technically                                    |
+| **Operator 1**     | AGE works operationally                                  |
+| **Operator 2**     | Identity, entitlement and tenant isolation actually work |
+| **Business owner** | A fundamentally different product/security/UX model      |
+
+🛑 **THE LINE THAT MATTERS MOST, VERBATIM:**
+
+> **"Operator 2 is not just another login screen. It is the first real proof that ADR-0055's
+> entitlement problem has actually been solved."**
+
+⚠️ **THIS IS AN ACCEPTANCE CRITERION, 🚫 NOT ENCOURAGEMENT.** A slice 7 that produces a working
+second login while `askEntitlement` still has no real caller has 🚫 **not** done what slice 7 is
+for — it has built the login screen and skipped the proof. ⚠️ Recall what `@age/entitlement` is
+today: it deliberately has **no caller**, and its guards assert that, precisely because a caller
+added casually would silently discharge **ADR-0055 D7**. Slice 7 is where that caller arrives
+**deliberately**, with the chain ADR-0066 D7 requires — `principal → entitlement → scope → allowed
+operation → data` — and 🚫 never `caller → clientId → database`.
+
+### 0.6b What Q4's answer forbids
+
+- 🚫 **NO PREPARATORY CODE FOR A BUSINESS-OWNER LOGIN — of any kind.** The owner enumerates it:
+  routes, models, permissions, UI, abstractions. 🚫 Not a `principalType` union with a second arm
+  "for later", 🚫 not a client-scoped entitlement shape nothing calls, 🚫 not a screen behind a flag.
+- 🚫 **OPTION 3 WAS CONSIDERED AND REJECTED BY THE OWNER**, and his reason is recorded because it
+  will be re-proposed: _"'Business owner is an intended future direction' sounds harmless, but in a
+  project with this much architecture and governance, it creates exactly the kind of gravitational
+  pull you've been trying to avoid: engineers start making today's decisions 'future compatible'
+  with tomorrow's unaccepted product."_ ⚠️ So "future compatible" is 🚫 not a justification here —
+  it is the named failure mode.
+- 🚫 **ADR-0062 D2 IS UNCHANGED AND IS NOT REPEALED BY THIS ANSWER.** A client remains a **subject**
+  of isolation — recorded, 🚫 not authorized. ⚠️ _"A client record does not become an identity
+  merely because the business may eventually see AGE."_
+- 🚫 **"SECOND OPERATOR" IS NOT AUTHORIZATION FOR BUSINESS ACTIONS OR WRITE CAPABILITIES.** The V1
+  boundary — **read / browse / inspect / understand** — stands exactly as it did. ⚠️ A second
+  operator is a second **reader**, and ADR-0057 D4's class 3 refusal is untouched.
+
+### 0.6c What is now unblocked, and what still is not
+
+✅ **UNBLOCKED:** slice 7 may be _designed_, and its shape is settled — a second operator principal,
+entitlement-scoped to the **same organization** (ADR-0062 D1: the tenant is the organization), with
+isolation actually enforced rather than asserted.
+
+🛑 **STILL NOT AUTHORIZED BY THIS ANSWER ALONE.** Q4 removes the _open question_; it 🚫 does not
+remove the fences that stand in front of slice 7 independently of it:
+
+- 🛑 The **session store rows** (ADR-0055 A2's Postgres model + migration + RLS) are a **§3 stop
+  condition** and need their own slice.
+- 🛑 **ADR-0066 D7** still forbids any inbound endpoint accepting tenant-scoped data until
+  `askEntitlement` has a real caller.
+- ⚠️ **RLS is a coherence constraint, 🚫 NOT an authorization boundary** (ADR-0046 D5) — so
+  "Operator 2 only sees their rows because RLS says so" would 🚫 not be the proof §0.6a demands.
+- ⚠️ Slices 4–6 come first, in order.
+
+---
+
 ## 1. The goal, restated in the owner's words and then corrected
 
 The Product Owner's statement: _"we want all disconnected tools to pass info to AGE for getting
@@ -643,9 +734,11 @@ that is runtime state outside the repo and remains unverified here.
 3. **Is a plain-text-only pilot acceptable?** ✅ **ANSWERED — yes, plain text first (§0.2).**
    🚫 ADR-0059 D4.2 is **not** thereby discharged; the decoder still needs its own ADR.
 4. **Does "a real human other than the developer" mean a second operator, or the business owner?**
-   ADR-0062 D2 makes a client a _subject_ of isolation, recorded but not authorized. The answer
-   changes slice 7 entirely. 🛑 **DEFERRED by the owner pending a client meeting** (§0.2) —
-   🚫 deferred is not answered.
+   ✅ **ANSWERED 2026-08-10 (§0.6) — A SECOND OPERATOR.** 🚫 No business-owner login is in scope,
+   and 🚫 no preparatory code, route, model, permission, UI or abstraction for one may be written.
+   ADR-0062 D2 stands unchanged: a client is a _subject_ of isolation, recorded but 🚫 not
+   authorized. 🛑 What slice 7 must prove is **not a login screen** but that ADR-0055's entitlement
+   problem is solved (§0.6a). ⚠️ The V1 read/browse/inspect/understand boundary is untouched.
 5. **Is D2 the right channel for provenance?** ✅ **ANSWERED — accepted 2026-08-09 (§0.3)**, with a
    binding wording correction (§0.3a) and the invariant promoted to **AGE-INV-PROV-1** (§0.3c).
 
@@ -659,6 +752,8 @@ that is runtime state outside the repo and remains unverified here.
    🚫 persistence is a separate decision — §0.5a), **D6** (🚫 unknown source ≠ unavailable identity —
    §0.5c) and **D7** (the boundary is **application acceptance** — §0.5d).
 
-⚠️ **Q1, Q2, Q3, Q5, Q6 and Q7 are answered, and D1–D7 are ACCEPTED. 🛑 Q4 remains DEFERRED** —
-🚫 no slice may assume, prepare for, or half-build a business-owner login, and 🛑 slice 7 is not
-authorized by this ADR.
+✅ **EVERY QUESTION IN §7 IS NOW ANSWERED, AND D1–D7 ARE ACCEPTED. THIS ADR HAS NO OPEN
+QUESTIONS.** 🛑 That is 🚫 not the same as everything being authorized: slices 4–6 run in order,
+and **slice 7 remains gated** on the session store rows (a §3 stop condition), on D7's requirement
+that `askEntitlement` gain a real caller, and on its own slice — 🚫 not on this ADR. ⚠️ And Q4's
+answer still forbids a business-owner login and every preparation for one (§0.6b).
