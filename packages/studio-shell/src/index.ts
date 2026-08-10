@@ -169,6 +169,24 @@ export {
 } from './discovery-workspace';
 
 export {
+  DRAFT_STORAGE_STATE,
+  describeDraftStorage,
+  recordPassageForQuestion,
+  recordPassageInDraft,
+  type DraftStorageState,
+  type RecordPassageForQuestionOptions,
+  type RecordPassageInDraftOptions,
+  type SourceAcceptanceOutcome,
+} from './source-acceptance';
+
+/**
+ * ⚠️ Re-exported so `apps/studio` can name a passage and a document without
+ * depending on `@age/assisted-intake` directly — the acceptance path stays the
+ * one in this package.
+ */
+export type { SourceDocument, SourcePassage } from '@age/assisted-intake';
+
+export {
   presentSystemStatus,
   type CaptureStoreState,
   type IdentityState,

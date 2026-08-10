@@ -92,6 +92,7 @@ describe('STUDIO_AREAS', () => {
       'home',
       'businesses',
       'discovery',
+      'sources',
       'bif',
       'evidence',
       'contradictions',

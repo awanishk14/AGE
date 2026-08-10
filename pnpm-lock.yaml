@@ -698,6 +698,9 @@ importers:
 
   packages/operator-workspace:
     dependencies:
+      '@age/assisted-intake':
+        specifier: workspace:*
+        version: link:../assisted-intake
       '@age/business-discovery-contracts':
         specifier: workspace:*
         version: link:../business-discovery-contracts
@@ -845,6 +848,9 @@ importers:
 
   packages/studio-shell:
     dependencies:
+      '@age/assisted-intake':
+        specifier: workspace:*
+        version: link:../assisted-intake
       '@age/bif':
         specifier: workspace:*
         version: link:../bif
@@ -863,6 +869,9 @@ importers:
       '@age/discovery-answer-file':
         specifier: workspace:*
         version: link:../discovery-answer-file
+      '@age/intake-draft':
+        specifier: workspace:*
+        version: link:../intake-draft
     devDependencies:
       vitest:
         specifier: ^2.1.1
