@@ -1,9 +1,10 @@
 # ADR-0066 — The hub, and what "two-way" may and may not mean
 
-Status: **D1, D2 and D3 Accepted** (D1/D2 2026-08-09, **D3 2026-08-10** — all three by the Product
-Owner, 🚫 none self-accepted; see §0.1, §0.3 and **§0.4**).
-**D4–D7 remain `Proposed`** — a **decision request**, not a self-acceptance; §7 lists what is still
-only the Product Owner's.
+Status: **ACCEPTED IN FULL — D1–D7** (D1/D2 2026-08-09, D3 2026-08-10, **D4–D7 2026-08-10** — all
+seven by the Product Owner, 🚫 none self-accepted; see §0.1, §0.3, §0.4 and **§0.5**).
+⚠️ **D4, D6 and D7 are accepted WITH BINDING CLARIFICATIONS** (§0.5a, §0.5c, §0.5d) — a
+clarification is part of the decision, 🚫 not commentary on it. 🛑 **§7 Q4 remains DEFERRED**, and
+🚫 the durable-storage mechanism for the draft is a **separate decision** (§0.5a).
 
 Supersedes: nothing. Depends on: ADR-0053 D3/D5, ADR-0054 D7, ADR-0057 D4 + OX-INV-1,
 ADR-0059 D3/D4.2/D4.3/D5, ADR-0061 §5, ADR-0062 D1–D3.
@@ -240,6 +241,182 @@ claim.**
 
 ---
 
+## 0.5 The Product Owner's acceptance of D4, D5, D6 and D7, verbatim (2026-08-10)
+
+> _"I agree with the overall direction, but I would not accept all four blindly as written. D5, D6,
+> and D7 are strong architectural fences. D4 is the one I would accept with a clarification, because
+> 'draft becomes durable' is a significant architectural change and we should make sure provenance
+> is attached to the right abstraction."_
+
+**The decision, in the owner's own words:**
+
+> **D4: Accepted with one clarification.**
+>
+> _The Answer File remains stated-only and its parser remains untouched. Source-confirmed provenance
+> belongs to the AGE intake draft/working record produced by the assisted-intake acceptance path._
+>
+> _However, the draft must not become a second canonical source of truth for the business. It is an
+> intake/working artifact from which the explicit acceptance path produces the canonical
+> profile/BIF. The persistence mechanism for making the draft durable is a separate decision and
+> must not be smuggled into D4._
+>
+> **D5: Accepted as written.**
+>
+> _Arrival from a source is evidence that the source supplied a candidate, not evidence that AGE
+> believes the candidate. No source may directly write a BIF, change a business status, or produce a
+> score._
+>
+> **D6: Accepted as written.**
+>
+> _Every inbound source must identify itself. If source identity is unavailable, AGE refuses the
+> inbound fact. AGE must never attribute an unidentified inbound fact to the current operator merely
+> to avoid refusal._
+>
+> **D7: Accepted with one wording clarification.**
+>
+> _No inbound endpoint may process or accept tenant-scoped data until `askEntitlement` has a real
+> caller. The entitlement check must precede application acceptance, persistence, transformation,
+> queuing, or other processing of the tenant-scoped payload. The intent is the authorization
+> boundary, not a literal TCP-level "before the first byte" requirement._
+>
+> _These four decisions are therefore accepted in principle. Do not create exceptions or
+> implementation shortcuts around them. Surface the separate persistence decision when D4 actually
+> requires durable draft storage._
+
+⚠️ And the authorization that followed it, verbatim: **_"let Slice 3 proceed after this"_**.
+
+### 0.5a ⚠️ D4's CLARIFICATION IS BINDING — 🚫 THE DRAFT IS NOT A SECOND SOURCE OF TRUTH
+
+The owner's words:
+
+> _"The draft must not become a second source of truth for the business profile. It should be an
+> intake/working artifact, from which an explicit acceptance path eventually produces the canonical
+> profile/BIF. Otherwise we risk gradually turning `Answer File → Draft → BIF` into
+> `Draft → everything`, and the draft eventually becomes an undocumented shadow database."_
+
+🛑 **THIS FAILURE ARRIVES BY DRIFT, NOT BY DECISION.** No slice will ever propose "make the draft
+canonical". It happens one convenience at a time: a reader that finds the draft closer than the
+Answer File, a screen that renders the draft because it is richer, a capability that takes the draft
+because it is already loaded. Each is locally reasonable, and the sum is a shadow database nobody
+chose.
+
+The distinction the owner drew, which is the model:
+
+|                    | **Answer File**                                | **Draft**                                           |
+| ------------------ | ---------------------------------------------- | --------------------------------------------------- |
+| What it is         | human-authored **input**                       | AGE's **working** intake record                     |
+| What it represents | what the client/operator explicitly **stated** | candidate answers **+ provenance**                  |
+| Provenance         | 🚫 none — the parser stays hard-coded `stated` | produced by the assisted-intake **acceptance path** |
+| Who may write it   | a human, by hand                               | 🚫 **not** by hand — only the acceptance path       |
+| Standing           | stable, byte-identical                         | working artifact, 🚫 **never canonical**            |
+
+⚠️ **WHY PROVENANCE MAY NOT LIVE IN THE ANSWER FILE, RESTATED:** the Answer File is hand-edited, so
+provenance there would be a **claim anyone can type**. In the draft it can only be _produced_ by the
+acceptance path D3 now guards. Provenance must be a record of something that happened, 🚫 never an
+assertion someone wrote down.
+
+🚫 **THE PERSISTENCE MECHANISM IS NOT DECIDED HERE, AND MUST NOT BE SMUGGLED IN.** D4 decides
+**where provenance belongs conceptually**. Durable draft storage — the store, the schema, the
+migration, the RLS — is a **separate decision** that must surface as its own `Proposed` ADR at the
+moment a slice actually needs it. ⚠️ Schema/migration/RLS is independently a §3 stop condition.
+
+### 0.5b D5 — arrival is evidence of arrival, 🚫 not evidence of truth
+
+The owner's framing, which generalises the decision past documents to every future integration:
+
+> _"The source can say: 'I found X.' It cannot say: 'AGE now believes X.'"_
+
+⚠️ It applies **identically** to every source the owner named — RankOps, mcp-ads, a CRM, Google Ads,
+Meta, LinkedIn, Search Console, GA4, Shopify, WooCommerce, a document, an MCP tool, and any future
+API. 🚫 There is no privileged source, and 🚫 no integration earns promotion rights by being
+official, first-party, or well-tested.
+
+> _"This protects the architecture from the temptation to build 'smart integrations' that quietly
+> become autonomous truth-writing systems."_
+
+🚫 **NO SOURCE WRITES A BIF, MOVES A STATUS, OR PRODUCES A SCORE** — a pushed fact enters as an
+answer **candidate an operator confirms**, and nothing else.
+
+### 0.5c ⚠️ D6's CLARIFICATION IS BINDING — TWO EPISTEMIC STATES THAT ARE 🚫 NOT THE SAME
+
+The owner's distinction, and it is the whole decision:
+
+> _"This maintains the distinction between **unknown source** and **known source whose identity is
+> unavailable**. Those are not the same epistemic state. The former is a valid absence of knowledge.
+> The latter is an invalid provenance assertion."_
+
+Given `value = "40%"` with no identifiable source, AGE must **refuse**. 🚫 It must **not** write
+`source = operator:<whoever is authenticated>` — the operator's presence is not the fact's origin,
+and attributing it to them is D3's failure wearing a new costume: inventing a provenance to avoid a
+refusal. 🚫 It must **not** write `source = unknown` **if that value would subsequently make the
+record look legitimate**.
+
+⚠️ This is the same three-valued discipline as ADR-0058 D2's `not-established`: _"we do not know"_ is
+a real, representable state — but it is 🚫 **never** a provenance, and 🚫 never a licence to record
+the fact anyway.
+
+### 0.5d ⚠️ D7's WORDING CLARIFICATION IS BINDING — THE BOUNDARY IS APPLICATION ACCEPTANCE
+
+The owner closed a loophole in the original phrasing:
+
+> _"'Before the first inbound byte' is conceptually useful, but technically an HTTP server obviously
+> receives bytes before application authorization can inspect them. What matters is before the
+> application accepts the payload for processing. That wording will prevent somebody from later
+> arguing: 'Technically the HTTP server received the request before entitlement.' The architectural
+> boundary is application acceptance, not TCP packet arrival."_
+
+**The binding wording:** the entitlement check must precede **application acceptance, persistence,
+transformation, queuing, or any other processing** of a tenant-scoped inbound payload. 🚫 "We only
+buffered it", 🚫 "we only parsed it to route it", 🚫 "we only enqueued it for later" are **not**
+exceptions — each is processing tenant-scoped data before authorization.
+
+⚠️ And the reason it must be `askEntitlement` specifically, in the owner's words: **`caller →
+clientId → database` is not entitlement.** The required chain is:
+
+`principal → entitlement → scope → allowed operation → data`
+
+🚫 An ingest endpoint shipped before `askEntitlement` has a real caller is an **unauthenticated
+write to a client's record** — the most expensive mistake available in this repository.
+
+### 0.5e The inbound pipeline the seven decisions now define
+
+Recorded because the owner drew it, and because each arrow is a decision that must not be skipped:
+
+```
+External source
+      |  "I found something"
+      v
+Source identity        -- D6: named, or refused
+      v
+Entitlement            -- D7: authorization BEFORE application acceptance
+      v
+Candidate evidence     -- D5: a candidate, never truth
+      v
+Operator acceptance
+      |-- stated
+      `-- confirmed-from-source -- D3: sourceId + locator + confirmedBy, or refused
+                    v
+                  Draft         -- D4: the working home for provenance, never canonical
+                    v
+          Canonical profile / BIF
+```
+
+⚠️ **And the chain of principles, in the owner's own table:**
+
+|        | Principle                                                                      |
+| ------ | ------------------------------------------------------------------------------ |
+| **D2** | Provenance doesn't increase truth or score                                     |
+| **D3** | Claimed provenance must be complete                                            |
+| **D4** | Provenance belongs to AGE's intake draft, 🚫 not the hand-authored Answer File |
+| **D5** | Sources propose; they never promote                                            |
+| **D6** | Unnamed inbound sources are refused                                            |
+| **D7** | Entitlement precedes inbound processing                                        |
+
+🚫 **NO EXCEPTIONS AND NO IMPLEMENTATION SHORTCUTS AROUND ANY OF THE FOUR** — the owner said so in
+the acceptance itself, and 🚫 a later slice finding one of them inconvenient is not a reason.
+
+---
+
 ## 1. The goal, restated in the owner's words and then corrected
 
 The Product Owner's statement: _"we want all disconnected tools to pass info to AGE for getting
@@ -332,23 +509,47 @@ entered AGE (§0.4c).
 type may define its own valid `locator` semantics in its own ADR (§0.4a); 🛑 that is a separate
 decision and 🚫 not a weakening of D3.
 
-**D4. The durable home for a confirmed answer is the DRAFT, extended — not the Answer File.** The
-Answer File stays `stated`-only and byte-identical; its parser keeps its hard-coded provenance.
+**D4. The durable home for a confirmed answer is the DRAFT, extended — not the Answer File.**
+✅ **ACCEPTED 2026-08-10 by the Product Owner, WITH A BINDING CLARIFICATION — see §0.5 and §0.5a.**
+The Answer File stays `stated`-only and byte-identical; its parser keeps its hard-coded provenance.
+
+🚫 **THE CLARIFICATION IS PART OF THE DECISION: the draft must not become a second canonical source
+of truth for the business.** It is an intake/**working** artifact from which an explicit acceptance
+path produces the canonical profile/BIF. 🚫 `Draft → everything` is the shadow database this
+decision exists to prevent, and it arrives by drift (§0.5a).
+
+🚫 **THE PERSISTENCE MECHANISM IS NOT DECIDED BY D4 AND MUST NOT BE SMUGGLED INTO IT.** D4 decides
+where provenance belongs **conceptually**. Durable draft storage needs its own `Proposed` ADR at the
+moment a slice actually requires it.
 
 ---
 
 ## 4. What a second source may not do
 
-**D5. Ingest never promotes.** A pushed fact enters as an answer candidate an operator confirms.
+**D5. Ingest never promotes.** ✅ **ACCEPTED AS WRITTEN 2026-08-10 by the Product Owner — see §0.5
+and §0.5b.** ⚠️ The owner's framing carries forward: _arrival is evidence of arrival, not evidence
+of truth_ — a source may say _"I found X"_, 🚫 never _"AGE now believes X"_, and this binds every
+integration equally (🚫 no privileged source).
+A pushed fact enters as an answer candidate an operator confirms.
 🚫 No source writes a BIF, no source moves a status, no source produces a score. ADR-0059's
 "the extractor proposes passages, not answers" generalises to every future source.
 
 **D6. Every inbound surface names its source, and an unknown source is refused** — 🚫 never
-recorded as "unknown" and never attributed to the operator.
+recorded as "unknown" and never attributed to the operator. ✅ **ACCEPTED AS WRITTEN 2026-08-10 by
+the Product Owner — see §0.5 and §0.5c.** ⚠️ The binding distinction: _an unknown source_ (a valid
+absence of knowledge) and _a known source whose identity is unavailable_ (an invalid provenance
+assertion) are 🚫 **not the same epistemic state**.
 
-**D7. `askEntitlement` is called before any inbound surface accepts a byte.** Today it has no
-caller by design. The first inbound network endpoint is the slice that must give it one — 🚫 an
-ingest endpoint shipped before that call is an unauthenticated write to a client's record.
+**D7. `askEntitlement` is called before any inbound surface ACCEPTS A TENANT-SCOPED PAYLOAD FOR
+PROCESSING.** ✅ **ACCEPTED 2026-08-10 by the Product Owner, WITH A BINDING WORDING CLARIFICATION —
+see §0.5 and §0.5d.** ⚠️ **The original "before any inbound surface accepts a byte" is replaced:**
+the boundary is **application acceptance**, 🚫 not TCP packet arrival — the check must precede
+acceptance, persistence, transformation, queuing, or any other processing of the payload. 🚫 "We
+only buffered it" / "only parsed it to route it" / "only enqueued it" are **not** exceptions.
+Today `askEntitlement` has no caller by design. The first inbound network endpoint is the slice that
+must give it one — 🚫 an ingest endpoint shipped before that call is an unauthenticated write to a
+client's record. ⚠️ `caller → clientId → database` is **not** entitlement; the chain is
+`principal → entitlement → scope → allowed operation → data`.
 
 ---
 
@@ -402,7 +603,17 @@ component and 🚫 never echoes a client's words, a source's contents or an orga
 (ADR-0054 D3, ADR-0065 D1). 🚫 It stores nothing, 🚫 changes no score, and 🚫 must leave the pinned
 98/63 vs 12/17 baseline and the Answer File byte-identical. That is the slice to build next.
 
-🚫 **Slices 4–6, and row 3 as tabled, stay unauthorized until D4–D7 are accepted.**
+✅ **D4–D7 ARE ACCEPTED (2026-08-10, §0.5), AND THE OWNER AUTHORIZED SLICE 3 EXPLICITLY:**
+_"let Slice 3 proceed after this"_. Row 3 — _"the draft learns provenance"_ — is therefore **live**,
+under D4 **as clarified**: 🚫 the draft is a working artifact and never a second canonical source of
+truth, and 🚫 the durable-storage mechanism is a separate decision that must not be smuggled into it
+(§0.5a). The Answer File's `stated`-only parser and its hard-coded `STATED_ANSWER_PROVENANCE`
+🚫 still must not change, and the pinned **98/63 vs 12/17** baseline must not move.
+
+⚠️ **Slices 4–6 are authorized in principle by D4–D7 but 🛑 remain SEQUENCED** — each is its own
+slice and its own PR, in order, and 🛑 **slice 7 still waits on §7 Q4**, which is DEFERRED. 🚫 No
+inbound network endpoint may be built in any of them until `askEntitlement` has a real caller (D7,
+§0.5d).
 
 The deployed app service shipped in #281 (§0.2). Everything else network-facing — the **ingest
 endpoint**, login, the session store rows — still sits behind D7 and behind §7 Q4, and 🚫 an ingest
@@ -442,5 +653,12 @@ that is runtime state outside the repo and remains unverified here.
    downgrade it?** ✅ **ANSWERED — accepted as written, 2026-08-10 (§0.4)**, with a binding wording
    refinement (§0.4a) and 🚫 no exception for phone calls, conversations or unpaginated scans.
 
-⚠️ **Q1, Q2, Q3, Q5 and Q6 are answered. Q4 is deferred. D4–D7 are still `Proposed`** — 🚫 slices
-4–6 are not authorized by this ADR's acceptance of D1, D2 and D3.
+7. **Are D4–D7 right — the draft as provenance's home, ingest that never promotes, named-or-refused
+   sources, and entitlement before processing?** ✅ **ANSWERED — all four accepted 2026-08-10
+   (§0.5)**, with binding clarifications on **D4** (🚫 the draft is not a second source of truth, and
+   🚫 persistence is a separate decision — §0.5a), **D6** (🚫 unknown source ≠ unavailable identity —
+   §0.5c) and **D7** (the boundary is **application acceptance** — §0.5d).
+
+⚠️ **Q1, Q2, Q3, Q5, Q6 and Q7 are answered, and D1–D7 are ACCEPTED. 🛑 Q4 remains DEFERRED** —
+🚫 no slice may assume, prepare for, or half-build a business-owner login, and 🛑 slice 7 is not
+authorized by this ADR.
