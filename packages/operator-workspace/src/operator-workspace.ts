@@ -2,6 +2,7 @@ import { join } from 'node:path';
 
 import {
   DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
+  buildProfileAndFieldProvenanceFromAnswers,
   buildProfileFromAnswers,
   produceScoredBifContext,
   type DiscoveryAnswer,
@@ -18,10 +19,12 @@ import {
   presentCapabilityReadiness,
   presentContradictions,
   presentEvidence,
+  presentBifFieldSources,
   presentGeneratedBif,
   type CapabilityReadinessView,
   type ContradictionsView,
   type EvidenceView,
+  type BifSectionSourceView,
   type GeneratedBifView,
   appendClientRecord,
   canSubmit,
@@ -522,6 +525,15 @@ export type GenerateBifOutcome =
   | {
       readonly kind: 'generated';
       readonly view: GeneratedBifView;
+      /**
+       * Where each BIF field's value came from (ADR-0066 D6, slice 5).
+       *
+       * ⚠️ A SECOND VALUE ALONGSIDE THE VIEW, never a property inside it. The
+       * view is what the BIF says; this is how each of those facts entered AGE,
+       * and folding one into the other is how a number eventually starts
+       * depending on an origin (AGE-INV-PROV-1).
+       */
+      readonly fieldSources: readonly BifSectionSourceView[];
       /** Echoed back so the operator can see the scope was DERIVED, not typed. */
       readonly organizationId: string;
     }
@@ -629,10 +641,17 @@ export function generateBifFromAnswerFile(
     // field it has no answer for and infers nothing (ADR-0050 D2). A low score
     // for a first real client is a CORRECT result (ADR-0054 D7) — 🚫 nothing
     // here may reach for a cap, a weight or a predicate to improve it.
-    const profile = buildProfileFromAnswers(answers, STUDIO_QUESTIONNAIRE, {
-      id: `${clientId}-discovery`,
-      capturedAt: instant.toISOString(),
-    });
+    // ⚠️ TWO VALUES, NEVER ONE. The profile is what every scorer sees; the
+    // channel is asked for BY NAME and never reaches them, so identical facts
+    // with different provenance still score byte-identically (AGE-INV-PROV-1).
+    const { profile, fieldProvenance } = buildProfileAndFieldProvenanceFromAnswers(
+      answers,
+      STUDIO_QUESTIONNAIRE,
+      {
+        id: `${clientId}-discovery`,
+        capturedAt: instant.toISOString(),
+      },
+    );
 
     const { context, mappingMetadata, scoringMetadata } = produceScoredBifContext(profile, {
       // The single authoritative source, read off the record.
@@ -642,9 +661,14 @@ export function generateBifFromAnswerFile(
       questionnaire: STUDIO_QUESTIONNAIRE,
     });
 
+    const view = presentGeneratedBif(context, mappingMetadata, scoringMetadata);
+
     return {
       kind: 'generated',
-      view: presentGeneratedBif(context, mappingMetadata, scoringMetadata),
+      view,
+      // 🚫 Read for its field KEYS only — no value, confidence or score crosses
+      // into the origin view, so it cannot restate a number.
+      fieldSources: presentBifFieldSources(view.sections, fieldProvenance),
       organizationId: scope.client.organizationId,
     };
   } catch (error) {

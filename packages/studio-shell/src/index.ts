@@ -112,6 +112,17 @@ export {
   type StoredHistoryFacet,
 } from './bif-view';
 
+// ⚠️ Per-BIF-field origin (ADR-0066 D6, slice 5). 🚫 The two origins of one
+// field are never merged, and an absent one is `not-recorded` — never `stated`.
+export {
+  PRODUCED_FROM_ANSWER_FILE,
+  PROVENANCE_NEVER_CHANGES_A_SCORE,
+  presentBifFieldSources,
+  type BifFieldOriginView,
+  type BifFieldSourceView,
+  type BifSectionSourceView,
+} from './bif-field-source-view';
+
 export {
   dashboardCoverage,
   presentDashboard,

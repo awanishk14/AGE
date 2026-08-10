@@ -128,6 +128,12 @@ export type {
   ProfileFieldProvenanceEntry,
 } from './profile-field-provenance';
 
+// ⚠️ The single source of the BIF field → discovery field link (ADR-0066 D6).
+// 🚫 It carries no value, no score and no provenance — joining a provenance
+// channel through it cannot move a number (AGE-INV-PROV-1).
+export { BIF_FIELD_ORIGINS, discoveryFieldPathForBifField } from './bif-field-origins';
+export type { BifFieldOrigin } from './bif-field-origins';
+
 // Questionnaire validation (pure, deterministic completeness check).
 export {
   questionnaireValidationResultSchema,

@@ -5,10 +5,12 @@ import { describe, expect, it } from 'vitest';
 import {
   assembleEvidence,
   createClientRecord,
+  generateBifFromAnswerFile,
   readBusinessesView,
   readDiscoveryDraft,
   reportContradictions,
   resolveBusinessScope,
+  submitDiscoveryAnswers,
   writeDiscoveryDraft,
   STUDIO_QUESTIONNAIRE,
 } from '../operator-workspace';
@@ -179,5 +181,94 @@ describe('the questionnaire', () => {
     // off the mapper's own routing table.
     expect(STUDIO_QUESTIONNAIRE.id).toBe('age-business-discovery');
     expect(STUDIO_QUESTIONNAIRE.sections.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * ADR-0066 D6, slice 5 — a produced BIF that can say where each field came from.
+ *
+ * 🛑 AGE-INV-PROV-1 is the point of this block: the channel travels BESIDE the
+ * view, so a field's origin can be shown without any number being able to
+ * depend on it.
+ */
+describe('a produced BIF that says where each field came from', () => {
+  const CLIENT = Object.freeze({
+    clientId: 'fictional-client-9',
+    organizationId: 'org-fictional-9',
+    displayName: 'A Fictional Business',
+    externalRefsText: '',
+  });
+
+  function answeredDraft() {
+    const answers: Record<string, string | readonly string[]> = {};
+    for (const section of STUDIO_QUESTIONNAIRE.sections) {
+      for (const question of section.questions) {
+        if (!question.required) continue;
+        if (question.kind === 'list') {
+          answers[question.id] = ['A fictional item'];
+        } else if (question.kind === 'choice') {
+          const [first] = question.choices ?? [];
+          if (first !== undefined) answers[question.id] = first;
+        } else {
+          answers[question.id] = 'A fictional answer.';
+        }
+      }
+    }
+    return {
+      questionnaireId: STUDIO_QUESTIONNAIRE.id,
+      questionnaireVersion: STUDIO_QUESTIONNAIRE.version,
+      answers,
+      skips: {},
+    };
+  }
+
+  function generated() {
+    const runtime = createInMemoryRuntime(CONFIGURED);
+    createClientRecord(runtime, CLIENT);
+    const submitted = submitDiscoveryAnswers(runtime, CLIENT.clientId, answeredDraft());
+    expect(submitted.kind, JSON.stringify(submitted)).toBe('written');
+
+    return generateBifFromAnswerFile(runtime, CLIENT.clientId, 'operator:fictional');
+  }
+
+  it('reports an origin per BIF field, on a channel beside the view', () => {
+    const outcome = generated();
+
+    expect(outcome.kind, JSON.stringify(outcome)).toBe('generated');
+    if (outcome.kind !== 'generated') return;
+
+    // ⚠️ TWO VALUES, NEVER ONE — the origin has no slot inside the BIF view.
+    expect(outcome.fieldSources.length).toBe(outcome.view.sections.length);
+    expect(JSON.stringify(outcome.view)).not.toContain('origins');
+
+    const origins = outcome.fieldSources.flatMap((section) =>
+      section.fields.flatMap((field) => field.origins),
+    );
+    expect(origins.length).toBeGreaterThan(0);
+    // 🚫 The answer file is `stated`-only and its parser is untouched, so every
+    // origin here is `stated` — 🚫 no default put it there, and an absent one
+    // would read `not-recorded`.
+    expect(origins.some((origin) => origin.kind === 'stated')).toBe(true);
+    expect(origins.every((origin) => origin.kind !== 'confirmed-from-source')).toBe(true);
+  });
+
+  /**
+   * 🛑 AGE-INV-PROV-1, at the one place the two could meet. The view is produced
+   * from the profile alone; the channel is asked for by name. Nothing on the
+   * origin side is a number, so no score can come to depend on it.
+   */
+  it('🛑 puts no number on the origin channel', () => {
+    const outcome = generated();
+    if (outcome.kind !== 'generated') return;
+
+    for (const section of outcome.fieldSources) {
+      for (const field of section.fields) {
+        for (const origin of field.origins) {
+          for (const value of Object.values(origin)) {
+            expect(typeof value).not.toBe('number');
+          }
+        }
+      }
+    }
   });
 });

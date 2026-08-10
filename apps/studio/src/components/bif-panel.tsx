@@ -2,7 +2,11 @@
 
 import { useState } from 'react';
 
-import type { GeneratedBifView } from '@age/studio-shell';
+import {
+  PROVENANCE_NEVER_CHANGES_A_SCORE,
+  type BifSectionSourceView,
+  type GeneratedBifView,
+} from '@age/studio-shell';
 
 import { StateChip } from './state-chip';
 
@@ -32,7 +36,16 @@ export interface BifPanelProps {
  * browser bundle.
  */
 export type GenerateBifOutcomeLike =
-  | { readonly kind: 'generated'; readonly view: GeneratedBifView; readonly organizationId: string }
+  | {
+      readonly kind: 'generated';
+      readonly view: GeneratedBifView;
+      /**
+       * ⚠️ A SECOND VALUE, alongside the view — where each field's value came
+       * from, never a property inside the BIF itself (ADR-0066 D2).
+       */
+      readonly fieldSources: readonly BifSectionSourceView[];
+      readonly organizationId: string;
+    }
   | { readonly kind: 'not-configured'; readonly variable: string }
   | { readonly kind: 'no-answer-file' }
   | { readonly kind: 'refused'; readonly reason: string };
@@ -133,12 +146,20 @@ export function BifPanel({ clientId, generate }: BifPanelProps) {
         </section>
       ) : null}
 
-      {outcome?.kind === 'generated' ? <ProducedBif view={outcome.view} /> : null}
+      {outcome?.kind === 'generated' ? (
+        <ProducedBif view={outcome.view} fieldSources={outcome.fieldSources} />
+      ) : null}
     </section>
   );
 }
 
-function ProducedBif({ view }: { readonly view: GeneratedBifView }) {
+function ProducedBif({
+  view,
+  fieldSources,
+}: {
+  readonly view: GeneratedBifView;
+  readonly fieldSources: readonly BifSectionSourceView[];
+}) {
   return (
     <div className="mt-6">
       <div className="flex flex-wrap items-center gap-3">
@@ -184,7 +205,7 @@ function ProducedBif({ view }: { readonly view: GeneratedBifView }) {
                 completeness {section.completenessScore} · confidence {section.confidenceScore}
               </span>
             </div>
-            <ul className="mt-2 space-y-1">
+            <ul className="mt-2 space-y-2">
               {section.fields.map((field) => (
                 <li key={field.key} className="text-sm">
                   {/*
@@ -199,12 +220,23 @@ function ProducedBif({ view }: { readonly view: GeneratedBifView }) {
                   <span className="font-mono text-[0.6875rem] text-[hsl(var(--age-text-muted))]">
                     {field.confidence} · {field.source}
                   </span>
+                  <FieldOrigins
+                    origins={
+                      fieldSources
+                        .find((candidate) => candidate.id === section.id)
+                        ?.fields.find((candidate) => candidate.key === field.key)?.origins ?? []
+                    }
+                  />
                 </li>
               ))}
             </ul>
           </li>
         ))}
       </ul>
+
+      <p className="mt-4 text-xs text-[hsl(var(--age-text-muted))]">
+        {PROVENANCE_NEVER_CHANGES_A_SCORE}
+      </p>
 
       {/*
         ⚠️ Omitted sections are `unknown`, not `not-assessed`: the answers WERE
@@ -248,6 +280,40 @@ function ProducedBif({ view }: { readonly view: GeneratedBifView }) {
     </div>
   );
 }
+
+/**
+ * Where one field's value came from.
+ *
+ * 🚫 EACH ORIGIN IS ITS OWN LINE. Two origins are shown as two — never one
+ * summarised label, never a diff, never "mostly confirmed" (ADR-0066 D5). And
+ * 🚫 no number appears here: an origin records how a fact entered AGE, and the
+ * one sentence permitted about that relationship is the one printed below the
+ * sections.
+ */
+function FieldOrigins({ origins }: { readonly origins: readonly BifOriginLike[] }) {
+  if (origins.length === 0) {
+    return null;
+  }
+
+  return (
+    <ul className="mt-1 space-y-0.5 border-l border-dotted border-[hsl(var(--age-border))] pl-2">
+      {origins.map((origin, index) => (
+        <li
+          key={`${origin.kind}-${index}`}
+          className="text-[0.6875rem] text-[hsl(var(--age-text-muted))]"
+        >
+          <span className="font-mono">{origin.kind}</span>
+          {'questionId' in origin ? (
+            <span className="font-mono"> · {origin.questionId}</span>
+          ) : null}
+          <span> — {origin.detail}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+type BifOriginLike = BifSectionSourceView['fields'][number]['origins'][number];
 
 function Score({ label, value }: { readonly label: string; readonly value: number }) {
   return (
