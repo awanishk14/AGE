@@ -1,7 +1,8 @@
 # ADR-0066 — The hub, and what "two-way" may and may not mean
 
-Status: **D1 and D2 Accepted** (2026-08-09, by the Product Owner — see §0.1 and §0.3).
-**D3–D7 remain `Proposed`** — a **decision request**, not a self-acceptance; §7 lists what is still
+Status: **D1, D2 and D3 Accepted** (D1/D2 2026-08-09, **D3 2026-08-10** — all three by the Product
+Owner, 🚫 none self-accepted; see §0.1, §0.3 and **§0.4**).
+**D4–D7 remain `Proposed`** — a **decision request**, not a self-acceptance; §7 lists what is still
 only the Product Owner's.
 
 Supersedes: nothing. Depends on: ADR-0053 D3/D5, ADR-0054 D7, ADR-0057 D4 + OX-INV-1,
@@ -150,6 +151,95 @@ demonstrated workload that requires it.
 
 ---
 
+## 0.4 The Product Owner's acceptance of D3, verbatim (2026-08-10)
+
+> _I accept D3 as written._
+>
+> _A confirmed-from-source answer must contain all three provenance components: sourceId, locator,
+> and confirmedBy. If any is missing, AGE must refuse the answer._
+>
+> _Do not downgrade it to stated, because that changes the historical meaning of how the fact
+> entered AGE. Do not invent or infer missing provenance._
+>
+> _I agree that we should not create an exception now. If a future source type genuinely has a
+> different notion of location — such as an interview transcript timestamp or a scanned document
+> without conventional page numbers — that source type can define its own valid locator semantics
+> through a separate decision._
+>
+> _One wording refinement for the ADR: the principle is not that the underlying source "is not a
+> source"; it is that AGE cannot accept a source-confirmed answer when its provenance is
+> incomplete._
+>
+> _D3 is therefore accepted in principle. Proceed with the slice 3 implementation under this rule._
+
+— the Product Owner, 2026-08-10.
+
+**This accepts D3 and nothing else.** ⚠️ 🚫 It does not accept D4–D7, and 🚫 it does not answer §7
+Q4 (still deferred). 🚫 Slices 4–6 remain unauthorized.
+
+⚠️ **ONE SCOPE CORRECTION THE ARCHITECT OWES, AGAINST HIS OWN EARLIER FRAMING.** The owner's closing
+line — _"proceed with the slice 3 implementation under this rule"_ — accepts **the rule**, and the
+rule is D3's. But the slice tabled at §5 row 3 (_"the draft learns provenance"_) is authorized by
+**D4**, not D3, and 🛑 **D4 is still `Proposed`**. The architect had told the owner that accepting
+D3 unblocked slice 3; that was **wrong**, and it is corrected here rather than built on. ✅ What D3
+authorizes by itself is the **completeness rule enforced where answers enter** — see §5. 🚫 The
+draft does not grow a provenance store until D4 is accepted.
+
+### 0.4a ⚠️ THE WORDING REFINEMENT IS BINDING — D3's OLD HEADING IS WRONG
+
+🚫 **Never write _"a source that cannot be named is not a source."_** That phrasing makes a claim
+about **the world** — that the document, the phone call, the scan does not exist. AGE is in no
+position to say that, and saying it would make the rule read as a judgement about legitimacy rather
+than about representability. ✅ **The correct principle, and the only one to state, is:**
+
+> **A source-confirmed answer is valid only when its provenance is complete enough to identify the
+> source, locate the originating material, and identify the confirmer.**
+
+⚠️ The distinction matters for how this evolves. The failure is **AGE's inability to represent the
+provenance completely**, 🚫 not the source's non-existence. A future source type may therefore
+define **its own valid `locator` semantics** — `transcript:00:14:32` for an interview,
+`image:page-7` for a scan — and still satisfy D3 in full. 🛑 That is a **separate decision**, in its
+own ADR; 🚫 it is not an exception to D3 and 🚫 no slice may invent a locator format from these
+lines. **Every source type must define what "locatable" means for it** before it is accepted.
+
+### 0.4b The three fields answer three different audit questions
+
+In the owner's words — 🚫 losing any one is not a partial record, it is a **materially different**
+claim:
+
+| Field         | The question it answers              | What its absence destroys                                          |
+| ------------- | ------------------------------------ | ------------------------------------------------------------------ |
+| `sourceId`    | **Which** source?                    | _"page 4"_ of **what**? The locator points nowhere.                |
+| `locator`     | **Where** in that source?            | AGE cannot take the operator back to the originating statement.    |
+| `confirmedBy` | **Who** established this provenance? | No one is accountable for the judgement that the source says this. |
+
+### 0.4c 🚫 THE DOWNGRADE IS THE THING BEING REFUSED
+
+⚠️ **This is the most important part of D3**, in the owner's framing. These two are **not**
+equivalent and must never be silently exchanged:
+
+- `stated` — _"Client told AGE X."_
+- `confirmed-from-source` — _"Operator found X in source Y at location Z."_
+
+🚫 **If the second becomes the first because metadata is missing, AGE has changed the history of how
+the fact entered the system** — and nothing downstream can detect it. That is strictly worse than
+refusing. The refusal AGE owes the operator is: _"You told me this is a source-confirmed fact, but
+you haven't supplied enough information for me to record that claim honestly."_
+
+### 0.4d D2 + D3 together — the epistemic discipline, in the owner's words
+
+- **D2:** provenance must **not** affect truth or scoring.
+- **D3:** provenance must be **complete** if AGE claims it exists.
+
+> _AGE neither trusts a source merely because it exists, nor pretends provenance exists when it
+> cannot prove it._
+
+⚠️ The generalisation the owner drew, and the sentence to carry forward: **if AGE claims a fact has
+a particular provenance, AGE must be able to prove that provenance — otherwise it must refuse the
+claim.**
+
+---
+
 ## 1. The goal, restated in the owner's words and then corrected
 
 The Product Owner's statement: _"we want all disconnected tools to pass info to AGE for getting
@@ -227,10 +317,20 @@ evidence of truth and not a scoring input._** It must not influence scoring, BIF
 confidence, **or any other semantic result**. 🚫 The rule is **not** "a document can never raise a
 score" — see §0.3a for why that phrasing is wrong and what to say instead.
 
-**D3. A source that cannot be named is not a source.** An answer whose provenance is
-`confirmed-from-source` must carry its `sourceId`, `locator` and `confirmedBy`, or it is refused —
-🚫 never defaulted to `stated`. Losing provenance silently is worse than refusing the answer,
-because it launders a document's words into "what the business said".
+**D3. A source-confirmed answer is valid only when its provenance is complete.** ✅ **ACCEPTED
+2026-08-10 by the Product Owner — see §0.4, and ⚠️ §0.4a for the binding wording refinement that
+replaced this decision's original heading.**
+
+An answer whose provenance is `confirmed-from-source` must carry its `sourceId`, `locator` **and**
+`confirmedBy` — complete enough to identify the source, locate the originating material, and
+identify the confirmer — or it is **refused**. 🚫 Never defaulted to `stated`, 🚫 never invented,
+🚫 never inferred. Losing provenance silently is worse than refusing the answer, because it launders
+a document's words into "what the business said" and 🚫 changes the recorded history of how the fact
+entered AGE (§0.4c).
+
+🚫 **No exception is created for phone calls, conversations or unpaginated scans.** A future source
+type may define its own valid `locator` semantics in its own ADR (§0.4a); 🛑 that is a separate
+decision and 🚫 not a weakening of D3.
 
 **D4. The durable home for a confirmed answer is the DRAFT, extended — not the Answer File.** The
 Answer File stays `stated`-only and byte-identical; its parser keeps its hard-coded provenance.
@@ -286,7 +386,23 @@ that by stripping it: the answer is the operator's own record of what was said a
 AGE-INV-PROV-1 is about **scores and results**, exactly as the owner worded it — and it is pinned
 in the harder place, with the difference sitting where every scorer could reach it and none does.
 
-🚫 Slices 3–6 stay unauthorized until D3–D7 are accepted.
+✅ **D3 IS ACCEPTED (2026-08-10, §0.4) — AND IT AUTHORIZES THE REFUSAL RULE, 🚫 NOT THE TABLED
+SLICE 3.**
+
+⚠️ **Read this row's authority column before building it.** The slice tabled at row 3 — _"the draft
+learns provenance"_ — is authorized by **D4**, which decides that the durable home for a confirmed
+answer is the extended draft. 🛑 **D4 is still `Proposed`**, so 🚫 the draft must not grow a
+provenance store, and 🚫 the Answer File's `stated`-only parser and its hard-coded
+`STATED_ANSWER_PROVENANCE` must not change.
+
+✅ **What D3 authorizes on its own is a slice the table did not name: the completeness rule enforced
+at the boundary.** A `confirmed-from-source` `AnswerProvenance` missing any of `sourceId`,
+`locator` or `confirmedBy` is **refused** where answers enter, with a message that names the missing
+component and 🚫 never echoes a client's words, a source's contents or an organization id
+(ADR-0054 D3, ADR-0065 D1). 🚫 It stores nothing, 🚫 changes no score, and 🚫 must leave the pinned
+98/63 vs 12/17 baseline and the Answer File byte-identical. That is the slice to build next.
+
+🚫 **Slices 4–6, and row 3 as tabled, stay unauthorized until D4–D7 are accepted.**
 
 The deployed app service shipped in #281 (§0.2). Everything else network-facing — the **ingest
 endpoint**, login, the session store rows — still sits behind D7 and behind §7 Q4, and 🚫 an ingest
@@ -322,5 +438,9 @@ that is runtime state outside the repo and remains unverified here.
 5. **Is D2 the right channel for provenance?** ✅ **ANSWERED — accepted 2026-08-09 (§0.3)**, with a
    binding wording correction (§0.3a) and the invariant promoted to **AGE-INV-PROV-1** (§0.3c).
 
-⚠️ **Q1, Q2, Q3 and Q5 are answered. Q4 is deferred. D3–D7 are still `Proposed`** — 🚫 slices 3–6
-are not authorized by this ADR's acceptance of D2.
+6. **Is D3's refusal rule right — refuse an incomplete `confirmed-from-source` answer, rather than
+   downgrade it?** ✅ **ANSWERED — accepted as written, 2026-08-10 (§0.4)**, with a binding wording
+   refinement (§0.4a) and 🚫 no exception for phone calls, conversations or unpaginated scans.
+
+⚠️ **Q1, Q2, Q3, Q5 and Q6 are answered. Q4 is deferred. D4–D7 are still `Proposed`** — 🚫 slices
+4–6 are not authorized by this ADR's acceptance of D1, D2 and D3.
