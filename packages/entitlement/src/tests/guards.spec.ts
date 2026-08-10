@@ -184,7 +184,7 @@ describe('the entitlement question exists in exactly one place', () => {
  * ⚠️ The package-import scan is kept and narrowed to an ALLOW-LIST of one, so a
  * second importer is still a failure rather than a silently widened rule.
  */
-describe('askEntitlement has no caller', () => {
+describe('askEntitlement has exactly one caller', () => {
   const OUTSIDE = REPO_FILES.filter((file) => !file.startsWith(join(SRC, '..')));
 
   // ⚠️ WIDENED BY ONE IN THE A2 SESSION-STORE SLICE, AND 🚫 STILL AN ALLOW-LIST.
@@ -201,24 +201,36 @@ describe('askEntitlement has no caller', () => {
   // `@age/audit-trail` scopes an audit QUESTION to the organization the session
   // speaks for — an audit read is a read — so it needs the same session type.
   // 🚫 Never the decision: its own guard asserts it contains no `askEntitlement`.
+  // 🛑 WIDENED BY ONE AGAIN IN SLICE 7, AND THIS TIME FOR THE DECISION ITSELF —
+  // ADR-0068 §0.1b, which lowers exactly three things and names this as one:
+  // *`askEntitlement`'s first real caller, on a READ path*. `@age/entitled-read`
+  // is that caller. 🚫 The allow-list is still an allow-list: a second caller is
+  // a failure, and the test below pins the count at one rather than deleting the
+  // rule that used to pin it at zero.
   const AUTHORIZED_IMPORTERS = [
     'tenant-workspace',
     'session-store',
     'tenant-isolation',
     'audit-trail',
+    'entitled-read',
   ];
+
+  /** ⚠️ The ONE authorized caller, by path. 🚫 Not a prefix, not a glob. */
+  const THE_CALLER = join('packages', 'entitled-read', 'src', 'entitled-organization-read.ts');
 
   it('found files outside this package to scan', () => {
     expect(OUTSIDE.length).toBeGreaterThan(50);
     expect(OUTSIDE.length).toBeLessThan(REPO_FILES.length);
   });
 
-  it('the decision itself is called by nothing', () => {
-    // 🛑 THE LOAD-BEARING ONE. Importing the session type places a file; calling
-    // this decides who may read it, and nothing is authorized to do that yet.
+  it('the decision has exactly ONE caller, and it is the one ADR-0068 authorizes', () => {
+    // 🛑 THE LOAD-BEARING ONE, AND ⚠️ **DELIBERATELY CHANGED IN SLICE 7, 🚫 NOT
+    // DELETED.** It used to assert zero callers, citing ADR-0058 D8 and the
+    // undischarged ADR-0055 D7. ADR-0068 §0.1b authorized the first real caller
+    // on a READ path by name, so the rule becomes ONE — which is still a rule a
+    // second caller breaks. 🚫 What is still not authorized: a middleware, a
+    // route guard, a write path, or any second copy of the decision.
     // ⚠️ The scan is for the CALL — `askEntitlement(` — not for the bare name.
-    // The authorized package's own guard asserts that it never reaches for this
-    // decision, and naming the thing it refuses is how it does that.
     let examined = 0;
     const callers: string[] = [];
     for (const file of OUTSIDE) {
@@ -228,7 +240,17 @@ describe('askEntitlement has no caller', () => {
       }
     }
     expect(examined).toBe(OUTSIDE.length);
-    expect(callers).toEqual([]);
+
+    // ⚠️ Every mention lives in the authorized package — including its own
+    // guard, which names the call in order to pin where it happens.
+    for (const caller of callers) {
+      expect(caller.includes(join('packages', 'entitled-read')), caller).toBe(true);
+    }
+
+    // 🛑 And exactly ONE of them is shipped source. A second is the failure.
+    const shipped = callers.filter((file) => !file.endsWith('.spec.ts'));
+    expect(shipped).toHaveLength(1);
+    expect(shipped[0]?.endsWith(THE_CALLER)).toBe(true);
   });
 
   it('is imported by exactly the packages ADR-0061 A2 and A4 authorize', () => {
