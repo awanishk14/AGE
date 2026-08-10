@@ -21,6 +21,7 @@ import {
   PROFILE_SIGNAL_TO_FIELD_PATH,
   type EvidenceableFieldPath,
 } from './field-provenance';
+import { discoveryFieldPathForBifField } from './bif-field-origins';
 import type { EvidenceSourceRef } from './evidence-source-ref';
 import type { DiscoverySectionId } from './enums';
 
@@ -288,13 +289,27 @@ function candidateValues(
   sectionType: SectionType,
   profile: BusinessDiscoveryProfile,
 ): readonly MappedValue[] {
+  // ⚠️ The key → discovery field link is read from `BIF_FIELD_ORIGINS`, never
+  // repeated here: a surface showing a BIF field's origin and this mapper
+  // deciding whose evidence applies must give the same answer (ADR-0066 D6).
+  const originOf = (key: string): EvidenceableFieldPath | undefined =>
+    discoveryFieldPathForBifField(sectionType, key);
+
   switch (sectionType) {
     case SectionType.OrganizationIdentity:
       return [
-        { key: 'legalName', value: profile.businessName, fieldPath: 'businessName' },
-        { key: 'industry', value: profile.industry, fieldPath: 'industry' },
-        { key: 'businessModel', value: profile.businessModel, fieldPath: 'businessModel' },
-        { key: 'operatingCountries', value: profile.geographies, fieldPath: 'geographies' },
+        { key: 'legalName', value: profile.businessName, fieldPath: originOf('legalName') },
+        { key: 'industry', value: profile.industry, fieldPath: originOf('industry') },
+        {
+          key: 'businessModel',
+          value: profile.businessModel,
+          fieldPath: originOf('businessModel'),
+        },
+        {
+          key: 'operatingCountries',
+          value: profile.geographies,
+          fieldPath: originOf('operatingCountries'),
+        },
       ];
     case SectionType.VisionStrategy:
       // Only long-horizon goals have an exact BIF key. Short/medium goals are
@@ -303,21 +318,29 @@ function candidateValues(
         {
           key: 'longTermGoals',
           value: profile.goals.filter((goal) => goal.horizon === 'long').map((g) => g.statement),
-          fieldPath: 'goals',
+          fieldPath: originOf('longTermGoals'),
         },
       ];
     case SectionType.ProductsServices:
-      return [{ key: 'products', value: profile.offerings, fieldPath: 'offerings' }];
+      return [{ key: 'products', value: profile.offerings, fieldPath: originOf('products') }];
     case SectionType.IcpPersonas:
-      return [{ key: 'idealCustomerProfiles', value: profile.segments, fieldPath: 'segments' }];
+      return [
+        {
+          key: 'idealCustomerProfiles',
+          value: profile.segments,
+          fieldPath: originOf('idealCustomerProfiles'),
+        },
+      ];
     case SectionType.MarketCompetition:
-      return [{ key: 'competitors', value: profile.competitors, fieldPath: 'competitors' }];
+      return [
+        { key: 'competitors', value: profile.competitors, fieldPath: originOf('competitors') },
+      ];
     case SectionType.BrandSystem:
       return [
         {
           key: 'positioningStatement',
           value: profile.brandPositioning,
-          fieldPath: 'brandPositioning',
+          fieldPath: originOf('positioningStatement'),
         },
       ];
     case SectionType.GtmSystem:
@@ -325,7 +348,7 @@ function candidateValues(
         {
           key: 'acquisitionChannels',
           value: profile.marketingChannels,
-          fieldPath: 'marketingChannels',
+          fieldPath: originOf('acquisitionChannels'),
         },
       ];
     default:

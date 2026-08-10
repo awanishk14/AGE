@@ -47,6 +47,41 @@ const generatedView = {
   omittedSectionCount: 1,
 };
 
+/**
+ * ⚠️ The provenance channel, joined per field — a SECOND value beside the view.
+ * 🚫 `industry` deliberately has no entry: an unanswered field is `not-recorded`,
+ * never `stated` (ADR-0066 §0.4c).
+ */
+const fieldSources = [
+  {
+    id: 'section-identity',
+    name: 'Business Identity',
+    fields: [
+      {
+        key: 'legalName',
+        fieldPath: 'businessName',
+        origins: [
+          {
+            kind: 'stated' as const,
+            questionId: 'bi-name',
+            detail: 'Stated by a person in the intake.',
+          },
+          {
+            kind: 'confirmed-from-source' as const,
+            questionId: 'bi-name-check',
+            sourceId: 'src-fictional-brief',
+            locator: 'Fictional brief (line 3)',
+            confirmedBy: 'operator:fictional',
+            detail:
+              'Proposed from source "src-fictional-brief" at Fictional brief (line 3), and ' +
+              'accepted by operator:fictional.',
+          },
+        ],
+      },
+    ],
+  },
+];
+
 function renderPanel(outcome: GenerateBifOutcomeLike) {
   const generate = vi.fn(
     async (_clientId: string, _changedBy: string): Promise<GenerateBifOutcomeLike> => outcome,
@@ -72,7 +107,12 @@ describe('BifPanel', () => {
     // 🚫 THE ONE THAT MATTERS. A recompute-on-open is class 3 under ADR-0057 D4
     // even though its effect is entirely internal — it is the case that gets
     // argued away, so it is asserted directly.
-    const generate = renderPanel({ kind: 'generated', view: generatedView, organizationId: 'org' });
+    const generate = renderPanel({
+      kind: 'generated',
+      view: generatedView,
+      fieldSources,
+      organizationId: 'org',
+    });
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Generate BIF' })).toBeTruthy();
@@ -89,7 +129,12 @@ describe('BifPanel', () => {
   it('refuses to run without a principal, and never invents one', async () => {
     // 🚫 ADR-0053 D4: an OperatorPrincipal is never defaulted, generated or
     // inferred. A disabled button is the honest consequence.
-    const generate = renderPanel({ kind: 'generated', view: generatedView, organizationId: 'org' });
+    const generate = renderPanel({
+      kind: 'generated',
+      view: generatedView,
+      fieldSources,
+      organizationId: 'org',
+    });
     const button = screen.getByRole('button', { name: 'Generate BIF' }) as HTMLButtonElement;
 
     expect(button.disabled).toBe(true);
@@ -100,7 +145,12 @@ describe('BifPanel', () => {
   });
 
   it('passes the typed principal through untouched', async () => {
-    const generate = renderPanel({ kind: 'generated', view: generatedView, organizationId: 'org' });
+    const generate = renderPanel({
+      kind: 'generated',
+      view: generatedView,
+      fieldSources,
+      organizationId: 'org',
+    });
 
     press();
 
@@ -111,7 +161,7 @@ describe('BifPanel', () => {
   it('shows the four scores as four, and invents no headline number', async () => {
     // ⚠️ Intake completeness and BIF completeness measure different things.
     // 🚫 Averaging them would hide exactly the gap between them.
-    renderPanel({ kind: 'generated', view: generatedView, organizationId: 'org' });
+    renderPanel({ kind: 'generated', view: generatedView, fieldSources, organizationId: 'org' });
 
     press();
 
@@ -125,7 +175,7 @@ describe('BifPanel', () => {
   it('never claims the produced BIF was saved', async () => {
     // 🚫 Nothing is persisted and nothing here can persist. A screen implying
     // otherwise would have the operator believe AGE holds a record it does not.
-    renderPanel({ kind: 'generated', view: generatedView, organizationId: 'org' });
+    renderPanel({ kind: 'generated', view: generatedView, fieldSources, organizationId: 'org' });
 
     press();
 
@@ -137,7 +187,7 @@ describe('BifPanel', () => {
   it('shows an omitted section as a limit of capture, not as a finding', async () => {
     // 🚫 ADR-0026 D4: a missing section is a limitation, never negative
     // evidence about the business.
-    renderPanel({ kind: 'generated', view: generatedView, organizationId: 'org' });
+    renderPanel({ kind: 'generated', view: generatedView, fieldSources, organizationId: 'org' });
 
     press();
 
@@ -162,5 +212,30 @@ describe('BifPanel', () => {
 
     await waitFor(() => expect(screen.getByText('Refused')).toBeTruthy());
     expect(screen.getByText('The answer file could not be parsed.')).toBeTruthy();
+  });
+
+  it('shows each origin of a field separately, and never merges the two labels', async () => {
+    // 🚫 THE RULE SLICE 5 IS MOST TEMPTED TO BREAK (ADR-0066 D5). Two origins
+    // are two lines, each naming its own source — never one summarised label.
+    renderPanel({ kind: 'generated', view: generatedView, fieldSources, organizationId: 'org' });
+    press();
+
+    await waitFor(() => expect(screen.getByText(/Stated by a person in the intake/)).toBeDefined());
+    expect(screen.getByText(/accepted by operator:fictional/)).toBeDefined();
+    expect(screen.getByText(/bi-name-check/)).toBeDefined();
+    // 🚫 No summarising word stands in for the two.
+    expect(document.body.textContent).not.toMatch(/mostly confirmed/i);
+  });
+
+  it('says the one permitted sentence about provenance and scoring', async () => {
+    renderPanel({ kind: 'generated', view: generatedView, fieldSources, organizationId: 'org' });
+    press();
+
+    await waitFor(() =>
+      expect(screen.getByText(/Provenance alone never changes a score/)).toBeDefined(),
+    );
+    // 🚫 Both refused BY NAME (ADR-0066 §0.3).
+    expect(document.body.textContent).not.toMatch(/can never raise a score/i);
+    expect(document.body.textContent).not.toMatch(/is not a source/i);
   });
 });
