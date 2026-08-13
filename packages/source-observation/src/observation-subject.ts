@@ -96,3 +96,23 @@ export function isSameModelledSubject(
     subjectLabelKey(left.label) === subjectLabelKey(right.label)
   );
 }
+
+/**
+ * Anything that carries an observation's subject, and nothing more.
+ *
+ * ⚠️ **WHY THIS EXISTS AT ALL.** Admissibility and association read exactly one
+ * field — the subject — yet both were typed against `SourceObservationEnvelope`,
+ * which is the INBOUND shape. A `StoredSourceObservation` is deliberately not an
+ * envelope (the envelope carries `provenance.organizationScope`, the scope the
+ * SOURCE asserted, and the row does not store it), so asking the same question
+ * of a row that AGE has already recorded meant rebuilding an envelope around it.
+ *
+ * 🚫 **AND REBUILDING ONE WOULD MEAN INVENTING THAT FIELD BACK** — a fabricated
+ * provenance, which is the one thing the store exists to prevent. Widening the
+ * parameter to what the functions actually read lets a row be asked the same
+ * question by the same code, with nothing invented and no second implementation
+ * of the rule.
+ */
+export interface SubjectBearingObservation {
+  readonly subject: ObservationSubject;
+}

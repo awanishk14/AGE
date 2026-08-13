@@ -24,6 +24,7 @@ export type {
   ModelledSubject,
   ObservationSubject,
   ObservationSubjectKind,
+  SubjectBearingObservation,
 } from './observation-subject';
 export {
   OBSERVATION_SUBJECT_KINDS,

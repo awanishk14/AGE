@@ -29,4 +29,5 @@ export {
   NOT_A_MEASUREMENT,
   TWO_PRODUCERS_REQUIRED,
   deriveIntelligence,
+  deriveIntelligenceFromStoredObservations,
 } from './derivation';

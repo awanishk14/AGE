@@ -1,6 +1,6 @@
 import {
   type ObservationSubjectKind,
-  type SourceObservationEnvelope,
+  type SubjectBearingObservation,
   assessAdmissibility,
 } from '@age/source-observation';
 
@@ -101,7 +101,12 @@ const association = (outcome: AssociationOutcome): Association =>
  */
 export function associateObservation(
   derivation: Readonly<ModelledSubjectDerivation>,
-  envelope: Readonly<SourceObservationEnvelope>,
+  // ⚠️ WIDENED TO WHAT IS ACTUALLY READ — the subject, and nothing else. A row
+  // AGE has already stored can then be asked this same question by this same
+  // code. 🚫 The alternative was rebuilding an envelope around the row, which
+  // would mean inventing back the `organizationScope` the SOURCE asserted and
+  // the row deliberately does not keep — a fabricated provenance.
+  envelope: Readonly<SubjectBearingObservation>,
 ): Association {
   const admissibility = assessAdmissibility(envelope, derivation.subjects);
 
@@ -144,7 +149,7 @@ export function associateObservation(
  */
 export function associateObservations(
   derivation: Readonly<ModelledSubjectDerivation>,
-  envelopes: readonly Readonly<SourceObservationEnvelope>[],
+  envelopes: readonly Readonly<SubjectBearingObservation>[],
 ): readonly Association[] {
   return envelopes.map((envelope) => associateObservation(derivation, envelope));
 }
