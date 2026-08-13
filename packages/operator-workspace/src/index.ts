@@ -69,3 +69,13 @@ export {
   type OpenObservationRead,
   type RelayedObservationsOutcome,
 } from './relayed-observations';
+
+/**
+ * ⚠️ The TWELFTH operation, added by **ADR-0069** — reading what AGE CONCLUDES.
+ *
+ * 🛑 The only one that reads TWO stores, and 🛑 the only one whose empty answer
+ * has to be told apart from its never-ran answer: no stored context means the
+ * derivation NEVER RAN, and that is its own outcome. 🚫 It concludes nothing
+ * itself and 🚫 persists nothing.
+ */
+export { readDerivedIntelligence, type DerivedIntelligenceOutcome } from './derived-intelligence';

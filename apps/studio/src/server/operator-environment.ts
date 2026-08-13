@@ -12,6 +12,7 @@ import {
   narrowObservationRead,
   narrowSnapshotRead,
   readBusinessesView as readBusinessesViewIn,
+  readDerivedIntelligence as readDerivedIntelligenceIn,
   readDiscoveryDraft as readDiscoveryDraftIn,
   readRelayedObservations as readRelayedObservationsIn,
   readOperatorSourceDocument as readOperatorSourceDocumentIn,
@@ -20,6 +21,7 @@ import {
   resolveBusinessScope as resolveBusinessScopeIn,
   submitDiscoveryAnswers as submitDiscoveryAnswersIn,
   writeDiscoveryDraft as writeDiscoveryDraftIn,
+  type DerivedIntelligenceOutcome,
   type OperatorWorkspaceRuntime,
   type ReadOperatorSourceDocumentOptions,
   type RelayedObservationsOutcome,
@@ -79,6 +81,7 @@ export {
   type BusinessScope,
   type CapabilityReadinessOutcome,
   type ContradictionsOutcome,
+  type DerivedIntelligenceOutcome,
   type CreateClientOutcome,
   type DiscoveryWorkspaceOutcome,
   type DraftOutcome,
@@ -232,5 +235,36 @@ export function readRelayedObservations(clientId: string): Promise<RelayedObserv
     CONSOLE_RUNTIME,
     () => narrowObservationRead(openLocalPrismaObservationReadConnection()),
     clientId,
+  );
+}
+
+/**
+ * What AGE CONCLUDES, read back (ADR-0069 deliverable 6c-2).
+ *
+ * 🛑 **THE ONLY OPERATION THAT OPENS TWO CONNECTIONS**, and both are thunks, so
+ * the ORDER is enforced by the orchestration rather than promised here: an
+ * unknown business opens neither, and a business AGE holds no context for opens
+ * only the first. ⚠️ The second thunk is not called at all when there is no
+ * stored context — "AGE never ran the derivation" must not cost a read of the
+ * observation store, because a screen that reached it would be one refactor
+ * away from rendering "nothing concluded" over a business AGE cannot model.
+ *
+ * 🚫 BOTH FAÇADES ARE THE NARROWED ONES. Neither carries an append, and this is
+ * the read path — 🛑 relaying an observation is a separate act on a separate
+ * path (ADR-0069 D3), and it does not become reachable by being adjacent.
+ *
+ * 🚫 NOTHING IS PERSISTED (D2): the projection is recomputed on every request,
+ * and 🚫 no screen may seed a row to make it look populated (ADR-0064 D2).
+ */
+export function readDerivedIntelligence(
+  clientId: string,
+  bifId: string,
+): Promise<DerivedIntelligenceOutcome> {
+  return readDerivedIntelligenceIn(
+    CONSOLE_RUNTIME,
+    () => narrowSnapshotRead(openLocalPrismaSnapshotReadConnection()),
+    () => narrowObservationRead(openLocalPrismaObservationReadConnection()),
+    clientId,
+    bifId,
   );
 }
