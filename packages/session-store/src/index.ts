@@ -30,6 +30,16 @@ export {
 
 export { normalizeSessionRecord } from './session-row';
 
+/**
+ * 🛑 **VERIFICATION IS NOT ISSUANCE** (ADR-0068 §0.1b). The lookup is injected,
+ * so this package still opens no database and still mints nothing.
+ */
+export {
+  verifyPresentedSessionToken,
+  type PresentedTokenVerification,
+  type SessionVerification,
+} from './session-verification';
+
 export {
   MAXIMUM_SESSION_LIFETIME_SECONDS,
   MINIMUM_SESSION_LIFETIME_SECONDS,
