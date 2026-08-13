@@ -20,6 +20,7 @@
   "dependencies": {
     "@age/assisted-intake": "workspace:*",
     "@age/operator-workspace": "workspace:*",
+    "@age/source-observation": "workspace:*",
     "@age/studio-shell": "workspace:*"
   },
   "devDependencies": {

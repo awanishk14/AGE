@@ -185,6 +185,9 @@ importers:
       '@age/operator-workspace':
         specifier: workspace:*
         version: link:../../packages/operator-workspace
+      '@age/source-observation':
+        specifier: workspace:*
+        version: link:../../packages/source-observation
       '@age/studio-shell':
         specifier: workspace:*
         version: link:../../packages/studio-shell
