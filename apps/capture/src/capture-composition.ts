@@ -1,4 +1,9 @@
 import { PrismaClient } from '@prisma/client';
+import type { StoredSourceObservation } from '@age/source-observation';
+import {
+  PrismaSourceObservationScopeRunner,
+  ScopedSourceObservationRepository,
+} from '@age/source-observation-persistence';
 import {
   PrismaScoredBifSnapshotScopeRunner,
   ScopedScoredBifSnapshotRepository,
@@ -183,6 +188,61 @@ export function openLocalPrismaSnapshotReadConnection(
   return {
     findBySnapshotId: (key) => repository.findBySnapshotId(key),
     findLatest: (key) => repository.findLatest(key),
+    close: () => client.$disconnect(),
+  };
+}
+
+/**
+ * The read half of the observation store, narrowed on the way out (ADR-0069
+ * deliverable 6).
+ *
+ * ⚠️ **IT RETURNS A FAÇADE, NOT THE REPOSITORY.**
+ * `ScopedSourceObservationRepository` carries `append` as well as the read.
+ * Handing it to a screen whose entire premise is that it cannot write would
+ * make the premise a convention — true only until somebody typed `.append(`.
+ * The read is bound out individually and the repository never escapes this
+ * function, so the Sources screen holds no reference that could relay an
+ * observation. 🛑 The relay is a separate act, on a separate path.
+ *
+ * 🛑 **IT IS SCOPED, AND THAT IS NOT A DETAIL.** Under
+ * `FORCE ROW LEVEL SECURITY` an unscoped `SELECT` does not fail — it returns
+ * ZERO ROWS, which a screen would render as "no source system has relayed
+ * anything". A missing scope must never be able to look like an honest empty
+ * answer, so the read goes through the scope runner and never through a bare
+ * delegate.
+ *
+ * ⚠️ LOCAL-ONLY, on the same reasoning as the snapshot read: reading is not
+ * harmless — a remote target would pull a real business's relayed observations
+ * onto whatever machine ran the console. `assertLocalDatabaseTarget` runs ABOVE
+ * `new PrismaClient(`, and ⚠️ a loopback host stays NECESSARY, NOT SUFFICIENT.
+ *
+ * ⚠️ IT CONNECTS AS `age_app`, the non-owner role, so the read is subject to the
+ * policies rather than exempt from them. 🚫 That still does not make RLS an
+ * authorization boundary (ADR-0046 D5): the policy checks the row against the
+ * scope the transaction ASKED for, never against an entitlement to it.
+ */
+export interface ObservationReadConnection {
+  readonly listForOrganization: (
+    organizationId: string,
+  ) => Promise<ReadonlyArray<StoredSourceObservation>>;
+  readonly close: () => Promise<void>;
+}
+
+export function openLocalPrismaObservationReadConnection(
+  options: CaptureConnectionOptions = {},
+): ObservationReadConnection {
+  const url = options.datasourceUrl ?? resolveConnectionUrl(options.environment ?? process.env);
+
+  assertLocalDatabaseTarget(url);
+
+  const client = new PrismaClient({ datasources: { db: { url } } });
+
+  const repository = new ScopedSourceObservationRepository(
+    new PrismaSourceObservationScopeRunner(client),
+  );
+
+  return {
+    listForOrganization: (organizationId) => repository.listForOrganization(organizationId),
     close: () => client.$disconnect(),
   };
 }

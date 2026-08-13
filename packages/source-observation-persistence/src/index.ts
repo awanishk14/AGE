@@ -17,6 +17,14 @@
  */
 
 export { PrismaSourceObservationRepository } from './prisma-source-observation-repository';
+export { ScopedSourceObservationRepository } from './scoped-source-observation-repository';
+export { PrismaSourceObservationScopeRunner } from './source-observation-scope-runner';
+export type {
+  SourceObservationScope,
+  SourceObservationScopeRunner,
+  SourceObservationScopeTransaction,
+  SourceObservationTransactionSource,
+} from './source-observation-scope-runner';
 export { isUniqueConstraintViolation } from './source-observation-delegate';
 export type {
   SourceObservationDelegate,

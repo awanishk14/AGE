@@ -32,6 +32,8 @@
     "@age/discovery-answer-file": "workspace:*",
     "@age/operator-file-policy": "workspace:*",
     "@age/scored-bif-snapshot-persistence": "workspace:*",
+    "@age/source-observation": "workspace:*",
+    "@age/source-observation-persistence": "workspace:*",
     "@prisma/client": "^5.20.0",
     "zod": "^3.23.8"
   },
