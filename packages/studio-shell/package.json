@@ -23,6 +23,7 @@
     "@age/capability-kit": "workspace:*",
     "@age/client-registry": "workspace:*",
     "@age/demo-runtime": "workspace:*",
+    "@age/derived-intelligence": "workspace:*",
     "@age/discovery-answer-file": "workspace:*",
     "@age/intake-draft": "workspace:*",
     "@age/source-observation": "workspace:*"

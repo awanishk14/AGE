@@ -230,6 +230,25 @@ export {
 } from './relayed-observations-view';
 
 /**
+ * What AGE CONCLUDES, and — just as loudly — the four different silences it
+ * must never flatten into a clean bill (ADR-0069 D1/D2/D7).
+ */
+export {
+  DERIVATION_NOTICE,
+  NO_OBSERVATION_RELAYED_EXPLANATION,
+  NOTHING_CONCLUDED_NOTICE,
+  PERSISTENCE_NOTICE,
+  presentDerivedIntelligence,
+  type DerivedConclusionView,
+  type DerivedContributorView,
+  type DerivedIntelligenceView,
+  type UnconcludedView,
+  type UnmodelledKindView,
+  type UnobservedSubjectView,
+  type UnrelatedObservationView,
+} from './derived-intelligence-view';
+
+/**
  * ⚠️ Re-exported so a Studio client component can name the shape it renders
  * WITHOUT importing the server module that opens the connection. 🚫 A type only
  * — no repository, no façade and no relay path travels with it.

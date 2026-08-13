@@ -9,6 +9,8 @@ import type {
   MaterialityBand,
   ObservationSubjectKind,
   SourceObservationEnvelope,
+  StoredSourceObservation,
+  SubjectBearingObservation,
 } from '@age/source-observation';
 
 /**
@@ -147,6 +149,38 @@ const contributorOf = (envelope: Readonly<SourceObservationEnvelope>): Contribut
   materiality: envelope.claim.materiality,
 });
 
+/**
+ * What the rule actually needs from an observation: the subject it is about,
+ * and the facts a reader must be able to quote back.
+ *
+ * ⚠️ **WHY THERE IS AN INTERMEDIATE SHAPE AT ALL.** AGE has two honest shapes
+ * for an observation — the INBOUND envelope, which carries the scope the source
+ * asserted, and the STORED row, which deliberately does not (rebuilding an
+ * envelope from a row would mean inventing that field back). Both reduce to
+ * this, so 🛑 **THE RULE EXISTS EXACTLY ONCE** and neither entry point can drift
+ * into a second, gentler version of D7.
+ */
+interface RelatableObservation {
+  readonly observation: Readonly<SubjectBearingObservation>;
+  readonly contributor: ContributingObservation;
+}
+
+/**
+ * ⚠️ The row's provenance is FLAT where the envelope's is nested, and 🚫 that is
+ * the only difference this adapter is allowed to have. It reads columns; it
+ * defaults nothing, and 🚫 it must never fill a field the row does not hold.
+ */
+const storedContributorOf = (row: Readonly<StoredSourceObservation>): ContributingObservation => ({
+  sourceSystem: row.sourceSystem,
+  sourceInstance: row.sourceInstance,
+  sourceRecordId: row.sourceRecordId,
+  observedAt: row.period.observedAt,
+  windowStart: row.period.windowStart,
+  windowEnd: row.period.windowEnd,
+  direction: row.claim.direction,
+  materiality: row.claim.materiality,
+});
+
 interface Bucket {
   readonly subjectKind: ObservationSubjectKind;
   readonly subjectLabel: string;
@@ -165,12 +199,49 @@ export function deriveIntelligence(
   derivation: Readonly<ModelledSubjectDerivation>,
   envelopes: readonly Readonly<SourceObservationEnvelope>[],
 ): DerivedIntelligenceProjection {
+  return deriveFromRelatable(
+    derivation,
+    envelopes.map((envelope) => ({ observation: envelope, contributor: contributorOf(envelope) })),
+  );
+}
+
+/**
+ * The same projection, over observations AGE has ALREADY RECORDED.
+ *
+ * 🛑 **THE SAME RULE, 🚫 NOT A SECOND ONE.** This funnels into the identical
+ * core as `deriveIntelligence`, so D7 (two producers), the contested arm, the
+ * unobserved arm and `asOf`-from-the-data cannot differ between the relay's view
+ * and the operator's view. 🚫 Do not give it its own thresholds, its own
+ * ordering or its own explanation strings.
+ *
+ * 🚫 **A ROW IS NOT PROMOTED TO AN ENVELOPE HERE.** Nothing invents the
+ * `organizationScope` the source asserted — the caller has already resolved
+ * scope in order to read these rows at all, and re-asserting it from the row
+ * would be a fabricated provenance.
+ *
+ * @param rows the recorded observations for ONE organisation. ⚠️ Scope is the
+ *   caller's to enforce; 🚫 this function reads `organizationId` for nothing and
+ *   must never become the place isolation is decided.
+ */
+export function deriveIntelligenceFromStoredObservations(
+  derivation: Readonly<ModelledSubjectDerivation>,
+  rows: readonly Readonly<StoredSourceObservation>[],
+): DerivedIntelligenceProjection {
+  return deriveFromRelatable(
+    derivation,
+    rows.map((row) => ({ observation: row, contributor: storedContributorOf(row) })),
+  );
+}
+
+function deriveFromRelatable(
+  derivation: Readonly<ModelledSubjectDerivation>,
+  relatable: readonly RelatableObservation[],
+): DerivedIntelligenceProjection {
   const buckets = new Map<string, Bucket>();
   const unrelated: UnrelatedObservation[] = [];
 
-  for (const envelope of envelopes) {
-    const association = associateObservation(derivation, envelope);
-    const contributor = contributorOf(envelope);
+  for (const { observation, contributor } of relatable) {
+    const association = associateObservation(derivation, observation);
 
     if (association.outcome.kind !== 'associated') {
       unrelated.push({ association, contributor });

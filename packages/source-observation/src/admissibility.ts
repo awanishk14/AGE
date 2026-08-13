@@ -16,10 +16,10 @@
  * Pure: no clock, no ids, no randomness, no I/O.
  */
 
-import type { SourceObservationEnvelope } from './observation-envelope';
 import {
   type ModelledSubject,
   type ObservationSubjectKind,
+  type SubjectBearingObservation,
   isSameModelledSubject,
 } from './observation-subject';
 
@@ -64,7 +64,11 @@ export type AdmissibilityOutcome =
  *   answer before an intake exists, 🚫 not a reason to relax the rule.
  */
 export function assessAdmissibility(
-  envelope: Readonly<SourceObservationEnvelope>,
+  // ⚠️ WIDENED TO WHAT THIS FUNCTION ACTUALLY READS. It touches `subject` and
+  // nothing else, so a stored row can be asked the same question by the same
+  // code — 🚫 rather than by a second implementation, or by an envelope rebuilt
+  // around the row with its `organizationScope` invented back.
+  envelope: Readonly<SubjectBearingObservation>,
   knownSubjects: readonly Readonly<ModelledSubject>[],
 ): AdmissibilityOutcome {
   const { subject } = envelope;

@@ -951,6 +951,9 @@ importers:
       '@age/demo-runtime':
         specifier: workspace:*
         version: link:../demo-runtime
+      '@age/derived-intelligence':
+        specifier: workspace:*
+        version: link:../derived-intelligence
       '@age/discovery-answer-file':
         specifier: workspace:*
         version: link:../discovery-answer-file
