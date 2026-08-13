@@ -30,6 +30,7 @@
     "@age/capability-revenue": "workspace:*",
     "@age/client-registry": "workspace:*",
     "@age/discovery-answer-file": "workspace:*",
+    "@age/observation-association": "workspace:*",
     "@age/operator-file-policy": "workspace:*",
     "@age/scored-bif-snapshot-persistence": "workspace:*",
     "@age/source-observation": "workspace:*",

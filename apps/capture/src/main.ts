@@ -57,6 +57,29 @@ const runtime: CaptureCliRuntime = {
 
     return openLocalPrismaSnapshotReadConnection();
   },
+  /** ⚠️ AGE's identity for an observation. 🚫 Never the source's own id. */
+  newObservationId: () => randomUUID(),
+  /**
+   * ADR-0069 D4 — the relay's read door. NARROWED HERE, on purpose: the relay
+   * needs one question answered ("what does AGE model for this business?") and
+   * gets exactly that operation, not the whole snapshot reader.
+   */
+  openRelayContextConnection: async () => {
+    const { openLocalPrismaSnapshotReadConnection } = await import('./capture-composition');
+    const connection = openLocalPrismaSnapshotReadConnection();
+
+    return { findLatest: connection.findLatest, close: connection.close };
+  },
+  /**
+   * ADR-0069 D3/D7 — the relay's write door, and the ONLY way an observation
+   * reaches the store. A FIFTH door, separate from the read one above, so that
+   * every path which must not write holds nothing that could.
+   */
+  openObservationAppendConnection: async () => {
+    const { openLocalPrismaObservationAppendConnection } = await import('./capture-composition');
+
+    return openLocalPrismaObservationAppendConnection();
+  },
 };
 
 export async function main(argv: readonly string[]): Promise<number> {

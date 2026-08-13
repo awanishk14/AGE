@@ -16,6 +16,7 @@ import {
 } from './capture-connection-target';
 import type { CaptureConnection } from './capture-runner';
 import type { SnapshotReadConnection } from './inspect-runner';
+import type { ObservationAppendConnection } from './relay-runner';
 import { assertLocalDatabaseTarget } from './local-database-target';
 
 /**
@@ -243,6 +244,51 @@ export function openLocalPrismaObservationReadConnection(
 
   return {
     listForOrganization: (organizationId) => repository.listForOrganization(organizationId),
+    close: () => client.$disconnect(),
+  };
+}
+
+/**
+ * The write half of the observation store (ADR-0069 D3/D7) — the only way an
+ * observation has ever reached the table.
+ *
+ * ⚠️ **A SEPARATE DOOR FROM THE READ ONE, AND A SEPARATE FAÇADE.** The scoped
+ * repository carries both operations; binding out only `append` here means the
+ * relay command holds no `listForOrganization`, and the Sources screen holds no
+ * `append`. Neither could acquire the other's operation by typing a method
+ * name, which is what makes "this path only reads" a shape rather than a
+ * convention.
+ *
+ * 🛑 **THE SCOPE COMES FROM THE ROW'S OWN `organizationId`,** which the relay
+ * runner took off the operator's client record after refusing an observation
+ * that asserted a different one. PostgreSQL then checks the same id again in
+ * the policy's `WITH CHECK` — so a disagreement between what the transaction
+ * claims and what the row says is rejected by the database rather than trusted
+ * from the application. ⚠️ That is still coherence, 🚫 not authorization
+ * (ADR-0046 D5).
+ *
+ * ⚠️ LOCAL-ONLY, on the same reasoning as every other door here, and more
+ * sharply: this one writes. `assertLocalDatabaseTarget` runs ABOVE
+ * `new PrismaClient(`, and ⚠️ a loopback host stays NECESSARY, NOT SUFFICIENT.
+ *
+ * 🚫 NO `update`, NO `upsert`, NO `delete` — the store is append-only and the
+ * repository underneath has no such operation to bind.
+ */
+export function openLocalPrismaObservationAppendConnection(
+  options: CaptureConnectionOptions = {},
+): ObservationAppendConnection {
+  const url = options.datasourceUrl ?? resolveConnectionUrl(options.environment ?? process.env);
+
+  assertLocalDatabaseTarget(url);
+
+  const client = new PrismaClient({ datasources: { db: { url } } });
+
+  const repository = new ScopedSourceObservationRepository(
+    new PrismaSourceObservationScopeRunner(client),
+  );
+
+  return {
+    append: (observation) => repository.append(observation),
     close: () => client.$disconnect(),
   };
 }
