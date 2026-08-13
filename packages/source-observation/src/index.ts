@@ -42,5 +42,12 @@ export { acceptSourceObservationEnvelope } from './observation-envelope';
 export type { StoredSourceObservation } from './observation-row';
 export { StoredObservationRefusedError, normalizeStoredObservation } from './observation-row';
 
+export type { RelayOutcome, RelayRefused, RelayRelayed } from './observation-relay';
+export {
+  RELAY_ADMISSIBILITY_NOT_ASSESSED,
+  RELAY_DOES_NOT_RECORD,
+  relaySourceObservation,
+} from './observation-relay';
+
 export type { AdmissibilityOutcome } from './admissibility';
 export { assessAdmissibility } from './admissibility';

@@ -385,3 +385,85 @@ describe('the questionnaire tool', () => {
     expect(runtime.calls).toEqual([]);
   });
 });
+
+describe('the relay tool (ADR-0069 D3)', () => {
+  /** ⚠️ Obviously fictional — obvious fictionality is the guard (ADR-0053 D3). */
+  const OBSERVATION = Object.freeze({
+    subject: { kind: 'modelled', subjectKind: 'service', label: 'Widget Polishing' },
+    claim: { direction: 'down', materiality: 'moderate' },
+    period: {
+      observedAt: '2026-07-31T00:00:00.000Z',
+      windowStart: '2026-07-01T00:00:00.000Z',
+      windowEnd: '2026-07-31T00:00:00.000Z',
+    },
+    provenance: {
+      sourceSystem: 'example-visibility-system',
+      sourceInstance: 'instance-fictional-1',
+      sourceRecordId: 'record-fictional-1',
+      organizationScope: 'org-fictional-1',
+    },
+    claimKind: 'raw-observation',
+  });
+
+  const relay = (observation: unknown, runtime = createInMemoryRuntime({})) =>
+    callAgeTool(runtime, 'age_relay_source_observation', { observation });
+
+  it('🛑 touches nothing at all — no file, no environment, no clock', () => {
+    const runtime = createInMemoryRuntime({});
+    relay(OBSERVATION, runtime);
+
+    // 🚫 A relay that read a file would be a relay that could write one.
+    expect(runtime.calls).toEqual([]);
+  });
+
+  it('🛑 says explicitly that it stored nothing', () => {
+    const body = payload(relay(OBSERVATION));
+
+    expect(body.kind).toBe('relayed');
+    expect(body.recorded).toBe(false);
+    expect(String(body.recordedReason)).toContain('stored nothing');
+  });
+
+  it('🛑 reports admissibility as not-assessed WITH its reason, 🚫 never as a verdict', () => {
+    const admissibility = payload(relay(OBSERVATION)).admissibility as Record<string, unknown>;
+
+    expect(admissibility.state).toBe('not-assessed');
+    expect(String(admissibility.reason).length).toBeGreaterThan(0);
+  });
+
+  it('🚫 a relayed observation is NOT an error — it is an answer', () => {
+    expect(relay(OBSERVATION).isError).toBeUndefined();
+  });
+
+  it('refuses a malformed observation by POSITION, and that IS an error', () => {
+    const result = relay({ ...OBSERVATION, claimKind: undefined });
+
+    expect(result.isError).toBe(true);
+    expect(payload(result).position).toBe('claimKind');
+  });
+
+  it('🚫 refuses a missing observation rather than relaying an empty one', () => {
+    const result = callAgeTool(createInMemoryRuntime({}), 'age_relay_source_observation', {});
+
+    expect(result.isError).toBe(true);
+  });
+
+  it('🚫 has no bulk arm', () => {
+    expect(relay([OBSERVATION, OBSERVATION]).isError).toBe(true);
+  });
+
+  it('🚫 is not tenant-scoped, so D7 stays uncrossed BY SHAPE', () => {
+    const tool = AGE_MCP_TOOLS.find((entry) => entry.name === 'age_relay_source_observation');
+    const properties = (tool?.inputSchema as { properties: Record<string, unknown> }).properties;
+
+    expect(Object.keys(properties)).toEqual(['observation']);
+  });
+
+  it('🚫 names no peer product, so a third-party system relays through the same path', () => {
+    const tool = AGE_MCP_TOOLS.find((entry) => entry.name === 'age_relay_source_observation');
+
+    for (const product of ['rankops', 'snara', 'humantik', 'mcp-ads', 'content intelligence']) {
+      expect(tool?.description.toLowerCase()).not.toContain(product);
+    }
+  });
+});

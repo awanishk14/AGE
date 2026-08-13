@@ -14,6 +14,7 @@ import {
   type OperatorWorkspaceRuntime,
 } from '@age/operator-workspace';
 import { sourceDocumentSchema, sourcePassageSchema } from '@age/assisted-intake';
+import { relaySourceObservation } from '@age/source-observation';
 import {
   recordPassageForQuestion,
   type ClientRecordDraft,
@@ -279,6 +280,37 @@ export const AGE_MCP_TOOLS: readonly AgeToolDescriptor[] = Object.freeze([
       additionalProperties: false,
     }),
   },
+  /**
+   * ⚠️ THE ONE TOOL ADR-0069 D3 (deliverable 3) ADDS, AND ONLY THIS ONE.
+   *
+   * 🛑 **IT IS A RELAY, NOT AN INGESTION ENDPOINT.** Nothing listens; an operator
+   * carries one observation across, one call at a time. 🚫 There is no bulk arm,
+   * no queue, no scheduler, no poll and no "sync" — and 🚫 no second tool that
+   * records what this one relayed.
+   *
+   * 🛑 **IT TAKES NO `clientId` AND READS NOTHING**, exactly as the two slice-6
+   * tools do not. That is what keeps ADR-0066 D7 uncrossed BY SHAPE: this
+   * surface accepts, persists, transforms and queues no tenant-scoped data,
+   * because it holds none and can reach none.
+   */
+  {
+    name: 'age_relay_source_observation',
+    actionClass: 'knowledge-authoring',
+    description:
+      'Relay ONE observation from ONE external system, so AGE can check whether it is a statement AGE could work with. ⚠️ AGE STORES NOTHING — the result is held for this call only, and says so. ⚠️ Whether the observation names a subject AGE models is NOT assessed here and comes back as `not-assessed` with its reason — 🚫 that is neither a yes nor a no. 🚫 There is no bulk arm: one observation per call, on purpose.',
+    inputSchema: Object.freeze({
+      type: 'object',
+      properties: {
+        observation: {
+          type: 'object',
+          description:
+            'One observation: `subject`, `claim`, `period`, `provenance` and `claimKind`. A missing part is refused by NAME — 🚫 never filled in, and 🚫 never guessed from the rest.',
+        },
+      },
+      required: ['observation'],
+      additionalProperties: false,
+    }),
+  },
 ]);
 
 /**
@@ -426,6 +458,13 @@ export function callAgeTool(
         confirmedBy: confirmedBy.value,
       }),
     );
+  }
+
+  if (name === 'age_relay_source_observation') {
+    // 🚫 `args.observation` is passed through UNTOUCHED. It is untrusted input
+    // and `relaySourceObservation` is the only thing that decides about it —
+    // pre-checking a field here would be a second, laxer acceptance path.
+    return report(relaySourceObservation(args.observation));
   }
 
   const clientId = requiredString(args, 'clientId');
