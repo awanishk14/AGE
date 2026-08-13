@@ -770,6 +770,9 @@ importers:
       '@age/operator-file-policy':
         specifier: workspace:*
         version: link:../operator-file-policy
+      '@age/source-observation':
+        specifier: workspace:*
+        version: link:../source-observation
       '@age/studio-shell':
         specifier: workspace:*
         version: link:../studio-shell
