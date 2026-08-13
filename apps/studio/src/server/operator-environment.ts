@@ -1,14 +1,19 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
-import { openLocalPrismaSnapshotReadConnection } from '@age/capture/composition';
+import {
+  openLocalPrismaObservationReadConnection,
+  openLocalPrismaSnapshotReadConnection,
+} from '@age/capture/composition';
 import {
   assembleEvidence as assembleEvidenceIn,
   assessCapabilityReadiness as assessCapabilityReadinessIn,
   createClientRecord as createClientRecordIn,
   generateBifFromAnswerFile as generateBifFromAnswerFileIn,
+  narrowObservationRead,
   narrowSnapshotRead,
   readBusinessesView as readBusinessesViewIn,
   readDiscoveryDraft as readDiscoveryDraftIn,
+  readRelayedObservations as readRelayedObservationsIn,
   readOperatorSourceDocument as readOperatorSourceDocumentIn,
   readStoredSnapshot as readStoredSnapshotIn,
   reportContradictions as reportContradictionsIn,
@@ -17,6 +22,7 @@ import {
   writeDiscoveryDraft as writeDiscoveryDraftIn,
   type OperatorWorkspaceRuntime,
   type ReadOperatorSourceDocumentOptions,
+  type RelayedObservationsOutcome,
   type StoredSnapshotOutcome,
 } from '@age/operator-workspace';
 import {
@@ -80,6 +86,7 @@ export {
   type EvidenceOutcome,
   type GenerateBifOutcome,
   type ReadOperatorSourceDocumentOptions,
+  type RelayedObservationsOutcome,
   type SaveOutcome,
   type SourceDocumentOutcome,
   type SubmitOutcome,
@@ -202,4 +209,28 @@ export function boundPort(): number {
   const parsed = raw === undefined ? Number.NaN : Number.parseInt(raw, 10);
 
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 3100;
+}
+
+/**
+ * What peer products have OBSERVED, read back (ADR-0069 deliverable 6).
+ *
+ * ⚠️ THE ONLY PLACE `apps/studio` REACHES THE OBSERVATION STORE, and it reaches
+ * it through a façade carrying one read and a close. `narrowObservationRead`
+ * rebinds those two before the port leaves this module, so 🚫 no screen holds a
+ * reference that could relay an observation — the relay is a separate act, on a
+ * separate path, with its own gate (ADR-0069 D3).
+ *
+ * ⚠️ THE CONNECTION IS OPENED LAZILY, inside a thunk: the operation resolves the
+ * business FIRST and only calls this when there is a scope to read under, so an
+ * unknown business never opens a database connection.
+ *
+ * 🛑 AN EMPTY ANSWER IS A NAMED STATE, never an empty panel — and 🚫 no screen
+ * may seed a row to make this look populated (ADR-0064 D2).
+ */
+export function readRelayedObservations(clientId: string): Promise<RelayedObservationsOutcome> {
+  return readRelayedObservationsIn(
+    CONSOLE_RUNTIME,
+    () => narrowObservationRead(openLocalPrismaObservationReadConnection()),
+    clientId,
+  );
 }

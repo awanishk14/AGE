@@ -144,6 +144,12 @@ importers:
       '@age/scored-bif-snapshot-persistence':
         specifier: workspace:*
         version: link:../../packages/scored-bif-snapshot-persistence
+      '@age/source-observation':
+        specifier: workspace:*
+        version: link:../../packages/source-observation
+      '@age/source-observation-persistence':
+        specifier: workspace:*
+        version: link:../../packages/source-observation-persistence
       '@prisma/client':
         specifier: ^5.20.0
         version: 5.22.0(prisma@5.22.0)
