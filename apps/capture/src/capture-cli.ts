@@ -2,6 +2,7 @@ import { runAssess, type AssessRuntime } from './assess-runner';
 import { runCapture, type CaptureRunResult, type CaptureRuntime } from './capture-runner';
 import { runInspect, type InspectRuntime } from './inspect-runner';
 import { runOnboarding, type OnboardingRuntime } from './onboarding-runner';
+import { runRelay, type RelayRuntime } from './relay-runner';
 
 /**
  * Which of the CLI's two commands was asked for (ADR-0054 D6).
@@ -25,8 +26,12 @@ import { runOnboarding, type OnboardingRuntime } from './onboarding-runner';
  * mistyped `onbard` silently running something that writes.
  */
 
-/** The effects all four commands need. `main.ts` supplies the real ones. */
-export type CaptureCliRuntime = CaptureRuntime & OnboardingRuntime & InspectRuntime & AssessRuntime;
+/** The effects all five commands need. `main.ts` supplies the real ones. */
+export type CaptureCliRuntime = CaptureRuntime &
+  OnboardingRuntime &
+  InspectRuntime &
+  AssessRuntime &
+  RelayRuntime;
 
 /** The subcommand that runs the ADR-0054 D6 onboarding flow. */
 export const ONBOARDING_SUBCOMMAND = 'onboard';
@@ -53,6 +58,22 @@ export const INSPECT_SUBCOMMAND = 'inspect';
  */
 export const ASSESS_SUBCOMMAND = 'assess';
 
+/**
+ * The subcommand that records one relayed observation (ADR-0069 D3/D7).
+ *
+ * 🛑 A FIFTH BRANCH, AND THE ONLY WRITE PATH INTO THE OBSERVATION STORE. It is
+ * not a mode on `age-capture`, and not a flag on `inspect`: `age-capture` writes
+ * what the business said about itself, and this writes what an external system
+ * claimed. Those are two different kinds of statement (ADR-0069's whole premise
+ * that BIF, Source Observation and Derived Intelligence stay apart), and putting
+ * them behind one parser is how they start being treated as one.
+ *
+ * 🚫 IT IS STILL NOT A LISTENER. An operator types this, one observation at a
+ * time. There is no scheduler, no poll, no queue and no peer product connecting
+ * to AGE.
+ */
+export const RELAY_SUBCOMMAND = 'relay';
+
 export async function runCli(
   argv: readonly string[],
   runtime: CaptureCliRuntime,
@@ -67,6 +88,10 @@ export async function runCli(
 
   if (argv[0] === ASSESS_SUBCOMMAND) {
     return runAssess(argv.slice(1), runtime);
+  }
+
+  if (argv[0] === RELAY_SUBCOMMAND) {
+    return runRelay(argv.slice(1), runtime);
   }
 
   return runCapture(argv, runtime);

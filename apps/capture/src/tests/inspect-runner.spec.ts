@@ -428,11 +428,26 @@ describe('the read path holds no write handle and no series handle', () => {
    * 1: recorded, NOT authorized. It is one bound method away from existing,
    * which is exactly why this asserts the binding is absent.
    */
+  /**
+   * ⚠️ BOUNDED TO ONE FUNCTION, ON PURPOSE. Slicing to the end of the file made
+   * this guard read every door declared after the one it names — so adding the
+   * relay's append door (which legitimately binds `append:`) failed the READ
+   * door's assertion. A guard that fails for the wrong reason is one loosening
+   * away from failing for none.
+   */
+  const exportedFunctionSource = (root: string, name: string): string => {
+    const start = root.indexOf(`export function ${name}`);
+
+    expect(start, `capture-composition.ts must export ${name}`).toBeGreaterThan(-1);
+
+    const next = root.indexOf('\nexport function ', start + 1);
+
+    return next === -1 ? root.slice(start) : root.slice(start, next);
+  };
+
   it('binds no listSeries into the façade the composition root returns', () => {
     const root = source('capture-composition.ts');
-    const readFn = root.slice(
-      root.indexOf('export function openLocalPrismaSnapshotReadConnection'),
-    );
+    const readFn = exportedFunctionSource(root, 'openLocalPrismaSnapshotReadConnection');
 
     expect(readFn.length).toBeGreaterThan(200);
     expect(readFn.includes('listSeries:')).toBe(false);
@@ -441,6 +456,29 @@ describe('the read path holds no write handle and no series handle', () => {
     // check after construction has already handed the string to a driver.
     expect(readFn.indexOf('assertLocalDatabaseTarget')).toBeLessThan(
       readFn.indexOf('new PrismaClient('),
+    );
+  });
+
+  /**
+   * ADR-0069 D3 — the relay's write door, asserted here so the guard grows with
+   * the file rather than being narrowed around it. 🛑 THE WRITE DOOR AND THE
+   * READ DOORS ARE SEPARATE: this one binds `append` and nothing that reads,
+   * so a path holding it cannot browse, and a path holding a reader cannot
+   * write.
+   */
+  it('binds append — and no read — into the observation write door', () => {
+    const root = source('capture-composition.ts');
+    const appendFn = exportedFunctionSource(root, 'openLocalPrismaObservationAppendConnection');
+
+    expect(appendFn.length).toBeGreaterThan(200);
+    expect(appendFn.includes('append:')).toBe(true);
+    for (const forbidden of ['listForOrganization:', 'findLatest:', 'findBySnapshotId:']) {
+      expect(appendFn.includes(forbidden), `the append door must not bind ${forbidden}`).toBe(
+        false,
+      );
+    }
+    expect(appendFn.indexOf('assertLocalDatabaseTarget')).toBeLessThan(
+      appendFn.indexOf('new PrismaClient('),
     );
   });
 });

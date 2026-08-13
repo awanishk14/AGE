@@ -56,8 +56,25 @@ export type { InspectRunResult, InspectRuntime, SnapshotReadConnection } from '.
 export { ASSESS_EXIT_CODES, runAssess } from './assess-runner';
 export type { AssessRunResult, AssessRuntime } from './assess-runner';
 
+export { parseRelayArguments } from './relay-arguments';
+export type { ParsedRelayArguments, RelayCommand } from './relay-arguments';
+
+export {
+  RELAY_EXIT_CODES,
+  RELAY_NOTHING_WAS_APPENDED,
+  RELAY_RECORDED_IS_NOT_BELIEVED,
+  runRelay,
+} from './relay-runner';
+export type {
+  ObservationAppendConnection,
+  RelayContextConnection,
+  RelayRunResult,
+  RelayRuntime,
+} from './relay-runner';
+
 export {
   ASSESS_SUBCOMMAND,
+  RELAY_SUBCOMMAND,
   INSPECT_SUBCOMMAND,
   ONBOARDING_SUBCOMMAND,
   runCli,

@@ -138,6 +138,9 @@ importers:
       '@age/discovery-answer-file':
         specifier: workspace:*
         version: link:../../packages/discovery-answer-file
+      '@age/observation-association':
+        specifier: workspace:*
+        version: link:../../packages/observation-association
       '@age/operator-file-policy':
         specifier: workspace:*
         version: link:../../packages/operator-file-policy
