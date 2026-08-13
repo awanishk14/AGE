@@ -190,6 +190,8 @@ export {
   type SourceAcceptanceOutcome,
 } from './source-acceptance';
 
+export { describeSourcesCoverage } from './sources-coverage';
+
 /**
  * ⚠️ Re-exported so `apps/studio` can name a passage and a document without
  * depending on `@age/assisted-intake` directly — the acceptance path stays the
