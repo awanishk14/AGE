@@ -24,7 +24,8 @@
     "@age/client-registry": "workspace:*",
     "@age/demo-runtime": "workspace:*",
     "@age/discovery-answer-file": "workspace:*",
-    "@age/intake-draft": "workspace:*"
+    "@age/intake-draft": "workspace:*",
+    "@age/source-observation": "workspace:*"
   },
   "devDependencies": {
     "vitest": "^2.1.1"
