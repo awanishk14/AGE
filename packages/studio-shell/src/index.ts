@@ -214,3 +214,24 @@ export {
   type StoredSnapshotSectionView,
   type StoredSnapshotView,
 } from './stored-snapshot-view';
+
+/**
+ * What each source system RELAYED — and, just as loudly, what silence from any
+ * other system does not mean (ADR-0069 D5, D6).
+ */
+export {
+  presentRelayedObservations,
+  RELAY_ARRIVAL_NOTICE,
+  RELAY_SILENCE_NOTICE,
+  RELAY_UNMAPPED_NOTICE,
+  type RelayedObservationsView,
+  type RelayedObservationView,
+  type RelayedSourceSystemView,
+} from './relayed-observations-view';
+
+/**
+ * ⚠️ Re-exported so a Studio client component can name the shape it renders
+ * WITHOUT importing the server module that opens the connection. 🚫 A type only
+ * — no repository, no façade and no relay path travels with it.
+ */
+export type { StoredSourceObservation } from '@age/source-observation';

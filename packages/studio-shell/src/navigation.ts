@@ -247,10 +247,13 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
     route: '/b/:clientId/peer-products',
     level: 'subject',
     screen: 'S12',
-    wiring: 'not-wired',
+    // ⚠️ FLIPPED IN ADR-0069 DELIVERABLE 6, and the note it replaces was the
+    // condition: *"This screen must show ZERO peer products honestly before it
+    // shows one."* It does — an empty relay renders as a NAMED `none-relayed`
+    // carrying its own reason, never as an empty list, and never as a claim
+    // that a peer product has nothing.
+    wiring: 'wired',
     question: 'What does each peer product report, and what did AGE do with it?',
-    notWiredBecause:
-      'No peer product contract is wired. This screen must show ZERO peer products honestly before it shows one.',
   },
   {
     id: 'diagnostics',

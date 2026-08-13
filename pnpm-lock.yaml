@@ -954,6 +954,9 @@ importers:
       '@age/intake-draft':
         specifier: workspace:*
         version: link:../intake-draft
+      '@age/source-observation':
+        specifier: workspace:*
+        version: link:../source-observation
     devDependencies:
       vitest:
         specifier: ^2.1.1

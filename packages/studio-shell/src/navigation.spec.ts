@@ -97,6 +97,12 @@ describe('STUDIO_AREAS', () => {
       'evidence',
       'contradictions',
       'intelligence',
+      // ⚠️ ADDED DELIBERATELY, ADR-0069 deliverable 6. 🚫 The Peer Products flip
+      // is NOT a claim that any peer product has been assessed: the screen shows
+      // only source systems that have RELAYED, and says on its face that a
+      // system which never connected, one that did not run, and one that ran and
+      // found nothing are indistinguishable from AGE's side.
+      'peer-products',
       'diagnostics',
     ]);
   });
