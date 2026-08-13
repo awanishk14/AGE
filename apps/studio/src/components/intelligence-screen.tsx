@@ -2,10 +2,12 @@ import Link from 'next/link';
 
 import { ANSWER_FILE_PROVENANCE, STORED_SNAPSHOT_PROVENANCE } from '@age/studio-shell';
 
+import { DerivedIntelligencePanel } from './derived-intelligence-panel';
 import { IntelligencePanel } from './intelligence-panel';
 import { StoredSnapshotPanel } from './stored-snapshot-panel';
 import { SubjectAreaNav } from './subject-area-nav';
 import { assessCapabilityReadinessAction } from '@/server/intelligence-actions';
+import { readDerivedIntelligenceAction } from '@/server/derived-intelligence-actions';
 import { readStoredSnapshotAction } from '@/server/snapshot-actions';
 import { resolveBusinessScope } from '@/server/operator-environment';
 
@@ -75,10 +77,18 @@ export function IntelligenceScreen({ clientId }: { readonly clientId: string }) 
       <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
         What did the capabilities produce, and were they ready to run?
       </p>
+      {/*
+        ⚠️ NARROWED BY ADR-0069, NOT REPEALED. "Nothing has been produced" was
+        true of the CAPABILITIES and still is — 🚫 no capability has ever been
+        run against a real client, and that is refused, not pending. What AGE
+        now also has is a conclusion drawn by a deterministic rule over relayed
+        observations, which is 🚫 not a capability output and must never be
+        presented as one.
+      */}
       <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">
-        Nothing has been produced for this business. No capability has ever been run against a real
-        client — that is refused, not pending. What this screen can report is what each capability
-        says it would need.
+        No capability has ever been run against a real client — that is refused, not pending. What
+        this screen can report is what each capability says it would need, and, separately, what a
+        named rule concludes from the observations source systems have relayed.
       </p>
 
       {/*
@@ -99,6 +109,17 @@ export function IntelligenceScreen({ clientId }: { readonly clientId: string }) 
         {STORED_SNAPSHOT_PROVENANCE}
       </p>
       <StoredSnapshotPanel clientId={clientId} read={readStoredSnapshotAction} />
+
+      {/*
+        🛑 A THIRD ANSWER, AND IT IS NOT A SYNTHESIS OF THE OTHER TWO (ADR-0069
+        D1). It comes from a different question entirely — what external systems
+        OBSERVED, related to what the business SAYS — and 🚫 nothing between
+        these panels reconciles, diffs, ranks or prefers one over another.
+      */}
+      <p className="mt-10 text-xs font-semibold uppercase tracking-wider text-[hsl(var(--age-text-muted))]">
+        What AGE concludes by relating relayed observations to the business context
+      </p>
+      <DerivedIntelligencePanel clientId={clientId} read={readDerivedIntelligenceAction} />
 
       <SubjectAreaNav clientId={clientId} currentAreaId="intelligence" />
     </main>

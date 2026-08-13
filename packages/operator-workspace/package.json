@@ -22,7 +22,9 @@
     "@age/capability-kit": "workspace:*",
     "@age/client-registry": "workspace:*",
     "@age/demo-runtime": "workspace:*",
+    "@age/derived-intelligence": "workspace:*",
     "@age/discovery-answer-file": "workspace:*",
+    "@age/observation-association": "workspace:*",
     "@age/operator-file-policy": "workspace:*",
     "@age/source-observation": "workspace:*",
     "@age/studio-shell": "workspace:*"
