@@ -39,5 +39,8 @@ export type {
 } from './observation-envelope';
 export { acceptSourceObservationEnvelope } from './observation-envelope';
 
+export type { StoredSourceObservation } from './observation-row';
+export { StoredObservationRefusedError, normalizeStoredObservation } from './observation-row';
+
 export type { AdmissibilityOutcome } from './admissibility';
 export { assessAdmissibility } from './admissibility';

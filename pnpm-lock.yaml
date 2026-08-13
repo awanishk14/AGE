@@ -767,6 +767,9 @@ importers:
       '@age/session-store':
         specifier: workspace:*
         version: link:../session-store
+      '@age/source-observation':
+        specifier: workspace:*
+        version: link:../source-observation
       '@prisma/client':
         specifier: ^5.20.0
         version: 5.22.0(prisma@5.22.0)

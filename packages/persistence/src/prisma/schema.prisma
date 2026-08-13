@@ -119,3 +119,69 @@ model OperatorSession {
   @@index([organizationId], map: "operator_sessions_organization_idx")
   @@map("operator_sessions")
 }
+
+/// SourceObservation — what an external system OBSERVED (ADR-0069 §6, deliverable 2).
+///
+/// THE THIRD CATEGORY, AND IT IS NOT THE OTHER TWO. A row here is neither what
+/// the business says (that is the BIF) nor what AGE concludes (that is derived,
+/// and ADR-0069 D2 says it is COMPUTED and therefore has no table at all). This
+/// store holds only what a peer product asserted it saw.
+///
+/// A ROW IS A CANDIDATE, PERMANENTLY (ADR-0069 D5). SOURCE ARRIVAL IS NEVER
+/// CONFIRMATION, which is why there is deliberately no `status`, no `confirmed`,
+/// no `accepted`, no `dismissed`, no `weight`, no `trust`, no `score` and no
+/// `confidence` column. Each of those would be a way for an inbound observation
+/// to promote itself, and the first thing anyone does with such a column is read
+/// it as agreement.
+///
+/// APPEND-ONLY, ENFORCED BY WHAT IS ABSENT, exactly as `ScoredBifSnapshot` is:
+/// no `updatedAt`, no `version`, no `deletedAt`, no mutable `current` flag. A
+/// source that observed something different next month sends a NEW observation
+/// with a new period; it does not edit last month's. Correcting history is how a
+/// record of what was believed at the time gets destroyed.
+///
+/// THE TENANT IS THE ORGANIZATION, AND THERE IS NO `client_id` (ADR-0062 D1/D2).
+/// This matches `operator_sessions` and deliberately not `scored_bif_snapshots`:
+/// an observation is scoped by whose business it is about, and a client is a
+/// SUBJECT rather than a principal. The absence also keeps ADR-0066 D7 uncrossed
+/// BY SHAPE — an inbound path that cannot name a client cannot be pointed at
+/// one.
+///
+/// SUBJECT IS THREE COLUMNS BECAUSE IT IS TWO SHAPES. `subject_disposition` is
+/// `modelled` or `unmapped`. For `modelled`, `subject_kind` is present and
+/// `subject_label` is AGE'S OWN label for the subject, so two sources spelling a
+/// service differently converge on one subject. For `unmapped`, `subject_kind`
+/// is NULL — 🚫 NOT a guessed kind — and `subject_label` is the raw topic. An
+/// unmapped row is retained precisely because AGE could not relate it: that is
+/// the finding, and a NULL kind is what stops a later query from silently
+/// counting it as coverage.
+///
+/// NO RAW CORPUS, EVER. `source_record_id` is a REFERENCE back into the source
+/// system, which keeps its own 50,000 rows. AGE stores the reference, never the
+/// corpus, and there is no payload/body/raw column for one to arrive in.
+///
+/// TIME IS A STRING and there is NO `DEFAULT now()`, for the reason the two
+/// models above give. `recorded_at` is supplied by the caller and is NOT
+/// `observed_at`: an operator-mediated relay happens days after the observation
+/// BY CONSTRUCTION, and collapsing the two would make every relayed observation
+/// look freshly made.
+model SourceObservation {
+  observationId      String  @id @map("observation_id")
+  organizationId     String  @map("organization_id")
+  sourceSystem       String  @map("source_system")
+  sourceInstance     String  @map("source_instance")
+  sourceRecordId     String  @map("source_record_id")
+  subjectDisposition String  @map("subject_disposition")
+  subjectKind        String? @map("subject_kind")
+  subjectLabel       String  @map("subject_label")
+  claimDirection     String  @map("claim_direction")
+  claimMateriality   String  @map("claim_materiality")
+  claimKind          String  @map("claim_kind")
+  observedAt         String  @map("observed_at")
+  windowStart        String  @map("window_start")
+  windowEnd          String  @map("window_end")
+  recordedAt         String  @map("recorded_at")
+
+  @@index([organizationId, observedAt(sort: Desc), observationId(sort: Desc)], map: "source_observations_organization_observed_idx")
+  @@map("source_observations")
+}
