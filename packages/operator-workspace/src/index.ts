@@ -56,3 +56,16 @@ export {
   type SnapshotReadPort,
   type StoredSnapshotOutcome,
 } from './stored-snapshot';
+
+/**
+ * ⚠️ The ELEVENTH operation, added by **ADR-0069** — reading what peer products
+ * have OBSERVED. 🚫 It cannot relay, record or believe one.
+ */
+export {
+  NONE_RELAYED_REASON,
+  narrowObservationRead,
+  readRelayedObservations,
+  type ObservationReadPort,
+  type OpenObservationRead,
+  type RelayedObservationsOutcome,
+} from './relayed-observations';

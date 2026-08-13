@@ -24,6 +24,7 @@
     "@age/demo-runtime": "workspace:*",
     "@age/discovery-answer-file": "workspace:*",
     "@age/operator-file-policy": "workspace:*",
+    "@age/source-observation": "workspace:*",
     "@age/studio-shell": "workspace:*"
   },
   "devDependencies": {
