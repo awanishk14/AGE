@@ -108,6 +108,15 @@ the answer here, because "AGE has never looked" would render as "AGE checked and
 > is **agreement plus new information**, 🚫 not a conflict. The ADR must separate the two before it
 > decides anything about the second.
 
+⚠️ **The ADR is written: `docs/adrs/0072-when-an-observation-differs-from-what-the-business-said.md`,
+`Status: Proposed`, 🚫 authorizing nothing.** ⚠️ **Read it, 🚫 not this line** — its §2 measurement
+narrows the gap: `SUBJECT_SOURCES` is the whole mapping between the two worlds and every entry reads
+a **label**, so 🛑 **the BIF carries no directional claim for an observation to contradict.** An
+observation and the BIF meet **only at subject identity**. Gap B therefore asks whether a conflict is
+representable at all (D2 options **A**–**D**), 🚫 not who wins. 🛑 **"Agreement plus new information"
+is the DEFAULT arm, 🚫 not the exception**, and 🚫 no count, streak, direction or materiality may
+promote a run of observations into a conflict with the business's own account of itself.
+
 **Gap C — observation ageing (row 10).**
 Conclusions cannot go stale: D2 recomputes them, so nothing outlives its evidence. But an
 **observation** carries a period and nothing expires it — an eighteen-month-old observation
