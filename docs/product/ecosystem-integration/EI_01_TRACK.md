@@ -50,7 +50,10 @@ already `Accepted` — read the ADR.
 🛑 **These are surfaced, not chosen.** Each needs a `Proposed` ADR answered by the Product Owner
 before the stage that depends on it may proceed.
 
-**Gap A — the transport boundary (row 14). ⚠️ SPLIT IN TWO by ADR-0071 (`Proposed`, #325).**
+**Gap A — the transport boundary (row 14). ✅ ANSWERED — ADR-0071 is `Accepted`, 🚫 not
+self-accepted, and it SPLIT THE QUESTION IN TWO.** ⚠️ It authorizes the **shape, 🚫 not a slice**,
+and ⚠️ **ADR-0071 §0.1b sequences the first outbound slice BEHIND ADR-0070 D2** at the owner's
+instruction — 🚫 accepted does not mean next.
 The projection is a pure function with no surface. ADR-0071 separates the question that was being
 asked as one:
 
@@ -84,6 +87,13 @@ integration is done" really is false.
 ⚠️ **Operator mediation is a V1 transport constraint with an expiry condition** (ADR-0071 D2) —
 🚫 not a principle, and 🚫 not the permanent ecosystem architecture.
 
+🛑 **The rule is 🚫 NOT outbound-only — it governs how the SHIPPED INBOUND half is described**
+(ADR-0071 §0.1b.2, the Product Owner's own correction). What is shipped is AGE's **semantic
+machinery and the operator-mediated relay**, 🚫 not an integration with any peer. The permitted
+sentence is **"AGE can accept a correctly shaped observation through its relay mechanism"**;
+🚫 "AGE receives information from a peer product" is false, because no peer repository contains AGE
+code and no peer has ever sent AGE anything. ⚠️ An operator presented it.
+
 **Gap B — contradiction between derived intelligence and BIF/evidence (row 9).**
 Decided: two source systems that disagree are **reported as disagreement**; 🛑 AGE does not pick a
 winner by recency, materiality, source reputation or count. Undecided: what happens when a derived
@@ -92,12 +102,24 @@ answer must not be "the observation wins" or "the BIF wins" by default. ⚠️ `
 exists, is unwired, and over an empty list returns an empty set — 🚫 it must never be reached for as
 the answer here, because "AGE has never looked" would render as "AGE checked and it is sound."
 
+> 🛑 **Owner constraint, pre-recorded (ADR-0071 §0.1b.3):** the reportable fact is **"conflicting
+> information exists"**, and it 🚫 must never become **"AGE has decided the BIF is wrong."**
+> ⚠️ Not every difference is a contradiction — a peer reporting a decline in a market the BIF names
+> is **agreement plus new information**, 🚫 not a conflict. The ADR must separate the two before it
+> decides anything about the second.
+
 **Gap C — observation ageing (row 10).**
 Conclusions cannot go stale: D2 recomputes them, so nothing outlives its evidence. But an
 **observation** carries a period and nothing expires it — an eighteen-month-old observation
 contributes to a conclusion identically to yesterday's. 🚫 Do not close this with a TTL, a
 background job or a delete: the store is append-only. The likely shape is a derivation-time rule
 over the period already on the envelope, and it needs a decision, not a default.
+
+> 🛑 **Owner constraint, pre-recorded (ADR-0071 §0.1b.3): observation age ≠ observation validity.**
+> An observation made in the past remains historically true **as an observation**; 🚫 AGE must never
+> say "this is 90 days old, therefore false." What age may affect is **currentness** — whether the
+> observation should be used when constructing a **current** conclusion. ⚠️ An ADR that lets ageing
+> decide truth is answering the wrong question.
 
 **Exit criterion for E0:** gaps A, B and C each have an `Accepted` ADR, and the contract version
 (§E1.1) is stamped.
