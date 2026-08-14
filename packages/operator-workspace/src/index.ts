@@ -79,3 +79,19 @@ export {
  * itself and 🚫 persists nothing.
  */
 export { readDerivedIntelligence, type DerivedIntelligenceOutcome } from './derived-intelligence';
+
+/**
+ * ⚠️ The THIRTEENTH operation, added by **ADR-0069** — reading WHAT AGE WOULD
+ * TELL A PEER, so the operator can audit the peer's answer rather than a
+ * description of it.
+ *
+ * 🛑 It calls the SAME `projectClientContext` the peer-facing tool will call and
+ * 🚫 rewords nothing. 🛑 It opens ONE store — the observation store is not
+ * needed and 🚫 must not be mixed in. 🛑 No peer can actually ask yet: the tool
+ * is blocked on token verification (ADR-0068 §0.1b), and the surface must say
+ * so rather than let the operator assume peers are being served.
+ */
+export {
+  readClientContextProjection,
+  type ClientContextProjectionOutcome,
+} from './client-context-projection';

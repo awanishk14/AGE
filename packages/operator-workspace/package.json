@@ -20,6 +20,7 @@
     "@age/assisted-intake": "workspace:*",
     "@age/business-discovery-contracts": "workspace:*",
     "@age/capability-kit": "workspace:*",
+    "@age/client-context-projection": "workspace:*",
     "@age/client-registry": "workspace:*",
     "@age/demo-runtime": "workspace:*",
     "@age/derived-intelligence": "workspace:*",
