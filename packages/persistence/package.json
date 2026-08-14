@@ -34,6 +34,7 @@
     "@age/capture": "workspace:*",
     "@age/scored-bif-snapshot-persistence": "workspace:*",
     "@age/session-store": "workspace:*",
+    "@age/session-store-persistence": "workspace:*",
     "@age/source-observation": "workspace:*",
     "@prisma/client": "^5.20.0",
     "prisma": "^5.20.0",
