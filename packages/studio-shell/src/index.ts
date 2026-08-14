@@ -251,6 +251,21 @@ export {
 } from './derived-intelligence-view';
 
 /**
+ * What AGE WOULD TELL A PEER, put on a screen (ADR-0069 deliverable 7).
+ *
+ * 🛑 Every string is the projection's own, byte-identical — the operator audits
+ * the peer's answer, 🚫 never a console rendering of it. The one sentence this
+ * view authors says that no peer can ask yet (ADR-0068 §0.1b), so 🚫 nobody
+ * reads the screen as evidence that peers are being served.
+ */
+export {
+  NO_PEER_CAN_ASK_NOTICE,
+  presentClientContextProjection,
+  type ClientContextProjectionView,
+  type ProjectedSubjectKindView,
+} from './client-context-projection-view';
+
+/**
  * ⚠️ Re-exported so a Studio client component can name the shape it renders
  * WITHOUT importing the server module that opens the connection. 🚫 A type only
  * — no repository, no façade and no relay path travels with it.

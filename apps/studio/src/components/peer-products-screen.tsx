@@ -1,9 +1,13 @@
 import Link from 'next/link';
 
+import { ClientContextProjectionPanel } from './client-context-projection-panel';
 import { RelayedObservationsPanel } from './relayed-observations-panel';
 import { SubjectAreaNav } from './subject-area-nav';
 import { resolveBusinessScope } from '@/server/operator-environment';
-import { readRelayedObservationsAction } from '@/server/peer-products-actions';
+import {
+  readClientContextProjectionAction,
+  readRelayedObservationsAction,
+} from '@/server/peer-products-actions';
 
 /**
  * The Peer Products screen, for one business (ADR-0069 deliverable 6).
@@ -30,8 +34,8 @@ export function PeerProductsScreen({ clientId }: { readonly clientId: string }) 
           </h2>
           <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
             {scope.kind === 'unknown-client'
-              ? 'Reading relayed observations is refused rather than performed for an invented ' +
-                'business — the answer it produced would belong to nobody.'
+              ? 'Both reads on this screen are refused rather than performed for an invented ' +
+                'business — the answer either produced would belong to nobody.'
               : scope.kind === 'not-configured'
                 ? `No client record file has been configured (${scope.variable}), so no business can be resolved.`
                 : scope.reason}
@@ -63,13 +67,20 @@ export function PeerProductsScreen({ clientId }: { readonly clientId: string }) 
 
       <h1 className="mt-3 text-lg font-semibold tracking-tight">Peer Products</h1>
       <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
-        What did each source system report, and what did AGE do with it?
+        What would AGE tell a peer product about this business, and what did each source system
+        report back?
       </p>
       <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">
         An observation arriving is not AGE believing it. Nothing here writes a BIF, changes a status
         or produces a score, and where an observation came from never changes a score.
       </p>
-
+      {/*
+        🛑 THE TWO HALVES OF THE EXCHANGE, AND THEY STAY TWO. The first is what
+        AGE offers a peer — what the business stated. The second is what peers
+        relayed back. 🚫 Neither is a conclusion: what AGE concludes is a named
+        rule's answer, and it lives on Intelligence.
+      */}
+      <ClientContextProjectionPanel clientId={clientId} read={readClientContextProjectionAction} />
       <RelayedObservationsPanel clientId={clientId} read={readRelayedObservationsAction} />
       <SubjectAreaNav clientId={clientId} currentAreaId="peer-products" />
     </main>

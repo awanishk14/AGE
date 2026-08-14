@@ -970,6 +970,9 @@ importers:
       '@age/capability-kit':
         specifier: workspace:*
         version: link:../capability-kit
+      '@age/client-context-projection':
+        specifier: workspace:*
+        version: link:../client-context-projection
       '@age/client-registry':
         specifier: workspace:*
         version: link:../client-registry
