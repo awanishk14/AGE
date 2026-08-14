@@ -43,6 +43,7 @@ Final.
 - [3. Delivery Phases](#3-delivery-phases)
 - [4. Capability EPICs](#4-capability-epics)
 - [5. Milestones](#5-milestones)
+  - [5.1 The Ecosystem Integration & Peer Validation Track](#51-the-ecosystem-integration--peer-validation-track)
 - [6. Release Principles](#6-release-principles)
 - [7. The Phase 5 Boundary](#7-the-phase-5-boundary)
 - [8. Resolved Decisions & Out of Scope](#8-resolved-decisions--out-of-scope)
@@ -132,12 +133,42 @@ planning).
 
 Status markers (not dates):
 
-| Milestone                      | Meaning                                                            | Status      |
-| ------------------------------ | ------------------------------------------------------------------ | ----------- |
-| **`foundation-v0.1`**          | Cognitive Core complete                                            | ✅ Tagged   |
-| **`architecture-freeze-v1.0`** | Architecture frozen; Capability Architecture + System Map approved | ✅ Tagged   |
-| **Product Bible complete**     | All 16 Product Bible documents Final                               | In progress |
-| _(per phase)_                  | Each phase's capabilities matured                                  | —           |
+| Milestone                       | Meaning                                                            | Status      |
+| ------------------------------- | ------------------------------------------------------------------ | ----------- |
+| **`foundation-v0.1`**           | Cognitive Core complete                                            | ✅ Tagged   |
+| **`architecture-freeze-v1.0`**  | Architecture frozen; Capability Architecture + System Map approved | ✅ Tagged   |
+| **Product Bible complete**      | All 16 Product Bible documents Final                               | In progress |
+| **Ecosystem integration proof** | First real peer round trip, both directions (§5.1)                 | Not started |
+| _(per phase)_                   | Each phase's capabilities matured                                  | —           |
+
+### 5.1 The Ecosystem Integration & Peer Validation Track
+
+§2.1 records that AGE **composes peer products**. That composition is a first-class, mandatory part
+of the AGE program, and it has a completion criterion **that AGE-side code cannot satisfy alone**:
+
+> 🛑 **AGE ecosystem integration is not complete until AGE and at least one real peer product have
+> communicated end-to-end in both directions, with the peer product actually consuming AGE's
+> returned intelligence/context.**
+
+⚠️ **Existing AGE ecosystem packages, contracts, providers and architecture must never be reported
+as an ecosystem integration being complete.** A real integration has two sides; the second side
+lives in a repository this roadmap does not own. The track therefore defines a **seven-rung
+reporting ladder** that is 🚫 never collapsed into "integration done."
+
+The track runs **E0** canonical contracts → **E1** the reference peer contract → **E2** the first
+real peer round trip → **E3** a second peer proving the contract generalises → **E4** expansion.
+
+⚠️ **This section adds no dates, no schedule and no catalog** — §1 and §8 are unchanged. The named
+peer products, the per-peer state, the stage detail and the Definition of Done live in the track,
+which is execution planning and therefore outside the Product Bible:
+
+- [`ecosystem-integration/EI_00_README.md`](./ecosystem-integration/EI_00_README.md) — index,
+  reporting ladder, current per-peer state, the scope rule
+- [`ecosystem-integration/EI_01_TRACK.md`](./ecosystem-integration/EI_01_TRACK.md) — E0–E4, the ten
+  contract questions, the mandatory completion test, the Definition of Done
+
+🚫 The track authorizes no code, and 🚫 no peer repository is modified to "prepare" for AGE before
+its slice is authorized (`EI_00`, the scope rule).
 
 ## 6. Release Principles
 
