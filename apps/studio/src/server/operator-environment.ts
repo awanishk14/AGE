@@ -12,6 +12,7 @@ import {
   narrowObservationRead,
   narrowSnapshotRead,
   readBusinessesView as readBusinessesViewIn,
+  readClientContextProjection as readClientContextProjectionIn,
   readDerivedIntelligence as readDerivedIntelligenceIn,
   readDiscoveryDraft as readDiscoveryDraftIn,
   readRelayedObservations as readRelayedObservationsIn,
@@ -21,6 +22,7 @@ import {
   resolveBusinessScope as resolveBusinessScopeIn,
   submitDiscoveryAnswers as submitDiscoveryAnswersIn,
   writeDiscoveryDraft as writeDiscoveryDraftIn,
+  type ClientContextProjectionOutcome,
   type DerivedIntelligenceOutcome,
   type OperatorWorkspaceRuntime,
   type ReadOperatorSourceDocumentOptions,
@@ -80,6 +82,7 @@ export {
   STUDIO_QUESTIONNAIRE,
   type BusinessScope,
   type CapabilityReadinessOutcome,
+  type ClientContextProjectionOutcome,
   type ContradictionsOutcome,
   type DerivedIntelligenceOutcome,
   type CreateClientOutcome,
@@ -264,6 +267,35 @@ export function readDerivedIntelligence(
     CONSOLE_RUNTIME,
     () => narrowSnapshotRead(openLocalPrismaSnapshotReadConnection()),
     () => narrowObservationRead(openLocalPrismaObservationReadConnection()),
+    clientId,
+    bifId,
+  );
+}
+
+/**
+ * What AGE WOULD TELL A PEER about this business (ADR-0069 deliverable 7).
+ *
+ * 🛑 **ONE STORE, AND ONLY ONE.** Exactly one thunk is handed over, and it is
+ * the snapshot read. The observation store is not opened, not passed and not
+ * reachable from here — 🚫 and it must not become so: mixing in what a source
+ * reported would turn a statement about AGE's own model into a statement about
+ * what the world has said, which is the category confusion the three-way
+ * separation exists to prevent.
+ *
+ * ⚠️ THE CONNECTION IS OPENED LAZILY, inside the thunk, so an unknown business
+ * and a blank BIF id both cost nothing and reach nothing.
+ *
+ * 🚫 THE FAÇADE IS THE NARROWED ONE — a read and a close, no `append` — and this
+ * is a read path. 🛑 Serving a peer is a different act on a different surface,
+ * and it does not become reachable by being adjacent to this one.
+ */
+export function readClientContextProjection(
+  clientId: string,
+  bifId: string,
+): Promise<ClientContextProjectionOutcome> {
+  return readClientContextProjectionIn(
+    CONSOLE_RUNTIME,
+    () => narrowSnapshotRead(openLocalPrismaSnapshotReadConnection()),
     clientId,
     bifId,
   );
