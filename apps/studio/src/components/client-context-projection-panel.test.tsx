@@ -18,8 +18,16 @@ import {
  * 🚫 Every value here is obviously fictional (ADR-0053 D3, ADR-0065 D1).
  */
 
-const NO_PEER_NOTICE =
-  'No peer product can ask AGE for this yet. The tool that would serve it is not built.';
+/**
+ * ⚠️ The console's own sentence, as ADR-0071 D1 left it: the operator carries
+ * the answer. 🚫 It is not "coming soon" — nobody is building a peer credential.
+ */
+const HOW_IT_REACHES_A_PEER =
+  'No peer product can ask AGE for this, and in V1 none is meant to: the operator is the ' +
+  'transport. You carry this answer to the peer yourself, unchanged. That is a V1 transport ' +
+  'constraint and not a permanent one. Nothing has been sent from this screen, and no peer ' +
+  'product contains AGE code — so this is not evidence that any peer has received it, asked for ' +
+  'it, or is being served.';
 
 const VIEW: ClientContextProjectionView = {
   bifId: 'bif-fictional',
@@ -49,7 +57,7 @@ const VIEW: ClientContextProjectionView = {
   ],
   notCaptured: ['kpis'],
   notices: ['This is what the business itself stated.', 'No score is included.'],
-  noPeerCanAskNotice: NO_PEER_NOTICE,
+  howThisReachesAPeerNotice: HOW_IT_REACHES_A_PEER,
 };
 
 const press = (): void => {
@@ -83,15 +91,15 @@ describe('ClientContextProjectionPanel', () => {
     expect(screen.getByRole('button', { name: /show the peer/i })).toHaveProperty('disabled', true);
   });
 
-  it('🛑 states that no peer can ask yet, ABOVE the answer', async () => {
+  it('🛑 states that the OPERATOR is the transport, ABOVE the answer', async () => {
     render(<ClientContextProjectionPanel clientId="client-fictional" read={projects()} />);
     typeBifId();
     press();
 
-    await waitFor(() => expect(screen.getByText(NO_PEER_NOTICE)).toBeDefined());
+    await waitFor(() => expect(screen.getByText(HOW_IT_REACHES_A_PEER)).toBeDefined());
     // 🛑 It precedes the subject list in the document, not merely appears in it —
     // an operator who read the subjects first has already drawn the conclusion.
-    const notice = screen.getByText(NO_PEER_NOTICE);
+    const notice = screen.getByText(HOW_IT_REACHES_A_PEER);
     const subjects = screen.getByText(/Subjects a peer may name/i);
     expect(
       notice.compareDocumentPosition(subjects) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -111,7 +119,7 @@ describe('ClientContextProjectionPanel', () => {
     expect(screen.getByText(/AGE holds no stored business context/i)).toBeDefined();
     // 🚫 The projected vocabulary must not appear on this state at all.
     expect(screen.queryByText(/Subjects a peer may name/i)).toBeNull();
-    expect(screen.queryByText(NO_PEER_NOTICE)).toBeNull();
+    expect(screen.queryByText(HOW_IT_REACHES_A_PEER)).toBeNull();
   });
 
   it('🛑 shows every kind — 🚫 hides none for being empty, and keeps the silences apart', async () => {
@@ -168,6 +176,54 @@ describe('ClientContextProjectionPanel', () => {
 
     await waitFor(() => expect(screen.getByText(/Sections AGE holds nothing for/i)).toBeDefined());
     expect(screen.getByText('kpis')).toBeDefined();
+  });
+
+  it('🛑 gives the operator the exact bytes to carry (ADR-0071 D1)', async () => {
+    render(<ClientContextProjectionPanel clientId="client-fictional" read={projects()} />);
+    typeBifId();
+    press();
+
+    await waitFor(() => expect(screen.getByText(/Carry this to the peer product/i)).toBeDefined());
+
+    // 🛑 The document is SHOWN, not merely offered — an operator who cannot read
+    // what they are about to hand over is auditing a button, not an answer.
+    const carried = screen.getByTestId('client-context-handover-document').textContent ?? '';
+    expect(carried).toContain('bif-fictional');
+    expect(carried).toContain('never-captured');
+    expect(carried).toContain('captured-nothing-recorded');
+    // 🚫 The console's own sentence never travels to a peer.
+    expect(carried).not.toContain('the operator is the transport');
+    expect(carried).not.toContain('howThisReachesAPeerNotice');
+  });
+
+  it('🚫 the control COPIES — 🚫 it never says sent, delivered or received', async () => {
+    render(<ClientContextProjectionPanel clientId="client-fictional" read={projects()} />);
+    typeBifId();
+    press();
+
+    await waitFor(() => expect(screen.getByText(/Carry this to the peer product/i)).toBeDefined());
+
+    // ADR-0071 D4: producing a document is 🚫 not evidence any peer received it.
+    expect(screen.getByRole('button', { name: /copy the document/i })).toBeDefined();
+
+    // 🛑 Scoped to the CONTROLS, on purpose. The prose may — and does — tell the
+    // operator that *they* deliver it; what must never exist is a control whose
+    // label implies AGE transmits. ⚠️ Counted, so a page that rendered no button
+    // cannot pass this by finding nothing.
+    let examined = 0;
+    for (const control of screen.getAllByRole('button')) {
+      const label = control.textContent ?? '';
+      for (const forbidden of ['send', 'deliver', 'sync', 'push', 'transmit', 'connect']) {
+        expect(label.toLowerCase(), forbidden).not.toContain(forbidden);
+      }
+      examined += 1;
+    }
+    expect(examined).toBeGreaterThan(0);
+
+    // 🚫 And no claim, anywhere, that a peer is on the other end of this.
+    for (const forbidden of [/peer received/i, /sent to the peer/i, /connected to/i]) {
+      expect(screen.queryByText(forbidden), String(forbidden)).toBeNull();
+    }
   });
 
   it('🛑 renders a refusal as a result, never as a crash', async () => {

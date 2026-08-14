@@ -9,7 +9,7 @@ import { projectClientContext } from '@age/client-context-projection';
 import { describe, expect, it } from 'vitest';
 
 import {
-  NO_PEER_CAN_ASK_NOTICE,
+  HOW_THIS_REACHES_A_PEER_NOTICE,
   presentClientContextProjection,
 } from '../client-context-projection-view';
 
@@ -98,7 +98,7 @@ describe('presentClientContextProjection', () => {
     const emitted = [
       view.bifId,
       view.asOf,
-      view.noPeerCanAskNotice,
+      view.howThisReachesAPeerNotice,
       ...view.notCaptured,
       ...view.notices,
       ...view.subjectKinds.flatMap((kind) => [
@@ -111,18 +111,22 @@ describe('presentClientContextProjection', () => {
 
     expect(emitted.length).toBeGreaterThan(1);
     const authored = emitted.filter((value) => !carried.has(value));
-    expect(authored).toEqual([NO_PEER_CAN_ASK_NOTICE]);
+    expect(authored).toEqual([HOW_THIS_REACHES_A_PEER_NOTICE]);
   });
 
-  it('🛑 says no peer can ask yet — 🚫 never that peers are being served', () => {
+  it('🛑 says the OPERATOR carries it — 🚫 never that peers are being served', () => {
     const view = presentClientContextProjection(projectionFixture());
 
-    expect(view.noPeerCanAskNotice).toBe(NO_PEER_CAN_ASK_NOTICE);
-    expect(view.noPeerCanAskNotice).toContain('No peer product can ask AGE for this yet');
+    expect(view.howThisReachesAPeerNotice).toBe(HOW_THIS_REACHES_A_PEER_NOTICE);
+    expect(view.howThisReachesAPeerNotice).toContain('the operator is the transport');
+    // 🛑 It says the peer's silence is a DECISION, 🚫 not a missing feature.
+    expect(view.howThisReachesAPeerNotice).toContain('in V1 none is meant to');
+    // ⚠️ ADR-0071 D2 — a constraint with an expiry, 🚫 never a principle.
+    expect(view.howThisReachesAPeerNotice).toContain('not a permanent one');
     // 🚫 The gap is stated as a gap, not as a schedule — "coming soon" invites
     // an operator to wait rather than to read what is actually true today.
     for (const forbidden of ['coming soon', 'currently serving', 'peers receive']) {
-      expect(view.noPeerCanAskNotice.toLowerCase(), forbidden).not.toContain(forbidden);
+      expect(view.howThisReachesAPeerNotice.toLowerCase(), forbidden).not.toContain(forbidden);
     }
   });
 
@@ -134,7 +138,7 @@ describe('presentClientContextProjection', () => {
     expect(Object.keys(view).sort()).toEqual([
       'asOf',
       'bifId',
-      'noPeerCanAskNotice',
+      'howThisReachesAPeerNotice',
       'notCaptured',
       'notices',
       'subjectKinds',
