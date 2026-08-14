@@ -125,6 +125,73 @@ Both future ADRs are constrained **in advance**:
    on **both** sides, **one real end-to-end round-trip test**, and 🚫 not called complete before
    that test passes. Then the same pattern per peer.
 
+---
+
+## 6. #328 — the operator can actually carry it (the first slice under this ADR)
+
+| PR   | Merge SHA | Post-merge CI                                            |
+| ---- | --------- | -------------------------------------------------------- |
+| #328 | `8cb9de0` | green, **15 executed steps**, matched by full `head_sha` |
+
+🛑 **D1 had been DECIDED and nothing IMPLEMENTED CARRYING.** An operator could read the
+client-context projection on screen and then had no way to take it anywhere — the ADR said "the
+operator is the transport" while the product gave the operator nothing to transport. #328 closes
+that, and is 🚫 **not** the outbound ecosystem slice §5 sequences behind ADR-0070 D2: it adds no peer
+contract, names no peer, and opens no connection.
+
+**Shipped:** `buildClientContextHandover` in `packages/studio-shell/src/client-context-handover.ts`,
+plus `ClientContextHandoverBlock` in the Studio client-context panel — the exact bytes on screen and
+a clipboard copy.
+
+### 6.1 The rules the code holds
+
+- 🛑 **THE CARRIED KEY SET IS PINNED, 🚫 NOT FILTERED.** `CARRIED_KEYS` is built key-by-key, 🚫 never
+  by spreading the view. A field added to the view cannot reach a peer until someone adds it here
+  **on purpose**, and three specs fail until they do. ⚠️ This is D5 enforced by shape: widening the
+  payload _"since a human is reading it anyway"_ is a **REFUSAL**, so the widening must be a
+  decision, 🚫 never an accident.
+- 🚫 **THE CONSOLE'S OWN SENTENCE NEVER TRAVELS.** `HOW_THIS_REACHES_A_PEER_NOTICE` is a claim about
+  **AGE's surface**, authored for an operator. A peer receiving it would receive a claim AGE never
+  made about the business — a console's limitation read as a business fact.
+- 🚫 **NO INSTRUCTION, EVER** (§5, refused by name) and 🚫 **NO SCORE CROSSES** — both guarded.
+- 🚫 **COPYING IS NOT SENDING.** No peer name, no endpoint, no request, no network. 🚫 **No control
+  may say send / deliver / sync / push / transmit / connect** — every button label is scanned **and
+  counted**, so a page that rendered no button cannot pass by finding nothing. ⚠️ The guard is scoped
+  to **controls**: the prose may and does say the **operator** delivers it.
+- ⚠️ **PURE and DETERMINISTIC** — same view, byte-identical document; 🚫 no clock in the file name;
+  `asOf` is the stored capture time.
+
+### 6.2 The false notice it corrected
+
+The panel had been displaying: _"No peer product can ask AGE for this yet. The tool that would serve
+it is not built."_ 🛑 **Both halves had stopped being true.** Credential verification shipped at
+**#322**, and **ADR-0071 D1** then decided that in V1 **no peer asks at all** — the operator carries
+it. 🚫 **Describing a DECIDED architecture as a missing feature told the operator to wait for
+something nobody is building.** Renamed `NO_PEER_CAN_ASK_NOTICE` → `HOW_THIS_REACHES_A_PEER_NOTICE`
+and rewritten to state D1, D2's expiry condition, and that nothing has been sent. 🚫 Do not soften it
+to "coming soon".
+
+⚠️ **The general rule this is an instance of:** a screen that claims a blocker the architecture has
+since removed is as dishonest as one that claims a capability that does not exist. 🛠️ **Re-read the
+console's authored sentences whenever an ADR lands.**
+
+### 6.3 Guards made to fail
+
+| Mutation                                             | What named it                                                        |
+| ---------------------------------------------------- | -------------------------------------------------------------------- |
+| `const carried = { ...view }` before the pinned loop | 3 handover specs (pinned key set · console sentence · widened field) |
+| Button label → `"Copy the document and send it"`     | the control-label guard, naming `send`                               |
+
+Both restored by **targeted inverse edit**, 🚫 never `git checkout <file>`.
+
+### 6.4 What #328 is 🚫 NOT
+
+🚫 It is **not** an integration, and 🚫 **not** rung 6. No peer repository contains AGE code; nothing
+was sent; producing a document is 🚫 **not evidence any peer received anything** (D4). The permitted
+sentence is: **an operator can now carry AGE's client-context answer out of Studio by hand.**
+
+---
+
 ⚠️ **Do not design five separate integration architectures.** The point of the semantic contract is
 that every peer plugs into the **same** AGE model. The long-term loop the owner is building toward:
 `Business → AGE → shared intelligence → peers → new observations → AGE → refined intelligence`,
