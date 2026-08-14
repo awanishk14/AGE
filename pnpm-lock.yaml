@@ -836,6 +836,9 @@ importers:
       '@age/session-store':
         specifier: workspace:*
         version: link:../session-store
+      '@age/session-store-persistence':
+        specifier: workspace:*
+        version: link:../session-store-persistence
       '@age/source-observation':
         specifier: workspace:*
         version: link:../source-observation
@@ -916,6 +919,16 @@ importers:
       '@age/entitlement':
         specifier: workspace:*
         version: link:../entitlement
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(terser@5.48.0)
+
+  packages/session-store-persistence:
+    dependencies:
+      '@age/session-store':
+        specifier: workspace:*
+        version: link:../session-store
     devDependencies:
       vitest:
         specifier: ^2.1.1
