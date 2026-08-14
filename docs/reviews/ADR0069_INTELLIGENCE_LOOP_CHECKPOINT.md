@@ -83,3 +83,31 @@
 > the stored `capturedAt`, 🚫 never a clock; 🚫 an unknown business opens NO connection and a blank
 > BIF id refuses BEFORE the scope resolves. 🛑 **NO PEER CAN ASK YET AND THE CODE SAYS SO** —
 > 🚫 do not close that with a session, a token or a route.
+
+## #319 — the peer's own answer, on the operator's screen (verbatim, extracted from CLAUDE.md §1)
+
+> ✅ **#319 — THE PEER'S OWN ANSWER, ON THE OPERATOR'S SCREEN** (main `d896519`, post-merge CI
+> green, **15 steps**). ADR-0069 deliverable 7's screen half, on the #311/#312 precedent:
+> `presentClientContextProjection` (`@age/studio-shell`, pure) · `readClientContextProjection`
+> (`operator-environment.ts`, the ONE effects module) · `readClientContextProjectionAction` ·
+> `ClientContextProjectionPanel`, above `RelayedObservationsPanel` on Peer Products.
+> 🛑 **THE VIEW AUTHORS EXACTLY ONE SENTENCE OF ITS OWN, AND IT IS COUNTED, 🚫 NOT EYEBALLED** — a
+> set-difference test proves every other string is carried byte-identical from the projection; a
+> friendlier console re-wording would be a SECOND answer, and the copy that drifts still looks
+> authoritative. 🛑 **THAT ONE SENTENCE IS `NO_PEER_CAN_ASK_NOTICE`, AND IT RENDERS ABOVE THE
+> ANSWER** — asserted by DOCUMENT ORDER (`compareDocumentPosition`), 🚫 not by mere presence: an
+> operator who read the subjects first has already concluded that peers are served. 🚫 It states
+> the gap as a gap — `coming soon` / `currently serving` / `peers receive` are forbidden BY NAME.
+> 🛑 **AN ACTION, 🚫 NEVER PAGE DATA** — nothing is read until the operator presses, and the button
+> is DISABLED without a BIF id (🚫 never defaulted), so opening a screen is not the act of opening
+> a database connection. 🛑 **IT HANDS OVER ONE THUNK AND SO OPENS ONE STORE** — the observation
+> store is unreachable BY SHAPE. 🛑 **THIS IS NOT THE PEER-FACING SURFACE AND MUST NOT BECOME ONE**
+> — the action carries no credential and checks none; the tool a peer would call stays BLOCKED on
+> token verification (ADR-0068 §0.1b), and 🚫 the gap is not closed by exposing this action.
+> 🚫 **NO SCORE, 🚫 NO RELATIVE TIME** — `as of <the stored capturedAt>`; `ago`/`today`/`recently`
+> asserted absent. 🛑 **`no-context` IS ITS OWN STATE**, 🚫 not a projection with no subjects, and
+> the projected vocabulary does not appear on it at all. 🛑 **A REFUSAL IS A RESULT, 🚫 NEVER A
+> CRASH**, and the driver's own words never reach the screen (a message can carry a connection
+> string). ⚠️ Fixtures obviously fictional; the shell spec builds its projection through the REAL
+> chain, 🚫 not a hand-shaped object. ⚠️ Four guards were each made to FAIL and restored by
+> targeted inverse edits, 🚫 never `git checkout`.
