@@ -29,6 +29,7 @@ import {
   type RelayedObservationsOutcome,
   type StoredSnapshotOutcome,
 } from '@age/operator-workspace';
+import { decodeOperatorDocument } from '@age/operator-document-decoder';
 import {
   assertLoopbackBindHost,
   DEFAULT_STUDIO_BIND_HOST,
@@ -74,6 +75,11 @@ const CONSOLE_RUNTIME: OperatorWorkspaceRuntime = {
   now: () => new Date(),
   fileExists: (path) => existsSync(path),
   readFileText: (path) => readFileSync(path, 'utf8'),
+
+  // ⚠️ ADR-0070. A PDF read as UTF-8 is mojibake, so the decoder is handed
+  // BYTES. `new Uint8Array(...)` copies out of the Buffer rather than wrapping
+  // the shared pool, so nothing downstream can see another read's memory.
+  readFileBytes: (path) => new Uint8Array(readFileSync(path)),
   writeFileText: (path, contents) => writeFileSync(path, contents, 'utf8'),
   ensureDirectory: (path) => mkdirSync(path, { recursive: true }),
 };
@@ -139,15 +145,25 @@ export function assessCapabilityReadiness(clientId: string, changedBy: string) {
 }
 
 /**
- * One operator-named source document, read (ADR-0066 D4, slice 4).
+ * One operator-named source document, read — and now DECODED if it is a PDF
+ * (ADR-0066 D4 slice 4, extended by ADR-0070 D1/D2).
  *
- * 🚫 Nothing is fetched and nothing is decoded — a website URL is ADR-0059
- * D4.3 and a PDF/DOCX decoder is D4.2, each refused pending its own ADR. The
- * only capability handed down is `readFileText`; there is no writer on this
- * path, so 🚫 the answer file cannot be touched from the Sources screen.
+ * 🛑 **THIS IS THE ONLY IMPORT OF `@age/operator-document-decoder` IN THE
+ * REPOSITORY, AND IT MUST STAY THAT WAY** (ADR-0070 D1). The decoder is handed
+ * to the operation as an argument rather than added to `OperatorWorkspaceRuntime`
+ * — a runtime member would let `apps/mcp` bind one, and 🚫 no MCP surface is
+ * authorized to decode a real client's documents.
+ *
+ * 🚫 **STILL NOTHING IS FETCHED.** A website URL is ADR-0059 D4.3 and a widget
+ * is D4.4, both refused; OCR is refused by name in ADR-0070 D4; and DOCX has no
+ * decoder because option B was DEFERRED, 🚫 not adopted. The bytes are decoded
+ * in-process and 🚫 never leave this machine.
+ *
+ * 🚫 There is still no writer on this path, so 🚫 the answer file cannot be
+ * touched from the Sources screen.
  */
 export function readOperatorSourceDocument(options: ReadOperatorSourceDocumentOptions) {
-  return readOperatorSourceDocumentIn(CONSOLE_RUNTIME, options);
+  return readOperatorSourceDocumentIn(CONSOLE_RUNTIME, decodeOperatorDocument, options);
 }
 
 /**

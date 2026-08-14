@@ -19,6 +19,7 @@
     "@age/client-registry": "workspace:*",
     "@age/demo-runtime": "workspace:*",
     "@age/discovery-answer-file": "workspace:*",
+    "@age/operator-document-decoder": "workspace:*",
     "@age/operator-file-policy": "workspace:*",
     "@age/operator-workspace": "workspace:*",
     "@age/studio-shell": "workspace:*",

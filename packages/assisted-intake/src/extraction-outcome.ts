@@ -28,6 +28,8 @@ export const NOT_EXTRACTED_REASONS = [
   'empty-document',
   'no-readable-passages',
   'not-plain-text',
+  'could-not-decode',
+  'decoded-no-text',
 ] as const;
 
 export type NotExtractedReason = (typeof NOT_EXTRACTED_REASONS)[number];
@@ -72,6 +74,16 @@ export function describeNotExtracted(outcome: NotExtractedOutcome): string {
     case 'no-readable-passages':
       return 'That document contains no readable text passages, so nothing was proposed from it. This is a statement about the file, not about the business.';
     case 'not-plain-text':
-      return 'That file is not plain text, so AGE did not read it. PDF and DOCX need a decoder, and which decoder is a decision that has not been made yet — nothing was inferred from the bytes.';
+      return 'That file is not plain text and is not a PDF, so AGE did not read it. AGE decodes PDF only; DOCX needs a second decoder, and adopting one is a decision that has not been made — nothing was inferred from the bytes.';
+    case 'could-not-decode':
+      // 🛑 ADR-0070 D3. 🚫 NOT "the document was empty" and 🚫 NOT a fallback to
+      // showing raw bytes: AGE was handed a PDF, could not open it, and says so.
+      return 'That file says it is a PDF, and AGE could not open it — it may be damaged or password-protected. Nothing was read and nothing was inferred from the bytes. This is a statement about the file, not about the business.';
+    case 'decoded-no-text':
+      // ⚠️ Kept apart from `empty-document` ON PURPOSE. A scan has words a human
+      // can see and AGE cannot; reading them would be OCR, refused by name
+      // (ADR-0070 D4). Telling the operator "this document is empty" would be
+      // false, and would send them looking for a different document.
+      return 'AGE opened that PDF and it contains no text layer — this is what a scanned or photographed document looks like. AGE does not read images of text, so nothing was proposed. This is a statement about the file, not about the business, and the document may well be full of writing.';
   }
 }

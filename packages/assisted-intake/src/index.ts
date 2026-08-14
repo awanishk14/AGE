@@ -9,8 +9,10 @@
  * - 🚫 A model call (D5 — refused; sending a real client's documents to a
  *   vendor is a wider disclosure than a commit, which ADR-0053 D3 already
  *   refuses).
- * - 🚫 A PDF or DOCX decoder (D4.2 — allowed only "subject to naming the
- *   library in a follow-up ADR"; until then such a file is refused BY NAME).
+ * - 🚫 A DECODER OF ANY KIND. ⚠️ ADR-0070 answered D4.2 for PDF — the library
+ *   is `unpdf` and it lives in `@age/operator-document-decoder`, at the
+ *   console's edge (D1). 🚫 It must not move here, and 🚫 DOCX has no decoder at
+ *   all: option B (`mammoth`) was DEFERRED to its own slice, not adopted.
  * - 🚫 An "accept all", a bulk apply, or any confidence threshold (D1).
  * - 🚫 Any number expressing certainty (D3).
  */
@@ -46,6 +48,7 @@ export type {
   LoadSourceDocumentOptions,
   LoadedSourceDocument,
   SourceFileReader,
+  SourceTextRead,
 } from './load-source-document';
 
 /**

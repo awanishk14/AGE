@@ -64,10 +64,10 @@ const INSTRUCTIONS = [
  * 2.0 MUST NOT be answered. ⚠️ Answering one (`notifications/initialized` is the
  * one every client sends) corrupts the stream for the rest of the session.
  */
-export function handleMcpMessage(
+export async function handleMcpMessage(
   runtime: OperatorWorkspaceRuntime,
   message: unknown,
-): JsonRpcResponse | null {
+): Promise<JsonRpcResponse | null> {
   if (typeof message !== 'object' || message === null || Array.isArray(message)) {
     return fail(null, INVALID_REQUEST, 'expected a JSON-RPC 2.0 request object');
   }
@@ -123,7 +123,7 @@ export function handleMcpMessage(
       // ⚠️ A refused tool call is a RESULT with `isError`, not a JSON-RPC error.
       // A protocol error is invisible to the model; AGE's refusals are the part
       // it most needs to read.
-      return ok(id, callAgeTool(runtime, name, args));
+      return ok(id, await callAgeTool(runtime, name, args));
     }
 
     default:
@@ -137,10 +137,10 @@ export function handleMcpMessage(
  * ⚠️ A blank line is not a message and a malformed line is not a crash: a
  * client that dies mid-write must not take AGE's session with it.
  */
-export function handleMcpLine(
+export async function handleMcpLine(
   runtime: OperatorWorkspaceRuntime,
   line: string,
-): JsonRpcResponse | null {
+): Promise<JsonRpcResponse | null> {
   const trimmed = line.trim();
   if (trimmed === '') {
     return null;

@@ -34,13 +34,24 @@ export interface PassageLike {
 export interface DocumentLike {
   readonly sourceId: string;
   readonly label: string;
-  // ⚠️ The one kind that exists. 🚫 Not widened to `string`: a PDF/DOCX decoder
-  // is ADR-0059 D4.2 and a web address is D4.3, each refused pending its own
-  // ADR, so a second kind must not be typeable here first.
-  readonly kind: 'plain-text';
+  // ⚠️ The two kinds that exist, PINNED. 🚫 Not widened to `string`: DOCX has no
+  // decoder (ADR-0070 deferred option B) and a web address is ADR-0059 D4.3,
+  // refused — so a third kind must not become typeable here before it is real.
+  readonly kind: 'plain-text' | 'decoded-pdf';
   readonly locator: string;
   readonly text: string;
 }
+
+/**
+ * 🛑 **HOW AGE GOT THE TEXT, ON SCREEN — 🚫 NOT A QUALITY BADGE.** ADR-0070: an
+ * operator checking a passage against their document needs to know whether they
+ * are looking at a file's characters or a decoder's output. 🚫 It ranks nothing
+ * and 🚫 changes no score.
+ */
+const HOW_IT_WAS_READ: Readonly<Record<DocumentLike['kind'], string>> = {
+  'plain-text': 'Read as plain text',
+  'decoded-pdf': 'Decoded from PDF, on this machine',
+};
 
 export type SourceReadOutcomeLike =
   | { readonly kind: 'refused'; readonly reason: string }
@@ -123,13 +134,15 @@ export function SourcesPanel({ questions, storageNotice, read, record }: Sources
       <div className="rounded border border-[hsl(var(--age-border))] p-4">
         <h2 className="text-sm font-semibold">Read a source document</h2>
         <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
-          AGE reads one plain-text file you name, on your machine, outside this repository, and
-          shows you its own sentences verbatim. It happens once, when you press.
+          AGE reads one file you name, on your machine, outside this repository, and shows you its
+          own sentences verbatim. It happens once, when you press.
         </p>
         <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">
-          Nothing is fetched, downloaded or contacted, and no PDF or DOCX is decoded. A web address
-          and a document decoder are each decisions that have not been made — they are refused, not
-          pending.
+          Plain text and PDF. A PDF is decoded here, on this machine — nothing is fetched,
+          downloaded, uploaded or contacted, and no document is ever sent anywhere to be read. AGE
+          does not read images of text, so a scanned PDF with no text layer will say so rather than
+          be guessed at. DOCX is not decoded at all: a second decoder is a decision that has not
+          been made.
         </p>
 
         <label className="mt-4 block text-xs font-medium" htmlFor="source-path">
@@ -198,6 +211,15 @@ export function SourcesPanel({ questions, storageNotice, read, record }: Sources
             What the document says — {readOutcome.outcome.passages.length} passage
             {readOutcome.outcome.passages.length === 1 ? '' : 's'}
           </h3>
+          {/*
+            ⚠️ Shown ONLY where a decode actually succeeded. On a `not-extracted`
+            outcome the document is still a PDF but its text never arrived, and a
+            badge reading "Decoded from PDF" beside "proposed nothing" would claim
+            a step that did not finish. There the notice says what happened instead.
+          */}
+          <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">
+            {HOW_IT_WAS_READ[readOutcome.document.kind]}
+          </p>
           <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">
             These are the document&apos;s own words. AGE did not decide which of them answers which
             question. {readOutcome.notice} That judgement is yours, one passage at a time.

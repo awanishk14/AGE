@@ -11,6 +11,7 @@ import {
   submitDiscoveryAnswers,
   writeDiscoveryDraft,
   STUDIO_QUESTIONNAIRE,
+  type OperatorDocumentDecoder,
   type OperatorWorkspaceRuntime,
 } from '@age/operator-workspace';
 import { sourceDocumentSchema, sourcePassageSchema } from '@age/assisted-intake';
@@ -361,11 +362,26 @@ function requiredString(
  * make this whole surface unfalsifiable behind a signature that only looks
  * parameterised (ADR-0049 D2's reasoning, applied here).
  */
-export function callAgeTool(
+/**
+ * 🛑 **THIS SERVER DECODES NOTHING, AND SAYS SO BY SHAPE (ADR-0070 D1).**
+ *
+ * ⚠️ ADR-0070 put `unpdf` at the CONSOLE's edge, in `@age/operator-document-decoder`,
+ * and 🚫 nowhere else. `apps/mcp` therefore supplies the answer "no decoder
+ * claims this file" for every document, which leaves this tool on route 1 —
+ * plain text — exactly as it was before ADR-0070.
+ *
+ * 🚫 **DO NOT REPLACE THIS WITH A REAL DECODER.** Handing a model's tool call a
+ * PDF decoder is a widening of what this surface may do to an operator's
+ * documents, and it needs its own ADR. ⚠️ A PDF named here today is reported as
+ * `not-plain-text` WITH its reason — 🚫 never as an empty document.
+ */
+const DECODES_NOTHING: OperatorDocumentDecoder = async () => ({ kind: 'no-decoder' });
+
+export async function callAgeTool(
   runtime: OperatorWorkspaceRuntime,
   name: string,
   args: Readonly<Record<string, unknown>>,
-): AgeToolResult {
+): Promise<AgeToolResult> {
   if (!AGE_MCP_TOOLS.some((tool) => tool.name === name)) {
     // ⚠️ Named, so a model can correct itself, and 🚫 without listing the other
     // tools: a tool list belongs in `tools/list`, not in an error a transcript
@@ -410,7 +426,7 @@ export function callAgeTool(
     }
 
     return report(
-      readOperatorSourceDocument(runtime, {
+      await readOperatorSourceDocument(runtime, DECODES_NOTHING, {
         path: String(args.path),
         sourceId: String(args.sourceId),
         label: String(args.label),
