@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { describeDraftStorage } from '@age/studio-shell';
+import { describeDraftStorage, describeSourcesCoverage } from '@age/studio-shell';
 
 import { SourcesPanel } from './sources-panel';
 import { SubjectAreaNav } from './subject-area-nav';
@@ -71,6 +71,15 @@ export function SourcesScreen({ clientId }: { readonly clientId: string }) {
         A document supplying a candidate answer is not AGE believing it. Nothing here writes a BIF,
         changes a status or produces a score, and where an answer came from never changes a score.
       </p>
+      {/*
+        ⚠️ THE AREA NAMES ITS OWN BOUNDARY. Since ADR-0069 a document is not the
+        only input AGE receives, and an operator reading this screen alone would
+        otherwise take one document for the whole of what AGE has been given.
+        🚫 The sentence is a POINTER, never a second copy of the other answer,
+        and 🚫 it claims nothing about what the observation store holds — from
+        here AGE has not looked.
+      */}
+      <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">{describeSourcesCoverage()}</p>
 
       <SourcesPanel
         questions={STUDIO_QUESTIONNAIRE.sections
