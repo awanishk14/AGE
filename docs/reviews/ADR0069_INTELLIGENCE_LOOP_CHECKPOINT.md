@@ -50,3 +50,36 @@
 > OBSERVATION STORE** — from Sources AGE has not looked, and the spec forbids "no observations" /
 > "nobody has reported" BY NAME (D5). ⚠️ `describeSourcesCoverage()` is the ONE implementation, in
 > `@age/studio-shell`; 🚫 the screen writes no prose of its own.
+
+## #315 — the projection, and the surface that cannot exist yet (verbatim, extracted from CLAUDE.md §1)
+
+> ✅ **#315 — THE PROJECTION, AND THE SURFACE THAT CANNOT EXIST YET** (main `5676a5d`, post-merge
+> CI green, **15 steps**). ADR-0069 deliverable 7's projection half: `projectClientContext`
+> (`@age/client-context-projection`) answers ONE question, **"what may I name?"**, because
+> admissibility is BY SUBJECT (D4). 🛑 **THE MCP TOOL IS DELIBERATELY NOT BUILT AND THAT IS THE
+> REPORTED CONFLICT, 🚫 NOT AN OVERSIGHT** — "entitled on read" is unreachable while the only
+> `Authentication` constructible is `none`, so a tool through `readWithinEntitlement` would refuse
+> every call; it waits on token verification (ADR-0068 §0.1b). 🚫 **DO NOT CLOSE THAT GAP** by
+> inventing a session, defaulting an organization or skipping the entitlement question — a guard
+> forbids `token`/`session`/`cookie`/`bearer`/`express`/`listen(` in the package BY NAME.
+> 🛑 **ONE READING RULE, SHARED** — subjects come from `deriveModelledSubjects`, the SAME function
+> admissibility is assessed against; a second reading would advertise a subject AGE would refuse
+> to relate. 🚫 **NO SCORE CROSSES** — the **KEY SET IS PINNED, NOT SEARCHED**: the substring scan
+> missed `bifCompletenessScore` on casing when the guard was made to fail. 🚫 **NOTHING IS
+> EMPTY-BY-OMISSION** — every subject kind appears; `never-captured` and `captured-nothing-recorded`
+> stay apart and 🚫 NEITHER SAYS THE BUSINESS HAS NONE. ⚠️ **`asOf` IS A PARAMETER, 🚫 NEVER A
+> CLOCK.**
+
+## #317 — the peer's own answer, read for a screen (verbatim, extracted from CLAUDE.md §1)
+
+> ✅ **#317 — THE PEER'S OWN ANSWER, READ FOR A SCREEN** (main `6a42f77`, post-merge CI green,
+> **15 steps**). `readClientContextProjection` is `@age/operator-workspace`'s THIRTEENTH operation
+> and #315's first caller. 🛑 **THE OPERATOR SEES THE PEER'S ANSWER, 🚫 NOT A DESCRIPTION OF IT** —
+> asserted by **BYTE-IDENTICAL EQUALITY** with `projectClientContext`, so 🚫 no friendlier console
+> wording can grow beside it. 🛑 **IT OPENS ONE STORE AND ONLY ONE** — the observation store is not
+> opened, not read, not needed; mixing in what a source REPORTED would turn a statement about AGE's
+> own model into one about what the world has said. ⚠️ **HANDLES ARE COUNTED, 🚫 NOT INFERRED FROM
+> OUTPUT.** 🛑 **NO STORED CONTEXT IS ITS OWN OUTCOME**, 🚫 never an empty subject list; ⚠️ `asOf` is
+> the stored `capturedAt`, 🚫 never a clock; 🚫 an unknown business opens NO connection and a blank
+> BIF id refuses BEFORE the scope resolves. 🛑 **NO PEER CAN ASK YET AND THE CODE SAYS SO** —
+> 🚫 do not close that with a session, a token or a route.
