@@ -197,3 +197,61 @@ that every peer plugs into the **same** AGE model. The long-term loop the owner 
 `Business → AGE → shared intelligence → peers → new observations → AGE → refined intelligence`,
 with AGE as the common organizational intelligence layer and the peer products remaining
 specialized execution systems.
+
+---
+
+## 7. §5 items 4 and 5 (2026-08-15)
+
+### 7.1 Item 4 — "finish the document/source ingestion capability" was MEASURED, 🚫 not invented
+
+🛑 **EVERY REMAINING INGESTION ITEM IS GATED BY A PRODUCT OWNER DECISION, SO ITEM 4 IS COMPLETE AS
+FAR AS IT IS AUTHORIZED.** Measured at `4c2405d`, the path is wired end to end — an operator names a
+file, AGE reads or decodes it locally, proposes passages, and one human accepts one passage against
+one question through `recordPassageForQuestion`. What is left, and why each is 🚫 not mine to take:
+
+| Remaining item                    | Gate                                                                                                                                                                                                                                                            |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **DOCX**                          | ADR-0070 §0.1b — 🛑 option **B** is 🚫 **NOT pre-authorized by the decoder package existing**. That argument is refused **by name**.                                                                                                                            |
+| **A URL / a widget**              | ADR-0059 D4.3 needs its own allow-list ADR; D4.4 is 🛑 **refused, not postponed**.                                                                                                                                                                              |
+| **OCR / a model call**            | ADR-0070 D4 and ADR-0059 D5 — both refused by name.                                                                                                                                                                                                             |
+| **The draft surviving a request** | 🛑 **ADR-0067: a draft answer lives NOWHERE between requests, and THAT IS A DECISION, 🚫 NOT A GAP.** The trigger for revisiting is a real operator hitting the limit on a real document — 🚫 not that the asymmetry with the Discovery workspace looks untidy. |
+
+⚠️ **The asymmetry is real and is 🚫 not a defect:** the Discovery form path has a durable operator
+workspace and `operator-environment.ts` does expose `writeFileText`, so closing the gap would be a
+two-line edit. 🛑 **That is precisely what ADR-0067 forbids** — "do not fix the evaporating draft with
+a file write, a cache, a module-level variable, a session field or a hidden form value." 🚫 Ease of
+implementation is not authorization.
+
+### 7.2 Item 5 — the gap B ADR is written (#331)
+
+| PR   | Merge SHA | Post-merge CI                                            |
+| ---- | --------- | -------------------------------------------------------- |
+| #331 | `1926ce0` | green, **15 executed steps**, matched by full `head_sha` |
+
+**`docs/adrs/0072-when-an-observation-differs-from-what-the-business-said.md`, `Status: Proposed`.**
+🚫 It authorizes nothing and 🚫 must not be self-accepted. ⚠️ **Read the ADR, 🚫 not this block.**
+
+🛑 **THE MEASUREMENT CHANGED THE QUESTION, AND THAT IS THE FINDING WORTH CARRYING.** Gap B was
+recorded as _"a derived conclusion contradicts the BIF — who wins?"_. On `main`, `SUBJECT_SOURCES` is
+the **entire** mapping between the two worlds and every entry reads a **label**; an observation
+carries a **direction**. 🛑 **The BIF holds names, observations hold movements, and the two meet ONLY
+at subject identity** — so there is 🚫 no pair of comparable assertions to contradict, and "who wins"
+presupposes a conflict AGE has no way to hold. ⚠️ The roadmap's own framing of a gap is 🚫 not
+evidence about the code (finding 11 again).
+
+🚫 **`detectContradictions` MUST NOT BE REACHED FOR AS THE ANSWER.** It is `Evidence`↔`Evidence` on
+polarity, unwired, no import path, and over an empty list returns an empty set that renders as "no
+contradictions" — the exact _"AGE has never looked" → "AGE checked and it is sound"_ failure.
+
+The two rules the ADR fixes regardless of how D2 is answered: 🛑 **"agreement plus new information"
+is the DEFAULT arm, 🚫 not the exception** — 🚫 no count, streak, direction or materiality may promote
+a run of observations into a conflict with the business's own account of itself (that would be AGE
+deciding the BIF is wrong **by accumulation**, arriving without anyone choosing it); and 🛑 the
+reportable fact is **"conflicting information exists"**, 🚫 never a correction, a suggested edit, a
+flag on the field or a prompt to update the BIF, and 🚫 no score moves.
+
+⚠️ **Option A is a complete answer** — gap B closing as "not representable, and the repair is intake"
+is a **decision**, the ADR-0067 shape, and 🚫 it must not later be patched by a helpful rule.
+
+🛠️ **Next in §5: item 6, the gap C (ageing/currentness) ADR**, under §3.3's constraint. Item 3
+(Operator 2) stays blocked on the owner and is 🛑 a human act.
