@@ -45,6 +45,7 @@ export {
  */
 export {
   readOperatorSourceDocument,
+  type OperatorDocumentDecoder,
   type ReadOperatorSourceDocumentOptions,
   type SourceDocumentOutcome,
 } from './source-document';

@@ -46,6 +46,21 @@ export interface OperatorWorkspaceRuntime {
   /** Read a file as UTF-8 text, or throw. ⚠️ Callers swallow the system error: it embeds the path. */
   readFileText(path: string): string;
 
+  /**
+   * Read a file as raw bytes, or throw (ADR-0070).
+   *
+   * ⚠️ **A SEPARATE MEMBER FROM `readFileText`, ON PURPOSE.** A PDF read as
+   * UTF-8 is mojibake, and mojibake is what a decoder must never be handed —
+   * nor an operator shown. This exists because the console now reads documents
+   * whose bytes are not characters, and 🚫 for no other reason.
+   *
+   * 🚫 **THE DECODER ITSELF IS NOT A RUNTIME MEMBER.** Which library decodes a
+   * real client's documents is ADR-0070 D2, a Product Owner decision — 🚫 not a
+   * capability any surface may quietly bind. It is passed to the one operation
+   * that needs it, by the one surface authorized to have it.
+   */
+  readFileBytes(path: string): Uint8Array;
+
   /** Write UTF-8 text, or throw. */
   writeFileText(path: string, contents: string): void;
 

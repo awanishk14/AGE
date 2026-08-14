@@ -16,6 +16,14 @@ import type { OperatorWorkspaceRuntime } from '../operator-workspace-runtime';
  */
 export interface InMemoryRuntime extends OperatorWorkspaceRuntime {
   readonly files: Map<string, string>;
+  /**
+   * Files whose contents are bytes rather than characters (ADR-0070).
+   *
+   * ⚠️ **SEPARATE FROM `files` ON PURPOSE.** A spec that stored a PDF as a
+   * string and re-encoded it would be testing a document AGE could never
+   * receive; a real PDF's bytes are not the UTF-8 encoding of any string.
+   */
+  readonly byteFiles: Map<string, Uint8Array>;
   readonly directories: Set<string>;
   /** Every effect method that was called, in order. */
   readonly calls: string[];
@@ -34,11 +42,13 @@ export function createInMemoryRuntime(
   env: Readonly<Record<string, string | undefined>> = {},
 ): InMemoryRuntime {
   const files = new Map<string, string>();
+  const byteFiles = new Map<string, Uint8Array>();
   const directories = new Set<string>();
   const calls: string[] = [];
 
   return {
     files,
+    byteFiles,
     directories,
     calls,
     env,
@@ -63,6 +73,20 @@ export function createInMemoryRuntime(
         throw new Error('ENOENT: no such file or directory');
       }
       return contents;
+    },
+    readFileBytes: (path) => {
+      calls.push(`readFileBytes:${path}`);
+      const bytes = byteFiles.get(path);
+      if (bytes !== undefined) return bytes;
+
+      // ⚠️ A text fixture read as bytes is exactly what the console does to a
+      // `.txt` the operator names — the decoder is expected to look at those
+      // bytes, find no PDF header, and hand the file back to route 1.
+      const contents = files.get(path);
+      if (contents === undefined) {
+        throw new Error('ENOENT: no such file or directory');
+      }
+      return new TextEncoder().encode(contents);
     },
     writeFileText: (path, contents) => {
       calls.push(`writeFileText:${path}`);

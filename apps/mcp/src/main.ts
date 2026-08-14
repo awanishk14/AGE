@@ -48,12 +48,24 @@ const MCP_RUNTIME: OperatorWorkspaceRuntime = {
   readFileText: (path) => readFileSync(path, 'utf8'),
   writeFileText: (path, contents) => writeFileSync(path, contents, 'utf8'),
   ensureDirectory: (path) => mkdirSync(path, { recursive: true }),
+  readFileBytes: (path) => new Uint8Array(readFileSync(path)),
 };
 
-function respond(line: string): void {
+/**
+ * 🛑 **ONE RESPONSE AT A TIME, IN THE ORDER THE LINES ARRIVED.**
+ *
+ * ⚠️ Handling a message became asynchronous when reading a source document did
+ * (ADR-0070). Two overlapping handlers would write to `stdout` in whichever
+ * order they happened to finish — and on this transport stdout IS the protocol
+ * channel, so an out-of-order line desynchronises the session exactly as a
+ * stray log line would. 🚫 Do not replace this chain with a bare `void`.
+ */
+let responses: Promise<void> = Promise.resolve();
+
+async function respond(line: string): Promise<void> {
   let response;
   try {
-    response = handleMcpLine(MCP_RUNTIME, line);
+    response = await handleMcpLine(MCP_RUNTIME, line);
   } catch (error: unknown) {
     /**
      * 🚫 NEITHER THE MESSAGE NOR THE STACK IS SENT. An unanticipated throw here
@@ -71,6 +83,11 @@ function respond(line: string): void {
   }
 }
 
+/** Append one line to the serial chain. ⚠️ A failure never breaks the chain. */
+function queue(line: string): void {
+  responses = responses.then(() => respond(line));
+}
+
 function main(): void {
   let pending = '';
 
@@ -86,7 +103,7 @@ function main(): void {
     while (newline !== -1) {
       const line = pending.slice(0, newline);
       pending = pending.slice(newline + 1);
-      respond(line);
+      queue(line);
       newline = pending.indexOf('\n');
     }
   });
@@ -94,7 +111,7 @@ function main(): void {
   process.stdin.on('end', () => {
     // A final line without its terminator is still a message the client sent.
     if (pending.trim() !== '') {
-      respond(pending);
+      queue(pending);
       pending = '';
     }
   });

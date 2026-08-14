@@ -26,7 +26,7 @@ function payload(result: AgeToolResult): Record<string, unknown> {
 }
 
 describe('the tool list', () => {
-  it('offers class 1 and class 2 only, and no execution tool exists', () => {
+  it('offers class 1 and class 2 only, and no execution tool exists', async () => {
     // 🛑 ADR-0057 D4: Business Execution is REFUSED, not postponed, and a
     // "preview" or "dry run" tool is still class 3.
     expect(AGE_MCP_TOOLS.length).toBeGreaterThan(0);
@@ -37,7 +37,7 @@ describe('the tool list', () => {
     }
   });
 
-  it('omits onboard, because ADR-0060 §6 Q1 is unanswered', () => {
+  it('omits onboard, because ADR-0060 §6 Q1 is unanswered', async () => {
     // 🛑 The first ADR-0054 D6 capture write must be the operator's own CLI
     // invocation — a tool call is easy for a model to make by accident, and
     // 🚫 ADR-0055 D7 has still never happened. 🚫 DO NOT SEED A ROW either.
@@ -45,12 +45,12 @@ describe('the tool list', () => {
     expect(AGE_MCP_TOOLS.some((tool) => /onboard|capture|snapshot/i.test(tool.name))).toBe(false);
   });
 
-  it('names every tool once', () => {
+  it('names every tool once', async () => {
     const names = AGE_MCP_TOOLS.map((tool) => tool.name);
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('describes readiness as separate, never as a gate', () => {
+  it('describes readiness as separate, never as a gate', async () => {
     // ADR-0027: readiness is a separate named entry point, 🚫 never a gate on a
     // run. The description is what a model reads before choosing.
     const readiness = AGE_MCP_TOOLS.find((tool) => tool.name === 'age_assess_capability_readiness');
@@ -59,11 +59,11 @@ describe('the tool list', () => {
 });
 
 describe('an operator who has configured nothing', () => {
-  it('is told which setting is missing, and it is an error, not an empty list', () => {
+  it('is told which setting is missing, and it is an error, not an empty list', async () => {
     // 🚫 "Nobody told me where to look" must never reach a model as "there are
     // no businesses" — one is a fact about the environment, the other a claim
     // about the operator's clients.
-    const result = callAgeTool(createInMemoryRuntime({}), 'age_list_businesses', {});
+    const result = await callAgeTool(createInMemoryRuntime({}), 'age_list_businesses', {});
 
     expect(result.isError).toBe(true);
     expect(payload(result)).toEqual({
@@ -72,27 +72,31 @@ describe('an operator who has configured nothing', () => {
     });
   });
 
-  it('opens no file at all', () => {
+  it('opens no file at all', async () => {
     const runtime = createInMemoryRuntime({});
-    callAgeTool(runtime, 'age_list_businesses', {});
+    await callAgeTool(runtime, 'age_list_businesses', {});
 
     expect(runtime.calls.filter((call) => call.startsWith('readFileText'))).toEqual([]);
   });
 });
 
 describe('the arguments a tool refuses to invent', () => {
-  it('refuses a missing clientId rather than guessing one', () => {
-    const result = callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_read_discovery_draft', {});
+  it('refuses a missing clientId rather than guessing one', async () => {
+    const result = await callAgeTool(
+      createInMemoryRuntime(CONFIGURED),
+      'age_read_discovery_draft',
+      {},
+    );
 
     expect(result.isError).toBe(true);
     expect(payload(result).reason).toContain('clientId');
   });
 
-  it('refuses a missing changedBy rather than generating a principal', () => {
+  it('refuses a missing changedBy rather than generating a principal', async () => {
     // 🚫 ADR-0053 D4: no `operatorPrincipalOrDefault`, no principal derived from
     // the process, the hostname or the environment. A generated one would
     // record a run as asked for by someone who never asked.
-    const result = callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_assemble_evidence', {
+    const result = await callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_assemble_evidence', {
       clientId: 'fictional-client-1',
     });
 
@@ -100,9 +104,9 @@ describe('the arguments a tool refuses to invent', () => {
     expect(payload(result).reason).toContain('changedBy');
   });
 
-  it('refuses an unknown tool without listing the others', () => {
+  it('refuses an unknown tool without listing the others', async () => {
     // 🚫 A tool list belongs in `tools/list`, not in an error a transcript keeps.
-    const result = callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_execute_campaign', {});
+    const result = await callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_execute_campaign', {});
 
     expect(result.isError).toBe(true);
     expect(result.content[0]?.text ?? '').not.toContain('age_list_businesses');
@@ -110,14 +114,14 @@ describe('the arguments a tool refuses to invent', () => {
 });
 
 describe('the refusals a tool must not smooth over', () => {
-  it('refuses a record file inside the repository, and writes nothing', () => {
+  it('refuses a record file inside the repository, and writes nothing', async () => {
     // 🛑 ADR-0054 D2. A real client's data inside the working tree is one
     // `git add -A` away from being committed, and 🚫 private is not a control.
     const runtime = createInMemoryRuntime({
       AGE_CLIENT_RECORD_FILE: join(FIXTURE_REPOSITORY_ROOT, 'clients.json'),
     });
 
-    const result = callAgeTool(runtime, 'age_create_business_record', {
+    const result = await callAgeTool(runtime, 'age_create_business_record', {
       clientId: 'fictional-client-1',
       organizationId: 'org-fictional-1',
       displayName: 'A Fictional Business',
@@ -127,15 +131,15 @@ describe('the refusals a tool must not smooth over', () => {
     expect(runtime.calls.filter((call) => call.startsWith('writeFileText'))).toEqual([]);
   });
 
-  it('reports an unknown clientId as its own kind, not as a business with no data', () => {
+  it('reports an unknown clientId as its own kind, not as a business with no data', async () => {
     const runtime = createInMemoryRuntime(CONFIGURED);
-    callAgeTool(runtime, 'age_create_business_record', {
+    await callAgeTool(runtime, 'age_create_business_record', {
       clientId: 'fictional-client-1',
       organizationId: 'org-fictional-1',
       displayName: 'A Fictional Business',
     });
 
-    const result = callAgeTool(runtime, 'age_resolve_business_scope', {
+    const result = await callAgeTool(runtime, 'age_resolve_business_scope', {
       clientId: 'fictional-client-2',
     });
 
@@ -143,7 +147,7 @@ describe('the refusals a tool must not smooth over', () => {
     expect(payload(result).kind).toBe('unknown-client');
   });
 
-  it('never returns a bare null, false, 0 or "none" as an answer', () => {
+  it('never returns a bare null, false, 0 or "none" as an answer', async () => {
     // 🛑 D4's central refusal: an epistemic state that serialises to a falsy
     // value WILL be read as a negative finding by the next thing that touches
     // it. Every tool reachable without configuration is exercised.
@@ -151,7 +155,7 @@ describe('the refusals a tool must not smooth over', () => {
     let examined = 0;
 
     for (const tool of AGE_MCP_TOOLS) {
-      const result = callAgeTool(runtime, tool.name, {
+      const result = await callAgeTool(runtime, tool.name, {
         clientId: 'fictional-client-1',
         changedBy: 'operator:fixture',
         draft: {},
@@ -172,12 +176,16 @@ describe('the refusals a tool must not smooth over', () => {
 });
 
 describe('a draft nobody has started', () => {
-  it('says it was never saved, and that is an answer, not an error', () => {
+  it('says it was never saved, and that is an answer, not an error', async () => {
     // ⚠️ "No file yet" is the ORDINARY state of a business nobody has started,
     // and a different fact from a draft that exists and cannot be read.
-    const result = callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_read_discovery_draft', {
-      clientId: 'fictional-client-1',
-    });
+    const result = await callAgeTool(
+      createInMemoryRuntime(CONFIGURED),
+      'age_read_discovery_draft',
+      {
+        clientId: 'fictional-client-1',
+      },
+    );
 
     expect(result.isError).toBeUndefined();
     expect(payload(result)).toMatchObject({ kind: 'loaded', everSaved: false });
@@ -199,8 +207,8 @@ describe('reading one source document over the tool surface', () => {
     return runtime;
   }
 
-  it('shows the document’s own sentences and claims nothing about the business', () => {
-    const result = callAgeTool(
+  it('shows the document’s own sentences and claims nothing about the business', async () => {
+    const result = await callAgeTool(
       runtimeWithDocument('Fictional Kite Repairs mends kites. It was founded by two people.'),
       'age_read_source_document',
       { path: DOCUMENT_PATH, sourceId: 'src-fictional-brief', label: 'A fictional brief' },
@@ -213,11 +221,11 @@ describe('reading one source document over the tool surface', () => {
     expect(String(body.notice)).toContain('decided nothing about this business');
   });
 
-  it('🚫 refuses a path it was not given rather than searching for one', () => {
+  it('🚫 refuses a path it was not given rather than searching for one', async () => {
     // 🚫 ADR-0054 D2/D3: an operator file's path is never defaulted, and the
     // working directory is never searched for one.
     const runtime = runtimeWithDocument('Anything.');
-    const result = callAgeTool(runtime, 'age_read_source_document', {
+    const result = await callAgeTool(runtime, 'age_read_source_document', {
       sourceId: 'src-fictional-brief',
       label: 'A fictional brief',
     });
@@ -227,9 +235,9 @@ describe('reading one source document over the tool surface', () => {
     expect(runtime.calls.filter((call) => call.startsWith('readFileText'))).toEqual([]);
   });
 
-  it('🚫 refuses a source it cannot identify, before reading anything', () => {
+  it('🚫 refuses a source it cannot identify, before reading anything', async () => {
     const runtime = runtimeWithDocument('Anything.');
-    const result = callAgeTool(runtime, 'age_read_source_document', {
+    const result = await callAgeTool(runtime, 'age_read_source_document', {
       path: DOCUMENT_PATH,
       sourceId: 'src-fictional-brief',
       label: '   ',
@@ -239,14 +247,18 @@ describe('reading one source document over the tool surface', () => {
     expect(runtime.calls.filter((call) => call.startsWith('readFileText'))).toEqual([]);
   });
 
-  it('🚫 never surfaces the message that embeds the operator’s directory layout', () => {
+  it('🚫 never surfaces the message that embeds the operator’s directory layout', async () => {
     // ⚠️ "Unreadable" is NOT "empty", and the system error carries the
     // operator's own paths into a transcript a model keeps.
-    const result = callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_read_source_document', {
-      path: DOCUMENT_PATH,
-      sourceId: 'src-fictional-brief',
-      label: 'A fictional brief',
-    });
+    const result = await callAgeTool(
+      createInMemoryRuntime(CONFIGURED),
+      'age_read_source_document',
+      {
+        path: DOCUMENT_PATH,
+        sourceId: 'src-fictional-brief',
+        label: 'A fictional brief',
+      },
+    );
 
     const text = result.content[0]?.text ?? '';
     expect(result.isError).toBe(true);
@@ -270,21 +282,21 @@ describe('accepting one passage over the tool surface', () => {
     text: 'Fictional Kite Repairs mends kites.',
   });
 
-  function firstQuestionId(): string {
+  async function firstQuestionId(): Promise<string> {
     const questionnaire = payload(
-      callAgeTool(createInMemoryRuntime({}), 'age_read_questionnaire', {}),
+      await callAgeTool(createInMemoryRuntime({}), 'age_read_questionnaire', {}),
     ).questionnaire as { sections: { questions: { id: string }[] }[] };
 
     return questionnaire.sections[0]?.questions[0]?.id ?? '';
   }
 
-  it('records the acceptance, and says plainly that nothing was stored', () => {
+  it('records the acceptance, and says plainly that nothing was stored', async () => {
     // 🛑 `storage: 'not-stored'` IS THE HONEST ANSWER, not a defect. Durable
     // draft storage is a separate decision (ADR-0066 §0.5a, ADR-0067
     // `Proposed`), and 🚫 nothing here may learn how to write.
     const runtime = createInMemoryRuntime(CONFIGURED);
-    const result = callAgeTool(runtime, 'age_accept_source_passage', {
-      questionId: firstQuestionId(),
+    const result = await callAgeTool(runtime, 'age_accept_source_passage', {
+      questionId: await firstQuestionId(),
       passage: PASSAGE,
       source: SOURCE,
       confirmedBy: 'operator:fixture',
@@ -297,12 +309,12 @@ describe('accepting one passage over the tool surface', () => {
     expect(runtime.calls.filter((call) => call.startsWith('writeFileText'))).toEqual([]);
   });
 
-  it('🚫 carries the full provenance, and never a bare `stated`', () => {
+  it('🚫 carries the full provenance, and never a bare `stated`', async () => {
     // 🛑 ADR-0066 §0.4c: all three of `sourceId`, `locator` and `confirmedBy`,
     // or a refusal. 🚫 An incomplete provenance is NEVER downgraded to `stated`.
     const body = payload(
-      callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_accept_source_passage', {
-        questionId: firstQuestionId(),
+      await callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_accept_source_passage', {
+        questionId: await firstQuestionId(),
         passage: PASSAGE,
         source: SOURCE,
         confirmedBy: 'operator:fixture',
@@ -316,44 +328,56 @@ describe('accepting one passage over the tool surface', () => {
     expect(serialised).toContain('operator:fixture');
   });
 
-  it('🚫 refuses an unknown question rather than matching the nearest one', () => {
-    const result = callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_accept_source_passage', {
-      questionId: 'no-such-question',
-      passage: PASSAGE,
-      source: SOURCE,
-      confirmedBy: 'operator:fixture',
-    });
+  it('🚫 refuses an unknown question rather than matching the nearest one', async () => {
+    const result = await callAgeTool(
+      createInMemoryRuntime(CONFIGURED),
+      'age_accept_source_passage',
+      {
+        questionId: 'no-such-question',
+        passage: PASSAGE,
+        source: SOURCE,
+        confirmedBy: 'operator:fixture',
+      },
+    );
 
     expect(result.isError).toBe(true);
     expect(payload(result).reason).toContain('refuses rather than choosing the closest');
   });
 
-  it('🚫 refuses a passage whose locator was dropped, and repairs nothing', () => {
+  it('🚫 refuses a passage whose locator was dropped, and repairs nothing', async () => {
     // ⚠️ An answer whose locator is missing could not be checked against the
     // document afterwards, so it is refused rather than completed by AGE.
-    const result = callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_accept_source_passage', {
-      questionId: firstQuestionId(),
-      passage: { passageId: 'p-1', text: 'Fictional Kite Repairs mends kites.' },
-      source: SOURCE,
-      confirmedBy: 'operator:fixture',
-    });
+    const result = await callAgeTool(
+      createInMemoryRuntime(CONFIGURED),
+      'age_accept_source_passage',
+      {
+        questionId: await firstQuestionId(),
+        passage: { passageId: 'p-1', text: 'Fictional Kite Repairs mends kites.' },
+        source: SOURCE,
+        confirmedBy: 'operator:fixture',
+      },
+    );
 
     expect(result.isError).toBe(true);
     expect(payload(result).reason).toContain('locator');
   });
 
-  it('🚫 refuses a missing confirmedBy rather than attributing it to nobody', () => {
-    const result = callAgeTool(createInMemoryRuntime(CONFIGURED), 'age_accept_source_passage', {
-      questionId: firstQuestionId(),
-      passage: PASSAGE,
-      source: SOURCE,
-    });
+  it('🚫 refuses a missing confirmedBy rather than attributing it to nobody', async () => {
+    const result = await callAgeTool(
+      createInMemoryRuntime(CONFIGURED),
+      'age_accept_source_passage',
+      {
+        questionId: await firstQuestionId(),
+        passage: PASSAGE,
+        source: SOURCE,
+      },
+    );
 
     expect(result.isError).toBe(true);
     expect(payload(result).reason).toContain('confirmedBy');
   });
 
-  it('🚫 neither tool is tenant-scoped, so D7 is not crossed', () => {
+  it('🚫 neither tool is tenant-scoped, so D7 is not crossed', async () => {
     // 🛑 ADR-0066 D7: no inbound surface may accept, persist, transform or queue
     // TENANT-SCOPED data until `askEntitlement` has a real caller. Neither of
     // these two takes a clientId at all.
@@ -370,17 +394,17 @@ describe('accepting one passage over the tool surface', () => {
 });
 
 describe('the questionnaire tool', () => {
-  it('hands back the questions, so the authoring tools are usable at all', () => {
-    const result = callAgeTool(createInMemoryRuntime({}), 'age_read_questionnaire', {});
+  it('hands back the questions, so the authoring tools are usable at all', async () => {
+    const result = await callAgeTool(createInMemoryRuntime({}), 'age_read_questionnaire', {});
     const questionnaire = payload(result).questionnaire as Record<string, unknown>;
 
     expect(questionnaire.id).toBe('age-business-discovery');
     expect(Array.isArray(questionnaire.sections)).toBe(true);
   });
 
-  it('touches nothing', () => {
+  it('touches nothing', async () => {
     const runtime = createInMemoryRuntime({});
-    callAgeTool(runtime, 'age_read_questionnaire', {});
+    await callAgeTool(runtime, 'age_read_questionnaire', {});
 
     expect(runtime.calls).toEqual([]);
   });
@@ -405,61 +429,64 @@ describe('the relay tool (ADR-0069 D3)', () => {
     claimKind: 'raw-observation',
   });
 
-  const relay = (observation: unknown, runtime = createInMemoryRuntime({})) =>
-    callAgeTool(runtime, 'age_relay_source_observation', { observation });
+  const relay = async (observation: unknown, runtime = createInMemoryRuntime({})) =>
+    await callAgeTool(runtime, 'age_relay_source_observation', { observation });
 
-  it('🛑 touches nothing at all — no file, no environment, no clock', () => {
+  it('🛑 touches nothing at all — no file, no environment, no clock', async () => {
     const runtime = createInMemoryRuntime({});
-    relay(OBSERVATION, runtime);
+    await relay(OBSERVATION, runtime);
 
     // 🚫 A relay that read a file would be a relay that could write one.
     expect(runtime.calls).toEqual([]);
   });
 
-  it('🛑 says explicitly that it stored nothing', () => {
-    const body = payload(relay(OBSERVATION));
+  it('🛑 says explicitly that it stored nothing', async () => {
+    const body = payload(await relay(OBSERVATION));
 
     expect(body.kind).toBe('relayed');
     expect(body.recorded).toBe(false);
     expect(String(body.recordedReason)).toContain('stored nothing');
   });
 
-  it('🛑 reports admissibility as not-assessed WITH its reason, 🚫 never as a verdict', () => {
-    const admissibility = payload(relay(OBSERVATION)).admissibility as Record<string, unknown>;
+  it('🛑 reports admissibility as not-assessed WITH its reason, 🚫 never as a verdict', async () => {
+    const admissibility = payload(await relay(OBSERVATION)).admissibility as Record<
+      string,
+      unknown
+    >;
 
     expect(admissibility.state).toBe('not-assessed');
     expect(String(admissibility.reason).length).toBeGreaterThan(0);
   });
 
-  it('🚫 a relayed observation is NOT an error — it is an answer', () => {
-    expect(relay(OBSERVATION).isError).toBeUndefined();
+  it('🚫 a relayed observation is NOT an error — it is an answer', async () => {
+    expect((await relay(OBSERVATION)).isError).toBeUndefined();
   });
 
-  it('refuses a malformed observation by POSITION, and that IS an error', () => {
-    const result = relay({ ...OBSERVATION, claimKind: undefined });
+  it('refuses a malformed observation by POSITION, and that IS an error', async () => {
+    const result = await relay({ ...OBSERVATION, claimKind: undefined });
 
     expect(result.isError).toBe(true);
     expect(payload(result).position).toBe('claimKind');
   });
 
-  it('🚫 refuses a missing observation rather than relaying an empty one', () => {
-    const result = callAgeTool(createInMemoryRuntime({}), 'age_relay_source_observation', {});
+  it('🚫 refuses a missing observation rather than relaying an empty one', async () => {
+    const result = await callAgeTool(createInMemoryRuntime({}), 'age_relay_source_observation', {});
 
     expect(result.isError).toBe(true);
   });
 
-  it('🚫 has no bulk arm', () => {
-    expect(relay([OBSERVATION, OBSERVATION]).isError).toBe(true);
+  it('🚫 has no bulk arm', async () => {
+    expect((await relay([OBSERVATION, OBSERVATION])).isError).toBe(true);
   });
 
-  it('🚫 is not tenant-scoped, so D7 stays uncrossed BY SHAPE', () => {
+  it('🚫 is not tenant-scoped, so D7 stays uncrossed BY SHAPE', async () => {
     const tool = AGE_MCP_TOOLS.find((entry) => entry.name === 'age_relay_source_observation');
     const properties = (tool?.inputSchema as { properties: Record<string, unknown> }).properties;
 
     expect(Object.keys(properties)).toEqual(['observation']);
   });
 
-  it('🚫 names no peer product, so a third-party system relays through the same path', () => {
+  it('🚫 names no peer product, so a third-party system relays through the same path', async () => {
     const tool = AGE_MCP_TOOLS.find((entry) => entry.name === 'age_relay_source_observation');
 
     for (const product of ['rankops', 'snara', 'humantik', 'mcp-ads', 'content intelligence']) {

@@ -50,6 +50,14 @@ export function createInMemoryRuntime(
       }
       return contents;
     },
+    readFileBytes: (path) => {
+      calls.push(`readFileBytes:${path}`);
+      const contents = files.get(path);
+      if (contents === undefined) {
+        throw new Error('ENOENT: no such file or directory');
+      }
+      return new TextEncoder().encode(contents);
+    },
     writeFileText: (path, contents) => {
       calls.push(`writeFileText:${path}`);
       files.set(path, contents);

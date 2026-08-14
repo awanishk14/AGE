@@ -1,9 +1,39 @@
 # ADR-0070 — The decoder that reads what AGE must not send anywhere
 
-Status: **Proposed** (2026-08-14)
-🚫 **This is a decision request. It authorizes NOTHING on its own, and it must 🚫 NOT be
-self-accepted** — it names a third-party dependency that will be handed a real client's documents,
-which is a disclosure-shaped decision, not a sequencing one.
+Status: **Accepted** (2026-08-15) — D2 answered **option D**, bounded by §0.1b.
+⚠️ **🚫 NOT self-accepted.** It named a third-party dependency that will be handed a real client's
+documents, which is a disclosure-shaped decision, not a sequencing one, so it was 🚫 not the
+architect's to make. §0.1 records who made it.
+
+## 0.1 — How D2 was answered
+
+The Product Owner was read the five options **verbatim from §3 D2**, with the architect's
+recommendation and the concrete implementation consequence of each, and selected:
+
+> **D — `unpdf`, PDF only.**
+> MIT, zero runtime deps, in-process. Option **B** (`mammoth`, DOCX) **deferred to its own slice**.
+
+🚫 **This is not the architect concurring with itself.** The recommendation in §3 D2 was **D then B**;
+the owner selected D and deferred B, which is a narrowing of the recommendation, not an echo of it.
+⚠️ Per finding 7, the owner's selection is 🚫 **not independent corroboration** of the architect's
+reasoning — it is the decision, and the reasoning stands or falls separately.
+
+**D1 and D3 are accepted as proposed** — they are architecture, self-acceptable under the §2 mandate,
+and neither was altered to fit D2's answer.
+
+### 0.1b — What this acceptance is bounded to
+
+- ✅ **PDF only, via `unpdf`, at ONE import site** (§3 D1), enforced by
+  `packages/operator-document-decoder/src/tests/single-decoder-site.spec.ts` — a guard that has been
+  **made to fail** (a decoder import added to `@age/assisted-intake`; it named the file, and was
+  reverted by a targeted inverse edit).
+- 🚫 **DOCX IS NOT DECODED, AND OPTION B IS NOT PRE-AUTHORIZED BY THIS ACCEPTANCE.** A DOCX stays
+  `not-plain-text`, refused by name. Adopting `mammoth` is a **fresh decision by the owner**, in its
+  own slice, on the same grounds this one was made — 🚫 it must not be added on the argument that
+  "the decoder package already exists."
+- 🚫 **§3 D4 is untouched**: no OCR, no model call, no URL fetching, no widget, no upload endpoint,
+  no relaxation of ADR-0054 D2, and 🚫 nothing auto-mapped from a passage to an answer.
+- 🚫 **The five residuals in §5 remain 🚫 NOT a to-do list.** Each still needs its own `Proposed` ADR.
 
 Depends on: ADR-0059 **D4 route 2** (the refusal this ADR exists to answer), ADR-0059 **D1/D2/D7**,
 ADR-0054 **D2** (an operator file's path is never defaulted), ADR-0053 **D3** (a real client's
