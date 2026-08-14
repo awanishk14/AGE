@@ -12,20 +12,21 @@ import type { ClientContextProjection } from '@age/client-context-projection';
  * holds that rule on the read path; this module holds it on the render path,
  * and its spec is the guard.
  *
- * 🛑 **THIS MODULE AUTHORS EXACTLY ONE SENTENCE**, `NO_PEER_CAN_ASK_NOTICE`,
+ * 🛑 **THIS MODULE AUTHORS EXACTLY ONE SENTENCE**, `HOW_THIS_REACHES_A_PEER_NOTICE`,
  * and it is a statement about AGE's own surface rather than about the business
  * or the projection. Everything else is a pass-through. 🚫 Do not add a second
  * authored string here — a per-kind heading, a friendlier `because`, a count
  * rendered as a summary — because each one is a second answer growing beside
  * the first.
  *
- * 🛑 **NO PEER CAN ACTUALLY ASK YET, AND THE SCREEN SAYS SO.** Deliverable 7's
- * other half — `age_get_client_context`, entitled on read — is blocked: the only
- * `Authentication` anyone can construct today is `none`, so a tool wired through
- * `readWithinEntitlement` would refuse every call (ADR-0068 §0.1b). Showing this
- * projection without that sentence would let an operator conclude peers are
- * already being served. 🚫 Do not close the gap by adding a caller, a token, a
- * session or a route — this renders a read.
+ * 🛑 **NO PEER ASKS, AND THAT IS A DECISION — 🚫 NOT A MISSING FEATURE.**
+ * ADR-0071 D1: V1 outbound is **operator-mediated**, so the operator carries
+ * this to the peer (`buildClientContextHandover`). 🚫 Do not "finish" it with a
+ * peer credential, a session, an endpoint or MCP middleware — all four are
+ * refused by name in ADR-0071 §5, and D3 leaves the authenticated peer protocol
+ * deliberately unresolved. ⚠️ D2: that is a **V1 transport constraint with an
+ * expiry condition**, 🚫 not a principle. Showing this projection without the
+ * notice would let an operator conclude peers are already being served.
  *
  * 🚫 **NOTHING HERE IS EMPTY-BY-OMISSION.** Every subject kind the projection
  * carries is rendered, including the two silent states, and `never-captured` and
@@ -63,19 +64,27 @@ export interface ClientContextProjectionView {
   /** 🚫 A screen cannot drop these; they are what the answer is not. */
   readonly notices: readonly string[];
   /** 🛑 Always present, whatever the projection contains. */
-  readonly noPeerCanAskNotice: string;
+  readonly howThisReachesAPeerNotice: string;
 }
 
 /**
  * 🛑 The one sentence this module authors — and it is about AGE's surface, never
  * about the business. 🚫 It is not softened to "coming soon": an operator
  * reading this screen must not conclude that peers are already being served.
+ *
+ * ⚠️ **CORRECTED AT ADR-0071.** The previous wording said no peer could ask
+ * because AGE "cannot yet verify a presented credential". Both halves of that
+ * had stopped being true: credential verification shipped (ADR-0068 §0.1b), and
+ * ADR-0071 D1 then decided that in V1 **no peer asks at all — the operator
+ * carries it**. 🚫 Describing a decided architecture as a missing feature told
+ * the operator to wait for something nobody is building.
  */
-export const NO_PEER_CAN_ASK_NOTICE =
-  'No peer product can ask AGE for this yet. The tool that would serve it is not built: it must ' +
-  'be entitled on read, and AGE cannot yet verify a presented credential, so a tool wired against ' +
-  'it would refuse every call. This screen shows exactly what a peer would receive once one can ask ' +
-  '— it is not evidence that any peer has asked, or that any peer is being served.';
+export const HOW_THIS_REACHES_A_PEER_NOTICE =
+  'No peer product can ask AGE for this, and in V1 none is meant to: the operator is the ' +
+  'transport. You carry this answer to the peer yourself, unchanged. That is a V1 transport ' +
+  'constraint and not a permanent one. Nothing has been sent from this screen, and no peer ' +
+  'product contains AGE code — so this is not evidence that any peer has received it, asked for ' +
+  'it, or is being served.';
 
 /**
  * @param projection as `projectClientContext` produced it. ⚠️ Rendered in the
@@ -100,6 +109,6 @@ export function presentClientContextProjection(
     subjectKinds: Object.freeze(subjectKinds),
     notCaptured: Object.freeze([...projection.notCaptured]),
     notices: Object.freeze([...projection.notices]),
-    noPeerCanAskNotice: NO_PEER_CAN_ASK_NOTICE,
+    howThisReachesAPeerNotice: HOW_THIS_REACHES_A_PEER_NOTICE,
   };
 }

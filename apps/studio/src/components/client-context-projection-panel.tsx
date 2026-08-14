@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import type { ClientContextProjectionView } from '@age/studio-shell';
+import { buildClientContextHandover, type ClientContextProjectionView } from '@age/studio-shell';
 
 /**
  * What AGE WOULD TELL A PEER about this business (ADR-0069 deliverable 7).
@@ -13,10 +13,16 @@ import type { ClientContextProjectionView } from '@age/studio-shell';
  * friendlier console wording growing beside it would leave the operator
  * auditing a rendering rather than the thing itself.
  *
- * 🛑 **NO PEER CAN ACTUALLY ASK YET, AND THIS PANEL SAYS SO, ABOVE THE ANSWER.**
- * The tool is blocked on token verification (ADR-0068 §0.1b). 🚫 Do not soften
- * that sentence, move it below the fold, or close the gap with a session, a
- * token, a default organization or a route.
+ * 🛑 **NO PEER ASKS — THE OPERATOR CARRIES IT, AND THIS PANEL SAYS SO, ABOVE
+ * THE ANSWER** (ADR-0071 D1). 🚫 Do not soften that sentence or move it below
+ * the fold, and 🚫 do not "complete" the transport with a peer credential, a
+ * session, an endpoint or MCP middleware — all four are refused by name in
+ * ADR-0071 §5. ⚠️ D2: operator mediation is a **V1 constraint with an expiry
+ * condition**, 🚫 not a principle.
+ *
+ * 🚫 **COPYING IS NOT SENDING.** The handover block writes to a clipboard and
+ * nothing else. 🚫 No control here may say a peer received, consumed or acted on
+ * anything — no peer repository contains AGE code (ADR-0071 D4).
  *
  * 🛑 **THIS IS THE FIRST ANSWER OF THE THREE, AND IT STAYS SEPARATE.** It is
  * what the BUSINESS stated. What a source system reported is the panel below it;
@@ -155,6 +161,62 @@ export function ClientContextProjectionPanel({
   );
 }
 
+/**
+ * 🛑 **WHAT THE OPERATOR CARRIES, VISIBLE BEFORE THEY CARRY IT.** The exact
+ * bytes are on screen, so the operator delivers something they have read —
+ * 🚫 not a payload a button assembled out of sight.
+ *
+ * 🚫 **NOTHING IS SENT FROM HERE.** Copying is the whole mechanism: there is no
+ * peer name, no endpoint, no request. ⚠️ The button says "Copy", 🚫 never "Send"
+ * or "Deliver" — a verb implying transmission would be the screen claiming an
+ * integration that does not exist (ADR-0071 D4).
+ */
+function ClientContextHandoverBlock({ view }: { readonly view: ClientContextProjectionView }) {
+  const [copied, setCopied] = useState(false);
+  const handover = buildClientContextHandover(view);
+
+  return (
+    <section className="mt-6 rounded border border-[hsl(var(--age-border))] p-4">
+      <h3 className="text-sm font-semibold">Carry this to the peer product</h3>
+      <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
+        These are the exact bytes to hand over — the projection above, unchanged. Copying it sends
+        nothing: you deliver it yourself, and AGE has no way to know whether you did.
+      </p>
+
+      <div className="mt-3 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            void navigator.clipboard
+              .writeText(handover.document)
+              .then(() => setCopied(true))
+              .catch(() => setCopied(false));
+          }}
+          className="rounded border border-[hsl(var(--age-border))] px-3 py-1.5 text-sm font-medium"
+        >
+          Copy the document
+        </button>
+        <span className="font-mono text-xs text-[hsl(var(--age-text-muted))]">
+          {handover.suggestedFileName}
+        </span>
+        {/* ⚠️ Says the CLIPBOARD was written — 🚫 never that a peer received it. */}
+        {copied ? (
+          <span className="text-xs text-[hsl(var(--age-text-muted))]">
+            Copied to your clipboard. Nothing has been sent.
+          </span>
+        ) : null}
+      </div>
+
+      <pre
+        data-testid="client-context-handover-document"
+        className="mt-3 max-h-80 overflow-auto rounded border border-[hsl(var(--age-border))] p-3 font-mono text-xs"
+      >
+        {handover.document}
+      </pre>
+    </section>
+  );
+}
+
 function PeerAnswer({
   view,
   organizationId,
@@ -169,9 +231,18 @@ function PeerAnswer({
         list first and this second would already have concluded peers are served.
       */}
       <section className="rounded border border-[hsl(var(--age-unknown))] p-4">
-        <h3 className="text-sm font-semibold">No peer can ask for this yet</h3>
-        <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">{view.noPeerCanAskNotice}</p>
+        <h3 className="text-sm font-semibold">You are the transport</h3>
+        <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
+          {view.howThisReachesAPeerNotice}
+        </p>
       </section>
+
+      {/*
+        🛑 THE OPERATOR CAN NOW ACTUALLY CARRY IT (ADR-0071 D1). Before this the
+        projection could be read and not taken, which made "the operator is the
+        transport" a decision with nothing implementing it.
+      */}
+      <ClientContextHandoverBlock view={view} />
 
       <p className="mt-4 font-mono text-xs text-[hsl(var(--age-text-muted))]">
         {/* 🚫 The capture time, verbatim. Never "3 days ago", never "now". */}

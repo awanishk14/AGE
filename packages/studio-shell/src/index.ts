@@ -255,15 +255,22 @@ export {
  *
  * 🛑 Every string is the projection's own, byte-identical — the operator audits
  * the peer's answer, 🚫 never a console rendering of it. The one sentence this
- * view authors says that no peer can ask yet (ADR-0068 §0.1b), so 🚫 nobody
+ * view authors says the OPERATOR is the transport (ADR-0071 D1), so 🚫 nobody
  * reads the screen as evidence that peers are being served.
  */
 export {
-  NO_PEER_CAN_ASK_NOTICE,
+  HOW_THIS_REACHES_A_PEER_NOTICE,
   presentClientContextProjection,
   type ClientContextProjectionView,
   type ProjectedSubjectKindView,
 } from './client-context-projection-view';
+
+/**
+ * What the operator CARRIES to a peer (ADR-0071 D1 — the operator is the
+ * transport). 🛑 The document is the projection unchanged (D5); 🚫 the console's
+ * own sentence never travels, and 🚫 nothing is sent by building it.
+ */
+export { buildClientContextHandover, type ClientContextHandover } from './client-context-handover';
 
 /**
  * ⚠️ Re-exported so a Studio client component can name the shape it renders
