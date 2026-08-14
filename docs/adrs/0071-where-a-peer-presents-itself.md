@@ -1,11 +1,104 @@
 # ADR-0071 — Where a peer presents itself
 
-Status: **Proposed** (2026-08-14) — 🚫 **NOT self-accepted.** It authorizes **nothing** until §0.1
-carries the Product Owner's answer verbatim.
+Status: **Accepted** (2026-08-14) — 🚫 **NOT self-accepted.** The Product Owner answered §4 in their
+own words; the answer is recorded verbatim in §0.1, with the clarifications they attached in §0.1b.
+⚠️ It authorizes the **SHAPE, 🚫 not a slice** (§5), and ⚠️ **§0.1b sequences the first slice behind
+ADR-0070 D2** — read §0.1b before writing any outbound code.
 
 Depends on: ADR-0069 (D3, D5, deliverable 7), ADR-0068 (§0.1b, §0.1c), ADR-0066 (D1, D7),
 ADR-0062 (D1–D3), ADR-0058 D2, ADR-0057 D4, ADR-0046 D5.
 Supersedes: nothing. Companion: `docs/product/ecosystem-integration/EI_01_TRACK.md` §E0.1 gap A.
+
+---
+
+## 0.1 The Product Owner's answer (2026-08-14)
+
+⚠️ **This ADR was 🚫 NOT self-accepted.** §4 was put to the Product Owner as the decision request it
+was written to be, and the Product Owner answered it. ⚠️ Unlike ADR-0068 §0.1, the answer was 🚫 not
+a selection from labelled shapes — it was given in the owner's **own prose**, which selects option 3
+by restating its mechanism rather than by naming it. Quoted verbatim, unedited:
+
+> **Accept ADR-0071.**
+> Your stated architecture is already clear: for V1, AGE does not directly authenticate or
+> communicate with peer products. The operator is the transport boundary.
+>
+> So:
+>
+> Peer → Operator → AGE → Operator → Peer
+>
+> That is consistent with the current Claude-only constraint and avoids prematurely creating a
+> machine-to-machine trust boundary.
+
+🛑 **That is D1 (option 3), and it carries D3 with it** — "avoids prematurely creating a
+machine-to-machine trust boundary" is the owner affirming the deferral of Q2, not postponing an
+answer they intended to give.
+
+### 0.1a The architect's recommendation and the owner's answer agree — a fact, 🚫 not a confirmation
+
+⚠️ §4 recorded D1 as the architect's decision and §2 wrote all four shapes, so the owner selected
+from a framing that was entirely the architect's. ⚠️ **Agreement here is not independent
+corroboration** (finding 7). The owner's prose reaches option 3 by its own route — _"the operator is
+the transport boundary"_, an argument from the **Claude-only constraint** rather than from ADR-0069
+D3's symmetry — but 🚫 that is a second reason for the same shape, and 🚫 not a second observer. If
+§2 omitted the right shape, this acceptance carries that omission forward.
+
+### 0.1b The three clarifications the owner attached — 🛑 binding, and 🚫 not commentary
+
+**1. 🛠️ SEQUENCING — ADR-0070 D2 IS ANSWERED BEFORE THIS ADR'S FIRST SLICE IS BUILT.** Verbatim:
+
+> Resolve ADR-0070 D2 next. I agree this should take priority over the outbound ecosystem slice.
+> The reason is strategic: document ingestion is part of AGE's intelligence-building capability,
+> whereas outbound peer projection is the final leg of the ecosystem loop.
+> The natural sequence is: Business documents → AGE → provenance-aware draft → BIF/intelligence →
+> Studio. Then: AGE intelligence → operator → RankOps / SNARA / Humantik / Content Intelligence.
+> That gives you something meaningful to test before worrying about automated peer-to-peer
+> communication.
+
+🛑 **This acceptance therefore does not make the outbound half of ADR-0069 deliverable 7 the next
+slice.** It makes it buildable, and 🚫 not imminent. ⚠️ The projection has nothing worth carrying to
+a peer until AGE can read a real client document, so building the transport first would demonstrate
+a working pipe with nothing in it.
+
+**2. 🛑 A CORRECTION TO HOW THE SHIPPED INBOUND HALF IS DESCRIBED.** The owner rejected the sentence
+_"AGE can now receive information from a peer product, reason over it, and show the result on
+screen"_ as imprecise, and fixed the wording:
+
+> What is shipped is the AGE-side semantic machinery and operator-mediated relay, not a real
+> integration with RankOps. […] The actual status should remain: **AGE can accept a correctly shaped
+> observation through its relay mechanism.** It does not mean: RankOps ↔ AGE integration is working.
+
+🛑 **"A peer sent AGE an observation" is 🚫 NEVER said of the shipped relay.** What is true is that
+**an operator** presented a correctly shaped observation and AGE accepted it. ⚠️ No peer repository
+contains AGE code, so no peer has ever sent anything. This is D4 applied to the **inbound**
+direction, which D4's table did not spell out — 🚫 the non-conflation rule is not outbound-only.
+
+⚠️ The owner also restated `EI_01` §E2.3's completion criterion and asked that it stay permanently on
+the roadmap: the first real integration is complete only at
+`RankOps → AGE contract → AGE accepts → AGE relates → AGE derives → AGE displays`, then
+`AGE → outbound contract → RankOps`, **with an actual round-trip test against the real RankOps
+system**. That is §E2.3 + §E2.4 unchanged; 🚫 nothing about this acceptance moves it.
+
+**3. ⚠️ GAPS B AND C ARE NOT TO BE WRITTEN MERELY TO COMPLETE THE DOCUMENTATION.** Verbatim:
+
+> I agree these are legitimate gaps, but I would not rush to write them merely to make the
+> documentation "complete."
+
+The owner then constrained both future ADRs in advance. **Gap B** — a peer reporting something the
+BIF does not say is _"conflicting information exists"_, and AGE 🛑 must never let that become _"AGE
+has decided the BIF is wrong."_ ⚠️ Note also that not every difference is a contradiction: a peer
+reporting a decline in a market the BIF names is **agreement plus new information**, 🚫 not a
+conflict. **Gap C** — 🛑 **observation age ≠ observation validity.** An observation made in the past
+remains historically true _as an observation_; what age may affect is whether AGE should use it when
+constructing a **current** conclusion. 🚫 An ADR that lets ageing decide truth is answering the wrong
+question. ⚠️ Both constraints are pre-recorded here so the eventual ADRs are measured against them.
+
+### 0.1c What is still refused, unchanged by this acceptance
+
+🚫 Everything in §5's "not authorized, by name" list stands, and §6's revisiting trigger is unchanged:
+a **real peer adapter that has something to say and no way to say it** — 🚫 not a prediction, and
+🚫 not the manual step becoming tiresome. 🛑 **The Operator 2 account remains a human act** — the
+owner reaffirmed it: _"This is not something Claude should build. If the architecture deliberately
+says provisioning is an out-of-band human action, keep it that way."_ (ADR-0068 §0.1c.)
 
 ---
 
