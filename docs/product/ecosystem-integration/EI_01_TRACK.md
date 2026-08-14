@@ -50,14 +50,39 @@ already `Accepted` — read the ADR.
 🛑 **These are surfaced, not chosen.** Each needs a `Proposed` ADR answered by the Product Owner
 before the stage that depends on it may proceed.
 
-**Gap A — the transport boundary (row 14). Blocks E1 and E2 direction 2.**
-The projection is a pure function with no surface. `age_get_client_context` (ADR-0069 deliverable 7)
-must be _entitled on read_; since PR #322 a `verified-session` is constructible, so the remaining
-question is **where a peer presents a credential**. Candidate shapes, each a different architecture:
-per-call argument · once at MCP session establishment · operator-mediated outbound mirroring D3
-(the peer never authenticates to AGE at all) · operator-read-only, which would make "peers pull from
-AGE" a **decision** rather than a gap. 🚫 It must not arrive as a middleware — a middleware
-authenticates every tool by default, including the inbound relay, which is a far larger crossing.
+**Gap A — the transport boundary (row 14). ⚠️ SPLIT IN TWO by ADR-0071 (`Proposed`, #325).**
+The projection is a pure function with no surface. ADR-0071 separates the question that was being
+asked as one:
+
+- **Q1 — how is AGE's intelligence loop proved?** ADR-0071 **D1**: operator-mediated outbound, the
+  mirror of ADR-0069 D3's inbound relay. 🚫 No peer credential, no peer principal, no new
+  `Authentication` arm. **This unblocks E1's semantics — it does 🚫 NOT satisfy E2 direction 2.**
+- **Q2 — how do autonomous peer products communicate with AGE?** ADR-0071 **D3**: 🛑 **explicitly
+  unresolved, and deferring it is the decision.** It needs its own ADR answering all ten trust
+  questions (ADR-0071 §3). 🛑 **E2 direction 2 is blocked on Q2, not on Q1.**
+
+🚫 It must not arrive as a middleware — a middleware authenticates every tool by default, including
+the inbound relay, which is a far larger crossing.
+
+### 🛑 E0.1a — The non-conflation rule (ADR-0071 D4)
+
+🛑 **Proving the intelligence loop is not completing the peer integration. They are two different
+claims and are 🚫 NEVER reported as one.**
+
+|                | The loop                                  | The integration                        |
+| -------------- | ----------------------------------------- | -------------------------------------- |
+| Shape          | `peer → operator → AGE → operator → peer` | `peer → AGE → peer`                    |
+| Proves         | AGE's semantics, reasoning and honesty    | that a real peer adapter can reach AGE |
+| Settled by     | the V1 slice under ADR-0071 D1            | 🛑 §E2.3, and nothing less             |
+| Rung (`EI_00`) | **up to 5**                               | **6**                                  |
+
+🛑 **A projection an operator carried into RankOps by hand is rung 5.** 🚫 It is never rung 6, never
+"RankOps integrated", and never counted toward the Definition of Done items 6–8. ⚠️ The failure this
+rule prevents is specific and predictable: the slice really does work, and the sentence "the RankOps
+integration is done" really is false.
+
+⚠️ **Operator mediation is a V1 transport constraint with an expiry condition** (ADR-0071 D2) —
+🚫 not a principle, and 🚫 not the permanent ecosystem architecture.
 
 **Gap B — contradiction between derived intelligence and BIF/evidence (row 9).**
 Decided: two source systems that disagree are **reported as disagreement**; 🛑 AGE does not pick a
