@@ -133,4 +133,46 @@ describe('AGE Studio bind configuration', () => {
     expect(text).toMatch(/assertLoopbackBindHost/);
     expect(text).toMatch(/DEFAULT_STUDIO_BIND_HOST/);
   });
+
+  /**
+   * 🛑 THE THIRD PLACE THE INVARIANT CAN BE BROKEN, AND THE EASIEST ONE TO
+   * BREAK BY ACCIDENT. The manifests pin the host and the source reports it —
+   * but a deploy script is where somebody puts nginx "just to make the URL
+   * nicer", and a reverse proxy in front of a loopback listener defeats
+   * OX-INV-1 completely while every other guard here stays green.
+   *
+   * ⚠️ `apps/studio` has NO sign-in. Exposing it is not a convenience decision;
+   * it is publishing an unauthenticated console, and it needs its own
+   * `Proposed` ADR. The sanctioned route is an SSH tunnel — the ADR names it,
+   * and the person at the far end has already authenticated to the host.
+   */
+  it('ships no deployment path that fronts, proxies or publishes the console', () => {
+    const script = repoFile('scripts/deploy-studio.sh');
+
+    // ⚠️ The script EXPLAINS which crossings it refuses, so comments are
+    // stripped before the scan — the same rule as the source guard above.
+    const commands = script
+      .split('\n')
+      .filter((line) => !/^\s*#/.test(line))
+      .join('\n');
+
+    let checked = 0;
+    for (const banned of [
+      /nginx/i,
+      /caddy/i,
+      /certbot|letsencrypt/i,
+      /proxy_pass|reverse[- ]proxy/i,
+      /\bufw\b|iptables|firewall-cmd/i,
+      /-p\s+\d+:\d+/, // a published container port
+      /0\.0\.0\.0/,
+    ]) {
+      expect(commands, `the deploy script must not carry ${String(banned)}`).not.toMatch(banned);
+      checked += 1;
+    }
+    expect(checked).toBe(7);
+
+    // ⚠️ THE POSITIVE HALF: a script that did nothing would also pass the scan
+    // above. It must actually name the tunnel as the way in.
+    expect(script).toMatch(/ssh -N -L 3100:127\.0\.0\.1:3100/);
+  });
 });
