@@ -147,3 +147,164 @@ and be argued for in an ADR rather than discovered later.
 
 🚫 **The ecosystem/peer track stays SUSPENDED** until the deployed Studio can be opened and used as
 the real product. The owner said so in their own words.
+
+---
+
+## 4. ✅ SLICE 2 SHIPPED (#345) — THE SESSION BOUNDARY
+
+> ⚠️ **Read this before touching the boundary.** 🛑 It authorizes **no client access**: there is
+> still no client switcher and no entitlement check. Admission answers _who is here_ and says
+> nothing about _which client they may open_. 🚫 The bind is still loopback and **nothing is
+> published** — no port, no proxy, no vhost.
+
+### 4.1 The two decisions taken here that were NOT in ADR-0074, and why they are decisions
+
+**D-A — `AGE_STUDIO_ORGANIZATION_ID`: a deployment-bound RLS _lookup_ scope.** ADR-0074 D5 says the
+organization comes from the session **row**. RLS needs an organization **before** the row can be
+read. The resolution: a required, un-defaulted variable in the root-owned mode-0600
+`EnvironmentFile`, used **only** as the RLS lookup scope (coherence, ADR-0046 D5), while **every
+entitlement decision reads `session.organizationId` off the row**. A row whose organization differs
+refuses (`organization-mismatch`) even though RLS should make that unreachable — 🚫 a boundary that
+only handles the cases it believes possible fails open the day one turns out to be possible.
+🛑 **This is a SINGLE-ORGANIZATION deployment, and that is a decision, 🚫 not a gap.** ⚠️ The full
+reasoning is written **in source**, in the `sessionLookupOrganizationId` doc block — 🚫 do not act on
+it from this summary. 🚫 It can only NARROW, is 🚫 not a caller claim, and builds 🚫 no second
+organization concept.
+
+**D-B — rate limiting and audit are DEFERRED to a slice 2b, deliberately.** ADR-0061 A6 item 6
+(audit) stays the empty gate item. Two reasons, both structural: each needs **its own writable
+store**, and this slice's whole argument is that the session store gained exactly **one** permitted
+write (`revoked_at`, by column grant) — adding a second write surface here would dissolve that
+argument. And `judgeAuthenticationAttempt` is sized for **password guessing**, while AGE's
+credential is a 64-hex opaque token that is provisioned as an act and never chosen by a human.
+🚫 Deferring is not the same as refusing: slice 2b owes both, and 🚫 the public bind (slice 4) must
+not land before them.
+
+### 4.2 What is now TRUE that was not
+
+- 🛑 **`requireVerifiedSession()` is the first statement of every protected route**, and does **not
+  return** for an unadmitted caller — 🚫 there is no falsy value to forget to check.
+- 🛑 **Composed in `apps/studio` ONLY.** Shared middleware was refused by name (it would move
+  `apps/mcp`'s trust boundary), and `middleware.ts` **cannot** be the gate: the edge runtime cannot
+  reach Prisma, so it could check cookie **shape** and never the **row**.
+- ⚠️ **The layout calls the REPORTING variant, never the redirecting one** — a redirecting layout
+  would also redirect `/sign-in`, and 🚫 the door cannot stand behind itself. The protection stays on
+  the **routes**, where the contract test can see it.
+- 🛑 **LOGOUT REVOKES THE ROW FIRST, then expires the cookie**, over a **column** grant
+  (`UPDATE ("revoked_at")`) plus a `FOR UPDATE` policy with **both** `USING` and `WITH CHECK`.
+  🚫 No INSERT, no DELETE, no other column: **VERIFICATION IS NOT ISSUANCE** now holds _at the
+  database_, against code nobody has written yet. 🚫 **DO NOT WIDEN TO `GRANT UPDATE ON TABLE`** —
+  a one-word edit, and every test in the repository would still pass.
+- ⚠️ **The Identity facet reads `Session verified`** behind the boundary. It said _"there is no
+  identity system"_, which stopped being true here — ⚠️ **a screen claiming a blocker the
+  architecture has removed is as dishonest as one claiming a capability that does not exist.**
+  🚫 Still never a boolean (ADR-0058 D2), and its detail says admission is not a decision about
+  which client may be opened.
+- ⚠️ **`scripts/deploy-studio.sh` no longer says _"the tunnel is the authentication"_.** It now says
+  the boundary is real, the tunnel is still the **transport**, and 🚫 nothing is published.
+
+### 4.3 The four guards, each made to FAIL before it was trusted
+
+| Guard                                                                                                     | The mutation that proved it                                                                |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `route-protection.test.ts` — every route hand-classified; the guard must precede every `@/server/*` call  | an unclassified route (named in the failure); one guard moved below `readBusinessesView()` |
+| `apps/mcp/src/tests/trust-boundary.spec.ts` — no session/entitlement vocabulary in source **or manifest** | a `VerifiedSession` type import added to `mcp-tools.ts`                                    |
+| the revocation module writes **ONE** column                                                               | `expiresAt` added to the update `data`                                                     |
+| `@age/entitlement`'s importer scan                                                                        | a real unauthorized import added to `session-boundary.ts`                                  |
+
+⚠️ **ONE GUARD WAS NARROWED, DELIBERATELY, AND THE RULE DID NOT CHANGE.** `@age/entitlement`'s
+importer scan matched any **mention** of the package, so it reported the new `apps/mcp` guard —
+whose entire purpose is to assert that dependency never appears, and which must therefore name it in
+code rather than in a comment. It now matches an **import statement**, the same precision the
+neighbouring `askEntitlement(` scan already used. 🚫 Not an exemption for spec files, 🚫 not a path
+allowance, and the **manifest scan is untouched**.
+
+⚠️ **`@age/entitlement` IS NOT A DEPENDENCY OF `apps/studio`, ON PURPOSE.** It was added, caught by
+that guard, and **removed** — 🚫 a dependency that is declared but not yet imported is a dependency
+somebody is about to import. Slice 3 adds it back **when it is actually used**, and amends
+`AUTHORIZED_IMPORTERS` deliberately at that point.
+
+### 4.4 🛠️ WHAT SLICE 2 DOES **NOT** PROVE
+
+🛑 **The definition of done is NOT met yet, and 🚫 must not be reported as met.** Everything above is
+green in tests and in an uncached 59-project run. What has **not** happened is the run against the
+real deployment: a real login, a real protected route, and 🛑 **logout and expiry each proven by the
+SAME COOKIE BEING REFUSED AFTERWARDS — 🚫 never by a redirect to a login screen.** Until that runs
+on the VPS, the honest sentence is _"the boundary is implemented"_, 🚫 never _"the boundary is
+verified"_.
+
+🛠️ **NEXT: run it on the VPS** (the migration, `AGE_STUDIO_ORGANIZATION_ID` into the env file, a
+token provisioned **as an act**), then **slice 2b** (rate limit + audit), then **slice 3** (the
+client switcher as a filter). 🛑 **The public bind is still LAST.**
+
+---
+
+## 5. 🛑 THE VPS VERIFICATION IS BLOCKED — AND WHAT MEASURING THE BOX ACTUALLY FOUND
+
+⚠️ #345 merged green (`6671d60`; both workflows matched to the FULL head SHA, 15 and 18 steps
+**executed**). The next act was the owner's instruction: verify slice 2 against the real deployed
+Studio and the real deployed PostgreSQL, no mocks. 🛑 **It did not run, and the reason is a finding,
+not a delay.**
+
+### 5.1 What the VPS actually is
+
+Measured on 2026-08-15, on the real host — 🚫 not read from a document:
+
+- ✅ `age-studio` is `active`, listening on **`127.0.0.1:3100`**, started from the **pre-slice-2**
+  build. 🚫 Nothing is exposed: nginx serves other vhosts and 🚫 none of them is AGE.
+- 🛑 **`/etc/age-studio/` DOES NOT EXIST.** The unit carries no `EnvironmentFile`, so there is no
+  `DATABASE_URL_APP` and no `AGE_STUDIO_ORGANIZATION_ID`. ⚠️ **Slice 1 shipped the code and was
+  never provisioned** — a distinction worth keeping, because "slice 1 is merged" had started to
+  sound like "the deployed store exists". It does not.
+- 🛑 **THERE IS NO POSTGRESQL ON THE HOST AT ALL** — no package, no `/etc/postgresql`, no `postgres`
+  user. Every PostgreSQL on the box is a **container** (RankOps', SNARA's, Drishti's).
+
+### 5.2 The consequence: ADR-0074 §0.2 item 3 names nothing
+
+Item 3 selected _"AGE's own database and its own role on the Postgres already running on the VPS.
+🚫 Not a second instance, 🚫 not a container."_ ⚠️ **On this box every route forward crosses one half
+of that sentence or the other.** The owner's own rule applies — _"Do not silently create a database
+architecture if an ADR is required"_ — so it went back to them instead of being resolved quietly.
+
+⚠️ **THE ARCHITECT'S RECOMMENDATION WAS WRONG, AND IS RECORDED AS WRONG** (finding 8). It was to
+reuse the RankOps container, on the argument that its bridge address qualifies under A5 as
+`private-interface` — which is true, and beside the point. 🛑 **The owner refused it and named the
+reason the recommendation had undervalued: a shared database is an integration nobody designed**,
+with no envelope, no version, no provenance and no refusal path. ⚠️ **A5 PERMITTING an address is
+not the same as the address being RIGHT**, and that gap is where the recommendation went.
+
+### 5.3 What was recorded instead — ADR-0075, `Proposed`
+
+The owner chose a **dedicated `age-postgres` container**, explicitly overriding the clause of item 3
+that excluded one, and instructed that it be recorded before any deployment code is written.
+`docs/adrs/0075-ages-own-database-and-the-boundary-between-peers.md` holds it: D1 its own container,
+volume and lifecycle · D2 its own database and non-owner `age_app` role · D3 🚫 no cross-product
+database reach in either direction, now **a property of the topology rather than of a grant** ·
+D4 🚫 AGE must not depend on a peer container's address · D5 private, and 🚫 nothing here opens a
+door · 🛑 **D6, the pinned principle: AGE MUST NEVER SHARE A DATABASE WITH A PEER PRODUCT** —
+_Peer → AGE contract → AGE intelligence → AGE projection → Peer_, 🚫 never Peer → shared database →
+AGE.
+
+🛑 **ADR-0075 IS `Proposed`, AUTHORIZES NOTHING, AND 🚫 MUST NOT BE SELF-ACCEPTED.** The owner's
+instruction ends _"Do not provision the database until the decision is recorded and accepted."_
+
+### 5.4 ⚠️ One bug this found in already-merged code
+
+🛑 **`scripts/provision-studio-database.sh` WOULD HAVE WRITTEN ANOTHER PRODUCT'S ADDRESS INTO AGE'S
+CONNECTION STRING.** It runs `sudo -u postgres psql` (a user that does not exist here) and hardcodes
+`127.0.0.1:5432` — which on this box is **SNARA's** published port. ⚠️ It has never been run, so
+nothing happened; 🚫 but it must be **corrected in the provisioning slice, not worked around**, and
+it is exactly the class of error ADR-0075 D6 exists to prevent.
+
+### 5.5 🛠️ THE ORDER FROM HERE — 🚫 UNCHANGED EXCEPT THAT ONE STEP MOVED IN FRONT
+
+1. 🛠️ **ADR-0075 accepted by the owner** (🚫 not self-accepted) — **BLOCKING**.
+2. 🛠️ Provision AGE's own store per ADR-0075, correcting the provisioning script (§5.4).
+3. 🛠️ **Verify slice 2 on the VPS**, per §4.4 — 🛑 logout and expiry proven by the **same cookie
+   being REFUSED**, 🚫 never by a redirect to a login screen; a misconfigured host refused by NAME;
+   every protected route behaving identically; the guards made to fail again against the deployment.
+4. 🛠️ Slice 2b — rate limiting + audit.
+5. 🛠️ Slice 3 — the client switcher, whose definition of done includes 🛑 **a real negative test: an
+   authenticated operator selecting or FORGING an unauthorized `clientId` gains nothing.** 🚫 **A
+   successful empty result is NOT proof of isolation** (the owner's words, and ADR-0074 §6 item 5).
+6. 🛠️ Slice 4 — the public bind, LAST.
