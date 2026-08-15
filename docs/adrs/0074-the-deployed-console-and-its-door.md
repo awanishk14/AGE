@@ -1,12 +1,13 @@
 # ADR-0074 — The deployed console and its door: an authenticated Agency Admin, and a selection that grants nothing
 
-Status: **Proposed** (2026-08-15)
+Status: **Accepted** (2026-08-15) — ⚠️ **BY THE PRODUCT OWNER, 🚫 NOT SELF-ACCEPTED.**
+⚠️ **BOUNDED BY §0.3b.** Read §0.3 before acting on any decision below.
 
 🛑 **THIS ADR REVERSES REFUSALS THE PRODUCT OWNER SET, AND THAT IS THE WHOLE REASON IT EXISTS.**
-🚫 It must **NOT** be self-accepted. Three of the four reversals in §3 are the Product Owner's own
+🚫 It was **NOT** self-accepted. Three of the four reversals in §3 are the Product Owner's own
 recorded answers — ADR-0061 §5-B and ADR-0068 §0.1c — and the architect may not lower a fence the
-owner raised. ⚠️ The owner has stated the intent (§0.1) and selected the three shapes (§0.2); what
-is missing is the **acceptance**, which is a separate act with a date.
+owner raised. ⚠️ The owner stated the intent (§0.1), selected the three shapes (§0.2), and
+**accepted it in their own words on 2026-08-15 (§0.3)** — a separate act, with a date.
 
 Reverses (each **narrowly**, and each named): ADR-0061 **§5-B** · ADR-0057 **D2 / OX-INV-1**
 (bounded — see D2) · ADR-0068 **§0.1c** items 2 and 3 (the login route + session issuance, and the
@@ -51,6 +52,132 @@ wrong this ADR carries that error forward.
    🚫 Not a password (ADR-0068 Question A option A2, 🚫 not chosen). 🚫 Not OIDC (A3, 🚫 not chosen).
 3. **The store is AGE's own database and its own role on the Postgres already running on the VPS.**
    🚫 Not a second instance, 🚫 not a container.
+
+## 0.3 Acceptance (Product Owner, 2026-08-15), verbatim
+
+> _"Accept ADR-0074 based on the following product direction._
+>
+> _I agree that AGE should move away from SSH-tunnel-only access and have a proper authenticated
+> Studio surface, using the same general access model we already use in RankOps._
+>
+> _The intended V1 user model is:_
+>
+> _Digital Dadi / Agency → authenticated agency users/operators → client switcher → each client is
+> strictly isolated._
+>
+> _Client → own client/workspace scope only._
+>
+> _The security invariant is non-negotiable:_
+>
+> _Client selection can narrow access; it can never grant access._
+>
+> _A forged or unauthorized clientId must never expand the caller's entitlement. Authorization must
+> come from the authenticated principal and organization entitlement, not from the selected client._
+>
+> _Do NOT build a separate Super Admin surface yet. Do NOT build a client-facing login yet. Do NOT
+> prepare code for either. Those can be future ADRs._
+>
+> _For this slice, implement the minimum real authenticated Studio experience needed to replace the
+> SSH tunnel: authenticated agency/operator login · verified session · organization entitlement ·
+> client switcher · strict client isolation · Studio routes protected by the verified session
+> boundary · unauthenticated access denied before protected data queries execute · logout/session
+> expiry._
+>
+> _Reuse the proven RankOps access model where technically appropriate, but do not copy RankOps
+> blindly. Inspect its actual authentication, organization, client-switching and authorization
+> implementation first and identify the smallest equivalent AGE implementation._
+>
+> _Keep AGE's existing architectural constraints:_
+>
+> _AGE does not mint credentials/provision accounts through an AGE API. No authentication
+> middleware that accidentally changes the trust boundary of unrelated inbound tools. No
+> clientId-based authorization. Client selection only narrows the already-authorized organization
+> scope. No public deployment before the authenticated boundary is verified. Do not expose the
+> Studio unauthenticated even temporarily. Preserve the existing epistemic/provenance rules.
+> Preserve the Claude-only constraint: AGE must not require an LLM API key and must not call an
+> external model._
+>
+> _Before writing code, inspect RankOps and AGE and produce a short comparison: how RankOps
+> authenticates · how it establishes the agency/organization · how it implements the client
+> switcher · how client isolation is enforced · which parts can safely be reused conceptually in AGE
+> · what AGE must implement differently because of its existing ADRs._
+>
+> _Then implement the smallest complete vertical slice._
+>
+> _Definition of done is not "login screen exists."_
+>
+> _It is: Login → authenticated session → organization entitlement → client selection → protected
+> Studio route → real AGE data for selected client → attempt to access another client is denied →
+> logout/expiry works._
+>
+> _Test this against real data and real running paths, not mocks._
+>
+> _Also update the deployment documentation so the old statement "the tunnel is the authentication"
+> is removed/replaced once the authenticated Studio boundary is actually live._
+>
+> _Do not proceed into unrelated ecosystem work until this authenticated deployed Studio can be
+> opened and used as the real AGE product."_
+
+⚠️ **This is an acceptance, 🚫 not a self-acceptance.** The architect proposed; the owner accepted
+in their own words on the same day, and the words are reproduced above so a later reader can check
+what was actually agreed against what this ADR then did.
+
+### 0.3b What the acceptance ADDS, and what it TIGHTENS — 🚫 the ADR as merged is not the whole rule
+
+🛑 **THE ACCEPTANCE IS NARROWER THAN THE PROPOSAL IN TWO PLACES AND WIDER IN FOUR. Read this
+subsection before citing any decision in §4.**
+
+**TIGHTENED — 🚫 these are refusals the owner added, and they bind:**
+
+- 🛑 **"No authentication middleware that accidentally changes the trust boundary of unrelated
+  inbound tools."** ⚠️ **This names the MCP surface, and it is the sharpest thing in the
+  acceptance.** `apps/mcp` binds nothing, takes no `clientId` on either tool "by shape, not
+  promise", and has no auth of any kind — 🛑 **a session boundary added at a shared layer would
+  silently make it an authenticated surface, which is a trust-boundary change nobody decided.**
+  🚫 The boundary is composed in **`apps/studio`'s own request path and nowhere else**; 🚫 no shared
+  middleware package, 🚫 no root-level interceptor, 🚫 no "auth" export another app could import.
+  ⚠️ A guard must assert `apps/mcp` imports nothing from the session/entitlement boundary.
+- 🛑 **"Preserve the Claude-only constraint: AGE must not require an LLM API key and must not call
+  an external model."** 🚫 Not for a login, 🚫 not for a summary on a protected screen, 🚫 not
+  behind a flag. ⚠️ Restates ADR-0060 D7 and ADR-0070 D5, and 🚫 neither is opened by this slice.
+- ⚠️ **"Do NOT prepare code for either"** (Super Admin, client login) — 🚫 stronger than "do not
+  build". 🚫 No arm, column, union member, route stub, flag or "coming soon" label. ⚠️ D6 already
+  said this; the owner said it again, which is how a fence gets built twice on purpose.
+- ⚠️ **"Do not proceed into unrelated ecosystem work until this is usable as the real AGE product."**
+  🛑 **This SUSPENDS the ecosystem/peer track** — `ADR0071_PEER_TRANSPORT_CHECKPOINT.md` §5's order
+  of work (item 6, the gap-C ageing ADR) is **paused, 🚫 not cancelled**, and 🚫 must not be picked
+  up because it is smaller or more familiar than this.
+
+**ADDED — ✅ authorized by the acceptance, and 🚫 by nothing else:**
+
+- ✅ **Logout and session expiry.** ⚠️ ADR-0068 §0.1c refused session issuance and the proposal
+  (D3) said 🛑 _"clearing the cookie is not revocation"_ — which is still true and is now the
+  **specification** rather than a limit: **logout writes `revokedAt` on the row** and the cookie is
+  expired as a consequence. 🚫 A logout that only clears the cookie is 🚫 NOT logout, and a session
+  that "expires" only in the cookie's `Max-Age` is 🚫 NOT expiry. ⚠️ **Both must be proven by a
+  presented cookie being REFUSED afterwards** — 🚫 not by a redirect to a login screen.
+- ✅ **The word the owner used is "login", and so does the code.** 🚫 No euphemism.
+- ✅ **The comparison document is required BEFORE code**, and it is a deliverable — 🚫 not a PR
+  description. ⚠️ It must state **what AGE must do differently because of its own ADRs**, which is
+  the half a "reuse the proven model" instruction usually loses.
+- ✅ **Real data, real running paths, 🚫 not mocks.** ⚠️ **This is the acceptance criterion that
+  decides whether the slice shipped**, and it is the one ADR-0068 §0.1d already framed: 🛑 **the
+  proof is a real `denied`, raised BEFORE a query exists.** 🚫 An empty result set is not a proof,
+  and 🚫 a green unit suite is not the test — the RankOps round trip's own lesson was that the
+  first envelope was refused **while both typecheckers and every unit test on both sides were
+  green**.
+
+**UNCHANGED and 🚫 not reopened by the acceptance:** no provisioning surface through an AGE API
+(D4 — ⚠️ the owner restated it) · one credential path, A1 (D3) · the organization is the tenant
+boundary and 🚫 **there is no `clientId`-based authorization anywhere** (D5) · V1 is read/browse/
+inspect (ADR-0057 D4 class 3 refused) · 🚫 no public exposure before the boundary is verified, and
+🚫 **not even temporarily** (D9 — ⚠️ the owner restated this too, which is 🚫 not redundancy: it is
+the shortcut being refused a third time in writing).
+
+⚠️ **`age.digitaldadi.agency` → `185.255.131.94` now resolves (the owner created it 2026-08-15).**
+🛑 **THAT CHANGES NOTHING ABOUT THE ORDER.** DNS existing is 🚫 not permission to answer on it; the
+vhost is still §7 step 4, and 🚫 nothing may listen publicly until steps 1–3 are green and the §6
+gate is discharged.
 
 ---
 
