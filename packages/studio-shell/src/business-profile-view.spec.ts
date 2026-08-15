@@ -8,6 +8,7 @@ import {
   type DiscoveryDraftPresence,
   type BusinessProfileInput,
 } from './business-profile-view';
+import type { SourceConfirmedPresence } from './source-confirmed-channel';
 import { STUDIO_AREAS } from './navigation';
 
 const IDENTITY = Object.freeze({
@@ -16,9 +17,19 @@ const IDENTITY = Object.freeze({
   organizationId: 'fixture-org',
 });
 
-const inputWith = (draft: DiscoveryDraftPresence): BusinessProfileInput => ({
+/**
+ * ⚠️ The second channel is a REQUIRED input (ADR-0073 D5), so the default here
+ * is the honest one for a fixture that names no workspace: nothing has looked.
+ * 🚫 Never `read` with a count — that would make the typed-draft cases silently
+ * assert a confirmed-answer figure they say nothing about.
+ */
+const inputWith = (
+  draft: DiscoveryDraftPresence,
+  sourceConfirmed: SourceConfirmedPresence = { kind: 'not-configured' },
+): BusinessProfileInput => ({
   identity: IDENTITY,
   draft,
+  sourceConfirmed,
 });
 
 const ALL_PRESENCES: readonly DiscoveryDraftPresence[] = [
@@ -153,6 +164,7 @@ describe('the Business Profile view', () => {
     const view = presentBusinessProfile({
       identity: { ...IDENTITY, clientId: 'a b/c' },
       draft: 'saved',
+      sourceConfirmed: { kind: 'not-configured' },
     });
 
     for (const area of view.areas) {
@@ -228,6 +240,63 @@ describe('the Business Profile view', () => {
 
       expect(checked).toBe(ALL_PRESENCES.length);
       expect(values.size).toBe(ALL_PRESENCES.length);
+    });
+  });
+
+  /**
+   * 🛑 THE FAILURE THIS BRANCH EXISTS TO END. Before ADR-0073 there was one
+   * intake channel, so "no saved draft" was a fair summary of everything AGE
+   * held. With three answers confirmed from a document on disk, that same
+   * sentence tells the operator their work was lost.
+   */
+  describe('the second intake channel', () => {
+    it('never lets the typed-draft line speak for the confirmed answers', () => {
+      const view = presentBusinessProfile(
+        inputWith('none-saved', { kind: 'read', questionCount: 3 }),
+      );
+
+      // The typed channel is still empty and still says so — 🚫 it is not
+      // "repaired" by the other channel having something.
+      expect(view.capture.state).toBe('unknown');
+      // ⚠️ But it must now say which channel it is talking about, and disclaim
+      // the other one by name.
+      expect(view.capture.label).toBe('Typed discovery draft');
+      expect(view.capture.detail).toContain('answers confirmed from documents');
+
+      expect(view.confirmations.state).toBe('known');
+      expect(view.confirmations.value).toBe('3 questions answered from a document');
+    });
+
+    it('keeps the two channels as two lines, with no combined figure', () => {
+      const view = presentBusinessProfile(inputWith('saved', { kind: 'read', questionCount: 2 }));
+
+      expect(view.capture.label).not.toBe(view.confirmations.label);
+      // 🚫 ADR-0073 D2/D5 — no sum, no share, no single completeness across the
+      // two channels anywhere on this surface.
+      const everySentence = [
+        view.capture.value,
+        view.capture.detail,
+        view.confirmations.value,
+        view.confirmations.detail,
+      ].join(' ');
+      expect(everySentence).not.toMatch(/\btotal\b|\bcombined\b|\bin all\b|%/i);
+    });
+
+    it('reports each presence of the confirmed channel distinctly', () => {
+      const values = new Set(
+        (
+          [
+            { kind: 'not-configured' },
+            { kind: 'refused' },
+            { kind: 'read', questionCount: 0 },
+            { kind: 'read', questionCount: 4 },
+          ] as const satisfies readonly SourceConfirmedPresence[]
+        ).map(
+          (presence) => presentBusinessProfile(inputWith('saved', presence)).confirmations.value,
+        ),
+      );
+
+      expect(values.size).toBe(4);
     });
   });
 

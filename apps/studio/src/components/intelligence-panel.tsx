@@ -2,7 +2,11 @@
 
 import { useState } from 'react';
 
-import type { CapabilityReadinessRowView, CapabilityReadinessView } from '@age/studio-shell';
+import {
+  BOTH_INTAKE_CHANNELS_READ,
+  type CapabilityReadinessRowView,
+  type CapabilityReadinessView,
+} from '@age/studio-shell';
 
 import { StateChip } from './state-chip';
 
@@ -56,9 +60,9 @@ export function IntelligencePanel({ clientId, assess }: IntelligencePanelProps) 
       <div className="rounded border border-[hsl(var(--age-border))] p-4">
         <h2 className="text-sm font-semibold">Assess capability readiness</h2>
         <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
-          This reads the answer file this console wrote, builds a BIF from it in memory, and asks
-          each capability that publishes an assessment how far that context carries it. It happens
-          once, when you press — never when the page opens.
+          {BOTH_INTAKE_CHANNELS_READ}, builds a BIF from them in memory, and asks each capability
+          that publishes an assessment how far that context carries it. It happens once, when you
+          press — never when the page opens.
         </p>
         <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">
           No capability is run. Readiness describes the captured context, never a result, and

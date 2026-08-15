@@ -4,9 +4,14 @@ import {
   presentBusinessProfile,
   presentEpistemicState,
   type DiscoveryDraftPresence,
+  type SourceConfirmedPresence,
 } from '@age/studio-shell';
 
-import { readDiscoveryDraft, resolveBusinessScope } from '@/server/operator-environment';
+import {
+  readDiscoveryDraft,
+  readSourceConfirmations,
+  resolveBusinessScope,
+} from '@/server/operator-environment';
 
 /**
  * S3 · Business Profile — the subject-level landing.
@@ -35,6 +40,25 @@ function presenceOf(outcome: ReturnType<typeof readDiscoveryDraft>): DiscoveryDr
       // ⚠️ `everSaved` is the whole distinction: an empty form that was never
       // saved is 🚫 not a draft that was read and found blank.
       return outcome.everSaved ? 'saved' : 'none-saved';
+  }
+}
+
+/**
+ * ⚠️ The count is of ENTRIES IN ONE FILE, and 🚫 nothing else. It is never
+ * combined with the typed draft's count and never expressed as a share of the
+ * questionnaire — ADR-0073 D2/D5 keeps the two channels apart, and a single
+ * figure spanning them is exactly how they would stop being apart.
+ */
+function confirmedPresenceOf(
+  outcome: ReturnType<typeof readSourceConfirmations>,
+): SourceConfirmedPresence {
+  switch (outcome.kind) {
+    case 'not-configured':
+      return { kind: 'not-configured' };
+    case 'refused':
+      return { kind: 'refused' };
+    case 'loaded':
+      return { kind: 'read', questionCount: outcome.draft.answers.length };
   }
 }
 
@@ -76,9 +100,11 @@ export function BusinessProfileScreen({ clientId }: { readonly clientId: string 
       organizationId: scope.client.organizationId,
     },
     draft: presenceOf(readDiscoveryDraft(clientId)),
+    sourceConfirmed: confirmedPresenceOf(readSourceConfirmations(clientId)),
   });
 
   const capture = presentEpistemicState(view.capture.state);
+  const confirmations = presentEpistemicState(view.confirmations.state);
 
   return (
     <main className="max-w-5xl p-8">
@@ -118,6 +144,21 @@ export function BusinessProfileScreen({ clientId }: { readonly clientId: string 
             </Link>
           </p>
         )}
+      </section>
+
+      {/* ⚠️ Its own section, beside the typed draft and never inside it: the two
+          channels are two, and a nested row would read as a subtotal. */}
+      <section className="mt-4 rounded border border-[hsl(var(--age-border))] p-4">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <h2 className="text-sm font-semibold">{view.confirmations.label}</h2>
+          <span className={confirmations.className} title={confirmations.meaning}>
+            {confirmations.label}
+          </span>
+        </div>
+        <p className="mt-1 text-sm font-medium">{view.confirmations.value}</p>
+        <p className="mt-1 text-xs text-[hsl(var(--age-text-muted))]">
+          {view.confirmations.detail}
+        </p>
       </section>
 
       {/* 🚫 Shown ON the surface, never as a footnote: without it a list of nine
