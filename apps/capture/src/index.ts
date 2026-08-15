@@ -53,6 +53,9 @@ export type { InspectCommand, ParsedInspectArguments } from './inspect-arguments
 export { INSPECT_EXIT_CODES, runInspect } from './inspect-runner';
 export type { InspectRunResult, InspectRuntime, SnapshotReadConnection } from './inspect-runner';
 
+export { PROJECT_EXIT_CODES, runProject } from './project-runner';
+export type { ProjectRunResult } from './project-runner';
+
 export { ASSESS_EXIT_CODES, runAssess } from './assess-runner';
 export type { AssessRunResult, AssessRuntime } from './assess-runner';
 
@@ -77,6 +80,7 @@ export {
   RELAY_SUBCOMMAND,
   INSPECT_SUBCOMMAND,
   ONBOARDING_SUBCOMMAND,
+  PROJECT_SUBCOMMAND,
   runCli,
 } from './capture-cli';
 export type { CaptureCliRuntime } from './capture-cli';

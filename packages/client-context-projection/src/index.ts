@@ -15,6 +15,14 @@
  */
 
 export {
+  AGE_PEER_CONTRACT,
+  PEER_CONTEXT_DOCUMENT,
+  asPeerContextDocument,
+  type PeerContextDocument,
+  type PeerObservationDocument,
+} from './peer-contract';
+
+export {
   projectClientContext,
   type ClientContextProjection,
   type ClientContextProjectionInput,

@@ -132,6 +132,9 @@ importers:
       '@age/capability-revenue':
         specifier: workspace:*
         version: link:../../packages/capabilities/revenue
+      '@age/client-context-projection':
+        specifier: workspace:*
+        version: link:../../packages/client-context-projection
       '@age/client-registry':
         specifier: workspace:*
         version: link:../../packages/client-registry
