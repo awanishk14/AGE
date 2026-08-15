@@ -99,7 +99,15 @@ rsync -az --delete \
 fi
 
 echo "==> Installing and building on the host"
-"${SSH[@]}" "cd '${AGE_VPS_PATH}' && pnpm install --frozen-lockfile && pnpm --filter @age/studio build"
+# 🛑 `prisma:generate` RUNS BEFORE THE BUILD, AND THE ORDER IS THE POINT. Next
+# traces `@prisma/client` into `.next/server/chunks/*` at BUILD time. Without a
+# generated client at that moment it bundles the stub, and the deployment then
+# starts, serves `/sign-in`, redirects every protected route correctly — and
+# throws `@prisma/client did not initialize yet` the instant a real session is
+# presented. ⚠️ Generating afterwards does NOT fix it: the stub is already
+# inside the bundle. That failure was MEASURED on the real VPS, and every test
+# in the repository was green while it stood.
+"${SSH[@]}" "cd '${AGE_VPS_PATH}' && pnpm install --frozen-lockfile && pnpm --filter @age/persistence run prisma:generate && pnpm --filter @age/studio build"
 
 echo "==> Writing the service (loopback only)"
 # ⚠️ The unit runs `pnpm --filter @age/studio start`, which is
