@@ -62,6 +62,19 @@ require AGE_DB_APP_PASSWORD
 # migration. 🚫 It is never written to the unit file.
 require AGE_DB_OWNER_URL
 
+# 🛑 THE ORGANIZATION THIS DEPLOYMENT SERVES (ADR-0074 §7 slice 2). It is 🚫 NOT
+# a secret and 🚫 NOT an authorization: it is the RLS *lookup* scope the console
+# needs before it can read a session row at all, and every entitlement decision
+# is taken from the ROW that comes back, never from this value. It can only
+# NARROW what is visible.
+#
+# ⚠️ IT IS REQUIRED, WITH NO DEFAULT. A console that guessed its organization
+# would either see nothing and blame the operator's credential, or — worse —
+# read rows it was never meant to. The boundary refuses by NAME when it is
+# absent (`deployment-not-configured`), and 🚫 never says "that token was not
+# accepted" about a good token.
+require AGE_STUDIO_ORGANIZATION_ID
+
 SSH=(ssh -p "$AGE_VPS_PORT" "${AGE_VPS_USER}@${AGE_VPS_HOST}")
 SERVICE="age-studio"
 ENV_FILE="/etc/age-studio/age-studio.env"
@@ -122,14 +135,24 @@ echo "==> Writing the service's EnvironmentFile (mode 600, root-owned)"
 # ⚠️ 127.0.0.1, and that is the whole point. `selectDeployedDatabaseComposition`
 # refuses a publicly reachable host ABOVE `new PrismaClient(`, so a store that
 # was accidentally exposed stops the console rather than being used by it.
-"${SSH[@]}" "AGE_DB_NAME='${AGE_DB_NAME}' AGE_DB_APP_PASSWORD='${AGE_DB_APP_PASSWORD}' bash -s" <<'REMOTE'
+# ⚠️ `AGE_STUDIO_ORGANIZATION_ID` travels in the remote command line while the
+# password does not, and that difference is deliberate: it is an identifier, not
+# a credential. 🚫 Do not move a secret onto this line to match it.
+"${SSH[@]}" "AGE_DB_NAME='${AGE_DB_NAME}' AGE_DB_APP_PASSWORD='${AGE_DB_APP_PASSWORD}' AGE_STUDIO_ORGANIZATION_ID='${AGE_STUDIO_ORGANIZATION_ID}' bash -s" <<'REMOTE'
 set -euo pipefail
 
 sudo install -d -m 700 -o root -g root /etc/age-studio
 
 umask 077
-printf 'DATABASE_URL_APP=postgresql://age_app:%s@127.0.0.1:5432/%s?schema=public\n' \
-  "$AGE_DB_APP_PASSWORD" "$AGE_DB_NAME" |
+# 🛑 BOTH LINES, ONE FILE, ONE WRITE. The console refuses to start without the
+# connection and refuses to admit anybody without the organization — 🚫 neither
+# is defaulted, and a file carrying only one of them is a misconfiguration the
+# operator finds at the door instead of silently.
+{
+  printf 'DATABASE_URL_APP=postgresql://age_app:%s@127.0.0.1:5432/%s?schema=public\n' \
+    "$AGE_DB_APP_PASSWORD" "$AGE_DB_NAME"
+  printf 'AGE_STUDIO_ORGANIZATION_ID=%s\n' "$AGE_STUDIO_ORGANIZATION_ID"
+} |
   sudo tee /etc/age-studio/age-studio.env >/dev/null
 
 sudo chown root:root /etc/age-studio/age-studio.env

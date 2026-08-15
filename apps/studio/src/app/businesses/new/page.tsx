@@ -3,13 +3,21 @@ import Link from 'next/link';
 import { CreateClientForm } from '@/components/create-client-form';
 import { createClientAction } from '@/server/client-actions';
 
+import { requireVerifiedSession } from '@/server/session-boundary';
+
 /**
  * ⚠️ Rendered per request. The form writes to the operator's record file, and a
  * statically prerendered page would be served from a build that never saw it.
  */
 export const dynamic = 'force-dynamic';
 
-export default function Page() {
+export default async function Page() {
+  // 🛑 THE BOUNDARY, BEFORE ANY PROTECTED QUERY (ADR-0074 §7 slice 2). It
+  // does not return for an unadmitted caller — 🚫 there is no falsy value to
+  // forget to check. A route contract test asserts this line precedes every
+  // `@/server/*` call in this file.
+  await requireVerifiedSession();
+
   return (
     <main className="max-w-3xl p-8">
       <p className="text-xs text-[hsl(var(--age-text-muted))]">

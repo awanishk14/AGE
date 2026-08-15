@@ -21,7 +21,7 @@ const SECTIONS: readonly { level: AreaLevel; heading: string }[] = [
  * ⚠️ An area that is not wired says so on the item rather than presenting a
  * full navigation that leads to empty screens.
  */
-export function Sidebar() {
+export function Sidebar({ signedIn }: { readonly signedIn: boolean }) {
   return (
     <nav aria-label="AGE Studio" className="w-72 shrink-0 border-r border-[hsl(var(--age-border))]">
       <div className="px-4 py-5">
@@ -68,6 +68,36 @@ export function Sidebar() {
           first — there is no default business, and none is selected for you.
         </p>
       </div>
+
+      {/*
+        🛑 **SIGNING OUT MUST BE REACHABLE, OR IT IS NOT A SESSION** — ADR-0074
+        §7 slice 2. The Product Owner's definition of done ends *"logout/expiry
+        works"*, and a revocation route nobody can press is a route nobody uses.
+
+        ⚠️ **A `POST` FORM, 🚫 NEVER A LINK.** A `GET` that revoked could be
+        fired by a prefetch, an image or another site. This posts, and the route
+        revokes the ROW before it expires the cookie.
+
+        🚫 **NOTHING IS SHOWN WHEN NOBODY IS SIGNED IN** — no "Sign in" link
+        either. The unauthenticated caller is already being redirected to the
+        door; a second, differently-worded door would be a second truth.
+      */}
+      {signedIn ? (
+        <div className="px-4 pb-6">
+          <form method="post" action="/sign-out">
+            <button
+              type="submit"
+              className="w-full rounded border border-[hsl(var(--age-border))] px-2 py-1.5 text-xs hover:bg-[hsl(var(--age-surface))]"
+            >
+              Sign out
+            </button>
+          </form>
+          <p className="mt-2 text-[0.6875rem] leading-relaxed text-[hsl(var(--age-text-muted))]">
+            Signing out revokes this session in the store, not only in this browser. The same token
+            is refused afterwards.
+          </p>
+        </div>
+      ) : null}
     </nav>
   );
 }

@@ -4,7 +4,13 @@ import {
   openDeployedPrismaObservationReadConnection,
   openDeployedPrismaSnapshotReadConnection,
 } from '@age/capture/deployed-composition';
+import {
+  openDeployedPrismaSessionConnection,
+  type SessionRevocation,
+  type SessionStoreConnection,
+} from '@age/capture/deployed-session-composition';
 import { REMOTE_ACKNOWLEDGEMENT } from '@age/deployed-database-target';
+import { verifyPresentedSessionToken, type SessionVerification } from '@age/session-store';
 import {
   assembleEvidence as assembleEvidenceIn,
   assessCapabilityReadiness as assessCapabilityReadinessIn,
@@ -251,6 +257,120 @@ export function readStoredSnapshot(
       ),
     clientId,
     bifId,
+  );
+}
+
+/**
+ * 🛑 **THE ORGANIZATION THIS DEPLOYMENT LOOKS SESSIONS UP IN — ADR-0074 §7 slice
+ * 2, and the one decision in this slice that ADR-0074 did not settle.**
+ *
+ * ⚠️ **THE PROBLEM, PLAINLY.** ADR-0074 D5 says the session establishes the
+ * organization *"from the ROW, never from the cookie, never from a header, never
+ * from the URL"*. But the row lives behind `FORCE ROW LEVEL SECURITY`, whose
+ * policy compares `organization_id` to a transaction-local setting — so
+ * something has to name an organization BEFORE the row can be read, and the row
+ * is what was going to name it. ADR-0068 refuses to default that scope, for the
+ * right reason: an unscoped lookup matches zero rows, and a false refusal is
+ * indistinguishable from a bad credential.
+ *
+ * ⚠️ **THE RESOLUTION, AND WHY IT DOES NOT WEAKEN D5.** The deployment names its
+ * own organization, out of band, in the same root-owned `mode 0600`
+ * `EnvironmentFile` that carries `DATABASE_URL_APP`. It is used for **ONE
+ * PURPOSE ONLY: the RLS lookup scope**, which is COHERENCE and 🚫 never
+ * authorization (ADR-0046 D5). 🛑 **EVERY ENTITLEMENT DECISION STILL READS
+ * `session.organizationId` OFF THE ROW**, and `readWithinEntitlement` re-derives
+ * the query scope from that and nothing else.
+ *
+ * Why this is safe rather than a loophole:
+ *
+ *   - It can only NARROW. A row whose `organization_id` does not match is
+ *     invisible, so naming the wrong organization verifies nothing. 🚫 It cannot
+ *     admit anyone; it can only fail to admit someone.
+ *   - 🚫 It is not a caller claim. It arrives from a root-owned file on the host,
+ *     never from a cookie, a header, a form field or a URL — the four sources D5
+ *     names. Anyone able to edit that file already owns the machine.
+ *   - 🚫 It builds no second organization concept. It is a string handed to
+ *     `set_config`, and nothing downstream reads it.
+ *
+ * ⚠️ **AN ABSENT VALUE REFUSES, 🚫 IT DOES NOT DEFAULT.** A deployment that
+ * cannot say which tenant it serves must admit nobody — and it must SAY SO, by
+ * naming the VARIABLE, so the operator sees a misconfiguration rather than a
+ * credential that looks broken. 🚫 The refusal never carries the value.
+ *
+ * 🛑 **THIS IS A SINGLE-ORGANIZATION DEPLOYMENT AND IT IS A DECISION, NOT A GAP.**
+ * ADR-0074 authorizes a CLIENT switcher over ONE entitled organization; a second
+ * organization on one host would need its own ADR, and 🚫 must not be reached for
+ * by turning this into a list.
+ */
+export function sessionLookupOrganizationId(): string | undefined {
+  const raw = process.env.AGE_STUDIO_ORGANIZATION_ID;
+
+  return raw === undefined || raw.trim() === '' ? undefined : raw.trim();
+}
+
+/**
+ * The session door, opened for exactly one operation and closed again.
+ *
+ * ⚠️ **NOTHING HOLDS IT OPEN, AND THAT IS THE SAME RULE AS EVERY OTHER READ HERE
+ * (ADR-0055 D2).** A module-level connection is a reference a screen could
+ * acquire; a connection opened and closed inside one call is not.
+ *
+ * 🚫 **NEITHER FUNCTION IS AN AUTHORIZATION.** `verifySessionToken` answers *is
+ * there a live row for this digest, in this deployment's scope*, and
+ * `revokeSessionById` ends one. What the resulting session may act on is
+ * `askEntitlement`, always, afterwards.
+ */
+async function withSessionStore<T>(
+  operation: (store: SessionStoreConnection) => Promise<T>,
+): Promise<T> {
+  const store = openDeployedPrismaSessionConnection({
+    acknowledgedRemote: CONSOLE_DATABASE_ACKNOWLEDGEMENT,
+  });
+
+  try {
+    return await operation(store);
+  } finally {
+    await store.close();
+  }
+}
+
+/**
+ * Verifies a presented token against the store.
+ *
+ * ⚠️ **THE HASHING HAPPENS INSIDE `verifyPresentedSessionToken`**, which is the
+ * ONE implementation of that rule. The digest is what reaches the database, so a
+ * query log or a slow-query trace cannot capture the credential.
+ *
+ * ⚠️ **IT DOES NOT THROW FOR AN ORDINARY FAILURE.** A wrong token is a RESULT,
+ * not an exception — the five unverified reasons stay five, and a caller can
+ * tell `expired` from `revoked` from `no-such-session`.
+ */
+export function verifySessionToken(
+  presentedToken: string,
+  organizationId: string,
+): Promise<SessionVerification> {
+  return withSessionStore((store) =>
+    verifyPresentedSessionToken({
+      presentedToken,
+      findRowByTokenHash: (tokenHash) => store.findByTokenHash(organizationId, tokenHash),
+      now: new Date(),
+    }),
+  );
+}
+
+/**
+ * Ends one session, server-side.
+ *
+ * 🛑 **THIS IS WHAT MAKES A LOGOUT A LOGOUT** (ADR-0074 D3). Clearing the cookie
+ * discards the operator's copy of the token; this discards the token. 🚫 The two
+ * are not interchangeable and the cookie half must never be shipped alone.
+ */
+export function revokeSessionById(
+  organizationId: string,
+  sessionId: string,
+): Promise<SessionRevocation> {
+  return withSessionStore((store) =>
+    store.revoke(organizationId, sessionId, new Date().toISOString()),
   );
 }
 

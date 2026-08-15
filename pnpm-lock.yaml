@@ -153,6 +153,9 @@ importers:
       '@age/scored-bif-snapshot-persistence':
         specifier: workspace:*
         version: link:../../packages/scored-bif-snapshot-persistence
+      '@age/session-store-persistence':
+        specifier: workspace:*
+        version: link:../../packages/session-store-persistence
       '@age/source-observation':
         specifier: workspace:*
         version: link:../../packages/source-observation
@@ -255,6 +258,12 @@ importers:
       '@age/operator-workspace':
         specifier: workspace:*
         version: link:../../packages/operator-workspace
+      '@age/session-cookie':
+        specifier: workspace:*
+        version: link:../../packages/session-cookie
+      '@age/session-store':
+        specifier: workspace:*
+        version: link:../../packages/session-store
       '@age/studio-shell':
         specifier: workspace:*
         version: link:../../packages/studio-shell

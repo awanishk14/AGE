@@ -147,7 +147,20 @@ cat <<TUNNEL
 
     and then opens  http://127.0.0.1:3100  in a browser.
 
-    ⚠️ The tunnel is the authentication. There is no login screen in the
-    console, so whoever can reach the port is the operator. Closing the SSH
-    session closes the console.
+    🛑 THE TUNNEL IS NO LONGER THE AUTHENTICATION (ADR-0074 §7 slice 2). The
+    console now has a real boundary: every route but the sign-in door requires a
+    session token that was provisioned as an act, verified against a row in this
+    deployment's store, and revoked on sign-out. Reaching the port is no longer
+    enough to see anything.
+
+    ⚠️ THE TUNNEL IS STILL THE TRANSPORT, AND STILL REQUIRED. The service is
+    bound to 127.0.0.1 and 🚫 nothing is published: there is no port, no proxy
+    and no vhost. The public bind, TLS and the boundary in front of it are
+    ADR-0074 §7 slice 4, and the Product Owner's instruction stands until then —
+    "do not expose the Studio unauthenticated even temporarily".
+
+    ⚠️ THE UNIT WILL NOT START WITHOUT AGE_STUDIO_ORGANIZATION_ID. It is written
+    into /etc/age-studio/age-studio.env by scripts/provision-studio-database.sh.
+    It is the RLS lookup scope, 🚫 not an authorization: every entitlement
+    decision is taken from the session row that comes back.
 TUNNEL

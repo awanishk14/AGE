@@ -253,9 +253,29 @@ describe('askEntitlement has exactly one caller', () => {
     expect(shipped[0]?.endsWith(THE_CALLER)).toBe(true);
   });
 
+  /**
+   * ⚠️ **THE SCAN IS FOR THE IMPORT, 🚫 NOT FOR THE BARE NAME** — narrowed in
+   * ADR-0074 §7 slice 2, and 🚫 the rule itself is unchanged.
+   *
+   * It used to match any file mentioning `@age/entitlement` anywhere, which
+   * reported `apps/mcp/src/tests/trust-boundary.spec.ts` — a guard whose whole
+   * purpose is to assert that `apps/mcp` never gains this dependency, and which
+   * must therefore name it in code rather than in a comment. A test that fails
+   * because another test forbids the same thing is measuring the wrong noun.
+   *
+   * 🛑 **THE NARROWING IS PRECISE AND DELIBERATE**: an *importer* is a file with
+   * an import statement, so that is what is matched — the same reasoning as the
+   * caller test above, which scans for `askEntitlement(` and not for the bare
+   * name. 🚫 It is NOT an exemption for spec files, and 🚫 not a path allowance:
+   * a spec that really imported the package would still be reported. The
+   * manifest scan below is untouched, so a package that merely DECLARED the
+   * dependency is still caught before anybody imports it.
+   */
   it('is imported by exactly the packages ADR-0061 A2 and A4 authorize', () => {
     const importers = OUTSIDE.filter((file) =>
-      stripComments(readFileSync(file, 'utf8')).includes('@age/entitlement'),
+      /from\s*'@age\/entitlement'|require\(\s*'@age\/entitlement'\s*\)/.test(
+        stripComments(readFileSync(file, 'utf8')),
+      ),
     );
 
     for (const importer of importers) {

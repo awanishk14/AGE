@@ -4,6 +4,8 @@ import { StateChip } from '@/components/state-chip';
 import { SystemStatusPanel } from '@/components/system-status-panel';
 import { boundHost, boundPort, readBusinessesView } from '@/server/operator-environment';
 
+import { requireVerifiedSession } from '@/server/session-boundary';
+
 export const dynamic = 'force-dynamic';
 
 const RECORD_FILE_STATUS = {
@@ -13,17 +15,26 @@ const RECORD_FILE_STATUS = {
   listed: 'read',
 } as const;
 
-export default function Page() {
+export default async function Page() {
+  // 🛑 THE BOUNDARY, BEFORE ANY PROTECTED QUERY (ADR-0074 §7 slice 2). It
+  // does not return for an unadmitted caller — 🚫 there is no falsy value to
+  // forget to check. A route contract test asserts this line precedes every
+  // `@/server/*` call in this file.
+  await requireVerifiedSession();
+
   const view = readBusinessesView();
 
   const facets = presentSystemStatus({
     bindHost: boundHost(),
     bindPort: boundPort(),
     recordFile: RECORD_FILE_STATUS[view.kind],
-    // ⚠️ Both of these are constants, and that is the point. They are not
-    // "pending", not "loading" and not `false` — there is no identity system
-    // and nothing has read the capture store (ADR-0058 D2, D6).
-    identity: 'not-established',
+    // ⚠️ Identity is `session-verified` since ADR-0074 §7 slice 2 — the guard
+    // above admitted a real session row, and Diagnostics exists to answer *"is
+    // the console telling the truth about itself?"*. 🛑 Admission, 🚫 never
+    // authorization; the facet's own detail says so.
+    identity: 'session-verified',
+    // ⚠️ A constant, and that is the point. It is not "pending", not "loading"
+    // and not `false` — nothing has read the capture store (ADR-0058 D6).
     captureStore: 'not-read',
   });
 

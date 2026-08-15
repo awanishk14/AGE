@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
 import { Sidebar } from '@/components/sidebar';
+import { assessRequestSession } from '@/server/session-boundary';
 
 import './globals.css';
 
@@ -10,12 +11,25 @@ export const metadata: Metadata = {
   description: 'Local operator console for AGE. No business execution.',
 };
 
-export default function RootLayout({ children }: { readonly children: ReactNode }) {
+/**
+ * 🛑 **THE LAYOUT IS NOT THE BOUNDARY, AND MUST NOT BECOME ONE** (ADR-0074 §7
+ * slice 2). It calls `assessRequestSession()`, which REPORTS and never
+ * redirects, for exactly one reason: so the sidebar can offer a way to sign out.
+ * 🚫 It must not call `requireVerifiedSession()` — a layout that redirected
+ * would also redirect `/sign-in`, and the door cannot stand behind itself.
+ *
+ * ⚠️ The protection stays on the ROUTES, where `route-protection.test.ts` can
+ * see it. 🚫 A guard here would look like protection while leaving every page
+ * free to render its data before the layout ever resolved.
+ */
+export default async function RootLayout({ children }: { readonly children: ReactNode }) {
+  const decision = await assessRequestSession();
+
   return (
     <html lang="en">
       <body className="min-h-screen antialiased">
         <div className="flex min-h-screen">
-          <Sidebar />
+          <Sidebar signedIn={decision.kind === 'admitted'} />
           <div className="flex min-h-screen flex-1 flex-col">
             {/*
               ⚠️ The banner is not decoration. An operator must be able to tell,

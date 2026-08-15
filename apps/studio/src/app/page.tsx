@@ -3,6 +3,8 @@ import { presentDashboard, presentSystemStatus } from '@age/studio-shell';
 import { DashboardScreen } from '@/components/dashboard-screen';
 import { boundHost, boundPort, readBusinessesView } from '@/server/operator-environment';
 
+import { requireVerifiedSession } from '@/server/session-boundary';
+
 export const dynamic = 'force-dynamic';
 
 /**
@@ -22,7 +24,13 @@ const RECORD_FILE_STATUS = {
   listed: 'read',
 } as const;
 
-export default function Page() {
+export default async function Page() {
+  // 🛑 THE BOUNDARY, BEFORE ANY PROTECTED QUERY (ADR-0074 §7 slice 2). It
+  // does not return for an unadmitted caller — 🚫 there is no falsy value to
+  // forget to check. A route contract test asserts this line precedes every
+  // `@/server/*` call in this file.
+  await requireVerifiedSession();
+
   const businesses = readBusinessesView();
 
   return (
@@ -32,10 +40,21 @@ export default function Page() {
         bindHost: boundHost(),
         bindPort: boundPort(),
         recordFile: RECORD_FILE_STATUS[businesses.kind],
-        // ⚠️ Constants, and that is the point: there is no identity system and
-        // nothing has read the capture store (ADR-0058 D2, D6). 🚫 Neither is
-        // "pending" and neither is `false`.
-        identity: 'not-established',
+        // ⚠️ DERIVED, 🚫 not asserted: reaching this line means a session row
+        // was really read and admitted, and `session` is that row. It used to
+        // read `not-established`, which stopped being true the moment this
+        // route grew a boundary — 🚫 a screen claiming a blocker the
+        // architecture has removed is as dishonest as one claiming a capability
+        // that does not exist. 🛑 It still says nothing about entitlement.
+        //
+        // ⚠️ It is written as a literal because the guard above has ALREADY
+        // decided it: `requireVerifiedSession()` does not return for an
+        // unadmitted caller, so there is no second outcome to branch on here.
+        // 🚫 Do not manufacture a ternary over `session` to make it look
+        // computed — a fake derivation is harder to audit than a plain fact.
+        identity: 'session-verified',
+        // ⚠️ STILL a constant, and still the point: nothing has read the
+        // capture store (ADR-0058 D6). 🚫 Not "pending", not `false`.
         captureStore: 'not-read',
       })}
     />
