@@ -70,6 +70,18 @@ echo "==> Copying the repository (🚫 never the operator's workspace, 🚫 neve
 # ⚠️ `--delete` keeps the remote checkout an exact copy — a file removed here
 # must not linger there and get imported. The workspace lives outside this path
 # (asserted above), so nothing of the operator's is in reach of it.
+#
+# ⚠️ THE FALLBACK IS NOT A CONVENIENCE. `rsync` is absent from a stock Git Bash
+# on Windows, which is where this repository is developed. `git archive` ships
+# ONLY TRACKED FILES, so it excludes the untracked handover documents, every
+# `.env`, and `node_modules` by construction rather than by a list somebody has
+# to remember to extend. 🚫 It deploys `HEAD`, never the working tree — an
+# uncommitted change must not be able to reach a server.
+if ! command -v rsync >/dev/null 2>&1; then
+  echo "    (rsync absent locally — shipping tracked files at HEAD instead)"
+  git -C "$(git rev-parse --show-toplevel)" archive --format=tar HEAD |
+    "${SSH[@]}" "rm -rf '${AGE_VPS_PATH}' && mkdir -p '${AGE_VPS_PATH}' && tar -x -C '${AGE_VPS_PATH}'"
+else
 rsync -az --delete \
   -e "ssh -p ${AGE_VPS_PORT}" \
   --exclude '.git' \
@@ -84,6 +96,7 @@ rsync -az --delete \
   --exclude 'docs/AGE_STANDING_CONTEXT.md' \
   --exclude 'docs/PROJECT_STATUS_HANDOFF.md' \
   ./ "${AGE_VPS_USER}@${AGE_VPS_HOST}:${AGE_VPS_PATH}/"
+fi
 
 echo "==> Installing and building on the host"
 "${SSH[@]}" "cd '${AGE_VPS_PATH}' && pnpm install --frozen-lockfile && pnpm --filter @age/studio build"
