@@ -235,3 +235,85 @@ describe('the provisioning script targets AGE, and can no longer target a neighb
     expect(SCRIPT_BODY).toContain('REFUSED: ${CONTAINER} publishes a port off loopback.');
   });
 });
+
+/**
+ * 🛑 **NO CREDENTIAL IN A REMOTE COMMAND LINE.**
+ *
+ * ⚠️ **THIS ONE SHIPPED, AND ITS COMMENT SAID THE OPPOSITE.** Every remote step
+ * used to read `ssh host "PGPASSWORD='…' bash -s"`, above a comment asserting
+ * that "every credential is passed to the remote side through an environment
+ * variable, so none appears in a remote argv". The string IS the remote shell's
+ * argv: for as long as each step ran, the superuser password, the application
+ * role's password and the OWNER connection string were readable from `ps` by
+ * every other user on a host AGE shares with three peer products.
+ *
+ * 🚫 Nothing was logged and nothing looked wrong, which is why a source review
+ * passed over it — the exposure is in the *shape* of the call, not its output.
+ *
+ * ⚠️ The rule is asserted as **exactly one `ssh` call site**, 🚫 not as "no
+ * secret appears near one": a second call site is where the next secret goes.
+ */
+describe('the provisioning script keeps secrets off the remote command line', () => {
+  /** Every credential this script handles, by the name it travels under. */
+  const CREDENTIALS: readonly string[] = [
+    'AGE_DB_SUPERUSER_PASSWORD',
+    'AGE_DB_APP_PASSWORD',
+    'AGE_DB_OWNER_URL',
+    'PGPASSWORD',
+    'DATABASE_URL',
+  ];
+
+  /**
+   * Every line that invokes ssh, however it is spelled.
+   *
+   * ⚠️ Trimmed, because this repository is developed on Windows and the working
+   * copy carries CRLF: an assertion that compared raw lines would fail for a
+   * reason that has nothing to do with what it is guarding.
+   */
+  const sshLines = bodyLines(SCRIPT)
+    .map((line) => line.trimEnd())
+    .filter((line) => /\bssh\b|\$\{SSH\[@\]\}/.test(line));
+
+  it('finds ssh call sites at all, so an empty scan can never report compliance', () => {
+    expect(sshLines.length).toBeGreaterThan(0);
+  });
+
+  it('reaches the server through ONE helper, and 🚫 nowhere else', () => {
+    // ⚠️ Two lines and no more: the array that builds the command, and the
+    // single pipe inside `remote()` that consumes it.
+    expect(
+      sshLines,
+      'A second ssh call site is a second place a secret can be put by mistake. Route it ' +
+        'through remote() instead.',
+    ).toEqual([
+      'SSH=(ssh -p "$AGE_VPS_PORT" "${AGE_VPS_USER}@${AGE_VPS_HOST}")',
+      '  } | "${SSH[@]}" bash -s',
+    ]);
+  });
+
+  it('passes the assignments down stdin, 🚫 never as arguments', () => {
+    // 🛑 `bash -s` reads its program from stdin, so exported assignments
+    // prepended to the heredoc are part of that program and never exist as
+    // argv. 🚫 A `remote()` that took a command string would defeat this.
+    expect(SCRIPT_BODY).toContain("printf 'export %s=%q\\n'");
+    expect(SCRIPT_BODY).toContain('| "${SSH[@]}" bash -s');
+  });
+
+  it('names no credential on an ssh line', () => {
+    let examined = 0;
+
+    for (const line of sshLines) {
+      for (const credential of CREDENTIALS) {
+        examined += 1;
+        expect(
+          line,
+          `${credential} appears on an ssh line. A remote command line is readable from ps by ` +
+            `every other user on that host.`,
+        ).not.toContain(credential);
+      }
+    }
+
+    // ⚠️ Count what was examined, so the loop above can never pass silently.
+    expect(examined).toBe(sshLines.length * CREDENTIALS.length);
+  });
+});

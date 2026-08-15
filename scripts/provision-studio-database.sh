@@ -71,9 +71,15 @@ require AGE_VPS_PORT
 require AGE_VPS_PATH
 
 # ⚠️ The database name, the SUPERUSER of AGE's OWN instance, and the application
-# role's password. Supplied, never invented. 🚫 Every credential is passed to the
-# remote side through an environment variable, so none appears in a remote argv
-# that `ps`/`/proc` would show to every other user on that host.
+# role's password. Supplied, never invented.
+#
+# 🛑 **AND EVERY ONE OF THEM TRAVELS ON STDIN** — see `remote()` below. An
+# earlier version of this comment claimed they were "passed through an
+# environment variable, so none appears in a remote argv", and that claim was
+# FALSE: `ssh host "VAR='secret' bash -s"` puts the whole string into the remote
+# shell's own argv, where `ps`/`/proc` shows it to every other user on that box
+# for as long as the step runs. ⚠️ A false assurance in a comment is worse than
+# no comment, because the next reader stops looking.
 require AGE_DB_NAME
 require AGE_DB_SUPERUSER
 require AGE_DB_SUPERUSER_PASSWORD
@@ -142,6 +148,36 @@ case "$AGE_DB_OWNER_URL" in
 esac
 
 SSH=(ssh -p "$AGE_VPS_PORT" "${AGE_VPS_USER}@${AGE_VPS_HOST}")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🛑 THE ONE WAY THIS SCRIPT TALKS TO THE SERVER, AND 🚫 THERE MUST NOT BE A
+# SECOND.
+#
+# ⚠️ **A REMOTE COMMAND LINE IS PUBLIC ON THAT HOST.** `ssh host "VAR=secret
+# bash -s"` hands the string to the remote login shell as its argv, and every
+# other user on the box can read it out of `ps` or `/proc/<pid>/cmdline` while
+# the step runs. Nothing is logged, nothing is exploited, nothing looks wrong —
+# which is exactly why it survived review.
+#
+# 🛑 **SO THE ASSIGNMENTS GO DOWN THE PIPE, AHEAD OF THE SCRIPT.** `bash -s`
+# reads its whole program from stdin, so `export` lines prepended to the
+# heredoc ARE part of that program: the values never exist as arguments to
+# anything. ⚠️ `%q` is bash's own quoting, so a password containing a quote, a
+# space or a `$` arrives as itself rather than as shell syntax.
+#
+# ⚠️ Usage: `remote NAME=value ... <<'REMOTE' … REMOTE`. 🚫 Do not add a variant
+# that takes a command string — the point of this helper is that there is
+# nowhere left to put a secret except stdin.
+remote() {
+  {
+    local assignment
+    for assignment in "$@"; do
+      printf 'export %s=%q\n' "${assignment%%=*}" "${assignment#*=}"
+    done
+    # ⚠️ Then the caller's heredoc, unchanged, as the rest of the program.
+    cat
+  } | "${SSH[@]}" bash -s
+}
 SERVICE="age-studio"
 ENV_FILE="/etc/age-studio/age-studio.env"
 CONTAINER="age-postgres"
@@ -155,7 +191,7 @@ echo "==> Writing the store's own env file and bringing up ${CONTAINER}"
 #
 # 🛑 THE ENV FILE HOLDS THE SUPERUSER PASSWORD. Root-owned, mode 600, on the
 # server, 🚫 never committed, 🚫 never rsynced, 🚫 never echoed.
-"${SSH[@]}" "AGE_DB_NAME='${AGE_DB_NAME}' AGE_DB_SUPERUSER='${AGE_DB_SUPERUSER}' AGE_DB_SUPERUSER_PASSWORD='${AGE_DB_SUPERUSER_PASSWORD}' AGE_DB_HOST_PORT='${AGE_DB_HOST_PORT}' COMPOSE_FILE='${COMPOSE_FILE}' COMPOSE_ENV='${COMPOSE_ENV}' bash -s" <<'REMOTE'
+remote   AGE_DB_NAME="$AGE_DB_NAME"   AGE_DB_SUPERUSER="$AGE_DB_SUPERUSER"   AGE_DB_SUPERUSER_PASSWORD="$AGE_DB_SUPERUSER_PASSWORD"   AGE_DB_HOST_PORT="$AGE_DB_HOST_PORT"   COMPOSE_FILE="$COMPOSE_FILE"   COMPOSE_ENV="$COMPOSE_ENV" <<'REMOTE'
 set -euo pipefail
 
 sudo install -d -m 700 -o root -g root /etc/age-studio
@@ -193,7 +229,7 @@ echo "==> Confirming this is AGE's OWN container, on AGE's OWN volume"
 # `age-postgres` were ever pointed at a peer's volume or attached to a peer's
 # network, every later step here would still succeed — and AGE's rows would be
 # living in somebody else's store. So it is measured, once, before the migration.
-"${SSH[@]}" "CONTAINER='${CONTAINER}' bash -s" <<'REMOTE'
+remote CONTAINER="$CONTAINER" <<'REMOTE'
 set -euo pipefail
 
 mounts=$(sudo docker inspect "$CONTAINER" --format '{{range .Mounts}}{{.Name}} {{end}}')
@@ -244,7 +280,7 @@ echo "==> Creating the non-owner application role"
 # ⚠️ `psql` RUNS INSIDE AGE'S OWN CONTAINER. 🚫 There is no `sudo -u postgres` on
 # this host and there never was; a host `psql` would have to be told which of the
 # box's several instances to dial, and the wrong answer is silent.
-"${SSH[@]}" "CONTAINER='${CONTAINER}' AGE_DB_NAME='${AGE_DB_NAME}' AGE_DB_SUPERUSER='${AGE_DB_SUPERUSER}' PGPASSWORD='${AGE_DB_SUPERUSER_PASSWORD}' AGE_DB_APP_PASSWORD='${AGE_DB_APP_PASSWORD}' bash -s" <<'REMOTE'
+remote   CONTAINER="$CONTAINER"   AGE_DB_NAME="$AGE_DB_NAME"   AGE_DB_SUPERUSER="$AGE_DB_SUPERUSER"   PGPASSWORD="$AGE_DB_SUPERUSER_PASSWORD"   AGE_DB_APP_PASSWORD="$AGE_DB_APP_PASSWORD" <<'REMOTE'
 set -euo pipefail
 
 sudo docker exec -i \
@@ -276,9 +312,16 @@ echo "==> Applying the COMMITTED migrations as the OWNER"
 # on a real store. This applies the reviewed files and nothing else, which is
 # what makes "the SQL that was reviewed is the SQL that ran" true (ADR-0032 D8).
 #
-# ⚠️ The owner URL is passed through the remote environment, so it is not in an
-# argv any other user on that host can read.
-"${SSH[@]}" "cd '${AGE_VPS_PATH}' && DATABASE_URL='${AGE_DB_OWNER_URL}' pnpm --filter @age/persistence prisma:migrate:deploy"
+# 🛑 THE OWNER URL IS A CREDENTIAL, and it now travels on stdin like the rest.
+# ⚠️ It previously rode the remote command line under a comment asserting the
+# opposite — the most valuable single line this change removes, because it is
+# the highest-privilege credential in the script.
+remote   AGE_VPS_PATH="$AGE_VPS_PATH"   DATABASE_URL="$AGE_DB_OWNER_URL" <<'REMOTE'
+set -euo pipefail
+
+cd "$AGE_VPS_PATH"
+pnpm --filter @age/persistence prisma:migrate:deploy
+REMOTE
 
 echo "==> Writing the service's EnvironmentFile (mode 600, root-owned)"
 # 🛑 THIS FILE HOLDS A CREDENTIAL. It is written on the server, readable by root
@@ -290,10 +333,10 @@ echo "==> Writing the service's EnvironmentFile (mode 600, root-owned)"
 # accidentally exposed stops the console rather than being used by it — but that
 # check cannot tell AGE's loopback database from a neighbour's, which is why the
 # port is required and 5432 is refused above.
-# ⚠️ `AGE_STUDIO_ORGANIZATION_ID` travels in the remote command line while the
-# passwords do not, and that difference is deliberate: it is an identifier, not a
-# credential. 🚫 Do not move a secret onto this line to match it.
-"${SSH[@]}" "AGE_DB_NAME='${AGE_DB_NAME}' AGE_DB_APP_PASSWORD='${AGE_DB_APP_PASSWORD}' AGE_DB_HOST_PORT='${AGE_DB_HOST_PORT}' AGE_STUDIO_ORGANIZATION_ID='${AGE_STUDIO_ORGANIZATION_ID}' bash -s" <<'REMOTE'
+# ⚠️ `AGE_STUDIO_ORGANIZATION_ID` is an identifier, 🚫 not a credential — but it
+# goes down the same pipe as everything else, because a second way of reaching
+# the server is a second place a secret can be put by mistake.
+remote   AGE_DB_NAME="$AGE_DB_NAME"   AGE_DB_APP_PASSWORD="$AGE_DB_APP_PASSWORD"   AGE_DB_HOST_PORT="$AGE_DB_HOST_PORT"   AGE_STUDIO_ORGANIZATION_ID="$AGE_STUDIO_ORGANIZATION_ID" <<'REMOTE'
 set -euo pipefail
 
 sudo install -d -m 700 -o root -g root /etc/age-studio
