@@ -1,9 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 import {
-  openLocalPrismaObservationReadConnection,
-  openLocalPrismaSnapshotReadConnection,
-} from '@age/capture/composition';
+  openDeployedPrismaObservationReadConnection,
+  openDeployedPrismaSnapshotReadConnection,
+} from '@age/capture/deployed-composition';
+import { REMOTE_ACKNOWLEDGEMENT } from '@age/deployed-database-target';
 import {
   assembleEvidence as assembleEvidenceIn,
   assessCapabilityReadiness as assessCapabilityReadinessIn,
@@ -60,6 +61,26 @@ import {
  * operator has since corrected, and "the screen disagrees with the file" is
  * precisely the failure this console exists to make impossible.
  */
+
+/**
+ * 🛑 **THE CONSOLE'S DATABASE MAY NOT BE ON THE OPERATOR'S MACHINE** — ADR-0061
+ * A5, wired by ADR-0074 §7 slice 1.
+ *
+ * ⚠️ **THIS IS THE ONE PLACE THE SENTENCE IS WRITTEN, AND WRITING IT IS THE
+ * DECISION.** The console used to open the LOCAL doors, whose rule says the
+ * target is the machine the operator is sitting at. Deployed on a VPS that
+ * sentence is false while the check still passes, because loopback on a server
+ * is loopback **on the server**. The deployed doors make a weaker claim that is
+ * TRUE in both places: the database is reachable only over the host's own
+ * loopback or a private interface, and 🚫 never a public one.
+ *
+ * 🚫 **IT IS NOT AN ENVIRONMENT SWITCH, ON PURPOSE.** A `if (process.env.DEPLOYED)`
+ * would mean the honest rule applied exactly when somebody remembered to set a
+ * variable. The console takes the claim it can always support, everywhere.
+ *
+ * 🚫 It authorizes nothing: where a row may live is not who may read it.
+ */
+const CONSOLE_DATABASE_ACKNOWLEDGEMENT = REMOTE_ACKNOWLEDGEMENT;
 
 /**
  * The console's own effects, named once.
@@ -222,7 +243,12 @@ export function readStoredSnapshot(
 ): Promise<StoredSnapshotOutcome> {
   return readStoredSnapshotIn(
     CONSOLE_RUNTIME,
-    () => narrowSnapshotRead(openLocalPrismaSnapshotReadConnection()),
+    () =>
+      narrowSnapshotRead(
+        openDeployedPrismaSnapshotReadConnection({
+          acknowledgedRemote: CONSOLE_DATABASE_ACKNOWLEDGEMENT,
+        }),
+      ),
     clientId,
     bifId,
   );
@@ -281,7 +307,12 @@ export function boundPort(): number {
 export function readRelayedObservations(clientId: string): Promise<RelayedObservationsOutcome> {
   return readRelayedObservationsIn(
     CONSOLE_RUNTIME,
-    () => narrowObservationRead(openLocalPrismaObservationReadConnection()),
+    () =>
+      narrowObservationRead(
+        openDeployedPrismaObservationReadConnection({
+          acknowledgedRemote: CONSOLE_DATABASE_ACKNOWLEDGEMENT,
+        }),
+      ),
     clientId,
   );
 }
@@ -310,8 +341,18 @@ export function readDerivedIntelligence(
 ): Promise<DerivedIntelligenceOutcome> {
   return readDerivedIntelligenceIn(
     CONSOLE_RUNTIME,
-    () => narrowSnapshotRead(openLocalPrismaSnapshotReadConnection()),
-    () => narrowObservationRead(openLocalPrismaObservationReadConnection()),
+    () =>
+      narrowSnapshotRead(
+        openDeployedPrismaSnapshotReadConnection({
+          acknowledgedRemote: CONSOLE_DATABASE_ACKNOWLEDGEMENT,
+        }),
+      ),
+    () =>
+      narrowObservationRead(
+        openDeployedPrismaObservationReadConnection({
+          acknowledgedRemote: CONSOLE_DATABASE_ACKNOWLEDGEMENT,
+        }),
+      ),
     clientId,
     bifId,
   );
@@ -340,7 +381,12 @@ export function readClientContextProjection(
 ): Promise<ClientContextProjectionOutcome> {
   return readClientContextProjectionIn(
     CONSOLE_RUNTIME,
-    () => narrowSnapshotRead(openLocalPrismaSnapshotReadConnection()),
+    () =>
+      narrowSnapshotRead(
+        openDeployedPrismaSnapshotReadConnection({
+          acknowledgedRemote: CONSOLE_DATABASE_ACKNOWLEDGEMENT,
+        }),
+      ),
     clientId,
     bifId,
   );

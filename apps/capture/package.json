@@ -11,7 +11,8 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./composition": "./src/capture-composition.ts"
+    "./composition": "./src/capture-composition.ts",
+    "./deployed-composition": "./src/deployed-console-composition.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/bundle.mjs",
@@ -30,6 +31,7 @@
     "@age/capability-revenue": "workspace:*",
     "@age/client-context-projection": "workspace:*",
     "@age/client-registry": "workspace:*",
+    "@age/deployed-database-target": "workspace:*",
     "@age/discovery-answer-file": "workspace:*",
     "@age/observation-association": "workspace:*",
     "@age/operator-file-policy": "workspace:*",

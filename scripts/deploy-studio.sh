@@ -118,6 +118,12 @@ WorkingDirectory=${AGE_VPS_PATH}
 Environment=NODE_ENV=production
 Environment=AGE_DISCOVERY_WORKSPACE=${AGE_VPS_DISCOVERY_WORKSPACE}
 Environment=AGE_CLIENT_RECORD_FILE=${AGE_VPS_CLIENT_RECORD_FILE}
+# 🛑 THE CREDENTIAL LIVES ON THE SERVER, NEVER IN THIS REPOSITORY.
+# \`scripts/provision-studio-database.sh\` writes it root-owned, mode 600.
+# ⚠️ NO LEADING \`-\`: an absent file must stop the service. ADR-0061 A6 item 2 —
+# a deployment that starts without its secrets is a deployment nobody knows is
+# misconfigured, and 🚫 there is no default and no generated substitute.
+EnvironmentFile=/etc/age-studio/age-studio.env
 ExecStart=/usr/bin/env pnpm --filter @age/studio start
 Restart=on-failure
 
