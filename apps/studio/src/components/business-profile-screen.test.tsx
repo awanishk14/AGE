@@ -8,14 +8,20 @@ import type {
   SourceConfirmationsOutcome,
 } from '@/server/operator-environment';
 
-const resolveBusinessScope = vi.fn<(clientId: string) => BusinessScope>();
-const readDiscoveryDraft = vi.fn<(clientId: string) => DraftOutcome>();
-const readSourceConfirmations = vi.fn<(clientId: string) => SourceConfirmationsOutcome>();
+const resolveBusinessScope =
+  vi.fn<(entitledOrganizationId: string, clientId: string) => BusinessScope>();
+const readDiscoveryDraft =
+  vi.fn<(entitledOrganizationId: string, clientId: string) => DraftOutcome>();
+const readSourceConfirmations =
+  vi.fn<(entitledOrganizationId: string, clientId: string) => SourceConfirmationsOutcome>();
 
 vi.mock('@/server/operator-environment', () => ({
-  resolveBusinessScope: (clientId: string) => resolveBusinessScope(clientId),
-  readDiscoveryDraft: (clientId: string) => readDiscoveryDraft(clientId),
-  readSourceConfirmations: (clientId: string) => readSourceConfirmations(clientId),
+  resolveBusinessScope: (entitledOrganizationId: string, clientId: string) =>
+    resolveBusinessScope(entitledOrganizationId, clientId),
+  readDiscoveryDraft: (entitledOrganizationId: string, clientId: string) =>
+    readDiscoveryDraft(entitledOrganizationId, clientId),
+  readSourceConfirmations: (entitledOrganizationId: string, clientId: string) =>
+    readSourceConfirmations(entitledOrganizationId, clientId),
 }));
 
 const { BusinessProfileScreen } = await import('./business-profile-screen');
@@ -54,7 +60,7 @@ describe('BusinessProfileScreen', () => {
   it('refuses the profile for a business no record carries, and reads no draft', () => {
     resolveBusinessScope.mockReturnValue({ kind: 'unknown-client', clientId: 'ghost' });
 
-    render(<BusinessProfileScreen clientId="ghost" />);
+    render(<BusinessProfileScreen entitledOrganizationId="org-a" clientId="ghost" />);
 
     expect(screen.getByText('No record carries that business')).toBeDefined();
     expect(readDiscoveryDraft).not.toHaveBeenCalled();
@@ -65,7 +71,7 @@ describe('BusinessProfileScreen', () => {
   it('says a workspace was never configured without calling it "no answers"', () => {
     readDiscoveryDraft.mockReturnValue({ kind: 'not-configured', variable: 'AGE_X' });
 
-    render(<BusinessProfileScreen clientId="c-1" />);
+    render(<BusinessProfileScreen entitledOrganizationId="org-a" clientId="c-1" />);
 
     expect(screen.getByText('Not looked for')).toBeDefined();
     expect(screen.getByText(/nothing has looked/)).toBeDefined();
@@ -77,30 +83,32 @@ describe('BusinessProfileScreen', () => {
    */
   it('separates a draft never saved from one that was', () => {
     readDiscoveryDraft.mockReturnValue({ kind: 'loaded', draft: emptyDraft, everSaved: false });
-    const neverSaved = render(<BusinessProfileScreen clientId="c-1" />);
+    const neverSaved = render(
+      <BusinessProfileScreen entitledOrganizationId="org-a" clientId="c-1" />,
+    );
     expect(screen.getByText('Nothing saved yet')).toBeDefined();
     neverSaved.unmount();
 
     readDiscoveryDraft.mockReturnValue({ kind: 'loaded', draft: emptyDraft, everSaved: true });
-    render(<BusinessProfileScreen clientId="c-1" />);
+    render(<BusinessProfileScreen entitledOrganizationId="org-a" clientId="c-1" />);
     expect(screen.getByText('A draft has been saved')).toBeDefined();
   });
 
   it('never reads a saved draft as a finished Discovery', () => {
-    render(<BusinessProfileScreen clientId="c-1" />);
+    render(<BusinessProfileScreen entitledOrganizationId="org-a" clientId="c-1" />);
 
     expect(screen.getByText(/A saved draft is not submitted answers/)).toBeDefined();
     expect(screen.getByText(/no snapshot of this business exists/)).toBeDefined();
   });
 
   it('shows the no-checklist notice on the surface, not as a footnote', () => {
-    render(<BusinessProfileScreen clientId="c-1" />);
+    render(<BusinessProfileScreen entitledOrganizationId="org-a" clientId="c-1" />);
 
     expect(screen.getByText(/are not a checklist and do not add up to a score/)).toBeDefined();
   });
 
   it('links every subject area under this business', () => {
-    render(<BusinessProfileScreen clientId="c-1" />);
+    render(<BusinessProfileScreen entitledOrganizationId="org-a" clientId="c-1" />);
 
     const links = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
     let checked = 0;
@@ -122,7 +130,7 @@ describe('BusinessProfileScreen', () => {
   });
 
   it('states an unwired area is not assessed, with its reason, never as empty', () => {
-    render(<BusinessProfileScreen clientId="c-1" />);
+    render(<BusinessProfileScreen entitledOrganizationId="org-a" clientId="c-1" />);
 
     expect(screen.getAllByText('Not assessed').length).toBeGreaterThan(0);
     expect(screen.getByText(/ADR-0055 D7/)).toBeDefined();
@@ -137,7 +145,7 @@ describe('BusinessProfileScreen', () => {
     readDiscoveryDraft.mockReturnValue({ kind: 'loaded', draft: emptyDraft, everSaved: false });
     readSourceConfirmations.mockReturnValue(confirmedWith(3));
 
-    render(<BusinessProfileScreen clientId="c-1" />);
+    render(<BusinessProfileScreen entitledOrganizationId="org-a" clientId="c-1" />);
 
     // The typed channel still says what is true of it…
     expect(screen.getByText('Nothing saved yet')).toBeDefined();
@@ -151,7 +159,7 @@ describe('BusinessProfileScreen', () => {
   it('says the console has not looked when no workspace carries confirmations', () => {
     readSourceConfirmations.mockReturnValue({ kind: 'not-configured', variable: 'AGE_X' } as never);
 
-    render(<BusinessProfileScreen clientId="c-1" />);
+    render(<BusinessProfileScreen entitledOrganizationId="org-a" clientId="c-1" />);
 
     // 🚫 Not "none confirmed" — nothing has looked.
     expect(screen.getByText('Not looked for')).toBeDefined();

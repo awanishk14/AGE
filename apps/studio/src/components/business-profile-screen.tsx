@@ -62,8 +62,24 @@ function confirmedPresenceOf(
   }
 }
 
-export function BusinessProfileScreen({ clientId }: { readonly clientId: string }) {
-  const scope = resolveBusinessScope(clientId);
+/**
+ * 🛑 **`entitledOrganizationId` COMES FROM THE ROUTE PAGE'S VERIFIED SESSION
+ * ROW** (AGE-INV-SEL-1, ADR-0074 §7 slice 3), 🚫 never from the URL. A server
+ * component's props are not browser-reachable, so there is nothing here for a
+ * caller to forge — and 🚫 there is no default: a page that forgets to say
+ * whose data it is rendering does not compile.
+ *
+ * ⚠️ The `clientId` still comes off the URL, and that is fine. It is a FILTER
+ * applied inside the entitlement, 🚫 not the thing that establishes it.
+ */
+export function BusinessProfileScreen({
+  entitledOrganizationId,
+  clientId,
+}: {
+  readonly entitledOrganizationId: string;
+  readonly clientId: string;
+}) {
+  const scope = resolveBusinessScope(entitledOrganizationId, clientId);
 
   if (scope.kind !== 'resolved') {
     return (
@@ -99,8 +115,8 @@ export function BusinessProfileScreen({ clientId }: { readonly clientId: string 
       displayName: scope.client.displayName,
       organizationId: scope.client.organizationId,
     },
-    draft: presenceOf(readDiscoveryDraft(clientId)),
-    sourceConfirmed: confirmedPresenceOf(readSourceConfirmations(clientId)),
+    draft: presenceOf(readDiscoveryDraft(entitledOrganizationId, clientId)),
+    sourceConfirmed: confirmedPresenceOf(readSourceConfirmations(entitledOrganizationId, clientId)),
   });
 
   const capture = presentEpistemicState(view.capture.state);

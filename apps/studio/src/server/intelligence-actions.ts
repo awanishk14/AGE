@@ -1,6 +1,7 @@
 'use server';
 
 import { assessCapabilityReadiness, type CapabilityReadinessOutcome } from './operator-environment';
+import { requireVerifiedSession } from './session-boundary';
 
 /**
  * The one thing the operator can do on the Intelligence screen.
@@ -14,10 +15,23 @@ import { assessCapabilityReadiness, type CapabilityReadinessOutcome } from './op
  * ADR-0027 assessment how far the captured context carries it. Nothing is
  * produced, nothing is stored, and no capability is executed against a real
  * business.
+ *
+ * 🛑 **THE ACTION ESTABLISHES ITS OWN ENTITLEMENT** (AGE-INV-SEL-1, ADR-0074 §7
+ * slice 3). A `'use server'` function is a BROWSER-REACHABLE ENDPOINT, so the
+ * `requireVerifiedSession()` call on the page that renders the button protects
+ * the PAGE and 🚫 nothing else. 🚫 Do not remove this call on the grounds that
+ * "the screen is already behind the boundary" — the screen is not what is
+ * being called.
+ *
+ * ⚠️ The organization comes from the SESSION ROW, 🚫 never from an argument: an
+ * argument would let the caller name whose data it wants, which is the exact
+ * chain this invariant forbids.
  */
 export async function assessCapabilityReadinessAction(
   clientId: string,
   changedBy: string,
 ): Promise<CapabilityReadinessOutcome> {
-  return assessCapabilityReadiness(clientId, changedBy);
+  const session = await requireVerifiedSession();
+
+  return assessCapabilityReadiness(session.organizationId, clientId, changedBy);
 }

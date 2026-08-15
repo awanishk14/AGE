@@ -390,8 +390,41 @@ export async function callAgeTool(
     return refuse(`no AGE tool is named '${name}'`);
   }
 
+  /**
+   * 🛑 **THIS SURFACE STATES WHICH ORGANIZATION IT OPERATES ON, AND IT CANNOT
+   * CHOOSE** (AGE-INV-SEL-1, ADR-0074 §7 slice 3).
+   *
+   * ⚠️ **THIS IS A NARROWING, 🚫 NOT AUTHENTICATION, AND IT MUST NOT BECOME
+   * ONE.** MCP has no session, no principal and no credential, and 🚫 slice 3
+   * gives it none — `apps/mcp`'s trust boundary is unchanged. What changes is
+   * that the operator who starts this process fixes its reach ONCE, out of
+   * band, before any tool call happens; previously every organization in the
+   * record file was reachable by naming a `clientId`.
+   *
+   * 🚫 **IT IS NEVER READ FROM `args`.** A model that could name the
+   * organization would be granting itself the entitlement — the exact chain the
+   * invariant forbids. 🚫 And it is never defaulted: without it, this server
+   * refuses to answer rather than guessing whose data was meant.
+   */
+  const configured = runtime.env.AGE_MCP_ORGANIZATION_ID;
+  const entitledOrganizationId = typeof configured === 'string' ? configured.trim() : '';
+
+  /**
+   * ⚠️ **APPLIED ONLY WHERE A BUSINESS IS REACHED.** The questionnaire is a
+   * constant and the relay names no business, so 🚫 neither is refused for
+   * want of an entitlement — refusing them would be a false blocker.
+   */
+  const unentitled =
+    entitledOrganizationId === ''
+      ? refuse(
+          "'AGE_MCP_ORGANIZATION_ID' is not set, so there is no organization this server may " +
+            'answer for. It is set by the operator when the server is started; no organization ' +
+            'is inferred and nothing was read.',
+        )
+      : undefined;
+
   if (name === 'age_list_businesses') {
-    return report(readBusinessesView(runtime));
+    return unentitled ?? report(readBusinessesView(runtime, entitledOrganizationId));
   }
 
   if (name === 'age_read_questionnaire') {
@@ -403,6 +436,8 @@ export async function callAgeTool(
   }
 
   if (name === 'age_create_business_record') {
+    if (unentitled !== undefined) return unentitled;
+
     for (const key of ['clientId', 'organizationId', 'displayName']) {
       if (requiredString(args, key).kind === 'missing') {
         return refuse(`'${key}' is required and must be a non-empty string`);
@@ -415,6 +450,17 @@ export async function callAgeTool(
       displayName: String(args.displayName),
       externalRefsText: typeof args.externalRefsText === 'string' ? args.externalRefsText : '',
     };
+
+    // 🛑 CREATION CANNOT LEAVE THE ENTITLEMENT EITHER (AGE-INV-SEL-1). The
+    // organization is on this tool's schema because the record carries it, so a
+    // model naming a different one is REFUSED — 🚫 never silently rewritten to
+    // the entitled one, which would record a business nobody described.
+    if (draft.organizationId !== entitledOrganizationId) {
+      return refuse(
+        "'organizationId' is not the organization this server answers for. Nothing was " +
+          'written, and no other organization was consulted.',
+      );
+    }
 
     return report(createClientRecord(runtime, draft));
   }
@@ -491,17 +537,21 @@ export async function callAgeTool(
     return report(relaySourceObservation(args.observation));
   }
 
+  // 🛑 EVERY TOOL BELOW NAMES A BUSINESS, SO EVERY TOOL BELOW IS ENTITLED
+  // FIRST — before the argument is even read.
+  if (unentitled !== undefined) return unentitled;
+
   const clientId = requiredString(args, 'clientId');
   if (clientId.kind === 'missing') {
     return refuse("'clientId' is required and must be a non-empty string");
   }
 
   if (name === 'age_resolve_business_scope') {
-    return report(resolveBusinessScope(runtime, clientId.value));
+    return report(resolveBusinessScope(runtime, entitledOrganizationId, clientId.value));
   }
 
   if (name === 'age_read_discovery_draft') {
-    return report(readDiscoveryDraft(runtime, clientId.value));
+    return report(readDiscoveryDraft(runtime, entitledOrganizationId, clientId.value));
   }
 
   if (name === 'age_write_discovery_draft' || name === 'age_submit_discovery_answers') {
@@ -512,8 +562,18 @@ export async function callAgeTool(
 
     return report(
       name === 'age_write_discovery_draft'
-        ? writeDiscoveryDraft(runtime, clientId.value, draft as DiscoveryDraft)
-        : submitDiscoveryAnswers(runtime, clientId.value, draft as DiscoveryDraft),
+        ? writeDiscoveryDraft(
+            runtime,
+            entitledOrganizationId,
+            clientId.value,
+            draft as DiscoveryDraft,
+          )
+        : submitDiscoveryAnswers(
+            runtime,
+            entitledOrganizationId,
+            clientId.value,
+            draft as DiscoveryDraft,
+          ),
     );
   }
 
@@ -525,16 +585,24 @@ export async function callAgeTool(
   }
 
   if (name === 'age_generate_bif') {
-    return report(generateBifFromAnswerFile(runtime, clientId.value, changedBy.value));
+    return report(
+      generateBifFromAnswerFile(runtime, entitledOrganizationId, clientId.value, changedBy.value),
+    );
   }
 
   if (name === 'age_assemble_evidence') {
-    return report(assembleEvidence(runtime, clientId.value, changedBy.value));
+    return report(
+      assembleEvidence(runtime, entitledOrganizationId, clientId.value, changedBy.value),
+    );
   }
 
   if (name === 'age_report_contradictions') {
-    return report(reportContradictions(runtime, clientId.value, changedBy.value));
+    return report(
+      reportContradictions(runtime, entitledOrganizationId, clientId.value, changedBy.value),
+    );
   }
 
-  return report(assessCapabilityReadiness(runtime, clientId.value, changedBy.value));
+  return report(
+    assessCapabilityReadiness(runtime, entitledOrganizationId, clientId.value, changedBy.value),
+  );
 }

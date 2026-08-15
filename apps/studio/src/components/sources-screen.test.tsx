@@ -10,10 +10,12 @@ import type { BusinessScope } from '@/server/operator-environment';
  * screen renders is a decision nobody is told.
  */
 
-const resolveBusinessScope = vi.fn<(clientId: string) => BusinessScope>();
+const resolveBusinessScope =
+  vi.fn<(entitledOrganizationId: string, clientId: string) => BusinessScope>();
 
 vi.mock('@/server/operator-environment', () => ({
-  resolveBusinessScope: (clientId: string) => resolveBusinessScope(clientId),
+  resolveBusinessScope: (entitledOrganizationId: string, clientId: string) =>
+    resolveBusinessScope(entitledOrganizationId, clientId),
   readSourceConfirmations: () => ({ kind: 'loaded', draft: { answers: [] }, everSaved: false }),
   STUDIO_QUESTIONNAIRE: { sections: [] },
 }));
@@ -39,14 +41,18 @@ describe('SourcesScreen', () => {
   });
 
   it('names its own boundary and points at the area that holds the other answer', () => {
-    render(<SourcesScreen clientId="fictional-client-1" />);
+    render(
+      <SourcesScreen entitledOrganizationId="org-fictional-1" clientId="fictional-client-1" />,
+    );
 
     expect(screen.getByText(/documents only/i)).toBeDefined();
     expect(screen.getByText(/the operator relays it/i)).toBeDefined();
   });
 
   it('🚫 does not render the relayed observations here — the answer stays in one place', () => {
-    render(<SourcesScreen clientId="fictional-client-1" />);
+    render(
+      <SourcesScreen entitledOrganizationId="org-fictional-1" clientId="fictional-client-1" />,
+    );
 
     // 🛑 A second copy of "what did a source report" would be a second truth,
     // and the copy that drifts still looks authoritative. Sources points; it
@@ -56,7 +62,9 @@ describe('SourcesScreen', () => {
   });
 
   it('🚫 never says nobody has reported — from here AGE has not looked', () => {
-    render(<SourcesScreen clientId="fictional-client-1" />);
+    render(
+      <SourcesScreen entitledOrganizationId="org-fictional-1" clientId="fictional-client-1" />,
+    );
 
     for (const forbidden of [
       /no source systems/i,

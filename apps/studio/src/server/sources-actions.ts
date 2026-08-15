@@ -11,6 +11,7 @@ import {
   type SourceConfirmationsOutcome,
   type SourceDocumentOutcome,
 } from './operator-environment';
+import { requireVerifiedSession } from './session-boundary';
 
 /**
  * The things the operator can do on the Sources screen (ADR-0066 D4, ADR-0073).
@@ -27,18 +28,34 @@ import {
  * reopened. 🚫 Nothing reaches a database, AGE or a peer, 🚫 the answer file is
  * untouched, and 🚫 a failed write is reported as a refusal rather than
  * swallowed (D7).
+ *
+ * 🛑 **EVERY ONE OF THEM ESTABLISHES ITS OWN ENTITLEMENT** (AGE-INV-SEL-1,
+ * ADR-0074 §7 slice 3). A `'use server'` function is a BROWSER-REACHABLE
+ * ENDPOINT; the boundary on the page that renders the screen protects the PAGE
+ * and 🚫 nothing else.
  */
 
+/**
+ * ⚠️ **THIS ONE NAMES NO BUSINESS, AND THE SESSION CHECK IS STILL REQUIRED.**
+ * It opens a file on the operator's own machine by PATH. There is no
+ * `clientId` to narrow, so 🚫 there is nothing here for AGE-INV-SEL-1 to filter
+ * — but an unauthenticated caller must not be able to read an operator's
+ * filesystem through it, so the door is closed on the session alone.
+ */
 export async function readSourceDocumentAction(
   options: ReadOperatorSourceDocumentOptions,
 ): Promise<SourceDocumentOutcome> {
+  await requireVerifiedSession();
+
   return readOperatorSourceDocument(options);
 }
 
 export async function readSourceConfirmationsAction(
   clientId: string,
 ): Promise<SourceConfirmationsOutcome> {
-  return readSourceConfirmations(clientId);
+  const session = await requireVerifiedSession();
+
+  return readSourceConfirmations(session.organizationId, clientId);
 }
 
 export interface RecordPassageInput {
@@ -53,7 +70,9 @@ export interface RecordPassageInput {
 export async function recordPassageAction(
   input: RecordPassageInput,
 ): Promise<RecordSourceConfirmationOutcome> {
-  return recordSourceConfirmation(input.clientId, {
+  const session = await requireVerifiedSession();
+
+  return recordSourceConfirmation(session.organizationId, input.clientId, {
     questionId: input.questionId,
     passage: input.passage,
     source: input.source,

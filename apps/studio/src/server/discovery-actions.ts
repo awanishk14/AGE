@@ -11,6 +11,7 @@ import {
   type SaveOutcome,
   type SubmitOutcome,
 } from './operator-environment';
+import { requireVerifiedSession } from './session-boundary';
 
 /**
  * The two things the operator can do on the Discovery screen.
@@ -22,6 +23,13 @@ import {
  * ⚠️ Effects still live in ONE module: this file decides nothing and touches
  * nothing. It converts a form payload into a draft and calls
  * `operator-environment`.
+ *
+ * 🛑 **EVERY ONE OF THEM ESTABLISHES ITS OWN ENTITLEMENT** (AGE-INV-SEL-1,
+ * ADR-0074 §7 slice 3). A `'use server'` function is a BROWSER-REACHABLE
+ * ENDPOINT: the `requireVerifiedSession()` call on the page that renders the
+ * form protects the PAGE and 🚫 nothing else. ⚠️ The WRITE doors are gated too —
+ * a gate on the read alone would leave a caller unable to see another
+ * organization's draft and still able to overwrite it.
  */
 
 function entriesFrom(formData: FormData): Record<string, string> {
@@ -39,7 +47,10 @@ export async function saveDiscoveryDraftAction(
   clientId: string,
   formData: FormData,
 ): Promise<SaveOutcome> {
+  const session = await requireVerifiedSession();
+
   return writeDiscoveryDraft(
+    session.organizationId,
     clientId,
     draftFromFormEntries(entriesFrom(formData), STUDIO_QUESTIONNAIRE),
   );
@@ -50,17 +61,20 @@ export async function submitDiscoveryAction(
   clientId: string,
   formData: FormData,
 ): Promise<SubmitOutcome> {
+  const session = await requireVerifiedSession();
   const draft = draftFromFormEntries(entriesFrom(formData), STUDIO_QUESTIONNAIRE);
 
   // ⚠️ The draft is saved FIRST. If writing the answer file fails, the
   // operator's typing must still survive — losing it to a failed submit is the
   // one outcome autosave exists to prevent.
-  writeDiscoveryDraft(clientId, draft);
+  writeDiscoveryDraft(session.organizationId, clientId, draft);
 
-  return submitDiscoveryAnswers(clientId, draft);
+  return submitDiscoveryAnswers(session.organizationId, clientId, draft);
 }
 
 /** Read the stored draft for the initial render. */
 export async function loadDiscoveryDraftAction(clientId: string): Promise<DraftOutcome> {
-  return readDiscoveryDraft(clientId);
+  const session = await requireVerifiedSession();
+
+  return readDiscoveryDraft(session.organizationId, clientId);
 }

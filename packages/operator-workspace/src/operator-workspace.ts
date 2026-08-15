@@ -80,13 +80,45 @@ import { readSourceConfirmations } from './source-confirmed-draft';
  */
 
 /**
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🛑 **AGE-INV-SEL-1 — SELECTION NARROWS, AND CAN NEVER WIDEN** (ADR-0074 §7
+ * slice 3).
+ *
+ * The entitlement is the VERIFIED SESSION'S organization, and it arrives as a
+ * REQUIRED parameter on every operation that names a business. 🚫 There is no
+ * default, no optional form and no "current client" held anywhere — a caller
+ * that forgets to state whose data it is asking for does not compile.
+ *
+ * ⚠️ **THE DEFECT THIS CLOSES WAS MEASURED ON THE REAL DEPLOYMENT, NOT
+ * PREDICTED.** An operator whose session belonged to one organization opened
+ * `/b/<another-organization's-client>/bif` and was served the page — with the
+ * scope taken FROM THE CLIENT RECORD. Naming an identifier widened the caller's
+ * reach into an organization their session never covered. The chain was
+ * `caller → clientId → data`, which is exactly the shape this invariant forbids.
+ *
+ * 🛑 **A FORGED `clientId` IS A NO-OP, NEVER AN ESCALATION**, and the refusal is
+ * the SAME ONE a nonexistent business gets. 🚫 The two are deliberately
+ * indistinguishable: a distinct "that belongs to another organization" would
+ * confirm the record exists, which is the other organization's information.
+ * ────────────────────────────────────────────────────────────────────────────
+ */
+
+/**
  * Read the operator's client records, or explain why not.
  *
  * ⚠️ Every failure becomes a REFUSED view carrying the reason. 🚫 None becomes
  * an empty list: "nobody told me where to look" and "there are no businesses"
  * must never render the same way.
+ *
+ * 🛑 **THE LIST IS NARROWED TO THE ENTITLED ORGANIZATION HERE**, at the read,
+ * 🚫 not by the screen that renders it. A view that carried every organization's
+ * records and trusted its callers to filter is a leak waiting for the one caller
+ * that forgets.
  */
-export function readBusinessesView(runtime: OperatorWorkspaceRuntime): BusinessesView {
+export function readBusinessesView(
+  runtime: OperatorWorkspaceRuntime,
+  entitledOrganizationId: string,
+): BusinessesView {
   const source = resolveClientRecordSource(runtime.env);
 
   if (source.kind === 'not-configured') {
@@ -100,7 +132,16 @@ export function readBusinessesView(runtime: OperatorWorkspaceRuntime): Businesse
       readFileText: (path) => runtime.readFileText(path),
     });
 
-    return presentBusinesses(records);
+    // 🛑 NARROWED BEFORE PRESENTATION. The record file is the operator's whole
+    // file and may name organizations this session does not cover; what leaves
+    // this function is only what the entitlement already covered.
+    //
+    // ⚠️ AN ENTITLEMENT THAT MATCHES NOTHING YIELDS `none`, 🚫 NOT `refused`.
+    // "You may look, and there is nothing here" is a true and different
+    // statement from "something went wrong reading the file".
+    return presentBusinesses(
+      records.filter((record) => record.organizationId === entitledOrganizationId),
+    );
   } catch (error) {
     if (error instanceof ClientRecordFileError || error instanceof OperatorFilePathRefusedError) {
       // ⚠️ These messages are already written to name a POSITION and never the
@@ -144,9 +185,13 @@ export type BusinessScope =
  */
 export function resolveBusinessScope(
   runtime: OperatorWorkspaceRuntime,
+  entitledOrganizationId: string,
   clientId: string,
 ): BusinessScope {
-  const view = readBusinessesView(runtime);
+  // 🛑 THE ENTITLEMENT IS APPLIED BY THE READ ITSELF, so the lookup below cannot
+  // see a record this session was never entitled to — 🚫 there is no filtered
+  // copy of an unfiltered list, and therefore no second place to forget.
+  const view = readBusinessesView(runtime, entitledOrganizationId);
 
   switch (view.kind) {
     case 'not-configured':
@@ -166,6 +211,54 @@ export function resolveBusinessScope(
     }
   }
 }
+
+/**
+ * The refusal a business-scoped operation owes when the entitlement does not
+ * reach the business named — or `undefined` when it does.
+ *
+ * 🛑 **THIS EXISTS BECAUSE SOME OPERATIONS TOUCH A CLIENT'S FILES WITHOUT EVER
+ * ASKING FOR ITS SCOPE.** The discovery draft is read, written and submitted by
+ * `clientId` alone: the id becomes a filename and the file is opened. Those
+ * paths never called `resolveBusinessScope`, so gating only the scope lookup
+ * would have left a door open beside the one being closed — a caller could not
+ * reach the BIF of another organization's client, and could still read and
+ * OVERWRITE that client's answers.
+ *
+ * ⚠️ **THE REASON IS THE SAME SENTENCE `resolveBusinessScope` GIVES AN UNKNOWN
+ * BUSINESS**, deliberately. 🚫 The operator is never told the difference between
+ * "no such business" and "not yours".
+ */
+export function refusalUnlessEntitled(
+  runtime: OperatorWorkspaceRuntime,
+  entitledOrganizationId: string,
+  clientId: string,
+):
+  | { readonly kind: 'not-configured'; readonly variable: string }
+  | { readonly kind: 'refused'; readonly reason: string }
+  | undefined {
+  const scope = resolveBusinessScope(runtime, entitledOrganizationId, clientId);
+
+  switch (scope.kind) {
+    case 'resolved':
+      return undefined;
+    case 'not-configured':
+      return { kind: 'not-configured', variable: scope.variable };
+    case 'refused':
+      return { kind: 'refused', reason: scope.reason };
+    case 'unknown-client':
+      return { kind: 'refused', reason: UNKNOWN_BUSINESS_REASON };
+  }
+}
+
+/**
+ * The one sentence an unreachable business gets, wherever it is refused.
+ *
+ * 🚫 ONE DEFINITION, ON PURPOSE. Two wordings drift, and the day they differ is
+ * the day the difference between them tells a caller which of the two happened.
+ */
+export const UNKNOWN_BUSINESS_REASON =
+  'That business is not in the client record file for this organization, so there is nothing ' +
+  'here to open. Nothing is guessed and no organization is inferred.';
 
 /**
  * ────────────────────────────────────────────────────────────────────────────
@@ -313,8 +406,14 @@ export type DraftOutcome =
  */
 export function readDiscoveryDraft(
   runtime: OperatorWorkspaceRuntime,
+  entitledOrganizationId: string,
   clientId: string,
 ): DraftOutcome {
+  // 🛑 THE ENTITLEMENT IS CHECKED BEFORE THE WORKSPACE IS EVEN LOCATED.
+  // 🚫 Not after the file is opened, and 🚫 not while rendering.
+  const unentitled = refusalUnlessEntitled(runtime, entitledOrganizationId, clientId);
+  if (unentitled !== undefined) return unentitled;
+
   const workspace = resolveWorkspaceDirectory(runtime);
   if (workspace.kind !== 'ready') {
     return workspace;
@@ -365,9 +464,15 @@ export type SaveOutcome =
 /** Persist the draft. Called by autosave and by an explicit Save. */
 export function writeDiscoveryDraft(
   runtime: OperatorWorkspaceRuntime,
+  entitledOrganizationId: string,
   clientId: string,
   draft: DiscoveryDraft,
 ): SaveOutcome {
+  // 🛑 THE ENTITLEMENT IS CHECKED BEFORE THE WORKSPACE IS EVEN LOCATED.
+  // 🚫 Not after the file is opened, and 🚫 not while rendering.
+  const unentitled = refusalUnlessEntitled(runtime, entitledOrganizationId, clientId);
+  if (unentitled !== undefined) return unentitled;
+
   const workspace = resolveWorkspaceDirectory(runtime);
   if (workspace.kind !== 'ready') {
     return workspace;
@@ -408,9 +513,15 @@ export type SubmitOutcome =
  */
 export function submitDiscoveryAnswers(
   runtime: OperatorWorkspaceRuntime,
+  entitledOrganizationId: string,
   clientId: string,
   draft: DiscoveryDraft,
 ): SubmitOutcome {
+  // 🛑 THE ENTITLEMENT IS CHECKED BEFORE THE WORKSPACE IS EVEN LOCATED.
+  // 🚫 Not after the file is opened, and 🚫 not while rendering.
+  const unentitled = refusalUnlessEntitled(runtime, entitledOrganizationId, clientId);
+  if (unentitled !== undefined) return unentitled;
+
   const workspace = resolveWorkspaceDirectory(runtime);
   if (workspace.kind !== 'ready') {
     return workspace;
@@ -658,6 +769,7 @@ export type GenerateBifOutcome =
  */
 export function generateBifFromAnswerFile(
   runtime: OperatorWorkspaceRuntime,
+  entitledOrganizationId: string,
   clientId: string,
   changedBy: string,
 ): GenerateBifOutcome {
@@ -670,7 +782,7 @@ export function generateBifFromAnswerFile(
     return { kind: 'refused', reason: messageOf(error) };
   }
 
-  const scope = resolveBusinessScope(runtime, clientId);
+  const scope = resolveBusinessScope(runtime, entitledOrganizationId, clientId);
   if (scope.kind === 'not-configured') {
     return { kind: 'not-configured', variable: scope.variable };
   }
@@ -764,6 +876,7 @@ export type EvidenceOutcome =
  */
 export function assembleEvidence(
   runtime: OperatorWorkspaceRuntime,
+  entitledOrganizationId: string,
   clientId: string,
   changedBy: string,
 ): EvidenceOutcome {
@@ -774,7 +887,7 @@ export function assembleEvidence(
     return { kind: 'refused', reason: messageOf(error) };
   }
 
-  const scope = resolveBusinessScope(runtime, clientId);
+  const scope = resolveBusinessScope(runtime, entitledOrganizationId, clientId);
   if (scope.kind === 'not-configured') {
     return { kind: 'not-configured', variable: scope.variable };
   }
@@ -853,10 +966,11 @@ export type ContradictionsOutcome =
  */
 export function reportContradictions(
   runtime: OperatorWorkspaceRuntime,
+  entitledOrganizationId: string,
   clientId: string,
   changedBy: string,
 ): ContradictionsOutcome {
-  const evidence = assembleEvidence(runtime, clientId, changedBy);
+  const evidence = assembleEvidence(runtime, entitledOrganizationId, clientId, changedBy);
 
   if (evidence.kind !== 'assembled') {
     return evidence;
@@ -900,6 +1014,7 @@ export type CapabilityReadinessOutcome =
  */
 export function assessCapabilityReadiness(
   runtime: OperatorWorkspaceRuntime,
+  entitledOrganizationId: string,
   clientId: string,
   changedBy: string,
 ): CapabilityReadinessOutcome {
@@ -910,7 +1025,7 @@ export function assessCapabilityReadiness(
     return { kind: 'refused', reason: messageOf(error) };
   }
 
-  const scope = resolveBusinessScope(runtime, clientId);
+  const scope = resolveBusinessScope(runtime, entitledOrganizationId, clientId);
   if (scope.kind === 'not-configured') {
     return { kind: 'not-configured', variable: scope.variable };
   }

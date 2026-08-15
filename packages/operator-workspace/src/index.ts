@@ -23,6 +23,7 @@ export {
   readBusinessesView,
   readDiscoveryDraft,
   reportContradictions,
+  refusalUnlessEntitled,
   resolveBusinessScope,
   submitDiscoveryAnswers,
   writeDiscoveryDraft,

@@ -101,6 +101,7 @@ describe('readStoredSnapshot', () => {
     const outcome = await readStoredSnapshot(
       runtime,
       () => port,
+      'org-fictional-1',
       'fictional-client-1',
       'bif-fictional',
     );
@@ -131,6 +132,7 @@ describe('readStoredSnapshot', () => {
     const outcome = await readStoredSnapshot(
       runtime,
       () => port,
+      'org-fictional-1',
       'fictional-client-1',
       'bif-fictional',
     );
@@ -150,6 +152,7 @@ describe('readStoredSnapshot', () => {
     const outcome = await readStoredSnapshot(
       runtime,
       () => port,
+      'org-fictional-1',
       'fictional-client-1',
       'bif-nothing',
     );
@@ -173,6 +176,7 @@ describe('readStoredSnapshot', () => {
         opened += 1;
         return portReturning(null).port;
       },
+      'org-fictional-1',
       'fictional-client-absent',
       'bif-fictional',
     );
@@ -193,6 +197,7 @@ describe('readStoredSnapshot', () => {
         opened += 1;
         return portReturning(null).port;
       },
+      'org-fictional-1',
       'fictional-client-1',
       'bif-fictional',
     );
@@ -211,6 +216,7 @@ describe('readStoredSnapshot', () => {
         opened += 1;
         return portReturning(null).port;
       },
+      'org-fictional-1',
       'fictional-client-1',
       '   ',
     );
@@ -230,6 +236,7 @@ describe('readStoredSnapshot', () => {
       () => {
         throw new Error('DATABASE_URL_APP is not set.');
       },
+      'org-fictional-1',
       'fictional-client-1',
       'bif-fictional',
     );

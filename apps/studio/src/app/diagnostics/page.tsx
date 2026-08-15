@@ -20,9 +20,9 @@ export default async function Page() {
   // does not return for an unadmitted caller — 🚫 there is no falsy value to
   // forget to check. A route contract test asserts this line precedes every
   // `@/server/*` call in this file.
-  await requireVerifiedSession();
+  const session = await requireVerifiedSession();
 
-  const view = readBusinessesView();
+  const view = readBusinessesView(session.organizationId);
 
   const facets = presentSystemStatus({
     bindHost: boundHost(),

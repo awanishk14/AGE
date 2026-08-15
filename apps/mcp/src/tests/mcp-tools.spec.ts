@@ -17,6 +17,12 @@ import {
  */
 
 const CONFIGURED = Object.freeze({
+  /**
+   * 🛑 The organization this server answers for (AGE-INV-SEL-1, ADR-0074 §7
+   * slice 3). 🚫 Never an argument — a model that could name it would be
+   * granting itself the entitlement.
+   */
+  AGE_MCP_ORGANIZATION_ID: 'org-fictional-1',
   AGE_CLIENT_RECORD_FILE: join(FIXTURE_OPERATOR_DIRECTORY, 'clients.json'),
   AGE_DISCOVERY_WORKSPACE: join(FIXTURE_OPERATOR_DIRECTORY, 'discovery'),
 });
@@ -59,11 +65,25 @@ describe('the tool list', () => {
 });
 
 describe('an operator who has configured nothing', () => {
+  it('is told the organization is missing before anything is looked for', async () => {
+    // 🛑 THE ENTITLEMENT IS THE FIRST THING MISSING (AGE-INV-SEL-1). 🚫 It is
+    // not defaulted and no organization is inferred, so this server refuses to
+    // answer rather than guessing whose businesses were meant.
+    const result = await callAgeTool(createInMemoryRuntime({}), 'age_list_businesses', {});
+
+    expect(result.isError).toBe(true);
+    expect(String(payload(result).reason)).toContain('AGE_MCP_ORGANIZATION_ID');
+  });
+
   it('is told which setting is missing, and it is an error, not an empty list', async () => {
     // 🚫 "Nobody told me where to look" must never reach a model as "there are
     // no businesses" — one is a fact about the environment, the other a claim
     // about the operator's clients.
-    const result = await callAgeTool(createInMemoryRuntime({}), 'age_list_businesses', {});
+    const result = await callAgeTool(
+      createInMemoryRuntime({ AGE_MCP_ORGANIZATION_ID: 'org-fictional-1' }),
+      'age_list_businesses',
+      {},
+    );
 
     expect(result.isError).toBe(true);
     expect(payload(result)).toEqual({
@@ -179,13 +199,21 @@ describe('a draft nobody has started', () => {
   it('says it was never saved, and that is an answer, not an error', async () => {
     // ⚠️ "No file yet" is the ORDINARY state of a business nobody has started,
     // and a different fact from a draft that exists and cannot be read.
-    const result = await callAgeTool(
-      createInMemoryRuntime(CONFIGURED),
-      'age_read_discovery_draft',
-      {
-        clientId: 'fictional-client-1',
-      },
-    );
+    // ⚠️ THE RECORD IS CREATED FIRST, AND THAT IS THE INVARIANT, 🚫 not a
+    // regression. Since AGE-INV-SEL-1 a draft is reachable only for a business
+    // the entitlement already covers, so "nobody has started this one" is now a
+    // statement about a business that EXISTS and has no draft — 🚫 no longer
+    // about an id nobody ever recorded.
+    const runtime = createInMemoryRuntime(CONFIGURED);
+    await callAgeTool(runtime, 'age_create_business_record', {
+      clientId: 'fictional-client-1',
+      organizationId: 'org-fictional-1',
+      displayName: 'A Fictional Business',
+    });
+
+    const result = await callAgeTool(runtime, 'age_read_discovery_draft', {
+      clientId: 'fictional-client-1',
+    });
 
     expect(result.isError).toBeUndefined();
     expect(payload(result)).toMatchObject({ kind: 'loaded', everSaved: false });

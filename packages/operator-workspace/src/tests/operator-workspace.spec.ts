@@ -53,7 +53,7 @@ describe('an operator who has configured nothing', () => {
   it('is told which variable is missing, never shown an empty registry', () => {
     const runtime = createInMemoryRuntime({});
 
-    expect(readBusinessesView(runtime)).toEqual({
+    expect(readBusinessesView(runtime, 'org-fictional-1')).toEqual({
       kind: 'not-configured',
       variable: 'AGE_CLIENT_RECORD_FILE',
     });
@@ -63,7 +63,7 @@ describe('an operator who has configured nothing', () => {
     // ⚠️ The guard against a read that happens BEFORE the configuration check:
     // a refusal that already touched the disk is not a refusal.
     const runtime = createInMemoryRuntime({});
-    readBusinessesView(runtime);
+    readBusinessesView(runtime, 'org-fictional-1');
 
     expect(runtime.calls.filter((call) => call.startsWith('readFileText'))).toEqual([]);
   });
@@ -72,10 +72,10 @@ describe('an operator who has configured nothing', () => {
     const runtime = createInMemoryRuntime({});
 
     for (const outcome of [
-      resolveBusinessScope(runtime, 'fictional-client-1'),
-      readDiscoveryDraft(runtime, 'fictional-client-1'),
-      assembleEvidence(runtime, 'fictional-client-1', 'operator:fixture'),
-      reportContradictions(runtime, 'fictional-client-1', 'operator:fixture'),
+      resolveBusinessScope(runtime, 'org-fictional-1', 'fictional-client-1'),
+      readDiscoveryDraft(runtime, 'org-fictional-1', 'fictional-client-1'),
+      assembleEvidence(runtime, 'org-fictional-1', 'fictional-client-1', 'operator:fixture'),
+      reportContradictions(runtime, 'org-fictional-1', 'fictional-client-1', 'operator:fixture'),
     ]) {
       expect(outcome.kind).toBe('not-configured');
     }
@@ -91,7 +91,7 @@ describe('an operator whose record file is inside the repository', () => {
     const inside = join(FIXTURE_REPOSITORY_ROOT, 'clients.json');
     const runtime = createInMemoryRuntime({ AGE_CLIENT_RECORD_FILE: inside });
 
-    const view = readBusinessesView(runtime);
+    const view = readBusinessesView(runtime, 'org-fictional-1');
 
     expect(view.kind).toBe('refused');
     expect(runtime.calls.filter((call) => call.startsWith('writeFileText'))).toEqual([]);
@@ -112,7 +112,7 @@ describe('creating the first client record', () => {
     const created = createClientRecord(runtime, DRAFT);
     expect(created.kind).toBe('created');
 
-    const view = readBusinessesView(runtime);
+    const view = readBusinessesView(runtime, 'org-fictional-1');
     expect(view.kind).toBe('listed');
   });
 
@@ -120,7 +120,7 @@ describe('creating the first client record', () => {
     const runtime = createInMemoryRuntime(CONFIGURED);
     createClientRecord(runtime, DRAFT);
 
-    const scope = resolveBusinessScope(runtime, 'fictional-client-1');
+    const scope = resolveBusinessScope(runtime, 'org-fictional-1', 'fictional-client-1');
 
     expect(scope.kind).toBe('resolved');
     if (scope.kind === 'resolved') {
@@ -138,7 +138,7 @@ describe('creating the first client record', () => {
     const runtime = createInMemoryRuntime(CONFIGURED);
     createClientRecord(runtime, DRAFT);
 
-    const scope = resolveBusinessScope(runtime, 'fictional-client-2');
+    const scope = resolveBusinessScope(runtime, 'org-fictional-1', 'fictional-client-2');
 
     expect(scope.kind).toBe('unknown-client');
   });
@@ -146,31 +146,141 @@ describe('creating the first client record', () => {
 
 describe('a discovery draft nobody has started', () => {
   /**
+   * ⚠️ THE RECORD IS CREATED FIRST, AND THAT IS NEW (AGE-INV-SEL-1). A draft can
+   * only be opened for a business the entitled organization actually holds, so
+   * "no draft yet" is now reachable only for a business that exists. 🚫 Reading
+   * a draft by naming an id was exactly the `caller → clientId → data` chain the
+   * invariant forbids.
+   */
+  const STARTED = Object.freeze({
+    clientId: 'fictional-client-1',
+    organizationId: 'org-fictional-1',
+    displayName: 'A Fictional Business',
+    externalRefsText: '',
+  });
+
+  /**
    * ⚠️ "No file yet" is the ORDINARY state of a business nobody has started,
    * and it is a different fact from "the saved draft is unreadable". 🚫 The two
    * must never render the same way.
    */
   it('loads empty and says it was never saved', () => {
     const runtime = createInMemoryRuntime(CONFIGURED);
+    createClientRecord(runtime, STARTED);
 
-    const outcome = readDiscoveryDraft(runtime, 'fictional-client-1');
+    const outcome = readDiscoveryDraft(runtime, 'org-fictional-1', 'fictional-client-1');
 
     expect(outcome).toMatchObject({ kind: 'loaded', everSaved: false });
   });
 
   it('round-trips through a save', () => {
     const runtime = createInMemoryRuntime(CONFIGURED);
-    const first = readDiscoveryDraft(runtime, 'fictional-client-1');
+    createClientRecord(runtime, STARTED);
+    const first = readDiscoveryDraft(runtime, 'org-fictional-1', 'fictional-client-1');
     if (first.kind !== 'loaded') throw new Error('expected an empty draft');
 
-    expect(writeDiscoveryDraft(runtime, 'fictional-client-1', first.draft)).toEqual({
+    expect(
+      writeDiscoveryDraft(runtime, 'org-fictional-1', 'fictional-client-1', first.draft),
+    ).toEqual({
       kind: 'saved',
     });
 
-    expect(readDiscoveryDraft(runtime, 'fictional-client-1')).toMatchObject({
+    expect(readDiscoveryDraft(runtime, 'org-fictional-1', 'fictional-client-1')).toMatchObject({
       kind: 'loaded',
       everSaved: true,
     });
+  });
+});
+
+/**
+ * 🛑 **AGE-INV-SEL-1 — NAMING AN IDENTIFIER NEVER WIDENS REACH** (ADR-0074 §7
+ * slice 3).
+ *
+ * ⚠️ **THIS DEFECT WAS MEASURED ON THE REAL DEPLOYMENT, NOT PREDICTED.** An
+ * operator whose verified session belonged to one organization listed and OPENED
+ * a business belonging to another, because the scope was taken from the client
+ * record the id pointed at. Every test in the repository was green while that
+ * stood — none of them stated whose data was being asked for, because until this
+ * slice nothing could.
+ *
+ * 🚫 The refusal is deliberately the SAME sentence a nonexistent business gets.
+ * A distinct "that belongs to another organization" would confirm the record
+ * exists, and that is the other organization's information.
+ */
+describe("a business belonging to somebody else's organization", () => {
+  const MINE = Object.freeze({
+    clientId: 'fictional-client-mine',
+    organizationId: 'org-fictional-nowhere',
+    displayName: 'A Fictional Business',
+    externalRefsText: '',
+  });
+
+  const THEIRS = Object.freeze({
+    clientId: 'fictional-client-theirs',
+    organizationId: 'org-fictional-elsewhere',
+    displayName: 'Another Fictional Business',
+    externalRefsText: '',
+  });
+
+  function bothRecorded() {
+    const runtime = createInMemoryRuntime(CONFIGURED);
+    createClientRecord(runtime, MINE);
+    createClientRecord(runtime, THEIRS);
+    return runtime;
+  }
+
+  it('🛑 is not in the list at all', () => {
+    const view = readBusinessesView(bothRecorded(), MINE.organizationId);
+
+    expect(view.kind).toBe('listed');
+    if (view.kind !== 'listed') return;
+    expect(JSON.stringify(view)).not.toContain(THEIRS.clientId);
+    expect(JSON.stringify(view)).not.toContain(THEIRS.organizationId);
+  });
+
+  it('🛑 cannot be opened by naming its id', () => {
+    const scope = resolveBusinessScope(bothRecorded(), MINE.organizationId, THEIRS.clientId);
+
+    // 🛑 A NO-OP, 🚫 NEVER AN ESCALATION. `resolved` here would mean the caller
+    // had reached into an organization their entitlement never covered.
+    expect(scope.kind).toBe('unknown-client');
+  });
+
+  it('🚫 is refused in exactly the same words as an id that exists nowhere', () => {
+    const runtime = bothRecorded();
+
+    const theirs = readDiscoveryDraft(runtime, MINE.organizationId, THEIRS.clientId);
+    const nobody = readDiscoveryDraft(runtime, MINE.organizationId, 'fictional-client-absent');
+
+    expect(theirs).toEqual(nobody);
+    expect(theirs.kind).toBe('refused');
+  });
+
+  it('🛑 cannot be WRITTEN to either — the draft path is not a way in', () => {
+    // ⚠️ The read and the write are separate doors. A gate on the read alone
+    // would leave a caller able to OVERWRITE another organization's answers
+    // while being unable to see them.
+    const runtime = bothRecorded();
+
+    // ⚠️ A DRAFT THE FUNCTION WOULD OTHERWISE ACCEPT. An invalid one would be
+    // refused by validation instead, and the test would pass with the
+    // entitlement gate removed — which is exactly what it did before this line.
+    const own = readDiscoveryDraft(runtime, MINE.organizationId, MINE.clientId);
+    if (own.kind !== 'loaded') throw new Error('expected an empty draft to reuse');
+
+    const before = runtime.calls.filter((call) => call.startsWith('writeFileText')).length;
+    const written = writeDiscoveryDraft(runtime, MINE.organizationId, THEIRS.clientId, own.draft);
+
+    expect(written.kind).toBe('refused');
+    expect(runtime.calls.filter((call) => call.startsWith('writeFileText')).length).toBe(before);
+  });
+
+  it('🛑 the entitled organization still reaches its own', () => {
+    // ⚠️ Without this the whole block would pass with a function that refuses
+    // everything, which is not the invariant — it is an outage.
+    const scope = resolveBusinessScope(bothRecorded(), MINE.organizationId, MINE.clientId);
+
+    expect(scope.kind).toBe('resolved');
   });
 });
 
@@ -225,10 +335,20 @@ describe('a produced BIF that says where each field came from', () => {
   function generated() {
     const runtime = createInMemoryRuntime(CONFIGURED);
     createClientRecord(runtime, CLIENT);
-    const submitted = submitDiscoveryAnswers(runtime, CLIENT.clientId, answeredDraft());
+    const submitted = submitDiscoveryAnswers(
+      runtime,
+      CLIENT.organizationId,
+      CLIENT.clientId,
+      answeredDraft(),
+    );
     expect(submitted.kind, JSON.stringify(submitted)).toBe('written');
 
-    return generateBifFromAnswerFile(runtime, CLIENT.clientId, 'operator:fictional');
+    return generateBifFromAnswerFile(
+      runtime,
+      CLIENT.organizationId,
+      CLIENT.clientId,
+      'operator:fictional',
+    );
   }
 
   it('reports an origin per BIF field, on a channel beside the view', () => {

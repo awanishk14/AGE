@@ -73,6 +73,7 @@ const noContextReason = (bifId: string): string =>
 export async function readClientContextProjection(
   runtime: OperatorWorkspaceRuntime,
   openContextRead: OpenSnapshotRead,
+  entitledOrganizationId: string,
   clientId: string,
   bifId: string,
 ): Promise<ClientContextProjectionOutcome> {
@@ -88,7 +89,7 @@ export async function readClientContextProjection(
     };
   }
 
-  const scope = resolveBusinessScope(runtime, clientId);
+  const scope = resolveBusinessScope(runtime, entitledOrganizationId, clientId);
   if (scope.kind === 'not-configured') {
     return { kind: 'not-configured', variable: scope.variable };
   }
