@@ -1,12 +1,13 @@
 # ADR-0075 — AGE's own database: a dedicated container, and the boundary a peer may never cross
 
-Status: **Proposed** (2026-08-15)
+Status: **Accepted** (2026-08-15) — ⚠️ **BY THE PRODUCT OWNER, 🚫 NOT SELF-ACCEPTED.**
+⚠️ **BOUNDED BY §0.3.** Read it before acting on any decision below.
 
-🛑 **THIS ADR AUTHORIZES NO PROVISIONING AND NO DEPLOYMENT CODE.** It records a decision the Product
-Owner has already stated (§0.2) and pins a standing principle they asked to have pinned (D6). ⚠️ It
-must be **Accepted** before the store is created — the owner's own instruction ends _"Stop after
-drafting the amendment/ADR. Do not provision the database until the decision is recorded and
-accepted."_ 🚫 It must **NOT** be self-accepted.
+⚠️ **IT NOW AUTHORIZES PROVISIONING, AND NOTHING BEYOND IT.** It records a decision the Product
+Owner stated (§0.2), pins a standing principle they asked to have pinned (D6), and was accepted in
+their own words on 2026-08-15 (§0.3) — a separate act, with a date. 🛑 **§2's refusals are NOT
+lifted by the acceptance**: the public bind and the vhost are still ADR-0074 D9, still LAST, and
+🚫 `age.digitaldadi.agency` is 🚫 not exposed by this ADR.
 
 Amends (narrowly, and only this): ADR-0074 **§0.2 item 3** and **D8**'s first bullet.
 Depends on: ADR-0061 **A5**, ADR-0074 **D8/D9**, ADR-0071 **D1/D5**, ADR-0069 **D3/D6**, ADR-0046
@@ -67,7 +68,32 @@ undervalued: **a shared database is a peer integration nobody designed.** See D6
 exclusion of a container — and 🚫 it lifts nothing else in ADR-0074. In particular D9 stands
 untouched: 🛑 **the public bind and the TLS vhost still come LAST, with the boundary.**
 
----
+## 0.3 The Product Owner's acceptance (2026-08-15), verbatim
+
+> _"Accept ADR-0075 and proceed. Now implement the AGE database provisioning slice for the actual
+> VPS topology. Provision a dedicated age-postgres container with: its own persistent volume, its
+> own database, its own non-owner age_app role, no access to any peer-product database, no
+> dependency on RankOps/SNARA/Drishti container addresses, no public PostgreSQL exposure. Correct
+> scripts/provision-studio-database.sh so it cannot accidentally target 127.0.0.1:5432 or assume a
+> host postgres user. Then deploy the current AGE main build and provision the store on the real
+> VPS. Do not start Slice 2b or Slice 3 yet. […] Do not expose age.digitaldadi.agency yet. Public
+> exposure remains the final step after authentication and isolation are proven. (all app on the vps
+> is contaninersied, and so should AGE)"_
+
+### 0.3b What the acceptance does and does **not** authorize
+
+- ✅ **Authorized:** the dedicated `age-postgres` container, its volume, its database, its `age_app`
+  role, the correction of `scripts/provision-studio-database.sh`, deploying the current `main` build
+  to the VPS, and running ADR-0074 §7 slice 2's acceptance test against it.
+- 🚫 **NOT authorized:** slice 2b · slice 3 · 🛑 **any public exposure of
+  `age.digitaldadi.agency`** — the owner repeated that fence in the same breath as the acceptance,
+  and 🚫 it is not softened by the store existing.
+- ⚠️ **THE PARENTHETICAL IS NOT A LICENCE TO CONTAINERISE `apps/studio`.** _"all app on the vps is
+  containerised, and so should AGE"_ was written about the **database** shape this ADR decides, and
+  the reading that satisfies it is the one taken here: AGE's store is a container of its own like
+  every other product's. 🛑 **Containerising the Studio APP is a different decision** — ADR-0057
+  §0.6 records that `apps/studio` gets **no Dockerfile**, and 🚫 an architect may not lower that
+  fence from a parenthetical. ⚠️ It is raised as an open question in §4, 🚫 not acted on.
 
 ## 1. What is decided
 
@@ -187,3 +213,32 @@ and 🚫 **never** Peer → shared database → AGE.
    and what production runs.
 4. 🛑 **Each of ADR-0074 §6's nine gate items still owes a guard MADE TO FAIL.** 🚫 Provisioning a
    database discharges none of them.
+
+---
+
+## 4. ⚠️ OPEN QUESTION — should `apps/studio` itself be a container? 🚫 NOT DECIDED HERE
+
+The acceptance's parenthetical — _"all app on the vps is containerised, and so should AGE"_ — is a
+fair observation about the box: RankOps, SNARA, Drishti and the agency site all run as containers,
+and AGE Studio is the one host process among them.
+
+🛑 **BUT ADR-0057 §0.6 REFUSED A DOCKERFILE FOR `apps/studio` BY NAME**, and the reason was not
+laziness: `apps/web` is a public surface and `apps/studio` was an operator console with **no
+authentication boundary at all**, so an image that could be run anywhere was a way to run an
+unauthenticated console anywhere. ⚠️ **Slice 2 changes that premise** — there is a boundary now — so
+the refusal is worth revisiting on its merits.
+
+🚫 **It is not revisited here, and 🚫 it must not be done as part of the provisioning slice.**
+Reasons, recorded so the question is answered rather than drifted into:
+
+- ⚠️ A container image for the console needs its own decisions: where `AGE_CLIENT_RECORD_FILE` and
+  the discovery workspace live (they are **operator files** under ADR-0054 D2/D3, and a bind mount
+  is a path), how the environment file reaches it, and 🛑 whether the loopback bind survives — a
+  published container port is exactly the crossing ADR-0057 D2 refuses.
+- ⚠️ Doing it now would mean the slice that proves the authentication boundary **also** changed how
+  the app is executed. 🚫 A verification is worth much less when the thing verified moved underneath
+  it.
+
+🛠️ **It needs its own `Proposed` ADR, after slice 2 is verified.** ⚠️ Until then the console keeps
+running from the systemd unit, and 🚫 that is a deferral, never a claim that the unit is the better
+shape.

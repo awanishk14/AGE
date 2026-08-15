@@ -1,0 +1,82 @@
+# AGE's OWN store — ADR-0075 D1–D5, accepted 2026-08-15.
+#
+# 🛑 THIS IS AGE'S DATABASE AND NOTHING ELSE'S. Its own container, its own named
+# volume, its own network, its own lifecycle. 🚫 RankOps' container is not
+# reused, 🚫 its volume is not reused, and 🚫 neither is SNARA's, Drishti's, or
+# any peer's that appears later.
+#
+# 🛑 ADR-0075 D6 — AGE MUST NEVER SHARE A DATABASE WITH A PEER PRODUCT. Not
+# RankOps today, not SNARA tomorrow. The communication architecture is
+# Peer → AGE contract → AGE intelligence → AGE projection → Peer, and 🚫 NEVER
+# Peer → shared database → AGE. A shared table is an integration nobody
+# designed: no envelope, no version, no provenance, no refusal path — every rule
+# AGE enforces at its boundary is code a `SELECT` from another product walks
+# straight past.
+#
+# ⚠️ SO THE NETWORK BELOW IS AGE'S OWN, AND THAT IS THE POINT. 🚫 Do not attach
+# this service to `rankops-internal` or to any other product's network, and
+# 🚫 do not attach a peer's service to this one. D3 is meant to be a property of
+# the TOPOLOGY rather than of a grant — separate instances make the reach
+# impossible rather than merely ungranted, which is the difference between a
+# fence and a promise.
+#
+# 🛑 NOT PUBLIC, AND 🚫 NOT ON 5432. The published port is bound to `127.0.0.1`
+# explicitly — 🚫 never `0.0.0.0`, 🚫 never a bare `"5432:5432"`, which Docker
+# publishes to the world and, worse, punches through the host firewall while
+# doing it. The host port is REQUIRED and has NO DEFAULT: on this VPS 5432 is
+# already SNARA's, and a defaulted port is how AGE would have ended up dialling
+# another product's database while every test still passed.
+#
+# ⚠️ WHY A HOST PORT AT ALL. The console runs as a host process (ADR-0057 §0.6
+# still refuses a Dockerfile for `apps/studio`; ADR-0075 §4 records revisiting it
+# as an open question, 🚫 not as this slice). A host process reaches a container
+# through a published port or through a peer's bridge address — and ADR-0075 D4
+# refuses the second by name, because an address assigned by somebody else's
+# deployment is a dependency nobody told AGE about. Loopback-published is the
+# arrangement that leaves AGE depending on AGE.
+#
+# ⚠️ EVERY SECRET IS REQUIRED AT STARTUP. The `:?` form means absent is a REFUSAL
+# TO START; 🚫 never `:-`, because a default password is a published one. 🚫 No
+# value here is committed — they come from an env file that is never tracked.
+#
+# ⚠️ RUN IT BY NAME. It is a separate composition, not a mode of another:
+#
+#     docker compose -f docker-compose.age-postgres.yml --env-file <file> up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: age-postgres
+    restart: unless-stopped
+    environment:
+      # ⚠️ The OWNER role of AGE's own instance. It is held by a human for the
+      # length of a migration and 🚫 is never written into the console's
+      # environment — the console runs as the non-owner `age_app` (ADR-0075 D2).
+      POSTGRES_USER: ${AGE_DB_SUPERUSER:?the superuser name must be stated}
+      POSTGRES_PASSWORD: ${AGE_DB_SUPERUSER_PASSWORD:?the superuser password must be stated}
+      POSTGRES_DB: ${AGE_DB_NAME:?the database name must be stated}
+    ports:
+      # 🛑 LOOPBACK ONLY. The address half is written out; 🚫 do not shorten it.
+      - '127.0.0.1:${AGE_DB_HOST_PORT:?the host port must be stated}:5432'
+    volumes:
+      # ⚠️ AGE'S OWN VOLUME (D1). A peer's restore must never be able to move an
+      # AGE row, and this is what makes that true.
+      - age_postgres_data:/var/lib/postgresql/data
+    networks:
+      - age-internal
+    healthcheck:
+      # ⚠️ Named explicitly: `pg_isready` with no arguments checks the image's
+      # default user, which is not necessarily this one.
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  age_postgres_data:
+    name: age_postgres_data
+
+networks:
+  age-internal:
+    name: age-internal
