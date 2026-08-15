@@ -39,7 +39,22 @@ export interface OperatorSessionScope {
   readonly organizationId: string;
 }
 
-export interface OperatorSessionScopeRunner {
+/**
+ * ⚠️ **THE DELEGATE IS A TYPE PARAMETER, AND ITS DEFAULT IS THE READ ONE**
+ * (ADR-0074 §7 slice 2). The transaction discipline — set the scope, then hand
+ * over a delegate bound to that same transaction — is identical whether the work
+ * inside is the verification read or the revocation write, and duplicating the
+ * runner to say so twice would give the repository two places for the
+ * `set_config` line to drift apart.
+ *
+ * 🚫 **PARAMETERISING THE DELEGATE DOES NOT WIDEN WHAT THE STORE CAN DO.** The
+ * only two delegates that exist are `OperatorSessionDelegate` (`findUnique`
+ * alone) and `OperatorSessionRevocationDelegate` (`updateMany` on `revokedAt`
+ * alone), and the database grants `SELECT` plus `UPDATE ("revoked_at")` and
+ * nothing else. A caller that supplied a wider delegate type would still be
+ * rejected by PostgreSQL.
+ */
+export interface OperatorSessionScopeRunner<TDelegate = OperatorSessionDelegate> {
   /**
    * Runs `operation` inside a single transaction in which the scope setting has
    * been applied. The delegate handed to `operation` must be bound to that same
@@ -48,7 +63,7 @@ export interface OperatorSessionScopeRunner {
    */
   runInScope<T>(
     scope: OperatorSessionScope,
-    operation: (sessions: OperatorSessionDelegate) => Promise<T>,
+    operation: (sessions: TDelegate) => Promise<T>,
   ): Promise<T>;
 }
 
@@ -59,9 +74,9 @@ export interface OperatorSessionScopeRunner {
  * makes `${scope.organizationId}` a **bound parameter** rather than text spliced
  * into SQL.
  */
-export interface OperatorSessionScopeTransaction {
+export interface OperatorSessionScopeTransaction<TDelegate = OperatorSessionDelegate> {
   $executeRaw(query: TemplateStringsArray, ...values: unknown[]): Promise<unknown>;
-  readonly operatorSession: OperatorSessionDelegate;
+  readonly operatorSession: TDelegate;
 }
 
 /**
@@ -71,8 +86,10 @@ export interface OperatorSessionScopeTransaction {
  * and no model access outside a transaction — so this runner cannot issue an
  * unscoped query even by mistake.
  */
-export interface OperatorSessionTransactionSource {
-  $transaction<T>(operation: (tx: OperatorSessionScopeTransaction) => Promise<T>): Promise<T>;
+export interface OperatorSessionTransactionSource<TDelegate = OperatorSessionDelegate> {
+  $transaction<T>(
+    operation: (tx: OperatorSessionScopeTransaction<TDelegate>) => Promise<T>,
+  ): Promise<T>;
 }
 
 /**
@@ -88,16 +105,18 @@ export interface OperatorSessionTransactionSource {
  * connection management. A rejected transaction propagates unchanged — this
  * layer has no basis to classify a database error (ADR-0036 D8).
  */
-export class PrismaOperatorSessionScopeRunner implements OperatorSessionScopeRunner {
-  private readonly source: OperatorSessionTransactionSource;
+export class PrismaOperatorSessionScopeRunner<
+  TDelegate = OperatorSessionDelegate,
+> implements OperatorSessionScopeRunner<TDelegate> {
+  private readonly source: OperatorSessionTransactionSource<TDelegate>;
 
-  constructor(source: OperatorSessionTransactionSource) {
+  constructor(source: OperatorSessionTransactionSource<TDelegate>) {
     this.source = source;
   }
 
   async runInScope<T>(
     scope: OperatorSessionScope,
-    operation: (sessions: OperatorSessionDelegate) => Promise<T>,
+    operation: (sessions: TDelegate) => Promise<T>,
   ): Promise<T> {
     return this.source.$transaction(async (tx) => {
       // Always, before anything reads. 🚫 There is no flag to omit it: an

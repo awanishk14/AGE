@@ -26,12 +26,12 @@ describe('presentSystemStatus', () => {
     expect(ids).toEqual(['bind', 'identity', 'capture-store', 'record-file', 'execution']);
   });
 
-  describe('identity (ADR-0058 D2)', () => {
-    it('is NEVER shown as healthy or established', () => {
+  describe('identity (ADR-0058 D2, widened by ADR-0074 §7 slice 2)', () => {
+    it('where there is no identity, is NEVER shown as healthy or established', () => {
       const identity = facet('identity');
 
       expect(identity.value).toBe('Not established');
-      // 🚫 `known` renders as a working subsystem. Identity does not exist.
+      // 🚫 `known` renders as a working subsystem. Identity does not exist there.
       expect(identity.state).toBe('not-assessed');
     });
 
@@ -39,6 +39,26 @@ describe('presentSystemStatus', () => {
       // ⚠️ The third value is the whole decision. If this sentence is ever
       // simplified to "not signed in", identity has quietly become a boolean.
       expect(facet('identity').detail).toContain('nobody is signed out');
+    });
+
+    it('behind the boundary, says a session was verified — 🚫 not that anything was authorized', () => {
+      const identity = facet('identity', input({ identity: 'session-verified' }));
+
+      expect(identity.value).toBe('Session verified');
+      // ⚠️ `known` is honest here and only here: a real row was read.
+      expect(identity.state).toBe('known');
+      // 🛑 ADMISSION IS NOT AUTHORIZATION. The facet must keep saying so — the
+      // next slice adds a client switcher, and this is the sentence that stops
+      // "signed in" from being read as "may open that client".
+      expect(identity.detail).toContain('not a decision about which client');
+      expect(identity.detail).toContain('can never widen it');
+    });
+
+    it('🚫 offers no value that reads as a boolean', () => {
+      for (const state of ['not-established', 'session-verified'] as const) {
+        const value = facet('identity', input({ identity: state })).value.toLowerCase();
+        expect(['true', 'false', 'yes', 'no', 'ok']).not.toContain(value);
+      }
     });
   });
 

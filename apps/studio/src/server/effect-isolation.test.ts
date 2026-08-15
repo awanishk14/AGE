@@ -189,4 +189,31 @@ describe('apps/studio effect isolation', () => {
     expect(source).not.toContain('AGE_DEPLOYED');
     expect(source).not.toContain('NODE_ENV');
   });
+
+  /**
+   * 🛑 THE SESSION DOOR IS OPENED HERE AND NOWHERE ELSE (ADR-0074 §7 slice 2).
+   *
+   * ⚠️ WHY A GUARD. `session-boundary.ts` is where a shortcut would be taken —
+   * it is the module that WANTS a clock (to date a revocation) and the database
+   * (to look a row up), and both are one import away. If it grew either, the
+   * boundary would still work and no other test would notice; the BANNED scan
+   * above catches the tokens, and this catches the inverse — the effect module
+   * quietly losing them.
+   *
+   * ⚠️ MADE TO FAIL BEFORE IT WAS TRUSTED: deleting the `verifySessionToken`
+   * wrapper fails the second assertion, and moving `new Date()` into
+   * `session-boundary.ts` fails the BANNED scan by name.
+   */
+  it('opens the session door from the one effect module', () => {
+    const source = withoutComments(readFileSync(`${srcDir}${EFFECT_MODULE}`, 'utf8'));
+
+    expect(source).toContain("from '@age/capture/deployed-session-composition'");
+    expect(source).toContain('verifyPresentedSessionToken(');
+    expect(source).toContain('AGE_STUDIO_ORGANIZATION_ID');
+
+    // 🚫 The console still cannot construct its own client or its own runner.
+    // The narrowed door is the only way in.
+    expect(source).not.toContain('PrismaOperatorSessionScopeRunner');
+    expect(source).not.toContain('operatorSessionRevocation(');
+  });
 });

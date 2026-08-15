@@ -45,6 +45,19 @@ import type { SnapshotReadConnection } from './inspect-runner';
  * true is that the function which would do it does not exist here — not that a
  * caller declines to call it. 🚫 Do not add one without its own ADR.
  *
+ * ⚠️ **AND THAT SENTENCE IS WHY THE SESSION DOOR IS IN A DIFFERENT FILE**
+ * (ADR-0074 §7 slice 2). ADR-0074 D3 requires a logout to write `revokedAt`, so
+ * a door that can end a session had to exist somewhere. Putting it here would
+ * have forced the claim above to be softened to "two doors read and one
+ * writes" — and a claim with an exception in it stops being checkable. So
+ * `deployed-session-composition.ts` makes its own, narrower claim instead, and
+ * this file's guard still scans for `update` and still finds none. 🚫 Do not
+ * move the session door into this module to save a file.
+ *
+ * ⚠️ The judgement below is EXPORTED for exactly that neighbour and no other
+ * reason — so the session door runs the same A5 check, against the same
+ * resolution, rather than growing a second copy that could be relaxed alone.
+ *
  * 🚫 **THIS IS NOT AN AUTHORIZATION** (ADR-0046 D5, ADR-0055 D9). Where a row
  * may be stored is not who may read it. These doors connect as the non-owner
  * `age_app` role, so the reads are subject to the row-level policies rather than
@@ -89,7 +102,9 @@ export interface DeployedConnectionOptions {
  * ⚠️ NO CREDENTIAL IS EVER RETURNED IN AN ERROR. The underlying refusals name a
  * VARIABLE or a HOST and nothing else; a connection string carries a password.
  */
-function judge(options: DeployedConnectionOptions): DeployedDatabaseComposition {
+export function judgeDeployedDatabase(
+  options: DeployedConnectionOptions,
+): DeployedDatabaseComposition {
   const resolved =
     options.datasourceUrl === undefined
       ? resolveCaptureDatasourceUrl(options.environment ?? process.env)
@@ -119,7 +134,7 @@ function judge(options: DeployedConnectionOptions): DeployedDatabaseComposition 
 export function openDeployedPrismaSnapshotReadConnection(
   options: DeployedConnectionOptions,
 ): SnapshotReadConnection {
-  const composition = judge(options);
+  const composition = judgeDeployedDatabase(options);
 
   const client = new PrismaClient({ datasources: { db: { url: composition.url } } });
 
@@ -149,7 +164,7 @@ export function openDeployedPrismaSnapshotReadConnection(
 export function openDeployedPrismaObservationReadConnection(
   options: DeployedConnectionOptions,
 ): ObservationReadConnection {
-  const composition = judge(options);
+  const composition = judgeDeployedDatabase(options);
 
   const client = new PrismaClient({ datasources: { db: { url: composition.url } } });
 

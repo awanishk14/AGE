@@ -11,14 +11,21 @@
 import type { EpistemicState } from './epistemic-state';
 
 /**
- * ⚠️ Identity is `not-established` — a THIRD value that is never `true` and
- * never `false` (ADR-0058 D2).
+ * ⚠️ **STILL NEVER A BOOLEAN** (ADR-0058 D2). It gained a second value in
+ * ADR-0074 §7 slice 2 and 🚫 must not gain a `true`/`false` one.
  *
- * 🚫 Identity must NOT be shown green. There is no identity system; nobody is
- * signed in, and nobody is signed out either. Rendering it as a healthy check
- * would tell the operator a subsystem is working when it does not exist.
+ * - `not-established` — there is no identity here. Nobody is signed in, and
+ *   nobody is signed out either: a THIRD state, not a failed check.
+ * - `session-verified` — a session row was read from the store and admitted for
+ *   THIS request. 🛑 That is an ADMISSION, 🚫 not an authorization: it says who
+ *   is here, and says nothing about which client they may open.
+ *
+ * ⚠️ **`session-verified` IS THE HONEST VALUE NOW THAT THE BOUNDARY EXISTS.** A
+ * screen still saying "there is no identity system" behind a login would be the
+ * same dishonesty as a screen claiming a capability that does not exist —
+ * 🚫 the facet must be passed what was actually decided, never a constant.
  */
-export type IdentityState = 'not-established';
+export type IdentityState = 'not-established' | 'session-verified';
 
 /**
  * ⚠️ The capture store is `not-read` (ADR-0058 D6, ADR-0055 D7).
@@ -87,13 +94,9 @@ export function presentSystemStatus(input: SystemStatusInput): readonly StatusFa
     Object.freeze({
       id: 'identity',
       label: 'Identity',
-      value: 'Not established',
-      // ⚠️ NOT `unknown`: AGE has not looked, because there is nothing to look
-      // at. 🚫 And never `known`, which would render as a working subsystem.
-      state: 'not-assessed' as EpistemicState,
-      detail:
-        'There is no identity system. Nobody is signed in, and nobody is signed out — this is a third ' +
-        'state, not a failed check. Every action here is attributed to the operator running the process.',
+      value: IDENTITY_VALUES[input.identity],
+      state: IDENTITY_STATES[input.identity],
+      detail: IDENTITY_DETAILS[input.identity],
     }),
     Object.freeze({
       id: 'capture-store',
@@ -123,6 +126,29 @@ export function presentSystemStatus(input: SystemStatusInput): readonly StatusFa
     }),
   ]);
 }
+
+const IDENTITY_VALUES: Readonly<Record<IdentityState, string>> = Object.freeze({
+  'not-established': 'Not established',
+  'session-verified': 'Session verified',
+});
+
+const IDENTITY_STATES: Readonly<Record<IdentityState, EpistemicState>> = Object.freeze({
+  // ⚠️ NOT `unknown`: AGE has not looked, because there is nothing to look at.
+  'not-established': 'not-assessed' as EpistemicState,
+  // ⚠️ `known` because a SOURCE WAS READ — the session row itself. 🚫 It is not
+  // a health colour and 🚫 it is not an entitlement; see the detail.
+  'session-verified': 'known' as EpistemicState,
+});
+
+const IDENTITY_DETAILS: Readonly<Record<IdentityState, string>> = Object.freeze({
+  'not-established':
+    'There is no identity system. Nobody is signed in, and nobody is signed out — this is a third ' +
+    'state, not a failed check. Every action here is attributed to the operator running the process.',
+  'session-verified':
+    'A session row was read from the store and admitted for this request: unexpired, unrevoked, and ' +
+    'belonging to this deployment’s organization. That is who is here. It is not a decision about ' +
+    'which client may be opened — selecting a client narrows this scope and can never widen it.',
+});
 
 const RECORD_FILE_VALUES: Readonly<Record<SystemStatusInput['recordFile'], string>> = Object.freeze(
   {

@@ -146,7 +146,9 @@ describe('DashboardScreen', () => {
 
     // ⚠️ Assert the file was really read FIRST, so a moved route can never make
     // the refusal below pass over an empty string.
-    expect(source).toContain('export default function Page');
+    // ⚠️ `async` since ADR-0074 §7 slice 2 — the route awaits the session
+    // boundary before it does anything else.
+    expect(source).toContain('export default async function Page');
 
     const banned = [
       'generateBifFromAnswerFile',

@@ -114,15 +114,34 @@ describe('the deployed composition has two doors and both only read', () => {
     }
   });
 
-  it('exports exactly the two read doors', () => {
+  /**
+   * ⚠️ **THE LIST GREW BY ONE, DELIBERATELY, AND THE CLAIM DID NOT.**
+   * `judgeDeployedDatabase` is 🚫 not a door — it opens nothing, connects to
+   * nothing and returns a JUDGEMENT. It became exported for exactly one caller,
+   * `deployed-session-composition.ts`, so that the session door runs the SAME
+   * A5 check against the SAME resolution instead of growing a second copy that
+   * could be relaxed on its own (ADR-0061 A5: *"the copy that gets relaxed still
+   * passes its own tests"*).
+   *
+   * 🛑 **THE DOOR COUNT IS STILL TWO AND BOTH STILL ONLY READ.** The `update` /
+   * `append` / `upsert` / `delete` scan above is untouched and still finds
+   * nothing, because the door that can write `revokedAt` lives in the other
+   * file. 🚫 Do not add a third `open…` function here.
+   */
+  it('exports exactly the two read doors, plus the shared judgement', () => {
     const exported = [...MODULE_SOURCE.matchAll(/^export function (\w+)/gm)].map(
       (match) => match[1],
     );
 
     expect(exported).toEqual([
+      'judgeDeployedDatabase',
       'openDeployedPrismaSnapshotReadConnection',
       'openDeployedPrismaObservationReadConnection',
     ]);
+
+    // 🛑 The claim that matters is about DOORS, so it is asserted separately
+    // from the export list — a future export cannot quietly become a door.
+    expect(exported.filter((name) => (name ?? '').startsWith('open'))).toHaveLength(2);
   });
 
   it('binds neither findBySnapshotId nor listForOrganization beyond its own door', () => {
