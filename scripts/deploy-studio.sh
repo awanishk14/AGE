@@ -135,6 +135,49 @@ EnvironmentFile=/etc/age-studio/age-studio.env
 ExecStart=/usr/bin/env pnpm --filter @age/studio start
 Restart=on-failure
 
+# ── The sandbox (ADR-0074 §7 slice 4) ─────────────────────────────────────────
+#
+# 🛑 **THE SINGLE MOST IMPORTANT LINE IN THIS FILE IS \`NoNewPrivileges\`.** The
+# account this service runs as holds \`NOPASSWD: ALL\` on a host it SHARES WITH
+# FOUR OTHER PRODUCTS. Until the console was reachable only through an SSH
+# tunnel that was a theoretical concern; the moment it answers the public
+# internet, any code-execution defect in it is root on that shared host, and the
+# blast radius is every peer's database. ⚠️ \`NoNewPrivileges\` makes the kernel
+# ignore setuid for this process AND EVERY CHILD IT WILL EVER HAVE, so \`sudo\`
+# inside the service simply cannot elevate. 🚫 Do not remove it to make a
+# deployment step convenient — deployment runs over ssh, not through the service.
+NoNewPrivileges=yes
+
+# ⚠️ **AND THE ONE THAT ANSWERS "AGE MUST NOT REACH A PEER'S DATABASE" WITH A
+# MECHANISM RATHER THAN A PROMISE.** The console makes no outbound call at all —
+# it is model-free, fetches no URL, and speaks to exactly one database on
+# loopback. Everything else is denied, which removes the Docker bridge subnets
+# (172.16/12) where the peer stores live from this process's reach entirely.
+# 🚫 It does NOT remove the peer instance published on 127.0.0.1:5432 — loopback
+# has to stay open for AGE's own store on 127.0.0.1:5442, and a port-level rule
+# is not expressible here. ⚠️ That residue is what ADR-0076 is about; 🚫 do not
+# read this line as closing it.
+IPAddressDeny=any
+IPAddressAllow=127.0.0.1/32
+IPAddressAllow=::1/128
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# ⚠️ The rest is ordinary systemd sandboxing: the filesystem is read-only apart
+# from the checkout and the operator's own workspace, /tmp is private, and the
+# kernel surfaces a web console has no business touching are closed.
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=${AGE_VPS_PATH} ${AGE_VPS_DISCOVERY_WORKSPACE}
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+
 [Install]
 WantedBy=multi-user.target
 UNIT
