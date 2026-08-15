@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import type { EvidenceView } from '@age/studio-shell';
+import { BOTH_INTAKE_CHANNELS_READ, type EvidenceView } from '@age/studio-shell';
 
 import { StateChip } from './state-chip';
 
@@ -47,8 +47,8 @@ export function EvidencePanel({ clientId, assemble }: EvidencePanelProps) {
       <div className="rounded border border-[hsl(var(--age-border))] p-4">
         <h2 className="text-sm font-semibold">Assemble the evidence ledger</h2>
         <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
-          This reads the answer file this console wrote and reports what the capture supports. It
-          happens once, when you press — never when the page opens.
+          {BOTH_INTAKE_CHANNELS_READ}, then reports what the capture supports. It happens once, when
+          you press — never when the page opens.
         </p>
         <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">
           Nothing is opened, downloaded or contacted. Listed documents and web addresses are text

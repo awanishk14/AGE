@@ -2,7 +2,11 @@
 
 import { useState } from 'react';
 
-import type { ContradictionPreconditionView, ContradictionsView } from '@age/studio-shell';
+import {
+  BOTH_INTAKE_CHANNELS_READ,
+  type ContradictionPreconditionView,
+  type ContradictionsView,
+} from '@age/studio-shell';
 
 import { StateChip } from './state-chip';
 
@@ -57,8 +61,8 @@ export function ContradictionsPanel({ clientId, report }: ContradictionsPanelPro
       <div className="rounded border border-[hsl(var(--age-border))] p-4">
         <h2 className="text-sm font-semibold">Report what stands in the way</h2>
         <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
-          This reads the answer file this console wrote and reports what the contradiction detector
-          would need from it. It does not run the detector, and it does not compare anything.
+          {BOTH_INTAKE_CHANNELS_READ}, then reports what the contradiction detector would need from
+          them. It does not run the detector, and it does not compare anything.
         </p>
         <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">
           A result would be empty for a reason that has nothing to do with this business, so no

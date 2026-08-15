@@ -199,6 +199,15 @@ export {
 
 export { describeSourcesCoverage } from './sources-coverage';
 
+export {
+  BOTH_INTAKE_CHANNELS_READ,
+  presentSourceConfirmedChannel,
+  SOURCE_CONFIRMED_LABEL,
+  SOURCE_CONFIRMED_SEPARATION_NOTE,
+  type SourceConfirmedChannelView,
+  type SourceConfirmedPresence,
+} from './source-confirmed-channel';
+
 /**
  * ⚠️ Re-exported so `apps/studio` can name a passage and a document without
  * depending on `@age/assisted-intake` directly — the acceptance path stays the

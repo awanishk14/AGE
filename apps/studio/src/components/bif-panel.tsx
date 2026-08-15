@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import {
+  BOTH_INTAKE_CHANNELS_READ,
   PROVENANCE_NEVER_CHANGES_A_SCORE,
   type BifSectionSourceView,
   type GeneratedBifView,
@@ -66,8 +67,8 @@ export function BifPanel({ clientId, generate }: BifPanelProps) {
       <div className="rounded border border-[hsl(var(--age-border))] p-4">
         <h2 className="text-sm font-semibold">Produce a BIF from this business’s answers</h2>
         <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
-          This reads the answer file this console wrote and runs the same Discovery → BIF mapping
-          and scoring the CLI runs. It happens once, when you press — never when the page opens.
+          {BOTH_INTAKE_CHANNELS_READ}, then runs the same Discovery → BIF mapping and scoring the
+          CLI runs. It happens once, when you press — never when the page opens.
         </p>
         <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">
           Nothing is saved. The result below is not written to any database, and closing this page

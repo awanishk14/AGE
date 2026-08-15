@@ -1,5 +1,10 @@
 import type { EpistemicState } from './epistemic-state';
 import { areaHref, STUDIO_AREAS, type StudioArea } from './navigation';
+import {
+  presentSourceConfirmedChannel,
+  type SourceConfirmedChannelView,
+  type SourceConfirmedPresence,
+} from './source-confirmed-channel';
 
 /**
  * S3 · Business Profile — the subject-level landing, decided here and rendered
@@ -90,6 +95,14 @@ export interface BusinessIdentityInput {
 export interface BusinessProfileInput {
   readonly identity: BusinessIdentityInput;
   readonly draft: DiscoveryDraftPresence;
+  /**
+   * ⚠️ REQUIRED, and 🚫 deliberately not optional. An omitted second channel
+   * would render as a page that had looked at one place and said nothing about
+   * the other — which is exactly the state this screen was in before ADR-0073's
+   * channel had a row of its own, and exactly the reading it produced: a
+   * business with confirmed answers reported as having nothing saved.
+   */
+  readonly sourceConfirmed: SourceConfirmedPresence;
 }
 
 /** One fact about the business's identity. Never about the business itself. */
@@ -152,6 +165,11 @@ export interface ProfileAreaView {
 export interface BusinessProfileView {
   readonly identity: readonly IdentityFactView[];
   readonly capture: CaptureStatusView;
+  /**
+   * The second intake channel, stated beside the first and 🚫 never merged into
+   * it (ADR-0073 D2/D5).
+   */
+  readonly confirmations: SourceConfirmedChannelView;
   readonly areas: readonly ProfileAreaView[];
   /**
    * Shown ON the surface, never as a footnote.
@@ -169,7 +187,14 @@ const NOTICE: readonly string[] = Object.freeze([
     'things, so there is no total, no percentage and no "ready" count.',
 ]);
 
-const CAPTURE_LABEL = 'Discovery answers';
+/**
+ * ⚠️ NARROWED BY ADR-0073, DELIBERATELY. It used to read "Discovery answers",
+ * which was accurate while typing was the only way an answer could exist. With a
+ * second channel beside it, that heading claimed to cover both and reported only
+ * one — so a business whose every answer came from a document read as a business
+ * with nothing saved. 🚫 Do not widen it back.
+ */
+const CAPTURE_LABEL = 'Typed discovery draft';
 
 /**
  * The capture status, one arm per presence value.
@@ -199,9 +224,10 @@ function captureStatusOf(presence: DiscoveryDraftPresence): CaptureStatusDecisio
         value: 'Nothing saved yet',
         state: 'unknown' as EpistemicState,
         detail:
-          'The console looked where it was told to look and found no saved draft for this ' +
+          'The console looked where it was told to look and found no typed draft for this ' +
           'business. That is a fact about the capture, not about the business — nothing here ' +
-          'says this business has little to tell.',
+          'says this business has little to tell, and 🚫 it says nothing at all about answers ' +
+          'confirmed from documents, which are reported on their own line.',
         nextAreaId: 'discovery',
       });
     case 'refused':
@@ -306,6 +332,10 @@ export function presentBusinessProfile(input: BusinessProfileInput): BusinessPro
       ...capture,
       ...(nextArea === undefined ? {} : { nextRoute: areaHref(nextArea, clientId) }),
     }),
+    // 🚫 DELEGATED, never restated. The second channel's sentences have exactly
+    // one implementation, so the copy on this screen cannot drift from the copy
+    // Discovery renders.
+    confirmations: presentSourceConfirmedChannel(input.sourceConfirmed),
     areas,
     notice: NOTICE,
   });

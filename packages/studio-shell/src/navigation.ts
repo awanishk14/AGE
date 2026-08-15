@@ -155,7 +155,8 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
     level: 'subject',
     screen: 'S5',
     // ⚠️ `wired` because the screen reads a real source and can produce a real
-    // result: the answer file this console wrote, through the same
+    // result: BOTH intake channels for this business — what the operator typed
+    // and what they confirmed from a document (ADR-0073 D5) — through the same
     // Discovery→BIF mapping and scoring the CLI runs.
     // 🚫 It is NOT a claim that the STORED half works. Nothing has read the
     // capture store (ADR-0055 D7), and the screen reports every stored fact as
@@ -169,8 +170,8 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
     route: '/b/:clientId/evidence',
     level: 'subject',
     screen: 'S6',
-    // ⚠️ `wired` because the screen reads a real source: the answer file this
-    // console wrote, and the mapper's own account of what it could and could not
+    // ⚠️ `wired` because the screen reads a real source: both intake channels
+    // (ADR-0073 D5), and the mapper's own account of what it could and could not
     // carry. 🚫 It is NOT a claim that any evidence has been checked — nothing
     // is fetched, opened or contacted, and the screen reports every belief of a
     // first discovery run as unsupported because that is what it is.
@@ -200,7 +201,7 @@ export const STUDIO_AREAS: readonly StudioArea[] = Object.freeze([
     screen: 'S8',
     // ⚠️ `wired` because HALF the question has a real answer: three capabilities
     // publish an ADR-0027 readiness assessment, and each one runs over a context
-    // built from the answer file this console wrote.
+    // built from both intake channels for this business (ADR-0073 D5).
     // 🚫 It is NOT a claim that anything has been PRODUCED. No capability has
     // been run for a real business — that is refused, not pending — and the
     // screen reports the produced half as `not-assessed` rather than as zero

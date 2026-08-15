@@ -1,12 +1,18 @@
 import Link from 'next/link';
 
-import { STUDIO_AREAS } from '@age/studio-shell';
+import {
+  areaHref,
+  presentEpistemicState,
+  presentSourceConfirmedChannel,
+  STUDIO_AREAS,
+} from '@age/studio-shell';
 
 import { DiscoveryForm } from './discovery-form';
 import { SubjectAreaNav } from './subject-area-nav';
 import { saveDiscoveryDraftAction, submitDiscoveryAction } from '@/server/discovery-actions';
 import {
   readDiscoveryDraft,
+  readSourceConfirmations,
   resolveBusinessScope,
   STUDIO_QUESTIONNAIRE,
 } from '@/server/operator-environment';
@@ -55,6 +61,26 @@ export function DiscoveryScreen({ clientId }: { readonly clientId: string }) {
   const outcome = readDiscoveryDraft(clientId);
 
   /**
+   * ⚠️ THE OTHER CHANNEL, SAID OUT LOUD ON THIS SCREEN. The form's own count is
+   * a count of THIS file — it always was — but this screen asks "what has the
+   * operator told AGE", and since ADR-0073 part of that answer lives elsewhere.
+   * An operator who confirmed three answers from a document and then read
+   * "0 of 17 answered" here would reasonably conclude their work was lost.
+   *
+   * 🚫 The counts are NOT added together and 🚫 the form's own figure is left
+   * exactly as it is: a combined number would be a completeness across two
+   * channels that AGE does not compute (ADR-0073 D2/D5).
+   */
+  const confirmed = readSourceConfirmations(clientId);
+  const confirmedView = presentSourceConfirmedChannel(
+    confirmed.kind === 'loaded'
+      ? { kind: 'read', questionCount: confirmed.draft.answers.length }
+      : { kind: confirmed.kind },
+  );
+  const confirmedState = presentEpistemicState(confirmedView.state);
+  const sourcesArea = STUDIO_AREAS.find((candidate) => candidate.id === 'sources');
+
+  /**
    * ADR-0059 D6 item 5 — the ONLY facts offered, and they are offered, not
    * filled in.
    *
@@ -94,6 +120,27 @@ export function DiscoveryScreen({ clientId }: { readonly clientId: string }) {
       <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
         {area?.question ?? 'What do we know about this business, and how do we know it?'}
       </p>
+
+      <section className="mt-4 rounded border border-[hsl(var(--age-border))] p-4">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <h2 className="text-sm font-semibold">{confirmedView.label}</h2>
+          <span className={confirmedState.className} title={confirmedState.meaning}>
+            {confirmedState.label}
+          </span>
+          <span className="text-sm font-medium">{confirmedView.value}</span>
+        </div>
+        <p className="mt-1 text-xs text-[hsl(var(--age-text-muted))]">{confirmedView.detail}</p>
+        {sourcesArea === undefined ? null : (
+          <p className="mt-2 text-xs">
+            <Link
+              href={{ pathname: areaHref(sourcesArea, clientId) }}
+              className="underline underline-offset-2"
+            >
+              Go to Sources
+            </Link>
+          </p>
+        )}
+      </section>
 
       {outcome.kind === 'loaded' ? (
         <DiscoveryForm
