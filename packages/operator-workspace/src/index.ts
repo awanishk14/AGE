@@ -26,8 +26,10 @@ export {
   resolveBusinessScope,
   submitDiscoveryAnswers,
   writeDiscoveryDraft,
+  composeIntakeChannels,
   STUDIO_QUESTIONNAIRE,
   type BusinessScope,
+  type ComposedIntake,
   type CapabilityReadinessOutcome,
   type ContradictionsOutcome,
   type CreateClientOutcome,
@@ -49,6 +51,25 @@ export {
   type ReadOperatorSourceDocumentOptions,
   type SourceDocumentOutcome,
 } from './source-document';
+
+/**
+ * ⚠️ The FOURTEENTH and FIFTEENTH operations, added by **ADR-0073** — reading
+ * and recording the confirmations a human accepted from a source, in the
+ * operator's OWN workspace.
+ *
+ * 🛑 **READ, RECORD, WRITE — AND THE READ IS LOAD-BEARING.** Without it the
+ * duplicate refusal never fires and each confirmation starts from nothing, which
+ * is the exact defect this pair replaces. 🚫 `@age/intake-draft` still persists
+ * nothing, and 🚫 nothing here is canonical: these answers reach a profile only
+ * through the same explicit path the answer file uses.
+ */
+export {
+  readSourceConfirmations,
+  recordSourceConfirmation,
+  type RecordSourceConfirmationOptions,
+  type RecordSourceConfirmationOutcome,
+  type SourceConfirmationsOutcome,
+} from './source-confirmed-draft';
 
 export {
   narrowSnapshotRead,

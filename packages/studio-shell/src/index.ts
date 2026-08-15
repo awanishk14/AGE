@@ -175,12 +175,19 @@ export {
   DISCOVERY_WORKSPACE_VARIABLE,
   draftFileNameFor,
   resolveDiscoveryWorkspace,
+  sourceConfirmedFileNameFor,
   UnsafeClientIdError,
   type DiscoveryWorkspace,
 } from './discovery-workspace';
 
 export {
-  DRAFT_STORAGE_STATE,
+  parseSourceConfirmedAnswers,
+  renderSourceConfirmedAnswers,
+  SourceConfirmedAnswersError,
+} from './source-confirmed-answers';
+
+export {
+  DRAFT_STORAGE_STATES,
   describeDraftStorage,
   recordPassageForQuestion,
   recordPassageInDraft,

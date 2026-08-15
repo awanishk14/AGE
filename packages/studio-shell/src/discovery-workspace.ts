@@ -68,3 +68,17 @@ export function answerFileNameFor(clientId: string): string {
   assertSafeClientIdForFileName(clientId);
   return `${clientId}.discovery-answers.json`;
 }
+
+/**
+ * Where the answers a human confirmed **from a source** are kept (ADR-0073 D1).
+ *
+ * 🛑 **A THIRD, SEPARATE FILE — 🚫 never a section inside the answer file and
+ * 🚫 never a section inside the draft.** The answer file is hand-authored and
+ * stays `stated`-only (D2); the discovery draft holds the operator's typing.
+ * Merging any two of the three would make one channel's rules apply to another's
+ * entries.
+ */
+export function sourceConfirmedFileNameFor(clientId: string): string {
+  assertSafeClientIdForFileName(clientId);
+  return `${clientId}.source-confirmed.json`;
+}

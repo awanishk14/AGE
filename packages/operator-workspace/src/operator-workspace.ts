@@ -1,7 +1,6 @@
 import { join } from 'node:path';
 
 import {
-  DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
   buildProfileAndFieldProvenanceFromAnswers,
   buildProfileFromAnswers,
   produceScoredBifContext,
@@ -39,7 +38,6 @@ import {
   renderAnswerFile,
   renderDiscoveryDraft,
   resolveClientRecordSource,
-  resolveDiscoveryWorkspace,
   UnsafeClientIdError,
   validateDraft,
   type BusinessesView,
@@ -56,6 +54,8 @@ import { ClientContext } from '@age/capability-kit';
 import { buildContextReadinessReport } from '@age/demo-runtime/context-readiness';
 
 import type { OperatorWorkspaceRuntime } from './operator-workspace-runtime';
+import { resolveWorkspaceDirectory, STUDIO_QUESTIONNAIRE } from './workspace-directory';
+import { readSourceConfirmations } from './source-confirmed-draft';
 
 /**
  * The nine operations the operator console performs, pure over an injected
@@ -289,45 +289,15 @@ export function createClientRecord(
  * ────────────────────────────────────────────────────────────────────────────
  */
 
-/** The questionnaire the console renders. There is exactly one. */
-export const STUDIO_QUESTIONNAIRE = DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE;
-
-export type DiscoveryWorkspaceOutcome =
-  | { readonly kind: 'not-configured'; readonly variable: string }
-  | { readonly kind: 'refused'; readonly reason: string }
-  | { readonly kind: 'ready'; readonly directory: string };
-
-/**
- * Locate the workspace, and refuse it if it is inside the repository.
- *
- * ⚠️ The same fail-closed rule as every other operator file, through the same
- * single implementation (`@age/operator-file-policy`). 🚫 Do not re-implement
- * it here — the copy that gets relaxed still passes its own tests.
- */
-function resolveWorkspaceDirectory(runtime: OperatorWorkspaceRuntime): DiscoveryWorkspaceOutcome {
-  const workspace = resolveDiscoveryWorkspace(runtime.env);
-
-  if (workspace.kind === 'not-configured') {
-    return { kind: 'not-configured', variable: workspace.variable };
-  }
-
-  try {
-    assertOperatorFilePathOutsideRepository(
-      workspace.directory,
-      runtime.repositoryRoot(),
-      'the discovery workspace directory',
-    );
-    return { kind: 'ready', directory: workspace.directory };
-  } catch (error) {
-    if (error instanceof OperatorFilePathRefusedError) {
-      return { kind: 'refused', reason: error.message };
-    }
-    return {
-      kind: 'refused',
-      reason: 'The discovery workspace could not be used, and the failure was not recognised.',
-    };
-  }
-}
+// ⚠️ The workspace lookup and the questionnaire live in `workspace-directory`
+// so the source-confirmation operations can share the SINGLE implementation
+// rather than each module importing the other (ADR-0073). Re-exported here
+// because every existing caller names them through this module.
+export {
+  resolveWorkspaceDirectory,
+  STUDIO_QUESTIONNAIRE,
+  type DiscoveryWorkspaceOutcome,
+} from './workspace-directory';
 
 export type DraftOutcome =
   | { readonly kind: 'not-configured'; readonly variable: string }
@@ -521,6 +491,138 @@ function messageOf(error: unknown): string {
     : 'The request could not be completed, and the failure was not recognised.';
 }
 
+/**
+ * Compose the two intake channels into the one list the canonical path takes
+ * (ADR-0073 D5).
+ *
+ * 🛑 **A QUESTION ANSWERED IN BOTH CHANNELS IS REFUSED, 🚫 NEVER MERGED, AND
+ * 🚫 NEITHER CHANNEL WINS.** Preferring the answer file would discard a
+ * confirmation whose origin a human recorded; preferring the confirmation would
+ * discard what the business itself stated. Merging would invent an answer nobody
+ * gave. The operator resolves it by removing one — that is a decision only they
+ * can make.
+ *
+ * ⚠️ **AGE-INV-PROV-1 IS UNTOUCHED.** Provenance travels beside each answer and
+ * reaches the field-source view; 🚫 it reaches no scorer, and it decides nothing
+ * about ordering here either — the answer file's entries come first only because
+ * a deterministic order is needed, 🚫 not because they rank above a confirmation.
+ */
+export type ComposedIntake =
+  | { readonly kind: 'refused'; readonly reason: string }
+  | { readonly kind: 'composed'; readonly answers: readonly DiscoveryAnswer[] };
+
+export function composeIntakeChannels(
+  statedAnswers: readonly DiscoveryAnswer[],
+  confirmedAnswers: readonly DiscoveryAnswer[],
+): ComposedIntake {
+  const stated = new Set(statedAnswers.map((answer) => answer.questionId));
+  const overlapping = confirmedAnswers
+    .filter((answer) => stated.has(answer.questionId))
+    .map((answer) => answer.questionId);
+
+  if (overlapping.length > 0) {
+    return {
+      kind: 'refused',
+      reason:
+        `${overlapping.join(', ')} — ${overlapping.length === 1 ? 'this question is' : 'these questions are'} ` +
+        'answered both in the answer file and by a confirmation from a source. AGE refuses rather ' +
+        'than choosing one or combining them, because either would discard an answer someone ' +
+        'gave. Remove the one that should not stand and generate again.',
+    };
+  }
+
+  return { kind: 'composed', answers: [...statedAnswers, ...confirmedAnswers] };
+}
+
+/**
+ * The whole intake for one business — both channels, composed (ADR-0073 D5).
+ *
+ * ⚠️ **ONE READER, DELIBERATELY.** Every screen that reasons from the intake —
+ * the BIF, the evidence assembly, the capability readiness — reads through this
+ * function, so 🚫 none of them can quietly see a different set of answers than
+ * another. A second reader would drift, and the drifted one is the screen the
+ * operator happens to be looking at.
+ */
+type IntakeOutcome =
+  | { readonly kind: 'not-configured'; readonly variable: string }
+  | { readonly kind: 'refused'; readonly reason: string }
+  | { readonly kind: 'no-answer-file' }
+  | { readonly kind: 'loaded'; readonly answers: readonly DiscoveryAnswer[] };
+
+function loadComposedIntake(runtime: OperatorWorkspaceRuntime, clientId: string): IntakeOutcome {
+  const workspace = resolveWorkspaceDirectory(runtime);
+  if (workspace.kind !== 'ready') {
+    return workspace;
+  }
+
+  let answerFilePath: string;
+  try {
+    answerFilePath = join(workspace.directory, answerFileNameFor(clientId));
+  } catch (error) {
+    if (error instanceof UnsafeClientIdError) {
+      return { kind: 'refused', reason: error.message };
+    }
+    throw error;
+  }
+
+  // ⚠️ The confirmations are read FIRST, because whether there is anything to
+  // reason from now depends on BOTH channels (ADR-0073 D5).
+  const confirmations = readSourceConfirmations(runtime, clientId);
+  if (confirmations.kind !== 'loaded') {
+    return confirmations;
+  }
+  const confirmedAnswers = confirmations.draft.answers;
+
+  const hasAnswerFile = runtime.fileExists(answerFilePath);
+
+  // ⚠️ A distinct state, not a refusal and not an empty result: Discovery has
+  // simply not been submitted yet. 🚫 Degrading to "no answers" would produce a
+  // BIF that merely looks sparse, hiding that nothing was read at all.
+  //
+  // ⚠️ Unless a human has confirmed answers from a source — those are a real
+  // intake too, and refusing to reason from them would tell an operator who has
+  // done work that nothing exists.
+  if (!hasAnswerFile && confirmedAnswers.length === 0) {
+    return { kind: 'no-answer-file' };
+  }
+
+  let statedAnswers: readonly DiscoveryAnswer[];
+  try {
+    // ⚠️ The SAME loader the CLI uses, including its outside-the-repository
+    // check. 🚫 A second reader would drift.
+    statedAnswers = hasAnswerFile
+      ? loadDiscoveryAnswerFile({
+          path: answerFilePath,
+          repositoryRoot: runtime.repositoryRoot(),
+          questionnaire: STUDIO_QUESTIONNAIRE,
+          // 🚫 The system error is swallowed and replaced. Node's read failures
+          // embed the full path, and the loader puts the message it is given
+          // into a refusal the screen shows — that would print the operator's
+          // own directory layout onto a page.
+          readFileText: (path: string) => {
+            try {
+              return runtime.readFileText(path);
+            } catch {
+              throw new Error('the file could not be opened');
+            }
+          },
+        })
+      : // ⚠️ Confirmations only — a partial intake, which produces a `Draft`
+        // BIF with sections OMITTED. 🚫 Nothing is placeholder-filled, and a low
+        // score is a CORRECT result (ADR-0054 D7).
+        [];
+  } catch (error) {
+    return { kind: 'refused', reason: messageOf(error) };
+  }
+
+  const composed = composeIntakeChannels(statedAnswers, confirmedAnswers);
+  if (composed.kind === 'refused') {
+    return { kind: 'refused', reason: composed.reason };
+  }
+
+  return { kind: 'loaded', answers: composed.answers };
+}
+
 export type GenerateBifOutcome =
   | {
       readonly kind: 'generated';
@@ -584,51 +686,9 @@ export function generateBifFromAnswerFile(
     };
   }
 
-  const workspace = resolveWorkspaceDirectory(runtime);
-  if (workspace.kind !== 'ready') {
-    return workspace;
-  }
-
-  let answerFilePath: string;
-  try {
-    answerFilePath = join(workspace.directory, answerFileNameFor(clientId));
-  } catch (error) {
-    if (error instanceof UnsafeClientIdError) {
-      return { kind: 'refused', reason: error.message };
-    }
-    throw error;
-  }
-
-  if (!runtime.fileExists(answerFilePath)) {
-    // ⚠️ A distinct state, not a refusal and not an empty BIF: Discovery has
-    // simply not been submitted yet. 🚫 Degrading to "no answers" would produce
-    // a BIF that merely looks sparse, hiding that nothing was read at all.
-    return { kind: 'no-answer-file' };
-  }
-
-  let answers: readonly DiscoveryAnswer[];
-  try {
-    // ⚠️ The SAME loader the CLI uses, including its outside-the-repository
-    // check. 🚫 A second reader would drift, and the drifted one is the surface
-    // nobody runs the CLI against.
-    answers = loadDiscoveryAnswerFile({
-      path: answerFilePath,
-      repositoryRoot: runtime.repositoryRoot(),
-      questionnaire: STUDIO_QUESTIONNAIRE,
-      // 🚫 The system error is swallowed and replaced. Node's read failures
-      // embed the full path, and the loader puts the message it is given into a
-      // refusal the screen shows — that would print the operator's own
-      // directory layout onto a page.
-      readFileText: (path: string) => {
-        try {
-          return runtime.readFileText(path);
-        } catch {
-          throw new Error('the file could not be opened');
-        }
-      },
-    });
-  } catch (error) {
-    return { kind: 'refused', reason: messageOf(error) };
+  const intake = loadComposedIntake(runtime, clientId);
+  if (intake.kind !== 'loaded') {
+    return intake;
   }
 
   // ⚠️ ONE INSTANT, NOT TWO — the CLI's rule, repeated. The profile's
@@ -645,7 +705,7 @@ export function generateBifFromAnswerFile(
     // channel is asked for BY NAME and never reaches them, so identical facts
     // with different provenance still score byte-identically (AGE-INV-PROV-1).
     const { profile, fieldProvenance } = buildProfileAndFieldProvenanceFromAnswers(
-      answers,
+      intake.answers,
       STUDIO_QUESTIONNAIRE,
       {
         id: `${clientId}-discovery`,
@@ -730,49 +790,18 @@ export function assembleEvidence(
     };
   }
 
-  const workspace = resolveWorkspaceDirectory(runtime);
-  if (workspace.kind !== 'ready') {
-    return workspace;
-  }
-
-  let answerFilePath: string;
-  try {
-    answerFilePath = join(workspace.directory, answerFileNameFor(clientId));
-  } catch (error) {
-    if (error instanceof UnsafeClientIdError) {
-      return { kind: 'refused', reason: error.message };
-    }
-    throw error;
-  }
-
-  if (!runtime.fileExists(answerFilePath)) {
-    return { kind: 'no-answer-file' };
-  }
-
-  let answers: readonly DiscoveryAnswer[];
-  try {
-    answers = loadDiscoveryAnswerFile({
-      path: answerFilePath,
-      repositoryRoot: runtime.repositoryRoot(),
-      questionnaire: STUDIO_QUESTIONNAIRE,
-      // 🚫 The system error is swallowed, for the same reason as above: Node's
-      // read failures embed the full path.
-      readFileText: (path: string) => {
-        try {
-          return runtime.readFileText(path);
-        } catch {
-          throw new Error('the file could not be opened');
-        }
-      },
-    });
-  } catch (error) {
-    return { kind: 'refused', reason: messageOf(error) };
+  // ⚠️ BOTH channels, through the one reader (ADR-0073 D5) — the evidence a
+  // screen shows must be the evidence the BIF was produced from, or the two
+  // pages disagree about what AGE was told.
+  const intake = loadComposedIntake(runtime, clientId);
+  if (intake.kind !== 'loaded') {
+    return intake;
   }
 
   const instant = runtime.now();
 
   try {
-    const profile = buildProfileFromAnswers(answers, STUDIO_QUESTIONNAIRE, {
+    const profile = buildProfileFromAnswers(intake.answers, STUDIO_QUESTIONNAIRE, {
       id: `${clientId}-discovery`,
       capturedAt: instant.toISOString(),
     });
@@ -897,48 +926,18 @@ export function assessCapabilityReadiness(
     };
   }
 
-  const workspace = resolveWorkspaceDirectory(runtime);
-  if (workspace.kind !== 'ready') {
-    return workspace;
-  }
-
-  let answerFilePath: string;
-  try {
-    answerFilePath = join(workspace.directory, answerFileNameFor(clientId));
-  } catch (error) {
-    if (error instanceof UnsafeClientIdError) {
-      return { kind: 'refused', reason: error.message };
-    }
-    throw error;
-  }
-
-  if (!runtime.fileExists(answerFilePath)) {
-    return { kind: 'no-answer-file' };
-  }
-
-  let answers: readonly DiscoveryAnswer[];
-  try {
-    answers = loadDiscoveryAnswerFile({
-      path: answerFilePath,
-      repositoryRoot: runtime.repositoryRoot(),
-      questionnaire: STUDIO_QUESTIONNAIRE,
-      // 🚫 The system error is swallowed: Node's read failures embed the full path.
-      readFileText: (path: string) => {
-        try {
-          return runtime.readFileText(path);
-        } catch {
-          throw new Error('the file could not be opened');
-        }
-      },
-    });
-  } catch (error) {
-    return { kind: 'refused', reason: messageOf(error) };
+  // ⚠️ BOTH channels, through the one reader (ADR-0073 D5). Readiness assessed
+  // over a narrower intake than the BIF was built from would report a business
+  // as less ready than the answers AGE actually holds.
+  const intake = loadComposedIntake(runtime, clientId);
+  if (intake.kind !== 'loaded') {
+    return intake;
   }
 
   const instant = runtime.now();
 
   try {
-    const profile = buildProfileFromAnswers(answers, STUDIO_QUESTIONNAIRE, {
+    const profile = buildProfileFromAnswers(intake.answers, STUDIO_QUESTIONNAIRE, {
       id: `${clientId}-discovery`,
       capturedAt: instant.toISOString(),
     });

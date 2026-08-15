@@ -11,7 +11,6 @@ import type {
 } from '@age/business-discovery-contracts';
 import {
   DraftRecordingRefusedError,
-  emptyIntakeDraft,
   recordAnswerInDraft,
   type IntakeDraft,
 } from '@age/intake-draft';
@@ -39,21 +38,45 @@ import {
  */
 
 /**
- * ⚠️ THE HONEST NAME FOR WHAT HAPPENED TO THE RECORDED ANSWER. It is a single
- * literal rather than a union, so that widening it is a visible edit in a file
- * that says an ADR is required first — 🚫 do not add a `'stored'` arm here to
- * make a screen read better.
+ * ⚠️ THE HONEST NAME FOR WHAT HAPPENED TO THE RECORDED ANSWER.
+ *
+ * ⚠️ **THE SECOND ARM ARRIVED WITH ADR-0073, 🚫 NOT WITH A SCREEN THAT READ
+ * BETTER.** It was a single literal until the Product Owner fired ADR-0067's own
+ * revisit trigger; that is the bar for a third arm too. 🚫 Do not add one to
+ * describe something a caller merely intends to write.
  */
-export const DRAFT_STORAGE_STATE = 'not-stored' as const;
+export const DRAFT_STORAGE_STATES = Object.freeze([
+  /** Held for this request only — nothing was written anywhere. */
+  'not-stored',
+  /**
+   * Written to the file the operator's own workspace holds (ADR-0073 D1).
+   * 🚫 It does NOT mean AGE stored it, and the sentence below must not say so.
+   */
+  'workspace-file',
+] as const);
 
-export type DraftStorageState = typeof DRAFT_STORAGE_STATE;
+export type DraftStorageState = (typeof DRAFT_STORAGE_STATES)[number];
 
-/** The sentence a surface shows about storage. ⚠️ Never blank, never implied. */
-export function describeDraftStorage(): string {
+/**
+ * The sentence a surface shows about storage. ⚠️ Never blank, never implied.
+ *
+ * 🛑 **THIS SENTENCE IS THE OPERATOR'S ONLY ACCOUNT OF WHERE THEIR CONFIRMATION
+ * WENT** (ADR-0073 D7). 🚫 No arm may say "saved to AGE", "synced", "uploaded" or
+ * "shared" — the file is on their own machine and AGE holds nothing — and
+ * 🚫 "not stored" must never be printed for a write that happened.
+ */
+export function describeDraftStorage(state: DraftStorageState): string {
+  if (state === 'not-stored') {
+    return (
+      'This acceptance is held for this request only — nothing was written. It will not be ' +
+      'there when the page is reloaded, and the answer file is unchanged.'
+    );
+  }
+
   return (
-    'This acceptance is held for this session only — AGE has not stored it. Where a draft is ' +
-    'kept durably is a decision that has not been made yet, so nothing was written to disk or ' +
-    'to a database. The answer file is unchanged.'
+    'This confirmation was written to the source-confirmation file in the discovery workspace ' +
+    'you named, on this machine. AGE has not stored it anywhere else, nothing was sent, and the ' +
+    'answer file is unchanged.'
   );
 }
 
@@ -110,7 +133,11 @@ export function recordPassageInDraft(
       kind: 'recorded',
       answer,
       draft: recordAnswerInDraft(draft, answer),
-      storage: DRAFT_STORAGE_STATE,
+      // ⚠️ TRUE AT THIS POINT, and stated by the layer that knows it: this
+      // module is pure and has written nothing. 🚫 It must not announce a write
+      // some caller intends to perform — only the layer that performed one may
+      // widen this, and only after it succeeded (ADR-0073 D7).
+      storage: 'not-stored',
     };
   } catch (error) {
     if (error instanceof DraftRecordingRefusedError) {
@@ -121,6 +148,16 @@ export function recordPassageInDraft(
 }
 
 export interface RecordPassageForQuestionOptions {
+  /**
+   * The confirmations recorded so far (ADR-0073 D1).
+   *
+   * ⚠️ **REQUIRED, WITH NO DEFAULT.** It was `emptyIntakeDraft()` here until
+   * ADR-0073, which is exactly why every earlier confirmation disappeared. 🚫 Do
+   * not restore a default: a caller that forgets to load what is already
+   * confirmed would silently start over, and the duplicate refusal — the one
+   * guard that protects a recorded origin — would never fire.
+   */
+  readonly draft: IntakeDraft;
   readonly questionnaire: BusinessDiscoveryQuestionnaire;
   readonly questionId: string;
   readonly passage: SourcePassage;
@@ -132,12 +169,12 @@ export interface RecordPassageForQuestionOptions {
  * The same acceptance, addressed by question id — what a surface has after a
  * human picked a question from a list.
  *
- * ⚠️ **THE DRAFT IT RECORDS INTO IS EMPTY, AND THAT IS THE HONEST SHAPE TODAY.**
- * `@age/intake-draft` persists nothing, so there is no draft to carry from one
- * request to the next. 🚫 Do not "fix" that here by writing a file: durable
- * draft storage is a separate decision (ADR-0066 §0.5a), and schema/migration/
- * RLS is independently a §3 stop condition. A surface must therefore report the
- * result as `not-stored` rather than implying a save.
+ * ⚠️ **THE DRAFT IS SUPPLIED BY THE CALLER (ADR-0073 D1).** `@age/intake-draft`
+ * still persists nothing and 🚫 must not learn how; the reading and writing live
+ * one layer out, in the operator-workspace orchestration and the console's single
+ * effect module. What changed is that the caller now has somewhere to load a
+ * draft *from* — the operator's own workspace — so a second confirmation no
+ * longer starts from nothing. 🚫 Option 3 (a tenant-scoped table) stays refused.
  *
  * 🚫 An unknown question is REFUSED, never matched to the nearest one — an
  * acceptance recorded against a question AGE invented would point a real
@@ -146,7 +183,7 @@ export interface RecordPassageForQuestionOptions {
 export function recordPassageForQuestion(
   options: RecordPassageForQuestionOptions,
 ): SourceAcceptanceOutcome {
-  const { questionnaire, questionId, passage, source, confirmedBy } = options;
+  const { draft, questionnaire, questionId, passage, source, confirmedBy } = options;
 
   const question = questionnaire.sections
     .flatMap((section) => section.questions)
@@ -163,7 +200,7 @@ export function recordPassageForQuestion(
   }
 
   return recordPassageInDraft({
-    draft: emptyIntakeDraft(),
+    draft,
     question,
     passage,
     source,

@@ -15,9 +15,12 @@ import type { DiscoveryAnswer } from '@age/business-discovery-contracts';
  * confidence number anywhere on this screen, because there is none to show
  * (D3).
  *
- * 🛑 NOTHING IS STORED, AND THIS SCREEN SAYS SO IN WORDS. Where a draft is kept
- * durably is a decision that has not been made (ADR-0066 §0.5a), so 🚫 the
- * panel must never imply a save, a queue or a "will be applied later".
+ * 🛑 **WHAT WAS DONE WITH THE CONFIRMATION IS SAID IN WORDS, AND THE WORDS COME
+ * FROM `@age/studio-shell`** (ADR-0073 D7). Since a confirmation is now written
+ * to the operator's own workspace, the old fixed "Not stored." heading would be
+ * FALSE — and a screen claiming a blocker the architecture has removed is as
+ * dishonest as one claiming a capability that does not exist. 🚫 No arm may say
+ * saved to AGE, synced, uploaded or shared: it is one file, on this machine.
  */
 
 /**
@@ -74,13 +77,31 @@ export type SourceReadOutcomeLike =
       readonly notice: string;
     };
 
+export type DraftStorageStateLike = 'not-stored' | 'workspace-file';
+
 export type AcceptanceOutcomeLike =
-  | { readonly kind: 'refused'; readonly questionId: string; readonly reason: string }
+  | { readonly kind: 'not-configured'; readonly variable: string }
+  | { readonly kind: 'refused'; readonly questionId?: string; readonly reason: string }
   | {
       readonly kind: 'recorded';
       readonly answer: DiscoveryAnswer;
-      readonly storage: string;
+      /**
+       * ⚠️ EVERY confirmation for this business, including the new one — the
+       * accumulation ADR-0073 exists to make real. 🚫 Not a count: the operator
+       * has to be able to see WHICH questions are answered from a document.
+       */
+      readonly draft: { readonly answers: readonly DiscoveryAnswer[] };
+      readonly storage: DraftStorageStateLike;
     };
+
+/**
+ * 🛑 The two storage headings. 🚫 Neither is softened into "saved", and 🚫 the
+ * `workspace-file` one must never be printed for a `not-stored` outcome.
+ */
+const STORAGE_HEADING: Readonly<Record<DraftStorageStateLike, string>> = {
+  'not-stored': 'Not stored.',
+  'workspace-file': 'Written to your discovery workspace.',
+};
 
 export interface QuestionOption {
   readonly id: string;
@@ -89,16 +110,28 @@ export interface QuestionOption {
 }
 
 export interface SourcesPanelProps {
+  /** ⚠️ Whose confirmations these are. Required — 🚫 never defaulted. */
+  readonly clientId: string;
   /** The questions a passage may be accepted as the answer to. */
   readonly questions: readonly QuestionOption[];
-  /** The storage sentence, decided in `@age/studio-shell` — 🚫 never re-worded here. */
-  readonly storageNotice: string;
+  /**
+   * The storage sentences, decided in `@age/studio-shell` — 🚫 never re-worded
+   * here, and 🚫 never chosen here either: the outcome names its own arm.
+   */
+  readonly storageNotices: Readonly<Record<DraftStorageStateLike, string>>;
+  /**
+   * What this business already has confirmed from documents, read once when the
+   * screen was rendered. ⚠️ `undefined` means AGE could not look — 🚫 never
+   * rendered as "nothing has been confirmed".
+   */
+  readonly alreadyConfirmed?: readonly DiscoveryAnswer[];
   readonly read: (options: {
     path: string;
     sourceId: string;
     label: string;
   }) => Promise<SourceReadOutcomeLike>;
   readonly record: (input: {
+    clientId: string;
     questionId: string;
     passage: PassageLike;
     source: DocumentLike;
@@ -106,7 +139,14 @@ export interface SourcesPanelProps {
   }) => Promise<AcceptanceOutcomeLike>;
 }
 
-export function SourcesPanel({ questions, storageNotice, read, record }: SourcesPanelProps) {
+export function SourcesPanel({
+  clientId,
+  questions,
+  storageNotices,
+  alreadyConfirmed,
+  read,
+  record,
+}: SourcesPanelProps) {
   const [path, setPath] = useState('');
   const [sourceId, setSourceId] = useState('');
   const [label, setLabel] = useState('');
@@ -131,6 +171,30 @@ export function SourcesPanel({ questions, storageNotice, read, record }: Sources
 
   return (
     <section className="mt-6 space-y-6">
+      {/*
+        ⚠️ What is already on disk, so the operator can see that earlier
+        confirmations SURVIVED. 🚫 Absent when AGE could not look — that is a
+        different thing from nobody having confirmed anything.
+      */}
+      {alreadyConfirmed !== undefined && alreadyConfirmed.length > 0 ? (
+        <div className="rounded border border-[hsl(var(--age-border))] p-4">
+          <h2 className="text-sm font-semibold">
+            Already confirmed from documents — {alreadyConfirmed.length} question
+            {alreadyConfirmed.length === 1 ? '' : 's'}
+          </h2>
+          <ul className="mt-2 space-y-1 text-xs text-[hsl(var(--age-text-muted))]">
+            {alreadyConfirmed.map((answer) => (
+              <li key={answer.questionId}>
+                <span className="font-mono">{answer.questionId}</span>
+                {answer.provenance.kind === 'confirmed-from-source'
+                  ? ` — ${answer.provenance.locator}, confirmed by ${answer.provenance.confirmedBy}`
+                  : ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : undefined}
+
       <div className="rounded border border-[hsl(var(--age-border))] p-4">
         <h2 className="text-sm font-semibold">Read a source document</h2>
         <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
@@ -277,7 +341,7 @@ export function SourcesPanel({ questions, storageNotice, read, record }: Sources
                       if (source === undefined) return;
 
                       setRecording(true);
-                      void record({ questionId, passage, source, confirmedBy })
+                      void record({ clientId, questionId, passage, source, confirmedBy })
                         .then(setAcceptance)
                         .finally(() => setRecording(false));
                     }}
@@ -288,6 +352,16 @@ export function SourcesPanel({ questions, storageNotice, read, record }: Sources
               </li>
             ))}
           </ul>
+        </div>
+      ) : undefined}
+
+      {acceptance?.kind === 'not-configured' ? (
+        <div className="rounded border border-[hsl(var(--age-unknown))] p-4">
+          <h3 className="text-sm font-semibold">The confirmation was not recorded</h3>
+          <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
+            No discovery workspace has been configured ({acceptance.variable}), so there is nowhere
+            on this machine to keep the confirmation. It was not recorded.
+          </p>
         </div>
       ) : undefined}
 
@@ -329,10 +403,18 @@ export function SourcesPanel({ questions, storageNotice, read, record }: Sources
             ) : undefined}
           </dl>
 
-          {/* 🛑 The storage state, in words. 🚫 Never softened into "saved". */}
+          {/* 🛑 The storage state, in words, CHOSEN BY THE OUTCOME. 🚫 Never a fixed heading. */}
           <p className="mt-3 rounded border border-[hsl(var(--age-unknown))] p-3 text-xs">
-            <span className="font-semibold">Not stored. </span>
-            {storageNotice}
+            <span className="font-semibold">{STORAGE_HEADING[acceptance.storage]} </span>
+            {storageNotices[acceptance.storage]}
+          </p>
+          <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">
+            Confirmed from documents so far: {acceptance.draft.answers.length}
+            {acceptance.draft.answers.length === 1 ? ' question' : ' questions'} —{' '}
+            <span className="font-mono">
+              {acceptance.draft.answers.map((answer) => answer.questionId).join(', ')}
+            </span>
+            . Confirming another passage adds to this list; it does not replace it.
           </p>
           <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">
             Where an answer came from never changes a score. Provenance alone never changes a score

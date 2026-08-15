@@ -16,6 +16,7 @@ import {
 } from '@age/operator-workspace';
 import { sourceDocumentSchema, sourcePassageSchema } from '@age/assisted-intake';
 import { relaySourceObservation } from '@age/source-observation';
+import { emptyIntakeDraft } from '@age/intake-draft';
 import {
   recordPassageForQuestion,
   type ClientRecordDraft,
@@ -465,8 +466,15 @@ export async function callAgeTool(
       );
     }
 
+    // 🛑 **THIS ARM STAYS PER-REQUEST, AND THAT IS A DECISION** (ADR-0073 D1).
+    // Durable confirmations are kept per BUSINESS, and this tool takes no
+    // `clientId` — deliberately. Giving it one would widen the MCP surface,
+    // which needs its own ADR (ADR-0060 D8). 🚫 Do not "fix" it by defaulting a
+    // business: an acceptance filed against a guessed business is worse than one
+    // that plainly did not last. The durable path is the Studio Sources screen.
     return report(
       recordPassageForQuestion({
+        draft: emptyIntakeDraft(),
         questionnaire: STUDIO_QUESTIONNAIRE,
         questionId: questionId.value,
         passage: passage.data,
