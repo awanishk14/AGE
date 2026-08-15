@@ -138,6 +138,9 @@ importers:
       '@age/client-registry':
         specifier: workspace:*
         version: link:../../packages/client-registry
+      '@age/deployed-database-target':
+        specifier: workspace:*
+        version: link:../../packages/deployed-database-target
       '@age/discovery-answer-file':
         specifier: workspace:*
         version: link:../../packages/discovery-answer-file
@@ -237,6 +240,9 @@ importers:
       '@age/demo-runtime':
         specifier: workspace:*
         version: link:../../packages/demo-runtime
+      '@age/deployed-database-target':
+        specifier: workspace:*
+        version: link:../../packages/deployed-database-target
       '@age/discovery-answer-file':
         specifier: workspace:*
         version: link:../../packages/discovery-answer-file

@@ -153,11 +153,40 @@ describe('apps/studio effect isolation', () => {
     // fails on its own documentation gets deleted rather than fixed.
     const source = withoutComments(raw);
 
-    expect(source).toContain("from '@age/capture/composition'");
+    expect(source).toContain("from '@age/capture/deployed-composition'");
     expect(source).toContain('narrowSnapshotRead(');
     // 🚫 Never a repository, never a Prisma client, never an append.
     expect(source).not.toContain('ScopedScoredBifSnapshotRepository');
     expect(source).not.toContain('new PrismaClient(');
     expect(source).not.toContain('findBySnapshotId');
+  });
+
+  /**
+   * 🛑 THE CONSOLE OPENS THE **DEPLOYED** DOORS, NEVER THE LOCAL ONES (ADR-0061
+   * A5, wired by ADR-0074 §7 slice 1).
+   *
+   * ⚠️ WHY A GUARD AND NOT A COMMENT. Both sets of doors compile, both accept a
+   * loopback target, and on the operator's own laptop both behave identically.
+   * The difference only shows up on the VPS, where the local rule's sentence —
+   * "this database is on the machine you are sitting at" — is FALSE while its
+   * check still passes. Reverting to the local import is therefore a change no
+   * test would otherwise notice and no reviewer would see fail.
+   *
+   * ⚠️ MADE TO FAIL BEFORE IT WAS TRUSTED: swapping the import back to
+   * `@age/capture/composition` fails the first assertion, and deleting the
+   * acknowledgement constant fails the third.
+   */
+  it('opens the deployed database doors and writes the acknowledgement out', () => {
+    const source = withoutComments(readFileSync(`${srcDir}${EFFECT_MODULE}`, 'utf8'));
+
+    expect(source).not.toContain("from '@age/capture/composition'");
+    expect(source).not.toContain('openLocalPrisma');
+    expect(source).toContain('REMOTE_ACKNOWLEDGEMENT');
+    expect(source).toContain('acknowledgedRemote:');
+
+    // 🚫 The choice is made in SOURCE, never by configuration. An environment
+    // read here would be A5's refused `allowRemote` flag under another name.
+    expect(source).not.toContain('AGE_DEPLOYED');
+    expect(source).not.toContain('NODE_ENV');
   });
 });
