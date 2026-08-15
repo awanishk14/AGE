@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -128,7 +128,7 @@ describe('the local rule keeps its teeth and is a different code path', () => {
   });
 });
 
-describe('the package is not an authorization and has no caller yet', () => {
+describe('the package is not an authorization, and its callers are pinned', () => {
   it('does not call askEntitlement', () => {
     // 🚫 Where a row may be stored is not who may read it (A2/A3). And a caller
     // here would silently discharge a question that is still open.
@@ -137,17 +137,45 @@ describe('the package is not an authorization and has no caller yet', () => {
     }
   });
 
-  it('is imported by nothing on the deployment path yet', () => {
-    // ⚠️ A6 gates the deployment slice. If this guard fails because a real
-    // composition now imports the package, the fix is to update it deliberately
-    // in that slice — never to delete it.
-    const importers = searchImporters(join(REPO, 'apps')).concat(
-      searchImporters(join(REPO, 'packages')).filter(
-        (file) => !file.includes('deployed-database-target'),
-      ),
-    );
+  /**
+   * 🛑 EVERY IMPORTER OF THIS PACKAGE IS NAMED HERE, AND THE LIST IS EXACT.
+   *
+   * ⚠️ THIS GUARD USED TO SAY "IMPORTED BY NOTHING YET", AND IT WAS UPDATED
+   * DELIBERATELY BY ADR-0074 §7 SLICE 1 — the slice its own comment said would
+   * do it. 🚫 It was not deleted and it was not loosened to "at least one":
+   * the whole value of a composition root is that there is a countable number
+   * of them, so a third importer appearing anywhere must fail this test and be
+   * argued for in an ADR rather than discovered later.
+   *
+   * The two that are permitted, and why each is exactly one file:
+   *
+   *   `apps/capture/src/deployed-console-composition.ts`
+   *       THE deployed composition root. It calls
+   *       `selectDeployedDatabaseComposition` above `new PrismaClient(`.
+   *
+   *   `apps/studio/src/server/operator-environment.ts`
+   *       The console's ONE effects module, which writes the acknowledgement
+   *       out in source. ⚠️ That it is the effects module is not incidental —
+   *       a screen holding `REMOTE_ACKNOWLEDGEMENT` could open a connection.
+   *
+   * 🚫 A TEST FILE IS NOT AN IMPORTER FOR THIS PURPOSE and is excluded below:
+   * exercising the judgement is how it is proven, not how it is relaxed.
+   */
+  it('is imported by exactly the two pinned composition sites', () => {
+    const importers = searchImporters(join(REPO, 'apps'))
+      .concat(
+        searchImporters(join(REPO, 'packages')).filter(
+          (file) => !file.includes('deployed-database-target'),
+        ),
+      )
+      .map((file) => relative(REPO, file).replace(/\\/g, '/'))
+      .filter((file) => !/(^|\/)tests?(\/|$)|\.(spec|test)\.tsx?$/.test(file))
+      .sort();
 
-    expect(importers).toEqual([]);
+    expect(importers).toEqual([
+      'apps/capture/src/deployed-console-composition.ts',
+      'apps/studio/src/server/operator-environment.ts',
+    ]);
   });
 });
 
