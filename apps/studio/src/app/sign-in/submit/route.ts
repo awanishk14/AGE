@@ -31,7 +31,22 @@ export async function POST(request: Request): Promise<Response> {
     return refuse('not-configured', request);
   }
 
-  const form = await request.formData();
+  // 🛑 **A MALFORMED BODY IS A REFUSAL, 🚫 NOT AN EXCEPTION.** `formData()`
+  // THROWS on a body that is not a form — an empty POST, a JSON body, a
+  // truncated multipart. Unguarded, that produced a 500 from the one route an
+  // unauthenticated caller on the public internet can reach, which is both a
+  // wrong answer (nothing failed; a caller sent nonsense) and an invitation to
+  // probe for a stack trace. ⚠️ It collapses into the SAME `refused=1` as a
+  // wrong token: the shape of the request must not be distinguishable from the
+  // correctness of the credential in it.
+  let form: FormData;
+
+  try {
+    form = await request.formData();
+  } catch {
+    return refuse('1', request);
+  }
+
   const presented = form.get('token');
 
   if (typeof presented !== 'string' || presented === '') {
