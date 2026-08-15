@@ -1,32 +1,32 @@
 'use server';
 
-import {
-  recordPassageForQuestion,
-  type SourceAcceptanceOutcome,
-  type SourceDocument,
-  type SourcePassage,
-} from '@age/studio-shell';
+import type { SourceDocument, SourcePassage } from '@age/studio-shell';
 
 import {
   readOperatorSourceDocument,
-  STUDIO_QUESTIONNAIRE,
+  readSourceConfirmations,
+  recordSourceConfirmation,
   type ReadOperatorSourceDocumentOptions,
+  type RecordSourceConfirmationOutcome,
+  type SourceConfirmationsOutcome,
   type SourceDocumentOutcome,
 } from './operator-environment';
 
 /**
- * The two things the operator can do on the Sources screen (ADR-0066 D4).
+ * The things the operator can do on the Sources screen (ADR-0066 D4, ADR-0073).
  *
- * ⚠️ BOTH ARE ACTIONS, never page data. Reading a document on open would make
- * opening a screen the act of reading a real client's file, and an acceptance
- * must be something a named human did, now.
+ * ⚠️ READING A DOCUMENT AND ACCEPTING A PASSAGE ARE BOTH ACTIONS, never page
+ * data. Reading a document on open would make opening a screen the act of
+ * reading a real client's file, and an acceptance must be something a named
+ * human did, now.
  *
- * 🛑 **NOTHING IS PERSISTED, AND THE SCREEN SAYS SO.** `@age/intake-draft`
- * persists nothing, and durable draft storage is a **separate decision** the
- * Product Owner kept out of D4 (ADR-0066 §0.5a). ⚠️ The consequence is visible
- * and deliberate: each acceptance starts from an EMPTY draft, because there is
- * no draft to carry between requests. 🚫 Do not "fix" that by writing one — the
- * fix is an ADR, not a file.
+ * 🛑 **AN ACCEPTANCE IS NOW KEPT — IN THE OPERATOR'S OWN WORKSPACE, AND NOWHERE
+ * ELSE** (ADR-0073 D1). Until ADR-0073 each acceptance started from an EMPTY
+ * draft, so the second confirmation on one document erased the first; the
+ * Product Owner fired ADR-0067's own named revisit trigger and that decision was
+ * reopened. 🚫 Nothing reaches a database, AGE or a peer, 🚫 the answer file is
+ * untouched, and 🚫 a failed write is reported as a refusal rather than
+ * swallowed (D7).
  */
 
 export async function readSourceDocumentAction(
@@ -35,7 +35,15 @@ export async function readSourceDocumentAction(
   return readOperatorSourceDocument(options);
 }
 
+export async function readSourceConfirmationsAction(
+  clientId: string,
+): Promise<SourceConfirmationsOutcome> {
+  return readSourceConfirmations(clientId);
+}
+
 export interface RecordPassageInput {
+  /** ⚠️ Required. A confirmation belongs to ONE business — 🚫 never defaulted. */
+  readonly clientId: string;
   readonly questionId: string;
   readonly passage: SourcePassage;
   readonly source: SourceDocument;
@@ -44,9 +52,8 @@ export interface RecordPassageInput {
 
 export async function recordPassageAction(
   input: RecordPassageInput,
-): Promise<SourceAcceptanceOutcome> {
-  return recordPassageForQuestion({
-    questionnaire: STUDIO_QUESTIONNAIRE,
+): Promise<RecordSourceConfirmationOutcome> {
+  return recordSourceConfirmation(input.clientId, {
     questionId: input.questionId,
     passage: input.passage,
     source: input.source,

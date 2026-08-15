@@ -4,7 +4,11 @@ import { describeDraftStorage, describeSourcesCoverage } from '@age/studio-shell
 
 import { SourcesPanel } from './sources-panel';
 import { SubjectAreaNav } from './subject-area-nav';
-import { resolveBusinessScope, STUDIO_QUESTIONNAIRE } from '@/server/operator-environment';
+import {
+  readSourceConfirmations,
+  resolveBusinessScope,
+  STUDIO_QUESTIONNAIRE,
+} from '@/server/operator-environment';
 import { readSourceDocumentAction, recordPassageAction } from '@/server/sources-actions';
 
 /**
@@ -48,6 +52,8 @@ export function SourcesScreen({ clientId }: { readonly clientId: string }) {
     );
   }
 
+  const confirmations = readSourceConfirmations(clientId);
+
   return (
     <main className="max-w-3xl p-8">
       <p className="text-xs text-[hsl(var(--age-text-muted))]">
@@ -81,7 +87,25 @@ export function SourcesScreen({ clientId }: { readonly clientId: string }) {
       */}
       <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">{describeSourcesCoverage()}</p>
 
+      {/*
+        ⚠️ Read once, here — the operator's OWN workspace file, 🚫 not a client
+        document. Reading it on open is what lets the screen show that earlier
+        confirmations survived (ADR-0073 D1); reading a client's DOCUMENT on open
+        stays refused, and still requires a press.
+      */}
+      {confirmations.kind !== 'loaded' ? (
+        <p className="mt-3 rounded border border-[hsl(var(--age-unknown))] p-3 text-xs">
+          {confirmations.kind === 'not-configured'
+            ? `No discovery workspace has been configured (${confirmations.variable}), so AGE cannot ` +
+              'show what has already been confirmed from documents, and cannot keep a new ' +
+              'confirmation either.'
+            : confirmations.reason}
+        </p>
+      ) : undefined}
+
       <SourcesPanel
+        clientId={clientId}
+        alreadyConfirmed={confirmations.kind === 'loaded' ? confirmations.draft.answers : undefined}
         questions={STUDIO_QUESTIONNAIRE.sections
           .flatMap((section) => section.questions)
           .map((question) => ({
@@ -89,7 +113,10 @@ export function SourcesScreen({ clientId }: { readonly clientId: string }) {
             prompt: question.prompt,
             kind: question.kind,
           }))}
-        storageNotice={describeDraftStorage()}
+        storageNotices={{
+          'not-stored': describeDraftStorage('not-stored'),
+          'workspace-file': describeDraftStorage('workspace-file'),
+        }}
         read={readSourceDocumentAction}
         record={recordPassageAction}
       />

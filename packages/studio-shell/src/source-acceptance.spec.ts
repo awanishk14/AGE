@@ -7,7 +7,7 @@ import { emptyIntakeDraft } from '@age/intake-draft';
 import { describe, expect, it } from 'vitest';
 
 import {
-  DRAFT_STORAGE_STATE,
+  DRAFT_STORAGE_STATES,
   describeDraftStorage,
   recordPassageForQuestion,
   recordPassageInDraft,
@@ -116,10 +116,41 @@ describe('recordPassageInDraft', () => {
     expect(outcome.kind).toBe('recorded');
     if (outcome.kind !== 'recorded') return;
 
-    expect(outcome.storage).toBe(DRAFT_STORAGE_STATE);
-    expect(DRAFT_STORAGE_STATE).toBe('not-stored');
-    expect(describeDraftStorage()).toContain('has not stored');
-    expect(describeDraftStorage()).toContain('answer file is unchanged');
+    // 🛑 The PURE layer always says `not-stored`, because it has written
+    // nothing. ⚠️ Only the layer that completed a write may widen this
+    // (ADR-0073 D7) — a caller that merely INTENDS to write must not.
+    expect(outcome.storage).toBe('not-stored');
+    expect(describeDraftStorage('not-stored')).toContain('nothing was written');
+    expect(describeDraftStorage('not-stored')).toContain('answer file is unchanged');
+  });
+
+  /**
+   * 🚫 **NO ARM MAY CLAIM AGE STORED IT** (ADR-0073 D7). The file is on the
+   * operator's own machine; "saved to AGE", "synced", "uploaded" or "shared"
+   * would each tell them something that did not happen.
+   */
+  it('🚫 no storage sentence claims AGE stored, sent or shared the confirmation', () => {
+    expect(DRAFT_STORAGE_STATES).toEqual(['not-stored', 'workspace-file']);
+
+    for (const state of DRAFT_STORAGE_STATES) {
+      const sentence = describeDraftStorage(state).toLowerCase();
+      expect(sentence.length).toBeGreaterThan(0);
+      for (const forbidden of ['saved to age', 'synced', 'uploaded', 'shared']) {
+        expect(sentence).not.toContain(forbidden);
+      }
+    }
+  });
+
+  /**
+   * 🚫 "Not stored" must never be printed for a write that happened — the whole
+   * point of the second arm.
+   */
+  it('🚫 the workspace-file sentence never says nothing was written', () => {
+    const sentence = describeDraftStorage('workspace-file');
+    expect(sentence).toContain('discovery workspace');
+    expect(sentence).toContain('answer file is unchanged');
+    expect(sentence.toLowerCase()).not.toContain('nothing was written');
+    expect(sentence.toLowerCase()).not.toContain('not be there when');
   });
 
   it('does not mutate the draft it was given', () => {
@@ -221,6 +252,7 @@ describe('recordPassageForQuestion', () => {
 
   it('finds the question inside its section and records against it', () => {
     const outcome = recordPassageForQuestion({
+      draft: emptyIntakeDraft(),
       questionnaire: DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
       questionId: FIRST_QUESTION.id,
       passage: PASSAGE,
@@ -231,13 +263,14 @@ describe('recordPassageForQuestion', () => {
     expect(outcome.kind).toBe('recorded');
     if (outcome.kind !== 'recorded') return;
     expect(outcome.answer.questionId).toBe(FIRST_QUESTION.id);
-    expect(outcome.storage).toBe(DRAFT_STORAGE_STATE);
+    expect(outcome.storage).toBe('not-stored');
   });
 
   it('REFUSES an unknown question and never matches the nearest one', () => {
     // 🚫 An acceptance recorded against a question AGE chose would point a real
     // human's confirmation at something they never confirmed.
     const outcome = recordPassageForQuestion({
+      draft: emptyIntakeDraft(),
       questionnaire: DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
       questionId: 'no-such-question',
       passage: PASSAGE,
@@ -255,6 +288,7 @@ describe('recordPassageForQuestion', () => {
 
   it('carries a refusal from the acceptance path through unchanged', () => {
     const outcome = recordPassageForQuestion({
+      draft: emptyIntakeDraft(),
       questionnaire: DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
       questionId: FIRST_QUESTION.id,
       passage: PASSAGE,
@@ -263,5 +297,48 @@ describe('recordPassageForQuestion', () => {
     });
 
     expect(outcome.kind).toBe('refused');
+  });
+
+  /**
+   * 🛑 **THE DEFECT ADR-0073 EXISTS TO FIX.** This function recorded into
+   * `emptyIntakeDraft()` until ADR-0073, so a second confirmation on the same
+   * document had never heard of the first. ⚠️ The caller now supplies the draft,
+   * and there is 🚫 NO DEFAULT — a caller that forgets to load what is already
+   * confirmed cannot silently start over.
+   */
+  it('records the second confirmation BESIDE the first, not instead of it', () => {
+    const SECOND_QUESTION = DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE.sections
+      .flatMap((section) => section.questions)
+      .find((question) => question.id !== FIRST_QUESTION.id && question.kind === 'text');
+    if (SECOND_QUESTION === undefined) {
+      throw new Error('The default questionnaire has fewer than two text questions.');
+    }
+
+    const first = recordPassageForQuestion({
+      draft: emptyIntakeDraft(),
+      questionnaire: DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
+      questionId: FIRST_QUESTION.id,
+      passage: PASSAGE,
+      source: SOURCE,
+      confirmedBy: CONFIRMED_BY,
+    });
+    expect(first.kind).toBe('recorded');
+    if (first.kind !== 'recorded') return;
+
+    const second = recordPassageForQuestion({
+      draft: first.draft,
+      questionnaire: DEFAULT_BUSINESS_DISCOVERY_QUESTIONNAIRE,
+      questionId: SECOND_QUESTION.id,
+      passage: { ...PASSAGE, passageId: 'src-fictional-brief#2', text: 'A second sentence.' },
+      source: SOURCE,
+      confirmedBy: CONFIRMED_BY,
+    });
+
+    expect(second.kind).toBe('recorded');
+    if (second.kind !== 'recorded') return;
+    expect(second.draft.answers).toHaveLength(2);
+    expect(second.draft.answers.map((answer) => answer.questionId)).toContain(FIRST_QUESTION.id);
+    // ⚠️ And the first draft is untouched — a new draft was returned.
+    expect(first.draft.answers).toHaveLength(1);
   });
 });

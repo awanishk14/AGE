@@ -14,6 +14,7 @@ const resolveBusinessScope = vi.fn<(clientId: string) => BusinessScope>();
 
 vi.mock('@/server/operator-environment', () => ({
   resolveBusinessScope: (clientId: string) => resolveBusinessScope(clientId),
+  readSourceConfirmations: () => ({ kind: 'loaded', draft: { answers: [] }, everSaved: false }),
   STUDIO_QUESTIONNAIRE: { sections: [] },
 }));
 

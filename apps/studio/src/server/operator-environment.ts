@@ -17,6 +17,8 @@ import {
   readDiscoveryDraft as readDiscoveryDraftIn,
   readRelayedObservations as readRelayedObservationsIn,
   readOperatorSourceDocument as readOperatorSourceDocumentIn,
+  readSourceConfirmations as readSourceConfirmationsIn,
+  recordSourceConfirmation as recordSourceConfirmationIn,
   readStoredSnapshot as readStoredSnapshotIn,
   reportContradictions as reportContradictionsIn,
   resolveBusinessScope as resolveBusinessScopeIn,
@@ -26,7 +28,10 @@ import {
   type DerivedIntelligenceOutcome,
   type OperatorWorkspaceRuntime,
   type ReadOperatorSourceDocumentOptions,
+  type RecordSourceConfirmationOptions,
+  type RecordSourceConfirmationOutcome,
   type RelayedObservationsOutcome,
+  type SourceConfirmationsOutcome,
   type StoredSnapshotOutcome,
 } from '@age/operator-workspace';
 import { decodeOperatorDocument } from '@age/operator-document-decoder';
@@ -98,8 +103,11 @@ export {
   type EvidenceOutcome,
   type GenerateBifOutcome,
   type ReadOperatorSourceDocumentOptions,
+  type RecordSourceConfirmationOptions,
+  type RecordSourceConfirmationOutcome,
   type RelayedObservationsOutcome,
   type SaveOutcome,
+  type SourceConfirmationsOutcome,
   type SourceDocumentOutcome,
   type SubmitOutcome,
 } from '@age/operator-workspace';
@@ -164,6 +172,27 @@ export function assessCapabilityReadiness(clientId: string, changedBy: string) {
  */
 export function readOperatorSourceDocument(options: ReadOperatorSourceDocumentOptions) {
   return readOperatorSourceDocumentIn(CONSOLE_RUNTIME, decodeOperatorDocument, options);
+}
+
+/**
+ * The confirmations a human accepted from a source, read and recorded
+ * (ADR-0073 D1).
+ *
+ * 🛑 **THE READ IS WHAT MAKES THE ACCUMULATION REAL.** `recordSourceConfirmation`
+ * loads what is on DISK before recording, so the next confirmation is added to
+ * every earlier one rather than to an empty draft — the defect ADR-0073 exists to
+ * fix. 🚫 It writes ONE file in the operator's own workspace, 🚫 never the answer
+ * file, and 🚫 nothing reaches a database, AGE or a peer.
+ */
+export function readSourceConfirmations(clientId: string): SourceConfirmationsOutcome {
+  return readSourceConfirmationsIn(CONSOLE_RUNTIME, clientId);
+}
+
+export function recordSourceConfirmation(
+  clientId: string,
+  options: RecordSourceConfirmationOptions,
+): RecordSourceConfirmationOutcome {
+  return recordSourceConfirmationIn(CONSOLE_RUNTIME, clientId, options);
 }
 
 /**

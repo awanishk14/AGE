@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@age/assisted-intake": "workspace:*",
+    "@age/intake-draft": "workspace:*",
     "@age/operator-workspace": "workspace:*",
     "@age/source-observation": "workspace:*",
     "@age/studio-shell": "workspace:*"

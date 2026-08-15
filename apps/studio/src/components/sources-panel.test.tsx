@@ -53,8 +53,39 @@ const RECORDED: AcceptanceOutcomeLike = {
       confirmedBy: 'operator:fictional',
     },
   },
-  storage: 'not-stored',
+  draft: {
+    answers: [
+      {
+        questionId: 'q-industry',
+        value: 'Imaginary kite repair.',
+        provenance: {
+          kind: 'confirmed-from-source',
+          sourceId: 'src-fictional-brief',
+          locator: 'Fictional Kite Repairs brief (line 4)',
+          confirmedBy: 'operator:fictional',
+        },
+      },
+      {
+        questionId: 'q-offering',
+        value: 'We repair kites.',
+        provenance: {
+          kind: 'confirmed-from-source',
+          sourceId: 'src-fictional-brief',
+          locator: 'Fictional Kite Repairs brief (line 1)',
+          confirmedBy: 'operator:fictional',
+        },
+      },
+    ],
+  },
+  storage: 'workspace-file',
 };
+
+const STORAGE_NOTICES = {
+  'not-stored': 'This acceptance is held for this request only — nothing was written.',
+  'workspace-file':
+    'This confirmation was written to the source-confirmation file in the discovery workspace ' +
+    'you named, on this machine.',
+} as const;
 
 const read = vi.fn(async (): Promise<SourceReadOutcomeLike> => READ_OUTCOME);
 const record = vi.fn(async (): Promise<AcceptanceOutcomeLike> => RECORDED);
@@ -62,8 +93,9 @@ const record = vi.fn(async (): Promise<AcceptanceOutcomeLike> => RECORDED);
 function renderPanel() {
   return render(
     <SourcesPanel
+      clientId="fictional-client-73"
       questions={QUESTIONS}
-      storageNotice="AGE has not stored it."
+      storageNotices={STORAGE_NOTICES}
       read={read}
       record={record}
     />,
@@ -136,7 +168,12 @@ describe('SourcesPanel', () => {
     ).toBe(false);
   });
 
-  it('says the acceptance was not stored, and never that it was saved', async () => {
+  /**
+   * 🛑 ADR-0073 D7 — the heading follows the OUTCOME. A fixed "Not stored." after
+   * a write actually happened would be a screen claiming a blocker the
+   * architecture has removed.
+   */
+  it('says where the confirmation went, in the outcome own words, and never that it was saved to AGE', async () => {
     renderPanel();
     nameTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Read this document/ }));
@@ -148,11 +185,53 @@ describe('SourcesPanel', () => {
     fireEvent.change(screen.getByLabelText(/Answers/), { target: { value: 'q-offering' } });
     fireEvent.click(screen.getByRole('button', { name: /Record this passage/ }));
 
-    await waitFor(() => expect(screen.getByText(/Not stored\./)).toBeDefined());
-    expect(screen.getByText(/AGE has not stored it\./)).toBeDefined();
+    await waitFor(() =>
+      expect(screen.getByText(/Written to your discovery workspace\./)).toBeDefined(),
+    );
+    expect(screen.getByText(/on this machine\./)).toBeDefined();
+    expect(document.body.textContent).not.toMatch(/Not stored/);
+    // ⚠️ Scoped to the STORAGE sentence: the panel's own description of PDF
+    // decoding legitimately says "uploaded" — to deny it.
+    const storageSentence = screen.getByText(/Written to your discovery workspace\./).parentElement;
+    expect(storageSentence?.textContent).not.toMatch(/saved|synced|uploaded|shared|sent/i);
+    // ⚠️ The accumulation, visible: BOTH confirmations are named.
+    expect(screen.getByText(/q-industry, q-offering/)).toBeDefined();
     // 🚫 The one sentence that is permitted about provenance and scoring.
     expect(screen.getByText(/Provenance alone never changes a score/)).toBeDefined();
-    expect(document.body.textContent).not.toMatch(/saved/i);
+  });
+
+  it('still says NOT STORED when nothing was written', async () => {
+    record.mockResolvedValueOnce({ ...RECORDED, storage: 'not-stored' });
+    renderPanel();
+    nameTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Read this document/ }));
+    await waitFor(() => expect(screen.getByText('We repair kites.')).toBeDefined());
+    fireEvent.change(screen.getByLabelText(/Confirmed by/), {
+      target: { value: 'operator:fictional' },
+    });
+    fireEvent.change(screen.getByLabelText(/Answers/), { target: { value: 'q-offering' } });
+    fireEvent.click(screen.getByRole('button', { name: /Record this passage/ }));
+
+    await waitFor(() => expect(screen.getByText(/Not stored\./)).toBeDefined());
+    expect(screen.getByText(/nothing was written\./)).toBeDefined();
+  });
+
+  it('reports a workspace that was never configured as not recorded', async () => {
+    record.mockResolvedValueOnce({ kind: 'not-configured', variable: 'AGE_DISCOVERY_WORKSPACE' });
+    renderPanel();
+    nameTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Read this document/ }));
+    await waitFor(() => expect(screen.getByText('We repair kites.')).toBeDefined());
+    fireEvent.change(screen.getByLabelText(/Confirmed by/), {
+      target: { value: 'operator:fictional' },
+    });
+    fireEvent.change(screen.getByLabelText(/Answers/), { target: { value: 'q-offering' } });
+    fireEvent.click(screen.getByRole('button', { name: /Record this passage/ }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/The confirmation was not recorded/)).toBeDefined(),
+    );
+    expect(screen.getByText(/AGE_DISCOVERY_WORKSPACE/)).toBeDefined();
   });
 
   it('shows the full provenance of a recorded answer, and no confidence number', async () => {

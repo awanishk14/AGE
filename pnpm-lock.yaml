@@ -194,6 +194,9 @@ importers:
       '@age/assisted-intake':
         specifier: workspace:*
         version: link:../../packages/assisted-intake
+      '@age/intake-draft':
+        specifier: workspace:*
+        version: link:../../packages/intake-draft
       '@age/operator-workspace':
         specifier: workspace:*
         version: link:../../packages/operator-workspace
@@ -814,6 +817,9 @@ importers:
       '@age/discovery-answer-file':
         specifier: workspace:*
         version: link:../discovery-answer-file
+      '@age/intake-draft':
+        specifier: workspace:*
+        version: link:../intake-draft
       '@age/observation-association':
         specifier: workspace:*
         version: link:../observation-association
