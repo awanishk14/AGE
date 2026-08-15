@@ -28,6 +28,7 @@
     "@age/capability-kit": "workspace:*",
     "@age/capability-market-discovery": "workspace:*",
     "@age/capability-revenue": "workspace:*",
+    "@age/client-context-projection": "workspace:*",
     "@age/client-registry": "workspace:*",
     "@age/discovery-answer-file": "workspace:*",
     "@age/observation-association": "workspace:*",

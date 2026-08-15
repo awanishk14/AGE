@@ -2,6 +2,7 @@ import { runAssess, type AssessRuntime } from './assess-runner';
 import { runCapture, type CaptureRunResult, type CaptureRuntime } from './capture-runner';
 import { runInspect, type InspectRuntime } from './inspect-runner';
 import { runOnboarding, type OnboardingRuntime } from './onboarding-runner';
+import { runProject } from './project-runner';
 import { runRelay, type RelayRuntime } from './relay-runner';
 
 /**
@@ -74,6 +75,21 @@ export const ASSESS_SUBCOMMAND = 'assess';
  */
 export const RELAY_SUBCOMMAND = 'relay';
 
+/**
+ * The subcommand that projects one stored context for a peer product
+ * (ADR-0069 deliverable 7, carried under ADR-0071 D1).
+ *
+ * ⚠️ A SIXTH BRANCH, AND 🚫 NOT A FLAG ON `inspect`. `inspect` prints what was
+ * stored for a human to read; this prints a machine document for another
+ * product. Same row, different audience — and a flag switching between them
+ * would put a peer-facing artefact behind a command whose whole contract is
+ * "show me what you kept" (ADR-0055 D4).
+ *
+ * 🚫 IT IS NOT A LISTENER EITHER. An operator runs it and carries the document.
+ * There is nothing for a peer to connect to (ADR-0071 D1/D3).
+ */
+export const PROJECT_SUBCOMMAND = 'project';
+
 export async function runCli(
   argv: readonly string[],
   runtime: CaptureCliRuntime,
@@ -92,6 +108,10 @@ export async function runCli(
 
   if (argv[0] === RELAY_SUBCOMMAND) {
     return runRelay(argv.slice(1), runtime);
+  }
+
+  if (argv[0] === PROJECT_SUBCOMMAND) {
+    return runProject(argv.slice(1), runtime);
   }
 
   return runCapture(argv, runtime);
