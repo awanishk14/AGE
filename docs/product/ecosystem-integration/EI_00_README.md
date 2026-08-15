@@ -16,6 +16,24 @@
 
 Everything else in this track is machinery for making that sentence checkable.
 
+## 🛑 What AGE is for, and what this track is therefore about
+
+> 🛑 **AGE's purpose is not to collect observations from peer products. AGE is the
+> organisation-level intelligence layer.** Collection is a means. ⚠️ A track that measures itself by
+> observations received is measuring the means.
+
+🛑 **The onboarding/discovery flow is where the canonical organisation/client context is
+established**, and that context is what `age.peer.v1` projects outward. The requirement is therefore
+**directional and has an anti-half** (`EI_01` §E0.2):
+
+- Each peer **consumes** the organisation's identity, services, audiences, geographies, priorities
+  and constraints from AGE.
+- 🚫 **No peer independently reconstructs any of them.** A peer that maintains its own notion of who
+  the organisation is has forked the semantic model, and the fork is invisible until the two
+  disagree in front of a client.
+
+⚠️ This applies to **every** peer named in this track and to future third parties alike.
+
 ## Why this track exists separately
 
 AGE already contains ecosystem packages, accepted contracts and shipped surfaces. That is a real
@@ -56,23 +74,31 @@ path. A rung-4 result must never be reported with the word "working."
 ⚠️ **A rung is per-peer, per-direction.** "RankOps → AGE at rung 6, AGE → RankOps at rung 3" is a
 legitimate and expected report. A single number for a peer is only honest once both directions match.
 
-## Current state (2026-08-14, measured against `main` @ `28f2c95`)
+## Current state (2026-08-15, measured against `main` @ `7e23558`)
 
-| Peer                 | Domain                              | Inbound | Outbound |
-| -------------------- | ----------------------------------- | ------- | -------- |
-| **RankOps**          | SEO / search intelligence           | rung 2  | rung 1   |
-| MCP Ads Server       | advertising intelligence, execution | rung 1  | rung 1   |
-| Content Intelligence | content / social strategy           | rung 1  | rung 1   |
-| SNARA                | service-business conversational     | rung 1  | rung 1   |
-| Humantik             | ecommerce intelligence              | rung 1  | rung 1   |
+| Peer                 | Domain                              | Inbound    | Outbound   |
+| -------------------- | ----------------------------------- | ---------- | ---------- |
+| **RankOps**          | SEO / search intelligence           | **rung 5** | **rung 5** |
+| MCP Ads Server       | advertising intelligence, execution | rung 1     | rung 1     |
+| Content Intelligence | content / social strategy           | rung 1     | rung 1     |
+| SNARA                | service-business conversational     | rung 1     | rung 1     |
+| Humantik             | ecommerce intelligence              | rung 1     | rung 1     |
 
-🛑 **No peer has ever reached rung 3.** No peer repository contains an AGE adapter, and none should
-until its slice is authorized (§ scope rule below).
+⚠️ **RankOps crossed rungs 3, 4 and 5 in #333/#334** — its `./core` AGE adapter is real, both
+products ran their own real paths, and the exchange completed in both directions. ⚠️ **Rung 5 is the
+ceiling of what that proves**, and `EI_01` §E0.1a says why: the round was **operator-mediated end to
+end**. 🛑 **Rung 6 is not reachable by any amount of further work on the shipped mechanism** — it is
+blocked on ADR-0071 D3's own ADR, and 🚫 a convenience flag is not that ADR. Every derived subject
+came back `single-producer`, which is the **correct** outcome and 🚫 is not cross-product
+intelligence. Record: `docs/reviews/ADR0071_RANKOPS_ROUND_TRIP_CHECKPOINT.md`.
 
-⚠️ Inbound is rung 2 for every peer because the contract is source-neutral by ADR-0069 D6 — the
-shipped surface accepts an observation from any peer without knowing which. Outbound is rung 1
-because the projection exists as a pure function with **no surface**, blocked on the transport
-decision (`EI_01` §E0, row 14).
+🛑 **No peer other than RankOps has ever reached rung 3.** No other peer repository contains an AGE
+adapter, and none should until its slice is authorized (§ scope rule below).
+
+⚠️ Inbound is rung 1 for the other four because the contract is source-neutral by ADR-0069 D6 — the
+shipped surface would accept an observation from any of them without knowing which, but none has
+ever presented one. ⚠️ **Source-neutrality is not per-peer progress**, and 🚫 the rung-2 that the
+shipped surface confers on AGE must never be reported as a rung the _peer_ has climbed.
 
 ## The scope rule (binding)
 
@@ -95,6 +121,12 @@ explicitly, and the Definition of Done cannot be met without it.
 - 🛑 **AGE must not require an LLM API key. Permanent.** 🚫 No OpenAI / Anthropic / Gemini key, no
   hidden model call, 🚫 **no MCP sampling as an indirect model-key architecture**, no background
   model execution. Claude via CLI/MCP is the intelligence interface, operator-invoked.
+- 🛑 **Every third-party data source enters through the same AGE semantic boundary.** An observation
+  is admitted by attaching to an existing AGE subject, or it is refused (ADR-0069 D4) — 🚫 there is
+  no second door for a purchased feed, a subscription, a scraper or a vendor API. ⚠️ **A parallel
+  intelligence path is the failure this constraint names**: a source that reaches a conclusion
+  without passing the admissibility rules produces intelligence AGE cannot explain, and 🚫 an
+  unexplainable conclusion is exactly what the whole architecture refuses to emit.
 - 🛑 **AGE is not a data warehouse.** Data is admitted only when it attaches to an existing AGE
   semantic subject (ADR-0069 D4). Inadmissible data is refused, 🚫 never stored "for later."
 - 🛑 **Hub and spoke.** A peer product never talks to another peer product for cross-product

@@ -17,6 +17,10 @@ AGE is the semantic authority. The peer product is authoritative for its own dom
 intelligence is produced **only** by AGE reasoning over the shared organisation/client semantic
 model — 🚫 never by two peers wiring themselves together.
 
+⚠️ **The diagram is drawn inbound-first and that is a drafting artefact, not the priority.** The
+outbound arrow carries AGE's reason for existing (§E0.2); the inbound arrow is how AGE learns
+enough to keep it honest.
+
 ---
 
 ## E0 — AGE canonical ecosystem contracts
@@ -135,6 +139,49 @@ over the period already on the envelope, and it needs a decision, not a default.
 
 ---
 
+## E0.2 — The projection origin: discovery is where the canonical context is established
+
+🛑 **Owner requirement, standing.** 🚫 Not a stage that can be skipped by a peer that "already knows
+its client".
+
+> 🛑 AGE's purpose is not merely to collect observations from peer products. **AGE is the
+> organisation-level intelligence layer.** The onboarding/discovery flow must eventually establish
+> the canonical organisation/client context that is projected to each peer per `age.peer.v1`.
+
+**What must be projected, and therefore must first be captured:** the organisation's **identity**,
+**services**, **audiences**, **geographies**, **priorities** and **constraints**.
+
+**The anti-half, which is the enforceable part:**
+
+🚫 **RankOps, MCP Ads Server, Content Intelligence, SNARA, Humantik and every future third-party
+system must not independently reconstruct any of those six.** They consume the relevant AGE context.
+⚠️ A peer holding its own answer to "who is this organisation and what do they sell to whom, where"
+is a **duplicated semantic model** — the same failure the scope rule names for premature adapters
+(`EI_00`), arrived at from the other direction and much harder to see, because each peer's copy is
+individually plausible and only the disagreement is visible.
+
+### E0.2a — What this stage does **not** yet have
+
+⚠️ Measured, 🚫 not assumed:
+
+- ✅ The projection **shape** exists — `@age/client-context-projection`, seven parts including what
+  AGE does not know, named (E0 row 12), and RankOps read one back (#334).
+- 🛑 **The canonical context is not yet fully established by discovery.** Discovery captures intake
+  answers; the BIF is derived from them. Whether every one of the six dimensions above is captured,
+  distinguishable, and projectable **is a measurement nobody has run**, and 🚫 it must not be
+  assumed from the projection type compiling.
+- 🛑 **Therefore this stage needs its own measurement pass first, and a `Proposed` ADR for whatever
+  the measurement shows is missing.** 🚫 Do not begin by extending the intake questionnaire — that
+  is the answer arriving before the question.
+
+**Exit criterion for E0.2:** each of the six dimensions is either (a) captured by discovery and
+carried into the projection, or (b) named in the projection as **not established, with its reason** —
+🚫 never absent, and 🚫 never defaulted. ⚠️ Option (b) is a legitimate exit: an honest "AGE has not
+established this organisation's constraints" is a projection a peer can consume correctly, and 🚫 a
+guess is not.
+
+---
+
 ## E1 — The AGE reference peer contract
 
 **Goal:** one canonical, versioned, **transport-independent** AGE ↔ peer contract.
@@ -189,6 +236,20 @@ adapter that does not state which contract version it implements has not reached
 the subject model. It is also read-heavy, which keeps the first crossing inside the V1 boundary —
 🚫 no execution, no side effects.
 
+### ⚠️ Where RankOps actually stands (2026-08-15, #333/#334)
+
+🛑 **Rung 5, both directions. `age.peer.v1` is the reference implementation for every later peer.**
+
+What the round trip **did** prove: the contract shape holds against two real running products, and
+one operator-mediated exchange completed in both directions. What it 🚫 **does not** prove, and must
+never be reported as: ecosystem integration being complete, rung 6, or production machine-to-machine
+integration. ⚠️ The exercise's own lesson — the adapter's first envelope was **refused by AGE while
+both typecheckers and every unit test on both sides were green** — is the reason rung 4 is named a
+liar's rung in `EI_00`.
+
+🛠️ **Use RankOps as the first real implementation and verification reference**, and then repeat the
+**same** contract pattern for the others. 🚫 **Do not design a second integration architecture.**
+
 ### 🛑 What does NOT make E2 complete
 
 - 🚫 AGE has an endpoint.
@@ -232,6 +293,48 @@ on it within its own domain. 🚫 Manually inspecting the JSON is not consumptio
 The validation is performed against the **actual repositories and actual running implementations** —
 🚫 not mocked contract tests.
 
+#### 🛑 E2.3a — The acceptance chain, in full, for every peer
+
+🛑 **This is the test. All nine links, in this order, or the peer is not complete.** ⚠️ It is stated
+as one closed loop on purpose: the two-direction phrasing above lets a program pass by running two
+independent halves that never meet.
+
+```
+1  AGE onboarding / discovery establishes the canonical context   (§E0.2)
+2  AGE projection renders it per age.peer.v1                      (row 12)
+3  the peer's own adapter receives it                             (rung 3)
+4  the peer CONSUMES it — 🚫 not inspects it                      (§E2.2)
+5  the peer performs its own domain operation USING that context
+6  the peer produces an AGE-admissible observation from that work
+7  AGE relay / acceptance — admitted, carried, or refused, honestly
+8  AGE reasoning over it                                          (D1/D2/D7)
+9  read-back: the result reaches the projection the peer next reads
+```
+
+⚠️ **Link 5 is the one a passing-looking run most easily omits**, and it is where the requirement
+actually lives. A peer that consumes the projection and then does its domain work from its _own_
+notion of the client has failed §E0.2 while every byte on the wire looked correct.
+
+⚠️ **Link 9 closes the loop and is not decoration.** Until a peer's own contribution can come back to
+it through AGE's reasoning, AGE is a relay with extra steps. 🛑 And link 9 is where ADR-0069 **D7**
+bites: with one producer the honest read-back is `single-producer`, so 🚫 **a green chain is still
+not "AGE produces cross-product intelligence"** until a **second** peer relays against the same
+subjects.
+
+#### 🛑 E2.3b — Completion is checked in BOTH repositories, per peer
+
+🛑 **A peer integration is not complete because AGE can generate the document, and 🚫 not because
+the contract exists.** Both sides are inspected, by commit:
+
+| Side     | What is checked                                                                         |
+| -------- | --------------------------------------------------------------------------------------- |
+| **AGE**  | the projection/contract side — what it emits, what it refuses, what it names as unknown |
+| **Peer** | the adapter/consumer side — that it consumes, and that it does 🚫 not reconstruct §E0.2 |
+
+⚠️ **The peer half is the half no AGE-side gate can see.** Every AGE test can be green while the peer
+adapter quietly rebuilds the client's services from its own database — which is precisely the
+failure §E0.2 exists to prevent. 🚫 A peer's self-report is not the check; the repository is.
+
 ### E2.4 — The evidence record (all nine fields, or the round did not happen)
 
 Recorded in `docs/reviews/` as the first ecosystem integration proof:
@@ -274,6 +377,21 @@ version it** (§E1.1); a contract that needed reshaping for its second consumer 
 ## E4 — Ecosystem expansion
 
 After the reference contract has survived two real peer integrations, extend to the remaining peers.
+
+**The roster, and one contract across all of it:** RankOps (reference) → Content Intelligence →
+MCP Ads Server → SNARA → Humantik → future third parties.
+
+> 🛑 **Owner requirement, standing:** 🚫 **do not create a separate integration architecture for
+> every product.** The bar for a second architecture is that `age.peer.v1` **genuinely cannot express
+> the required semantic exchange** — 🚫 not that it is awkward, 🚫 not that the peer's own model is
+> shaped differently, and 🚫 not that an escape hatch would be quicker. ⚠️ **The peer adapts to AGE's
+> admissibility model, never the reverse** (#333/#334 established this against a real peer), and 🚫 no
+> peer-specific store, table, field or domain escape hatch exists inside AGE.
+
+⚠️ If a peer really cannot be expressed, that is a finding about the **contract**, and the response is
+a versioned change to the one contract (§E1.1) with a `Proposed` ADR — 🚫 never a second contract
+living beside it.
+
 Each integration must have all eight:
 
 - AGE-side contract implementation · peer-side adapter/client implementation · entitlement/scope
@@ -301,5 +419,24 @@ hold:
 9. Actual repository commits/versions were recorded (§E2.4).
 10. **At least one second peer** completed the same contract pattern, proving RankOps was not a
     one-off special case.
+11. **The canonical context is established by AGE discovery** and projected (§E0.2) — 🚫 each peer
+    does not reconstruct the organisation's identity, services, audiences, geographies, priorities
+    or constraints for itself.
+12. **The full acceptance chain (§E2.3a) ran**, links 1–9 in order, including link 5 — the peer
+    performed its own domain operation **using** AGE's context.
 
-⚠️ Nine of ten is not done, and 🚫 the missing one is never reported as a rounding error.
+⚠️ **Eleven of twelve is not done, and 🚫 the missing one is never reported as a rounding error.**
+
+### ⚠️ Where the program stands against these twelve (2026-08-15)
+
+| Item       | State                                                                                         |
+| ---------- | --------------------------------------------------------------------------------------------- |
+| 1          | ⚠️ **partial** — ADR-0069/0071 accepted; gaps B (ADR-0072, `Proposed`) and C (unwritten) open |
+| 2, 3       | ✅ RankOps only                                                                               |
+| 4, 5, 6, 7 | ⚠️ **operator-mediated only** — real on both sides, 🚫 never unattended                       |
+| 8, 9       | ✅ #333/#334, recorded                                                                        |
+| 10         | 🛑 not started — no second peer                                                               |
+| 11         | 🛑 **not measured** — §E0.2a                                                                  |
+| 12         | 🛑 link 5 never exercised                                                                     |
+
+🚫 **This table is the honest report. "RankOps is integrated" is not.**
