@@ -26,9 +26,25 @@ import {
  * exists — and worse, would collect a real business's answers under an id that
  * names nothing.
  */
-export function DiscoveryScreen({ clientId }: { readonly clientId: string }) {
+/**
+ * 🛑 **`entitledOrganizationId` COMES FROM THE ROUTE PAGE'S VERIFIED SESSION
+ * ROW** (AGE-INV-SEL-1, ADR-0074 §7 slice 3), 🚫 never from the URL. A server
+ * component's props are not browser-reachable, so there is nothing here for a
+ * caller to forge — and 🚫 there is no default: a page that forgets to say
+ * whose data it is rendering does not compile.
+ *
+ * ⚠️ The `clientId` still comes off the URL, and that is fine. It is a FILTER
+ * applied inside the entitlement, 🚫 not the thing that establishes it.
+ */
+export function DiscoveryScreen({
+  entitledOrganizationId,
+  clientId,
+}: {
+  readonly entitledOrganizationId: string;
+  readonly clientId: string;
+}) {
   const area = STUDIO_AREAS.find((candidate) => candidate.id === 'discovery');
-  const scope = resolveBusinessScope(clientId);
+  const scope = resolveBusinessScope(entitledOrganizationId, clientId);
 
   if (scope.kind !== 'resolved') {
     return (
@@ -58,7 +74,7 @@ export function DiscoveryScreen({ clientId }: { readonly clientId: string }) {
     );
   }
 
-  const outcome = readDiscoveryDraft(clientId);
+  const outcome = readDiscoveryDraft(entitledOrganizationId, clientId);
 
   /**
    * ⚠️ THE OTHER CHANNEL, SAID OUT LOUD ON THIS SCREEN. The form's own count is
@@ -71,7 +87,7 @@ export function DiscoveryScreen({ clientId }: { readonly clientId: string }) {
    * exactly as it is: a combined number would be a completeness across two
    * channels that AGE does not compute (ADR-0073 D2/D5).
    */
-  const confirmed = readSourceConfirmations(clientId);
+  const confirmed = readSourceConfirmations(entitledOrganizationId, clientId);
   const confirmedView = presentSourceConfirmedChannel(
     confirmed.kind === 'loaded'
       ? { kind: 'read', questionCount: confirmed.draft.answers.length }

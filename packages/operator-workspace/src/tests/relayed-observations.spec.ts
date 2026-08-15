@@ -82,7 +82,12 @@ describe('readRelayedObservations', () => {
     const runtime = configuredRuntime();
     const { port, calls } = portReturning([OBSERVATION]);
 
-    const outcome = await readRelayedObservations(runtime, () => port, 'fictional-client-1');
+    const outcome = await readRelayedObservations(
+      runtime,
+      () => port,
+      'org-fictional-1',
+      'fictional-client-1',
+    );
 
     expect(outcome.kind).toBe('read');
     if (outcome.kind === 'read') {
@@ -100,6 +105,7 @@ describe('readRelayedObservations', () => {
     const outcome = await readRelayedObservations(
       runtime,
       () => portReturning([]).port,
+      'org-fictional-1',
       'fictional-client-1',
     );
 
@@ -130,7 +136,12 @@ describe('readRelayedObservations', () => {
       },
     };
 
-    const outcome = await readRelayedObservations(runtime, () => port, 'fictional-client-1');
+    const outcome = await readRelayedObservations(
+      runtime,
+      () => port,
+      'org-fictional-1',
+      'fictional-client-1',
+    );
 
     expect(outcome.kind).toBe('refused');
     if (outcome.kind === 'refused') {
@@ -146,6 +157,7 @@ describe('readRelayedObservations', () => {
       () => {
         throw new Error('AGE_CAPTURE_DATABASE_URL is not set.');
       },
+      'org-fictional-1',
       'fictional-client-1',
     );
 
@@ -164,6 +176,7 @@ describe('readRelayedObservations', () => {
         opened += 1;
         return portReturning([]).port;
       },
+      'org-fictional-1',
       'fictional-client-absent',
     );
 
@@ -185,6 +198,7 @@ describe('readRelayedObservations', () => {
         opened += 1;
         return portReturning([]).port;
       },
+      'org-fictional-1',
       'fictional-client-1',
     );
 

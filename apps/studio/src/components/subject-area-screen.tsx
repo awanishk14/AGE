@@ -20,13 +20,16 @@ import { resolveBusinessScope, type BusinessScope } from '@/server/operator-envi
  */
 export function SubjectAreaScreen({
   area: areaId,
+  entitledOrganizationId,
   clientId,
 }: {
   readonly area: string;
+  /** 🛑 The verified session's organization — AGE-INV-SEL-1. 🚫 Never the URL. */
+  readonly entitledOrganizationId: string;
   readonly clientId: string;
 }) {
   const area = STUDIO_AREAS.find((candidate) => candidate.id === areaId);
-  const scope = resolveBusinessScope(clientId);
+  const scope = resolveBusinessScope(entitledOrganizationId, clientId);
 
   if (area === undefined) {
     return (

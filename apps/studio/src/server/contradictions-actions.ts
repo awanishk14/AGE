@@ -1,6 +1,7 @@
 'use server';
 
 import { reportContradictions, type ContradictionsOutcome } from './operator-environment';
+import { requireVerifiedSession } from './session-boundary';
 
 /**
  * The one thing the operator can do on the Contradictions screen.
@@ -11,10 +12,23 @@ import { reportContradictions, type ContradictionsOutcome } from './operator-env
  * ⚠️ An ACTION, never page data — reporting on open would make opening the
  * screen the act, and a recompute-on-open is class 3 under ADR-0057 D4 even
  * though its effect is entirely internal.
+ *
+ * 🛑 **THE ACTION ESTABLISHES ITS OWN ENTITLEMENT** (AGE-INV-SEL-1, ADR-0074 §7
+ * slice 3). A `'use server'` function is a BROWSER-REACHABLE ENDPOINT, so the
+ * `requireVerifiedSession()` call on the page that renders the button protects
+ * the PAGE and 🚫 nothing else. 🚫 Do not remove this call on the grounds that
+ * "the screen is already behind the boundary" — the screen is not what is
+ * being called.
+ *
+ * ⚠️ The organization comes from the SESSION ROW, 🚫 never from an argument: an
+ * argument would let the caller name whose data it wants, which is the exact
+ * chain this invariant forbids.
  */
 export async function reportContradictionsAction(
   clientId: string,
   changedBy: string,
 ): Promise<ContradictionsOutcome> {
-  return reportContradictions(clientId, changedBy);
+  const session = await requireVerifiedSession();
+
+  return reportContradictions(session.organizationId, clientId, changedBy);
 }

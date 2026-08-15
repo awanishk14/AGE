@@ -293,7 +293,12 @@ describe('a BIF produced from both intake channels', () => {
   it('carries a confirmed answer into the BIF, still labelled as confirmed', () => {
     const runtime = configuredRuntime();
 
-    const submitted = submitDiscoveryAnswers(runtime, CLIENT.clientId, answeredDraft());
+    const submitted = submitDiscoveryAnswers(
+      runtime,
+      'org-fictional-73',
+      CLIENT.clientId,
+      answeredDraft(),
+    );
     expect(submitted.kind, JSON.stringify(submitted)).toBe('written');
 
     // ⚠️ A question the answer file does NOT answer — the two channels stay two.
@@ -305,7 +310,12 @@ describe('a BIF produced from both intake channels', () => {
     });
     expect(recorded.kind, JSON.stringify(recorded)).toBe('recorded');
 
-    const outcome = generateBifFromAnswerFile(runtime, CLIENT.clientId, CONFIRMED_BY);
+    const outcome = generateBifFromAnswerFile(
+      runtime,
+      'org-fictional-73',
+      CLIENT.clientId,
+      CONFIRMED_BY,
+    );
     expect(outcome.kind, JSON.stringify(outcome)).toBe('generated');
     if (outcome.kind !== 'generated') return;
 
@@ -325,7 +335,12 @@ describe('a BIF produced from both intake channels', () => {
     const runtime = configuredRuntime();
 
     // ⚠️ The answer file answers everything, including the question below.
-    const submitted = submitDiscoveryAnswers(runtime, CLIENT.clientId, answeredDraft());
+    const submitted = submitDiscoveryAnswers(
+      runtime,
+      'org-fictional-73',
+      CLIENT.clientId,
+      answeredDraft(),
+    );
     expect(submitted.kind, JSON.stringify(submitted)).toBe('written');
 
     const recorded = recordSourceConfirmation(runtime, CLIENT.clientId, {
@@ -336,7 +351,12 @@ describe('a BIF produced from both intake channels', () => {
     });
     expect(recorded.kind, JSON.stringify(recorded)).toBe('recorded');
 
-    const outcome = generateBifFromAnswerFile(runtime, CLIENT.clientId, CONFIRMED_BY);
+    const outcome = generateBifFromAnswerFile(
+      runtime,
+      'org-fictional-73',
+      CLIENT.clientId,
+      CONFIRMED_BY,
+    );
     expect(outcome.kind).toBe('refused');
     if (outcome.kind !== 'refused') return;
     expect(outcome.reason).toContain(FIRST_QUESTION.id);
@@ -359,13 +379,23 @@ describe('a BIF produced from both intake channels', () => {
     });
     expect(recorded.kind, JSON.stringify(recorded)).toBe('recorded');
 
-    const outcome = generateBifFromAnswerFile(runtime, CLIENT.clientId, CONFIRMED_BY);
+    const outcome = generateBifFromAnswerFile(
+      runtime,
+      'org-fictional-73',
+      CLIENT.clientId,
+      CONFIRMED_BY,
+    );
     expect(outcome.kind, JSON.stringify(outcome)).toBe('generated');
   });
 
   /** ⚠️ And with NEITHER channel it is still "not submitted", not an empty BIF. */
   it('still reports no answer file when neither channel holds anything', () => {
-    const outcome = generateBifFromAnswerFile(configuredRuntime(), CLIENT.clientId, CONFIRMED_BY);
+    const outcome = generateBifFromAnswerFile(
+      configuredRuntime(),
+      'org-fictional-73',
+      CLIENT.clientId,
+      CONFIRMED_BY,
+    );
     expect(outcome.kind).toBe('no-answer-file');
   });
 });

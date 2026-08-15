@@ -71,6 +71,7 @@ export async function readDerivedIntelligence(
   runtime: OperatorWorkspaceRuntime,
   openContextRead: OpenSnapshotRead,
   openObservationRead: OpenObservationRead,
+  entitledOrganizationId: string,
   clientId: string,
   bifId: string,
 ): Promise<DerivedIntelligenceOutcome> {
@@ -86,7 +87,7 @@ export async function readDerivedIntelligence(
     };
   }
 
-  const scope = resolveBusinessScope(runtime, clientId);
+  const scope = resolveBusinessScope(runtime, entitledOrganizationId, clientId);
   if (scope.kind === 'not-configured') {
     return { kind: 'not-configured', variable: scope.variable };
   }

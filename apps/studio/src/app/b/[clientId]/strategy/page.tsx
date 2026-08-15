@@ -7,8 +7,14 @@ export default async function Page({ params }: { readonly params: Promise<{ clie
   // does not return for an unadmitted caller — 🚫 there is no falsy value to
   // forget to check. A route contract test asserts this line precedes every
   // `@/server/*` call in this file.
-  await requireVerifiedSession();
+  const session = await requireVerifiedSession();
 
   const { clientId } = await params;
-  return <SubjectAreaScreen area="strategy" clientId={clientId} />;
+  return (
+    <SubjectAreaScreen
+      area="strategy"
+      entitledOrganizationId={session.organizationId}
+      clientId={clientId}
+    />
+  );
 }

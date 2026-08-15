@@ -127,6 +127,7 @@ describe('readClientContextProjection', () => {
     const outcome = await readClientContextProjection(
       runtime,
       h.openContext,
+      'org-fictional-1',
       'fictional-client-1',
       'bif-fictional',
     );
@@ -148,6 +149,7 @@ describe('readClientContextProjection', () => {
     const outcome = await readClientContextProjection(
       runtime,
       harness(storedRecord()).openContext,
+      'org-fictional-1',
       'fictional-client-1',
       'bif-fictional',
     );
@@ -162,6 +164,7 @@ describe('readClientContextProjection', () => {
     await readClientContextProjection(
       runtime,
       h.openContext,
+      'org-fictional-1',
       'fictional-client-1',
       'bif-fictional',
     );
@@ -177,6 +180,7 @@ describe('readClientContextProjection', () => {
     const outcome = await readClientContextProjection(
       runtime,
       harness(null).openContext,
+      'org-fictional-1',
       'fictional-client-1',
       'bif-fictional',
     );
@@ -196,6 +200,7 @@ describe('readClientContextProjection', () => {
     const outcome = await readClientContextProjection(
       runtime,
       h.openContext,
+      'org-fictional-1',
       'not-a-client',
       'bif-fictional',
     );
@@ -213,6 +218,7 @@ describe('readClientContextProjection', () => {
     const outcome = await readClientContextProjection(
       runtime,
       h.openContext,
+      'org-fictional-1',
       'fictional-client-1',
       '   ',
     );
@@ -230,6 +236,7 @@ describe('readClientContextProjection', () => {
     const outcome = await readClientContextProjection(
       runtime,
       h.openContext,
+      'org-fictional-1',
       'fictional-client-1',
       'bif-fictional',
     );
@@ -246,6 +253,7 @@ describe('readClientContextProjection', () => {
     const outcome = await readClientContextProjection(
       runtime,
       harness(null, { openThrows: true }).openContext,
+      'org-fictional-1',
       'fictional-client-1',
       'bif-fictional',
     );
@@ -263,6 +271,7 @@ describe('readClientContextProjection', () => {
     const outcome = await readClientContextProjection(
       runtime,
       h.openContext,
+      'org-fictional-1',
       'fictional-client-1',
       'bif-fictional',
     );

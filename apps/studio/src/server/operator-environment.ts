@@ -116,7 +116,12 @@ const CONSOLE_RUNTIME: OperatorWorkspaceRuntime = {
   ensureDirectory: (path) => mkdirSync(path, { recursive: true }),
 };
 
+// ⚠️ IMPORTED, not merely re-exported — the source-confirmation wrappers below
+// CALL it, and a re-export puts nothing in this module's scope.
+import { refusalUnlessEntitled } from '@age/operator-workspace';
+
 export {
+  refusalUnlessEntitled,
   STUDIO_QUESTIONNAIRE,
   type BusinessScope,
   type CapabilityReadinessOutcome,
@@ -139,44 +144,84 @@ export {
   type SubmitOutcome,
 } from '@age/operator-workspace';
 
-export function readBusinessesView() {
-  return readBusinessesViewIn(CONSOLE_RUNTIME);
+/**
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🛑 **EVERY OPERATION THAT NAMES A BUSINESS NOW STATES WHOSE IT IS**
+ * (AGE-INV-SEL-1, ADR-0074 §7 slice 3).
+ *
+ * `entitledOrganizationId` comes from `requireVerifiedSession()` — the ROW, 🚫
+ * never a cookie, a header, a query string or a route parameter. 🚫 There is no
+ * default and no optional form: a page that forgets to say whose data it wants
+ * does not compile.
+ *
+ * ⚠️ **THE `clientId` STILL COMES OFF THE URL, AND THAT IS FINE.** It is now a
+ * FILTER applied inside the entitlement, 🚫 not the thing that establishes it.
+ * Naming an id the entitlement does not cover is a no-op that refuses in the
+ * same words as an id that exists nowhere.
+ * ────────────────────────────────────────────────────────────────────────────
+ */
+export function readBusinessesView(entitledOrganizationId: string) {
+  return readBusinessesViewIn(CONSOLE_RUNTIME, entitledOrganizationId);
 }
 
-export function resolveBusinessScope(clientId: string) {
-  return resolveBusinessScopeIn(CONSOLE_RUNTIME, clientId);
+export function resolveBusinessScope(entitledOrganizationId: string, clientId: string) {
+  return resolveBusinessScopeIn(CONSOLE_RUNTIME, entitledOrganizationId, clientId);
 }
 
 export function createClientRecord(draft: ClientRecordDraft) {
   return createClientRecordIn(CONSOLE_RUNTIME, draft);
 }
 
-export function readDiscoveryDraft(clientId: string) {
-  return readDiscoveryDraftIn(CONSOLE_RUNTIME, clientId);
+export function readDiscoveryDraft(entitledOrganizationId: string, clientId: string) {
+  return readDiscoveryDraftIn(CONSOLE_RUNTIME, entitledOrganizationId, clientId);
 }
 
-export function writeDiscoveryDraft(clientId: string, draft: DiscoveryDraft) {
-  return writeDiscoveryDraftIn(CONSOLE_RUNTIME, clientId, draft);
+export function writeDiscoveryDraft(
+  entitledOrganizationId: string,
+  clientId: string,
+  draft: DiscoveryDraft,
+) {
+  return writeDiscoveryDraftIn(CONSOLE_RUNTIME, entitledOrganizationId, clientId, draft);
 }
 
-export function submitDiscoveryAnswers(clientId: string, draft: DiscoveryDraft) {
-  return submitDiscoveryAnswersIn(CONSOLE_RUNTIME, clientId, draft);
+export function submitDiscoveryAnswers(
+  entitledOrganizationId: string,
+  clientId: string,
+  draft: DiscoveryDraft,
+) {
+  return submitDiscoveryAnswersIn(CONSOLE_RUNTIME, entitledOrganizationId, clientId, draft);
 }
 
-export function generateBifFromAnswerFile(clientId: string, changedBy: string) {
-  return generateBifFromAnswerFileIn(CONSOLE_RUNTIME, clientId, changedBy);
+export function generateBifFromAnswerFile(
+  entitledOrganizationId: string,
+  clientId: string,
+  changedBy: string,
+) {
+  return generateBifFromAnswerFileIn(CONSOLE_RUNTIME, entitledOrganizationId, clientId, changedBy);
 }
 
-export function assembleEvidence(clientId: string, changedBy: string) {
-  return assembleEvidenceIn(CONSOLE_RUNTIME, clientId, changedBy);
+export function assembleEvidence(
+  entitledOrganizationId: string,
+  clientId: string,
+  changedBy: string,
+) {
+  return assembleEvidenceIn(CONSOLE_RUNTIME, entitledOrganizationId, clientId, changedBy);
 }
 
-export function reportContradictions(clientId: string, changedBy: string) {
-  return reportContradictionsIn(CONSOLE_RUNTIME, clientId, changedBy);
+export function reportContradictions(
+  entitledOrganizationId: string,
+  clientId: string,
+  changedBy: string,
+) {
+  return reportContradictionsIn(CONSOLE_RUNTIME, entitledOrganizationId, clientId, changedBy);
 }
 
-export function assessCapabilityReadiness(clientId: string, changedBy: string) {
-  return assessCapabilityReadinessIn(CONSOLE_RUNTIME, clientId, changedBy);
+export function assessCapabilityReadiness(
+  entitledOrganizationId: string,
+  clientId: string,
+  changedBy: string,
+) {
+  return assessCapabilityReadinessIn(CONSOLE_RUNTIME, entitledOrganizationId, clientId, changedBy);
 }
 
 /**
@@ -211,14 +256,31 @@ export function readOperatorSourceDocument(options: ReadOperatorSourceDocumentOp
  * fix. 🚫 It writes ONE file in the operator's own workspace, 🚫 never the answer
  * file, and 🚫 nothing reaches a database, AGE or a peer.
  */
-export function readSourceConfirmations(clientId: string): SourceConfirmationsOutcome {
+export function readSourceConfirmations(
+  entitledOrganizationId: string,
+  clientId: string,
+): SourceConfirmationsOutcome {
+  // 🛑 GATED HERE, 🚫 not inside `@age/operator-workspace`'s draft module —
+  // gating it there would make `operator-workspace.ts` import the module that
+  // imports it. The gate is the SAME function the workspace operations use, so
+  // there is still exactly one implementation of the rule.
+  const unentitled = refusalUnlessEntitled(CONSOLE_RUNTIME, entitledOrganizationId, clientId);
+  if (unentitled !== undefined) return unentitled;
+
   return readSourceConfirmationsIn(CONSOLE_RUNTIME, clientId);
 }
 
 export function recordSourceConfirmation(
+  entitledOrganizationId: string,
   clientId: string,
   options: RecordSourceConfirmationOptions,
 ): RecordSourceConfirmationOutcome {
+  // ⚠️ THE WRITE DOOR, GATED TOO. A gate on the read alone would leave a caller
+  // unable to see another organization's confirmations and still able to append
+  // to them.
+  const unentitled = refusalUnlessEntitled(CONSOLE_RUNTIME, entitledOrganizationId, clientId);
+  if (unentitled !== undefined) return unentitled;
+
   return recordSourceConfirmationIn(CONSOLE_RUNTIME, clientId, options);
 }
 
@@ -244,6 +306,7 @@ export function recordSourceConfirmation(
  * a row, and 🛑 no screen may seed one to make this panel look populated.
  */
 export function readStoredSnapshot(
+  entitledOrganizationId: string,
   clientId: string,
   bifId: string,
 ): Promise<StoredSnapshotOutcome> {
@@ -255,6 +318,7 @@ export function readStoredSnapshot(
           acknowledgedRemote: CONSOLE_DATABASE_ACKNOWLEDGEMENT,
         }),
       ),
+    entitledOrganizationId,
     clientId,
     bifId,
   );
@@ -424,7 +488,10 @@ export function boundPort(): number {
  * 🛑 AN EMPTY ANSWER IS A NAMED STATE, never an empty panel — and 🚫 no screen
  * may seed a row to make this look populated (ADR-0064 D2).
  */
-export function readRelayedObservations(clientId: string): Promise<RelayedObservationsOutcome> {
+export function readRelayedObservations(
+  entitledOrganizationId: string,
+  clientId: string,
+): Promise<RelayedObservationsOutcome> {
   return readRelayedObservationsIn(
     CONSOLE_RUNTIME,
     () =>
@@ -433,6 +500,7 @@ export function readRelayedObservations(clientId: string): Promise<RelayedObserv
           acknowledgedRemote: CONSOLE_DATABASE_ACKNOWLEDGEMENT,
         }),
       ),
+    entitledOrganizationId,
     clientId,
   );
 }
@@ -456,6 +524,7 @@ export function readRelayedObservations(clientId: string): Promise<RelayedObserv
  * and 🚫 no screen may seed a row to make it look populated (ADR-0064 D2).
  */
 export function readDerivedIntelligence(
+  entitledOrganizationId: string,
   clientId: string,
   bifId: string,
 ): Promise<DerivedIntelligenceOutcome> {
@@ -473,6 +542,7 @@ export function readDerivedIntelligence(
           acknowledgedRemote: CONSOLE_DATABASE_ACKNOWLEDGEMENT,
         }),
       ),
+    entitledOrganizationId,
     clientId,
     bifId,
   );
@@ -496,6 +566,7 @@ export function readDerivedIntelligence(
  * and it does not become reachable by being adjacent to this one.
  */
 export function readClientContextProjection(
+  entitledOrganizationId: string,
   clientId: string,
   bifId: string,
 ): Promise<ClientContextProjectionOutcome> {
@@ -507,6 +578,7 @@ export function readClientContextProjection(
           acknowledgedRemote: CONSOLE_DATABASE_ACKNOWLEDGEMENT,
         }),
       ),
+    entitledOrganizationId,
     clientId,
     bifId,
   );

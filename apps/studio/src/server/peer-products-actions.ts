@@ -10,6 +10,7 @@ import {
   readRelayedObservations,
   type RelayedObservationsOutcome,
 } from './operator-environment';
+import { requireVerifiedSession } from './session-boundary';
 
 /**
  * The one thing the operator can do on the Peer Products screen: read what has
@@ -24,11 +25,17 @@ import {
  * relay is a separate, operator-mediated act on a separate path (ADR-0069 D3),
  * and a "just add one" button on a read screen would be that act arriving
  * without its own decision.
+ *
+ * 🛑 **IT ESTABLISHES ITS OWN ENTITLEMENT** (AGE-INV-SEL-1, ADR-0074 §7 slice
+ * 3). A `'use server'` function is a BROWSER-REACHABLE ENDPOINT; the page's
+ * boundary protects the PAGE and 🚫 nothing else.
  */
 export async function readRelayedObservationsAction(
   clientId: string,
 ): Promise<RelayedObservationsOutcome> {
-  return readRelayedObservations(clientId);
+  const session = await requireVerifiedSession();
+
+  return readRelayedObservations(session.organizationId, clientId);
 }
 
 /**
@@ -73,7 +80,13 @@ export async function readClientContextProjectionAction(
   clientId: string,
   bifId: string,
 ): Promise<ClientContextProjectionViewOutcome> {
-  const outcome = await readClientContextProjection(clientId, bifId);
+  // 🛑 ENTITLED BEFORE ANYTHING IS PROJECTED, and 🚫 from the session row rather
+  // than from an argument (AGE-INV-SEL-1, ADR-0074 §7 slice 3). ⚠️ The
+  // `organizationId` this action RETURNS still comes from the outcome, not from
+  // the session — it is what AGE would tell the peer, 🚫 not a restatement of
+  // who asked.
+  const session = await requireVerifiedSession();
+  const outcome = await readClientContextProjection(session.organizationId, clientId, bifId);
 
   // ⚠️ Every non-`projected` arm travels WHOLE, refusals included — a refusal is
   // a result here, never an exception the screen has to invent words for.

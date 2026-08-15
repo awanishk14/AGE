@@ -113,9 +113,10 @@ export const NONE_RELAYED_REASON =
 export async function readRelayedObservations(
   runtime: OperatorWorkspaceRuntime,
   openRead: OpenObservationRead,
+  entitledOrganizationId: string,
   clientId: string,
 ): Promise<RelayedObservationsOutcome> {
-  const scope = resolveBusinessScope(runtime, clientId);
+  const scope = resolveBusinessScope(runtime, entitledOrganizationId, clientId);
   if (scope.kind === 'not-configured') {
     return { kind: 'not-configured', variable: scope.variable };
   }

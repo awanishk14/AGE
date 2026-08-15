@@ -4,10 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { BusinessScope } from '@/server/operator-environment';
 
-const resolveBusinessScope = vi.fn<(clientId: string) => BusinessScope>();
+const resolveBusinessScope =
+  vi.fn<(entitledOrganizationId: string, clientId: string) => BusinessScope>();
 
 vi.mock('@/server/operator-environment', () => ({
-  resolveBusinessScope: (clientId: string) => resolveBusinessScope(clientId),
+  resolveBusinessScope: (entitledOrganizationId: string, clientId: string) =>
+    resolveBusinessScope(entitledOrganizationId, clientId),
 }));
 
 const { SubjectAreaScreen } = await import('./subject-area-screen');
@@ -31,7 +33,7 @@ describe('SubjectAreaScreen', () => {
 
     it('names the business and its organization on the screen', () => {
       // ⚠️ A scope shown in the URL but not on the page is easy to misread.
-      render(<SubjectAreaScreen area="history" clientId="c-1" />);
+      render(<SubjectAreaScreen area="history" entitledOrganizationId="org-a" clientId="c-1" />);
 
       expect(screen.getByText('Fictional c-1')).toBeDefined();
       expect(screen.getByText('(c-1)')).toBeDefined();
@@ -39,7 +41,7 @@ describe('SubjectAreaScreen', () => {
     });
 
     it('still says the area is not wired, and why', () => {
-      render(<SubjectAreaScreen area="history" clientId="c-1" />);
+      render(<SubjectAreaScreen area="history" entitledOrganizationId="org-a" clientId="c-1" />);
 
       expect(screen.getByText('This screen is not wired yet')).toBeDefined();
       expect(screen.getByText(/ADR-0055 D7/)).toBeDefined();
@@ -47,7 +49,7 @@ describe('SubjectAreaScreen', () => {
     });
 
     it('keeps every sibling link inside the same business', () => {
-      render(<SubjectAreaScreen area="history" clientId="c-1" />);
+      render(<SubjectAreaScreen area="history" entitledOrganizationId="org-a" clientId="c-1" />);
 
       const scoped = screen
         .getAllByRole('link')
@@ -67,7 +69,7 @@ describe('SubjectAreaScreen', () => {
       // real business that happens to be empty.
       resolveBusinessScope.mockReturnValue({ kind: 'unknown-client', clientId: 'ghost' });
 
-      render(<SubjectAreaScreen area="history" clientId="ghost" />);
+      render(<SubjectAreaScreen area="history" entitledOrganizationId="org-a" clientId="ghost" />);
 
       expect(screen.getByText(/No record carries that business/)).toBeDefined();
       expect(screen.getByText(/a scope into circulation that names nothing/)).toBeDefined();
@@ -79,7 +81,9 @@ describe('SubjectAreaScreen', () => {
       // clients' names and must not appear in a refusal.
       resolveBusinessScope.mockReturnValue({ kind: 'unknown-client', clientId: 'ghost' });
 
-      const { container } = render(<SubjectAreaScreen area="history" clientId="ghost" />);
+      const { container } = render(
+        <SubjectAreaScreen area="history" entitledOrganizationId="org-a" clientId="ghost" />,
+      );
       expect(container.textContent).not.toContain('Fictional');
     });
   });
@@ -91,7 +95,7 @@ describe('SubjectAreaScreen', () => {
         variable: 'AGE_CLIENT_RECORD_FILE',
       });
 
-      render(<SubjectAreaScreen area="discovery" clientId="c-1" />);
+      render(<SubjectAreaScreen area="discovery" entitledOrganizationId="org-a" clientId="c-1" />);
 
       expect(screen.getByText(/The business could not be resolved/)).toBeDefined();
       expect(screen.getByText('AGE_CLIENT_RECORD_FILE')).toBeDefined();
@@ -106,7 +110,7 @@ describe('SubjectAreaScreen', () => {
         reason: 'The record at position 2 is not a valid ClientRecord',
       });
 
-      render(<SubjectAreaScreen area="history" clientId="c-1" />);
+      render(<SubjectAreaScreen area="history" entitledOrganizationId="org-a" clientId="c-1" />);
 
       expect(screen.getByText(/position 2/)).toBeDefined();
     });
