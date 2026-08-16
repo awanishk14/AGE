@@ -129,3 +129,43 @@ the path nobody uses is not a limit.** Both paths are checked separately now.
 
 🛑 **IT IS A TRANSPORT CONTROL, 🚫 NOT A SECOND AUTHENTICATION**, and 🚫 must never grow into one.
 The `429` carries no information about whether the token was correct — the same refusal rule as #353.
+
+### 2026-08-16 — finding 11 (INFORMATIONAL): the edge injects script into the authenticated console
+
+⚠️ **FOUND IN A REAL BROWSER ON THE PUBLISHED CONSOLE, 🚫 NOT BY ANY CHECK AVAILABLE ON THE BOX.**
+Cloudflare injects code into pages AGE serves. Measured, both halves:
+
+| Injected asset                                    | Origin CSP verdict                                                                                 |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `static.cloudflareinsights.com/beacon.min.js`     | **BLOCKED** by `script-src 'self'` — `transferSize 0, duration 0, responseStatus 0`, never fetched |
+| `/cdn-cgi/challenge-platform/scripts/jsd/main.js` | **RUNS** — it is served under AGE's own origin, so `'self'` cannot tell it from AGE's code         |
+
+🛑 **THE SECOND ROW IS THE FINDING, 🚫 NOT THE FIRST.** A CSP cannot exclude the terminator that
+serves the origin; `/cdn-cgi/` is same-origin by construction. **The edge is inside the console's
+trust boundary and no header can move it out** — the only controls are at the edge account itself.
+🚫 Do not record this as "CSP blocks third-party script" and stop: that is true of one of the two.
+
+⚠️ It is INFORMATIONAL rather than higher because the edge already terminates TLS and therefore
+already sees every request and response in cleartext; the script grants it nothing it lacked. ⚠️ It
+is recorded because **the boundary diagram in §1 shows Cloudflare as transport, and it is not only
+transport.** The three "Deprecated feature used" console messages an operator sees come from that
+script, 🚫 not from AGE.
+
+🛠️ Owner action, 🚫 not a code change: disable Web Analytics / the challenge-platform script for
+this hostname in the Cloudflare account, or accept the injection knowingly.
+
+### 2026-08-16 — finding 12 (LOW, honesty): the bind card described one of two boundaries
+
+The Dashboard showed **`0.0.0.0:3100`**, marked **`Known`**, beside a sentence saying the value was
+_"checked against the one loopback policy"_. Both halves were individually true — after ADR-0076 D2 a
+containerised console binds every address of **its own namespace**, and the **publication**
+(`127.0.0.1:3100:3100`) is what confines it — but together they showed an operator a value the
+explanation beside it forbids.
+
+🛑 **A CARD THAT SHOWS A VALUE ITS OWN EXPLANATION FORBIDS TEACHES THE OPERATOR TO STOP READING THE
+EXPLANATION** — the same failure as the routine `404` in #363, one layer up. 🚫 It was not a security
+regression: the boundary was correct and re-proven from inside the container on this deploy.
+
+**FIXED** — the detail now names both boundaries and says AGE can observe **neither** the socket nor
+the publication. A guard pins that both are accounted for (🚫 it does not pin the prose), and was
+made to fail against the old copy before being kept.

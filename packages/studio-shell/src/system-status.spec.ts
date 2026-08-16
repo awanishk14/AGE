@@ -90,6 +90,27 @@ describe('presentSystemStatus', () => {
       expect(detail).toContain('necessary, not sufficient');
       expect(detail).not.toMatch(/unreachable|cannot be reached|guarantee/i);
     });
+
+    /**
+     * 🛑 FOUND IN A REAL BROWSER ON THE PUBLISHED CONSOLE, 🚫 NOT BY A TEST.
+     * After ADR-0076 D2 the card showed `0.0.0.0:3100` — correct for a
+     * container, whose bind is scoped to its own namespace — beside a sentence
+     * that said the value had been "checked against the one loopback policy",
+     * and marked it `Known`. 🚫 A CARD THAT SHOWS A VALUE ITS OWN EXPLANATION
+     * FORBIDS TEACHES THE OPERATOR TO STOP READING THE EXPLANATION.
+     *
+     * 🚫 This does not pin the prose. It pins the fact that BOTH boundaries in
+     * `ConsoleListenerBoundary` are accounted for, because a card describing one
+     * of two is the defect.
+     */
+    it('accounts for both bind boundaries, so a container value is not shown under a loopback-only sentence', () => {
+      const detail = facet('bind', input({ bindHost: '0.0.0.0' })).detail;
+
+      expect(facet('bind', input({ bindHost: '0.0.0.0' })).value).toBe('0.0.0.0:3100');
+      expect(detail).toMatch(/container/i);
+      expect(detail).toMatch(/publish/i);
+      expect(detail).not.toMatch(/the one loopback policy/i);
+    });
   });
 
   describe('client records', () => {
