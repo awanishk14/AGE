@@ -491,8 +491,74 @@ capability that does not exist** — the rule that removed "read-only" from the 
 
 ### 8.5 🚫 WHAT IS STILL NOT PROVEN
 
-- 🚫 **Rate limiting on sign-in is STILL ABSENT**, and it matters more now the door is public.
+- ⚠️ ~~Rate limiting on sign-in is STILL ABSENT~~ — **SHIPPED #360/#361**; see the security
+  baseline §6, including finding 10, the directive that passed `nginx -t` and did nothing.
 - 🚫 **ADR-0076 D8 IS OPEN**: AGE's own store is still published on `127.0.0.1:5442` for the
   host-side capture CLI, so a compromised **peer** can still reach AGE's database. That is the
   mirror image of the problem D1 solved and it is deliberately unresolved.
-- 🚫 The remaining real-browser acceptance checks and the product walkthrough — see the report.
+- ⚠️ ~~The remaining real-browser acceptance checks and the product walkthrough~~ — **DONE
+  2026-08-16, §9.**
+
+## 9. The acceptance walkthrough on the PUBLIC url, in a real browser (2026-08-16)
+
+🛑 **EVERY LINE HERE WAS DONE IN A BROWSER AGAINST `https://age.digitaldadi.agency`, 🚫 NOT WITH
+`curl` AND 🚫 NOT IN CI.** Three of the four defects below were invisible to every check available
+without opening the page.
+
+### 9.1 The boundary, as a person meets it
+
+| Presented                                           | Outcome                                                                                           |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| nothing                                             | `/sign-in`; the RSC probe carries only `NEXT_REDIRECT;replace;/sign-in;307;`, 🚫 no business data |
+| 64 zeros                                            | `?refused=1` — "That token was not accepted."                                                     |
+| a valid Operator 1 token                            | admitted                                                                                          |
+| a **revoked** token                                 | `?refused=1`, identically                                                                         |
+| a token for **another organization**                | `?refused=1`, identically                                                                         |
+| a live session, revoked **in the store beneath it** | the very next navigation went to `/sign-in`                                                       |
+
+🛑 **THE LAST ROW IS THE ONE WORTH KEEPING.** Revocation is not checked at the door and then trusted
+for the rest of the visit: `/businesses` was open, the row was revoked directly in the store, and the
+next request was refused. 🚫 A cookie is not a session.
+
+🛑 **THE CROSS-ORGANIZATION REFUSAL IS THE DESIGNED OUTCOME, 🚫 NOT A DEFECT — AND 🚫 NOT THE
+ISOLATION IT LOOKS LIKE.** `sessionLookupOrganizationId()` narrows the lookup to
+`AGE_STUDIO_ORGANIZATION_ID`, so a row in another organization is INVISIBLE and collapses into
+`no-such-session`. ⚠️ **THIS DEPLOYMENT SERVES ONE ORGANIZATION AND THAT IS A DECISION, NOT A GAP**
+(`operator-environment.ts`). 🚫 So it does **not** demonstrate two organizations coexisting and
+seeing only their own — that shape does not exist here, and 🚫 must not be claimed. ⚠️ **RLS remains
+coherence, never authorization** (ADR-0046 D5): what was proven is a refusal at the door.
+
+### 9.2 Forged selection
+
+`invented-does-not-exist`, `../fictional-kite-repairs` and `FICTIONAL-KITE-REPAIRS` each produced the
+**identical** refusal — _"No record carries that business… A BIF is refused rather than produced for
+an invented business."_ AGE-INV-SEL-1 holds on the public path.
+
+### 9.3 What the product actually does, area by area
+
+Ten areas rendered against one real business under one organization band. Six carry real scoped
+content — **discovery** ("3 questions answered from a document"), **sources**, **BIF**, **evidence**,
+**contradictions**, **intelligence**. Three say _"This screen is not wired yet"_ **with the reason**:
+**strategy** (gap G-12, no caller), **execution** (a V2 capability, `18_AGE_STUDIO.md` §2.1),
+**history** (ADR-0055 D7). The dashboard says **9 of 12 areas read a real source** and names the
+other three.
+
+🛑 **THE INTENDED BLOCKS ARE THE PRODUCT WORKING, 🚫 NOT THE PRODUCT MISSING.** Every unwired area
+states what is absent and why. 🚫 None of them shows a zero.
+
+### 9.4 The four defects the browser found, and only the browser
+
+1. **A `404` on `/favicon.ico` on every page load** — `apps/studio` shipped no icon. 🛑 A console
+   that prints a routine error teaches its operator to ignore errors. **FIXED #363.**
+2. **The bind card described one of two boundaries** — `0.0.0.0:3100`, `Known`, beside "the one
+   loopback policy". **FIXED #364**; security baseline finding 12.
+3. **The edge injects script into the authenticated console.** The external beacon is blocked by
+   `script-src 'self'`; `/cdn-cgi/challenge-platform/scripts/jsd/main.js` **runs**, because it is
+   same-origin by construction. 🛑 **NO HEADER CAN MOVE THE TERMINATOR OUT OF THE TRUST BOUNDARY.**
+   Baseline finding 11 — an **owner action at the Cloudflare account**, 🚫 not a code change.
+4. **The `age_app` password had been exposed** in a working transcript. **ROTATED on the box**, the
+   new value generated there and never placed in an argv or a log; the console was re-verified
+   admitting a session afterwards, which is what proves the rotation took.
+
+⚠️ **AFTERWARDS, EVERY ACCEPTANCE SESSION ROW WAS REVOKED — `WHERE revoked_at IS NULL` RETURNS ZERO
+ROWS.** 🚫 A token that appeared in a transcript must not stay live because the walkthrough ended.
