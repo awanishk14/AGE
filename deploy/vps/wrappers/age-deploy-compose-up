@@ -1,0 +1,54 @@
+#!/bin/bash
+#
+# ADR-0077 D3 wrapper 1 of 4 — bring AGE Studio up.
+#
+# 🛑 THIS FILE EXISTS SO THAT `age-deploy` NEVER HOLDS THE DOCKER SOCKET.
+# `docker` group membership and `sudo docker <free arguments>` are both root:
+# `docker run -v /:/host` needs nothing else. The only way a deploy account may
+# touch Docker is through an operation whose arguments it does not choose.
+#
+# 🚫 TAKES NO ARGUMENTS. 🚫 Reads no environment variable from the caller.
+# 🚫 Every path below is a literal — a caller-supplied path is a caller-supplied
+# root write, and a caller-supplied uid is a caller-supplied privilege.
+
+set -euo pipefail
+
+if [ "$#" -ne 0 ]; then
+  echo "REFUSED: ${0} takes no arguments; it was given $#." >&2
+  exit 2
+fi
+
+CHECKOUT='/home/age-deploy/age'
+COMPOSE='/home/age-deploy/age/deploy/vps/compose/docker-compose.studio.yml'
+RECORD='/var/lib/age-operator/clients.json'
+WORKSPACE='/var/lib/age-operator/workspace'
+
+if [ ! -f "$COMPOSE" ]; then
+  echo "REFUSED: the composition is not at its fixed path." >&2
+  exit 2
+fi
+
+# 🛑 THE UID IS DERIVED FROM THE RECORD FILE, 🚫 NOT CHOSEN AND 🚫 NOT PASSED IN.
+# ADR-0076: the console runs as the owner of the file it must open, so the
+# operator's 0600 record stays 0600 and no other account on this shared host
+# gains anything. 🚫 The repair for a permission fault is never `chmod o+r`.
+if ! uid="$(stat -c %u "$RECORD" 2>/dev/null)"; then
+  echo "REFUSED: cannot stat the operator record; nothing is guessed here." >&2
+  exit 2
+fi
+gid="$(stat -c %g "$RECORD")"
+
+if [ "$uid" = '0' ]; then
+  echo "REFUSED: the operator record is owned by root; the console must not run as root." >&2
+  exit 2
+fi
+
+cd "$CHECKOUT"
+
+AGE_VPS_DISCOVERY_WORKSPACE="$WORKSPACE" \
+AGE_VPS_CLIENT_RECORD_FILE="$RECORD" \
+AGE_STUDIO_UID="$uid" \
+AGE_STUDIO_GID="$gid" \
+  docker compose -f "$COMPOSE" up -d --build
+
+echo "    composed as ${uid}:${gid} — the owner of the record file"

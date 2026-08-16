@@ -1,0 +1,63 @@
+#!/bin/bash
+#
+# ADR-0077 D3 wrapper 3 of 4 — install AGE's vhost.
+#
+# 🛑 THE HOSTNAME IS A LITERAL, 🚫 NEVER AN ARGUMENT. `sudo tee "$VARIABLE"`
+# permits writing ANY peer's vhost, which is a route to serving a peer's
+# hostname from an AGE-controlled upstream. This wrapper can write exactly one
+# file and enable exactly one site.
+#
+# The vhost body arrives ON STDIN, so what runs on the box is byte-for-byte the
+# file in the repository and there is no second copy of the rules to drift.
+
+set -euo pipefail
+
+if [ "$#" -ne 0 ]; then
+  echo "REFUSED: ${0} takes no arguments; the vhost arrives on stdin." >&2
+  exit 2
+fi
+
+HOSTNAME_LITERAL='age.digitaldadi.agency'
+AVAILABLE='/etc/nginx/sites-available/age.digitaldadi.agency'
+ENABLED='/etc/nginx/sites-enabled/age.digitaldadi.agency'
+BACKUP='/etc/nginx/sites-available/.age.digitaldadi.agency.previous'
+
+body="$(cat)"
+
+if [ -z "$body" ]; then
+  echo "REFUSED: the vhost body is empty." >&2
+  exit 2
+fi
+
+# ⚠️ The body must actually be AGE's vhost. This is not a substitute for the
+# literals above — it is a check that the caller did not pipe something else.
+if ! printf '%s' "$body" | grep -q "server_name ${HOSTNAME_LITERAL}"; then
+  echo "REFUSED: the piped vhost does not name AGE's hostname." >&2
+  exit 2
+fi
+
+if [ -f "$AVAILABLE" ]; then
+  cp -p "$AVAILABLE" "$BACKUP"
+fi
+
+printf '%s\n' "$body" > "$AVAILABLE"
+chown root:root "$AVAILABLE"
+chmod 644 "$AVAILABLE"
+ln -sfn "$AVAILABLE" "$ENABLED"
+
+# 🛑 RELOAD ONLY IF THE CONFIGURATION PARSES — and restore if it does not.
+# ⚠️ ADR-0074 finding 10: a directive that passed `nginx -t` and did nothing is
+# still possible; `nginx -t` is the floor, 🚫 not the proof.
+if ! nginx -t; then
+  echo "REFUSED: nginx -t failed; restoring the previous vhost." >&2
+  if [ -f "$BACKUP" ]; then
+    cp -p "$BACKUP" "$AVAILABLE"
+  else
+    rm -f "$AVAILABLE" "$ENABLED"
+  fi
+  nginx -t || true
+  exit 1
+fi
+
+systemctl reload nginx
+echo "    vhost applied and nginx reloaded"

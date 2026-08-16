@@ -18,13 +18,12 @@
 # 🚫 **IT TAKES NO SECRET AND SETS NONE.** Nothing here reaches a database, mints
 # a token or reads a credential file, so there is no value that could land in a
 # remote argv (the defect #350 removed from the provisioning script). The only
-# inputs are a hostname and an email address for the certificate authority.
+# only input is a hostname.
 #
 # ⚠️ Usage, from the repository root, with ssh able to reach the box:
 #
-#     AGE_VPS_HOST=vps AGE_VPS_USER=drishti AGE_VPS_PORT=22 \
+#     AGE_VPS_HOST=vps AGE_VPS_USER=age-deploy AGE_VPS_PORT=22 \
 #     AGE_PUBLIC_HOST=age.digitaldadi.agency \
-#     AGE_ACME_EMAIL=someone@example.com \
 #     bash scripts/expose-studio-public.sh
 #
 set -euo pipefail
@@ -33,7 +32,8 @@ AGE_VPS_HOST="${AGE_VPS_HOST:?the VPS host}"
 AGE_VPS_USER="${AGE_VPS_USER:?the VPS user}"
 AGE_VPS_PORT="${AGE_VPS_PORT:-22}"
 AGE_PUBLIC_HOST="${AGE_PUBLIC_HOST:?the public hostname, e.g. age.digitaldadi.agency}"
-AGE_ACME_EMAIL="${AGE_ACME_EMAIL:?an email address for the certificate authority}"
+# 🚫 NO `AGE_ACME_EMAIL`. Certificate issuance left this script with ADR-0077 D4
+# — it is an owner act, and there is nothing here that could need one.
 AGE_STUDIO_PORT="${AGE_STUDIO_PORT:-3100}"
 
 SSH=(ssh -p "$AGE_VPS_PORT" "${AGE_VPS_USER}@${AGE_VPS_HOST}")
@@ -52,7 +52,7 @@ remote() {
   } | "${SSH[@]}" bash -s
 }
 
-echo "==> 1/6 The console must already have a boundary. Checking it, on the box."
+echo "==> 1/4 The console must already have a boundary. Checking it, on the box."
 
 remote AGE_STUDIO_PORT="$AGE_STUDIO_PORT" <<'REMOTE'
 set -euo pipefail
@@ -61,7 +61,8 @@ set -euo pipefail
 # This asked `systemctl is-active age-studio`, which on the new deployment
 # answers "inactive" for a console that is running perfectly — a refusal that
 # would read exactly like a broken deployment.
-if [ "$(docker inspect -f '{{.State.Running}}' age-studio 2>/dev/null || echo false)" != "true" ]; then
+# ⚠️ ADR-0077 D3 WRAPPER 4 — the deploy account cannot reach the Docker socket.
+if ! sudo -n /usr/local/sbin/age-deploy-docker-probe inspect age-studio 2>/dev/null | grep -q '^true '; then
   echo "REFUSED: the age-studio container is not running. There is nothing to publish." >&2
   exit 1
 fi
@@ -103,68 +104,35 @@ esac
 echo "    boundary confirmed: loopback only, protected routes redirect, bad token refused"
 REMOTE
 
-echo "==> 2/6 Installing the plaintext half only, so the certificate can be issued."
+# ─────────────────────────────────────────────────────────────────────────────
+# 🛑 STEPS 2 AND 3 ARE OWNER ACTS AND ARE NO LONGER IN THIS SCRIPT (ADR-0077 D4).
+#
+# Bringing up the plaintext :80 half and ISSUING a certificate both need root
+# that `age-deploy` does not have and must not be given: `sudo certbot <free
+# arguments>` is unrestricted root, because `--deploy-hook` runs arbitrary
+# commands as root. 🚫 No wrapper was added for it, on purpose.
+#
+# ⚠️ THEY ARE ONE-TIME BOOTSTRAP ACTS, ALREADY PERFORMED FOR
+# `age.digitaldadi.agency`. Renewal is `certbot.timer`, on the system schedule,
+# as root — the deploy identity is not part of it. A NEW hostname is issued by
+# the owner, by hand, and 🚫 not by a deploy step.
+#
+# If the certificate is absent, step 4 below does not guess: the wrapper's own
+# `nginx -t` fails on the missing file and it RESTORES the previous vhost.
+# ─────────────────────────────────────────────────────────────────────────────
 
-# 🛑 THE ORDER IS LOAD-BEARING. The real vhost names a certificate that does not
-# exist yet, and `nginx -t` fails on a missing certificate file — so nginx would
-# refuse to reload and the ACME challenge would never be reachable. The :80 half
-# goes up alone first. ⚠️ It serves the challenge and redirects everything else,
-# so at NO POINT is there a plaintext route to the console.
-remote AGE_PUBLIC_HOST="$AGE_PUBLIC_HOST" <<'REMOTE'
-set -euo pipefail
-
-sudo -n mkdir -p /var/www/html
-sudo -n tee "/etc/nginx/sites-available/${AGE_PUBLIC_HOST}" >/dev/null <<CONF
-server {
-    listen 80;
-    listen [::]:80;
-    server_name ${AGE_PUBLIC_HOST};
-
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
-
-    location / {
-        return 301 https://\$host\$request_uri;
-    }
-}
-CONF
-
-sudo -n ln -sf "/etc/nginx/sites-available/${AGE_PUBLIC_HOST}" \
-               "/etc/nginx/sites-enabled/${AGE_PUBLIC_HOST}"
-sudo -n nginx -t
-sudo -n systemctl reload nginx
-echo "    plaintext half enabled (challenge + redirect only)"
-REMOTE
-
-echo "==> 3/6 Obtaining the certificate (webroot; Cloudflare may stay orange)."
-
-remote AGE_PUBLIC_HOST="$AGE_PUBLIC_HOST" AGE_ACME_EMAIL="$AGE_ACME_EMAIL" <<'REMOTE'
-set -euo pipefail
-
-if sudo -n test -f "/etc/letsencrypt/live/${AGE_PUBLIC_HOST}/fullchain.pem"; then
-  echo "    a certificate already exists; not reissuing"
-else
-  sudo -n certbot certonly --webroot -w /var/www/html \
-    -d "${AGE_PUBLIC_HOST}" \
-    --non-interactive --agree-tos -m "${AGE_ACME_EMAIL}"
-fi
-REMOTE
-
-echo "==> 4/6 Installing the real vhost (TLS, headers, proxy to loopback)."
+echo "==> 2/4 Installing the real vhost (TLS, headers, proxy to loopback)."
 
 # ⚠️ The file is piped, so what runs on the box is byte-for-byte the file in the
 # repository. 🚫 There is no second copy of these rules to drift.
-"${SSH[@]}" "sudo -n tee /etc/nginx/sites-available/${AGE_PUBLIC_HOST} >/dev/null" < "$VHOST_SOURCE"
+# 🛑 ADR-0077 D3 WRAPPER 3. `sudo tee "$VARIABLE"` permitted writing ANY peer's
+# vhost — a route to serving a peer's hostname from an AGE-controlled upstream.
+# The hostname and the destination are literals inside the wrapper now; the body
+# still arrives on stdin, so what runs on the box is byte-for-byte the file in
+# the repository. The wrapper runs `nginx -t` and RESTORES on failure.
+"${SSH[@]}" "sudo -n /usr/local/sbin/age-deploy-nginx-apply" < "$VHOST_SOURCE"
 
-remote AGE_PUBLIC_HOST="$AGE_PUBLIC_HOST" <<'REMOTE'
-set -euo pipefail
-sudo -n nginx -t
-sudo -n systemctl reload nginx
-echo "    vhost live"
-REMOTE
-
-echo "==> 5/6 Re-checking the things the exposure could have changed."
+echo "==> 3/4 Re-checking the things the exposure could have changed."
 
 remote AGE_STUDIO_PORT="$AGE_STUDIO_PORT" <<'REMOTE'
 set -euo pipefail
@@ -180,7 +148,7 @@ fi
 
 # 🛑 AND THE DATABASE MUST STILL BE PRIVATE. AGE's own store publishes to
 # 127.0.0.1 only (ADR-0075); a peer's store is none of AGE's business either way.
-if sudo -n ss -ltn | grep -qE '^\S+\s+\S+\s+\S+\s+(0\.0\.0\.0|\*|\[::\]):5442'; then
+if ss -ltn | grep -qE '^\S+\s+\S+\s+\S+\s+(0\.0\.0\.0|\*|\[::\]):5442'; then
   echo "REFUSED: AGE's database is listening on a public interface." >&2
   exit 1
 fi
@@ -189,27 +157,13 @@ fi
 # ⚠️ THIS IS THE MOMENT IT MATTERS MOST: the console has just become reachable
 # from the internet, so a defect in it is now reachable from the internet too.
 # 🚫 A raw TCP connect, 🚫 not an application query that returned nothing.
-docker exec age-studio node -e "
-const net = require('node:net');
-const peers = [['172.19.0.4',5432],['172.21.0.2',5432],['172.18.0.2',5432],['172.20.0.3',3306]];
-let bad = 0;
-Promise.all(peers.map(([host, port]) => new Promise((resolve) => {
-  const s = net.connect({ host, port });
-  const done = (reachable) => { s.destroy(); if (reachable) { bad += 1; console.error('    REACHABLE: ' + host + ':' + port); } resolve(); };
-  s.setTimeout(2000);
-  s.on('connect', () => done(true));
-  s.on('timeout', () => done(false));
-  s.on('error', () => done(false));
-}))).then(() => {
-  if (bad > 0) { console.error('REFUSED: the console can reach a peer database.'); process.exit(1); }
-  console.log('    no peer database is reachable from the console');
-});
-"
+# 🛑 ADR-0077 D3 WRAPPER 4 — the probe text is FIXED INSIDE THE WRAPPER.
+sudo -n /usr/local/sbin/age-deploy-docker-probe exec-probe age-studio peer-reachability
 
 echo "    console still loopback-only; database still private"
 REMOTE
 
-echo "==> 6/6 Done."
+echo "==> 4/4 Done."
 echo
 echo "    https://${AGE_PUBLIC_HOST}"
 echo

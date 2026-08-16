@@ -1,0 +1,119 @@
+#!/bin/bash
+#
+# ADR-0077 D3 wrapper 4 of 4 — the only wrapper that takes arguments, and they
+# are ENUMERATED, 🚫 NOT FREE.
+#
+#   verb      ∈ { inspect, logs, exec-probe, ps }
+#   container ∈ { age-studio, age-postgres }
+#   probe     ∈ { peer-reachability, sign-in }        (exec-probe only)
+#
+# 🛑 ANYTHING ELSE REFUSES. The allowlists are checked BEFORE anything reaches
+# `docker`, and the default branch of every case is a refusal.
+#
+# ⚠️ The probe script text is FIXED. Even caller-supplied text would execute as
+# uid 1001 inside the unprivileged container and grant nothing the container does
+# not already have — it is fixed anyway, because "harmless today" is not a
+# property that survives an image change.
+
+set -euo pipefail
+
+refuse() {
+  echo "REFUSED: ${1}" >&2
+  exit 2
+}
+
+verb="${1:-}"
+[ -n "$verb" ] || refuse 'no verb was given.'
+
+case "$verb" in
+  inspect | logs | exec-probe | ps) : ;;
+  *) refuse "'${verb}' is not one of inspect, logs, exec-probe, ps." ;;
+esac
+
+if [ "$verb" = 'ps' ]; then
+  [ "$#" -eq 1 ] || refuse 'ps takes no further arguments.'
+  docker ps --filter 'name=age-studio' --filter 'name=age-postgres' \
+    --format '{{.Names}}\t{{.Status}}'
+  exit 0
+fi
+
+container="${2:-}"
+[ -n "$container" ] || refuse 'no container was given.'
+
+case "$container" in
+  age-studio | age-postgres) : ;;
+  *) refuse "'${container}' is not one of age-studio, age-postgres." ;;
+esac
+
+# ⚠️ `if`, 🚫 not a second `case` over caller input. Every `case` in this file
+# is a VALIDATING one with a default-refuse branch, and a guard asserts that
+# exactly — a dispatching `case` with a fall-through default would look
+# identical and would weaken the assertion to nothing.
+if [ "$verb" = 'inspect' ]; then
+  [ "$#" -eq 2 ] || refuse 'inspect takes exactly a container name.'
+  docker inspect "$container" \
+    --format '{{.State.Running}} {{.Config.User}} {{.HostConfig.Privileged}} {{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+  exit 0
+fi
+
+if [ "$verb" = 'logs' ]; then
+  [ "$#" -eq 2 ] || refuse 'logs takes exactly a container name.'
+  docker logs --tail 30 "$container"
+  exit 0
+fi
+
+# ── exec-probe ───────────────────────────────────────────────────────────────
+[ "$#" -eq 3 ] || refuse 'exec-probe takes a container name and a probe name.'
+[ "$container" = 'age-studio' ] || refuse 'exec-probe runs only in age-studio.'
+
+probe="${3:-}"
+
+case "$probe" in
+  sign-in)
+    # ⚠️ `up -d` succeeds for a container that is crash-looping, and
+    # `State.Running` is true for part of every restart cycle. The question is
+    # whether the one route an unauthenticated caller may reach ANSWERS.
+    docker exec age-studio node -e "fetch('http://127.0.0.1:3100/sign-in').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+    exit 0
+    ;;
+  peer-reachability)
+    # 🛑 ADR-0076 D7 — a RAW TCP CONNECT, 🚫 not an application query that
+    # returned nothing. ⚠️ AGE's own store must be REACHABLE: a deployment that
+    # denied everything would pass a naive "nothing is reachable" check and be
+    # entirely broken.
+    docker exec age-studio node -e "
+const net = require('node:net');
+const targets = [
+  ['AGE postgres (age-internal)', 'age-postgres', 5432, 'ALLOWED'],
+  ['SNARA postgres', '172.19.0.4', 5432, 'DENIED'],
+  ['RankOps postgres', '172.21.0.2', 5432, 'DENIED'],
+  ['Drishti postgres', '172.18.0.2', 5432, 'DENIED'],
+  ['Scanner mysql', '172.20.0.3', 3306, 'DENIED'],
+];
+let failures = 0;
+const probe = ([label, host, port, expected]) => new Promise((resolve) => {
+  const socket = net.connect({ host, port });
+  const done = (actual) => {
+    socket.destroy();
+    const ok = actual === expected;
+    if (!ok) failures += 1;
+    console.log((ok ? '    ok   ' : '    FAIL ') + label + ' -> ' + actual + ' (expected ' + expected + ')');
+    resolve();
+  };
+  socket.setTimeout(3000);
+  socket.on('connect', () => done('ALLOWED'));
+  socket.on('timeout', () => done('DENIED'));
+  socket.on('error', () => done('DENIED'));
+});
+(async () => {
+  for (const target of targets) await probe(target);
+  if (failures > 0) { console.error('REFUSED: the container boundary is not what ADR-0076 D7 requires.'); process.exit(1); }
+  console.log('    (ADR-0076 D7 satisfied from inside the container)');
+})();
+"
+    exit 0
+    ;;
+  *)
+    refuse "'${probe}' is not one of peer-reachability, sign-in."
+    ;;
+esac
