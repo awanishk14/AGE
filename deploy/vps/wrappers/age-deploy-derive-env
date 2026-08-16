@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+# ADR-0077 D3 wrapper 2 of 4 — derive the container's env file.
+#
+# 🛑 REPLACES `sudo sh -c "sed … > …"`, WHICH IS A ROOT SHELL AND NOT AN
+# OPERATION. The substitution and both paths are literals here: a caller-supplied
+# `sed` expression, or a caller-supplied output path, is an arbitrary root write.
+#
+# 🚫 THE VALUE IS NEVER PRINTED, ECHOED, LOGGED OR RETURNED (ADR-0076 D6).
+
+set -euo pipefail
+
+if [ "$#" -ne 0 ]; then
+  echo "REFUSED: ${0} takes no arguments; it was given $#." >&2
+  exit 2
+fi
+
+SOURCE='/etc/age-studio/age-studio.env'
+DERIVED='/etc/age-studio/age-studio.container.env'
+SECRET_DIR='/etc/age-studio'
+OWNER='age-deploy'
+
+if [ ! -f "$SOURCE" ]; then
+  echo "REFUSED: the provisioned env file does not exist." >&2
+  echo "  Run scripts/provision-studio-database.sh first. Nothing is generated here." >&2
+  exit 2
+fi
+
+# 🛑 THE ONLY DIFFERENCE IS THE DATABASE HOST, AND IT IS A FACT ABOUT NAMESPACES,
+# 🚫 NOT A SETTING. The host publication `127.0.0.1:5442` does not exist inside
+# the container's namespace.
+sed -E 's#@127\.0\.0\.1:5442/#@172.23.0.2:5432/#' "$SOURCE" > "$DERIVED"
+chmod 600 "$DERIVED"
+
+# ⚠️ THE DEPLOY USER, 🚫 NOT root. `docker compose` reads `env_file` on the
+# CLIENT side, as the invoking user. 600 still means no other account on this
+# shared host can read the database URL, which is what D6 requires.
+chown "${OWNER}:${OWNER}" "$DERIVED"
+chgrp "$OWNER" "$SECRET_DIR"
+chmod 750 "$SECRET_DIR"
+
+if ! grep -q '@172.23.0.2:5432/' "$DERIVED"; then
+  echo "REFUSED: the derived env file does not name the container route." >&2
+  echo "  The provisioned DATABASE_URL is not in the expected form; fix it by hand." >&2
+  exit 2
+fi
+
+echo "    (derived, 600, deploy-user-owned — value never printed)"

@@ -69,13 +69,35 @@ case "$AGE_VPS_DISCOVERY_WORKSPACE" in
 esac
 
 SSH=(ssh -p "$AGE_VPS_PORT" "${AGE_VPS_USER}@${AGE_VPS_HOST}")
-COMPOSE_FILE="deploy/vps/compose/docker-compose.studio.yml"
 HOST_ENV="/etc/age-studio/age-studio.env"
 CONTAINER_ENV="/etc/age-studio/age-studio.container.env"
-SECRET_DIR="/etc/age-studio"
 
-echo "==> Checking the host answers, and that Docker is there"
-"${SSH[@]}" 'echo "    $(docker --version), $(docker compose version)"'
+# ⚠️ ADR-0077 D2/D3 — EVERY ROOT OPERATION BELOW IS A FIXED-ARGUMENT WRAPPER.
+# 🛑 The deploy account is not in the `docker` group and has no unrestricted
+# sudo, because both are root by another name (`docker run -v /:/host`). It may
+# run exactly these four programs, each of which chooses its own paths.
+# 🚫 Do not add a `sudo docker`, a `sudo tee` or a `sudo sh -c` back here.
+WRAPPER_COMPOSE_UP='/usr/local/sbin/age-deploy-compose-up'
+WRAPPER_DERIVE_ENV='/usr/local/sbin/age-deploy-derive-env'
+WRAPPER_PROBE='/usr/local/sbin/age-deploy-docker-probe'
+
+# 🛑 THE WRAPPER COMPOSES FROM A LITERAL CHECKOUT PATH, so a deploy that copied
+# the repository somewhere else would build the wrong tree — silently, because
+# `up -d --build` would succeed against whatever is at the wrapper's own path.
+# ⚠️ ADR-0077 D7: rolling back to the previous identity means deploying from the
+# PRIOR COMMIT, whose scripts do not use wrappers — 🚫 not relaxing this.
+WRAPPER_CHECKOUT='/home/age-deploy/age'
+if [ "$AGE_VPS_PATH" != "$WRAPPER_CHECKOUT" ]; then
+  echo "REFUSED: AGE_VPS_PATH is '${AGE_VPS_PATH}', but the root wrapper builds" >&2
+  echo "  ${WRAPPER_CHECKOUT}. Deploying would build a tree nobody updated." >&2
+  exit 2
+fi
+
+echo "==> Checking the host answers, and that AGE's containers are there"
+# 🚫 NOT `docker --version`: the deploy account cannot reach the Docker socket at
+# all, and that is the property ADR-0077 exists to create. The wrapper reports
+# AGE's own two containers and nothing else on this shared host.
+"${SSH[@]}" "sudo -n ${WRAPPER_PROBE} ps"
 
 echo "==> Copying the repository (🚫 never the operator's workspace, 🚫 never .env)"
 # ⚠️ THE FALLBACK IS NOT A CONVENIENCE. `rsync` is absent from a stock Git Bash
@@ -117,32 +139,13 @@ echo "==> Deriving the container's env file from the provisioned one"
 # 🚫 If the provisioned file is missing, this REFUSES. ADR-0061 A6 item 2: a
 # deployment that starts without its secrets is a deployment nobody knows is
 # misconfigured, and there is no default and no generated substitute.
-"${SSH[@]}" "set -euo pipefail
-  if ! sudo test -f '${HOST_ENV}'; then
-    echo 'REFUSED: ${HOST_ENV} does not exist.' >&2
-    echo '  Run scripts/provision-studio-database.sh first. Nothing is generated here.' >&2
-    exit 2
-  fi
-  sudo sh -c \"sed -E 's#@127\\.0\\.0\\.1:5442/#@172.23.0.2:5432/#' '${HOST_ENV}' > '${CONTAINER_ENV}'\"
-  sudo chmod 600 '${CONTAINER_ENV}'
-  # ⚠️ THE DEPLOY USER, 🚫 NOT root. \`docker compose\` reads \`env_file\` on the
-  # CLIENT side, as the invoking user — a root-owned 600 file fails with
-  # \"permission denied\" that names the path and not the reason. 600 still means
-  # no other account on this shared host can read the database URL, which is
-  # what D6 requires; \"root-owned\" was never the requirement.
-  sudo chown '${AGE_VPS_USER}':'${AGE_VPS_USER}' '${CONTAINER_ENV}'
-  # ⚠️ AND THE DIRECTORY MUST BE TRAVERSABLE BY THAT USER, or the 600 above is
-  # irrelevant — the open fails on the PATH. 750 with the deploy user's group:
-  # 🚫 no other account on this shared host gains anything, and the sibling
-  # \`age-postgres.env\` stays root-owned 600 and unreadable to them.
-  sudo chgrp '${AGE_VPS_USER}' '${SECRET_DIR}'
-  sudo chmod 750 '${SECRET_DIR}'
-  if ! sudo grep -q '@172.23.0.2:5432/' '${CONTAINER_ENV}'; then
-    echo 'REFUSED: the derived env file does not name 172.23.0.2:5432.' >&2
-    echo '  The provisioned DATABASE_URL is not in the expected form; fix it by hand.' >&2
-    exit 2
-  fi
-  echo '    (derived, 600, deploy-user-owned — value never printed)'"
+#
+# 🛑 ADR-0077 D3 WRAPPER 2. This used to be `sudo sh -c "sed … > …"`, which is a
+# ROOT SHELL and not an operation: a caller-supplied `sed` expression or output
+# path is an arbitrary root write. Both paths, the substitution and the
+# resulting ownership are now literals inside the wrapper, which takes no
+# arguments at all. 🚫 The refusals did not move — they live in the wrapper.
+"${SSH[@]}" "sudo -n ${WRAPPER_DERIVE_ENV}"
 
 echo "==> Building and starting the container (🚫 no published console port)"
 # ⚠️ `prisma:generate` RUNS BEFORE `next build` INSIDE THE IMAGE, and the order
@@ -160,23 +163,12 @@ echo "==> Building and starting the container (🚫 no published console port)"
 # console then said — honestly — that it had found no businesses.
 # 🚫 The repair is not `chmod o+r` on a real business's data. The one uid that is
 # certainly right is the one that owns the file the console must open.
-"${SSH[@]}" "set -euo pipefail
-  cd '${AGE_VPS_PATH}'
-  if ! uid=\$(stat -c %u '${AGE_VPS_CLIENT_RECORD_FILE}' 2>/dev/null); then
-    echo 'REFUSED: cannot stat ${AGE_VPS_CLIENT_RECORD_FILE}.' >&2
-    echo '  The console would start and report no businesses. Nothing is guessed here.' >&2
-    exit 2
-  fi
-  gid=\$(stat -c %g '${AGE_VPS_CLIENT_RECORD_FILE}')
-  if [ \"\$uid\" = '0' ]; then
-    echo 'REFUSED: the operator record is owned by root; the console must not run as root.' >&2
-    exit 2
-  fi
-  echo \"    running as \$uid:\$gid — the owner of the record file\"
-  AGE_VPS_DISCOVERY_WORKSPACE='${AGE_VPS_DISCOVERY_WORKSPACE}' \
-  AGE_VPS_CLIENT_RECORD_FILE='${AGE_VPS_CLIENT_RECORD_FILE}' \
-  AGE_STUDIO_UID=\"\$uid\" AGE_STUDIO_GID=\"\$gid\" \
-  docker compose -f '${COMPOSE_FILE}' up -d --build"
+#
+# 🛑 ADR-0077 D3 WRAPPER 1. The uid derivation moved INTO the wrapper, and that
+# is the point: a caller-supplied uid is a caller-supplied privilege, so the
+# deploy account no longer names it. The rule is unchanged — the console runs as
+# the owner of the record file, and the wrapper refuses uid 0.
+"${SSH[@]}" "sudo -n ${WRAPPER_COMPOSE_UP}"
 
 echo "==> The console must actually be SERVING, 🚫 not merely started"
 # 🛑 **`up -d` SUCCEEDS FOR A CONTAINER THAT IS CRASH-LOOPING.** ⚠️ MEASURED: a
@@ -187,14 +179,14 @@ echo "==> The console must actually be SERVING, 🚫 not merely started"
 # one route an unauthenticated caller may reach ANSWERS.
 "${SSH[@]}" "set -euo pipefail
   for attempt in \$(seq 1 30); do
-    if docker exec age-studio node -e \"fetch('http://127.0.0.1:3100/sign-in').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\" 2>/dev/null; then
+    if sudo -n ${WRAPPER_PROBE} exec-probe age-studio sign-in 2>/dev/null; then
       echo '    serving: /sign-in answers inside the container'
       exit 0
     fi
     sleep 4
   done
   echo 'REFUSED: the console never served /sign-in. It is not deployed.' >&2
-  docker logs --tail 30 age-studio >&2 || true
+  sudo -n ${WRAPPER_PROBE} logs age-studio >&2 || true
   exit 1"
 
 echo "==> D7: proving the boundary FROM INSIDE THE RUNNING CONTAINER"
@@ -205,36 +197,12 @@ echo "==> D7: proving the boundary FROM INSIDE THE RUNNING CONTAINER"
 #
 # ⚠️ AGE's own store must be REACHABLE. A deployment that denied everything would
 # pass a naive "nothing is reachable" check and be entirely broken.
-"${SSH[@]}" "cd '${AGE_VPS_PATH}' && docker exec age-studio node -e \"
-const net = require('node:net');
-const targets = [
-  ['AGE postgres (age-internal)', 'age-postgres', 5432, 'ALLOWED'],
-  ['SNARA postgres', '172.19.0.4', 5432, 'DENIED'],
-  ['RankOps postgres', '172.21.0.2', 5432, 'DENIED'],
-  ['Drishti postgres', '172.18.0.2', 5432, 'DENIED'],
-  ['Scanner mysql', '172.20.0.3', 3306, 'DENIED'],
-];
-let failures = 0;
-const probe = ([label, host, port, expected]) => new Promise((resolve) => {
-  const socket = net.connect({ host, port });
-  const done = (actual) => {
-    socket.destroy();
-    const ok = actual === expected;
-    if (!ok) failures += 1;
-    console.log((ok ? '    ok   ' : '    FAIL ') + label + ' -> ' + actual + ' (expected ' + expected + ')');
-    resolve();
-  };
-  socket.setTimeout(3000);
-  socket.on('connect', () => done('ALLOWED'));
-  socket.on('timeout', () => done('DENIED'));
-  socket.on('error', () => done('DENIED'));
-});
-(async () => {
-  for (const target of targets) await probe(target);
-  if (failures > 0) { console.error('REFUSED: the container boundary is not what ADR-0076 D7 requires.'); process.exit(1); }
-  console.log('    (ADR-0076 D7 satisfied from inside the container)');
-})();
-\""
+# 🛑 ADR-0077 D3 WRAPPER 4. The probe text is FIXED INSIDE THE WRAPPER, not
+# piped from here — 🚫 the deploy account does not choose what runs in the
+# container, even though that text executes as uid 1001 in an unprivileged
+# namespace and would grant nothing today. "Harmless today" is not a property
+# that survives an image change.
+"${SSH[@]}" "sudo -n ${WRAPPER_PROBE} exec-probe age-studio peer-reachability"
 
 echo "==> Confirming the console is published on LOOPBACK ONLY (D3)"
 # 🛑 THE CHECK THAT MATTERS, AND IT IS NOT "IS IT UP". A `ports:` key reading

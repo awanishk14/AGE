@@ -178,7 +178,7 @@ remote() {
     cat
   } | "${SSH[@]}" bash -s
 }
-SERVICE="age-studio"
+# 🚫 NO `SERVICE`. ADR-0077 D5 removed the disabled `age-studio.service`.
 ENV_FILE="/etc/age-studio/age-studio.env"
 CONTAINER="age-postgres"
 COMPOSE_FILE="${AGE_VPS_PATH}/deploy/vps/docker-compose.age-postgres.yml"
@@ -361,9 +361,13 @@ cat <<NEXT
 
 ==> Done. The store exists; 🚫 nothing was exposed.
 
-    The unit reads ${ENV_FILE}. Restart the service to pick it up:
+    The console reads ${ENV_FILE}. Redeploy to pick it up:
 
-      sudo systemctl restart ${SERVICE}
+      bash scripts/deploy-studio.sh
+
+    🚫 NOT `systemctl restart age-studio`. The console has been a CONTAINER
+    since ADR-0076 D1, and ADR-0077 D5 removed the disabled host unit that this
+    line still pointed at — a re-armable path back to a host process.
 
     ⚠️ An ABSENT DATABASE_URL_APP is a REFUSAL, never a default: the console
     stops rather than starting against a database nobody chose.

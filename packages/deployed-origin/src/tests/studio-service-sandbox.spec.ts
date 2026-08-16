@@ -49,6 +49,19 @@ const DOCKERFILE = readFileSync(DOCKERFILE_PATH, 'utf8');
 const SCRIPT = readFileSync(SCRIPT_PATH, 'utf8');
 
 /**
+ * ⚠️ ADR-0077 D3 MOVED THE ROOT HALF OF THE DEPLOY, 🚫 IT DID NOT REMOVE IT.
+ * The uid derivation and the D7 reachability probe used to be inline in
+ * `deploy-studio.sh`; they now live in root-owned fixed-argument wrappers,
+ * because the deploying account no longer has `sudo docker`. So each guard below
+ * asserts BOTH halves: that the script still reaches the operation through its
+ * wrapper, and that the wrapper still carries the fixed text. Asserting only one
+ * would let the boundary be deleted at the other end.
+ */
+const WRAPPER_DIR = join(REPO, 'deploy', 'vps', 'wrappers');
+const COMPOSE_UP_WRAPPER = readFileSync(join(WRAPPER_DIR, 'age-deploy-compose-up'), 'utf8');
+const PROBE_WRAPPER = readFileSync(join(WRAPPER_DIR, 'age-deploy-docker-probe'), 'utf8');
+
+/**
  * ⚠️ Comments come off before every scan. Each file EXPLAINS the rule it obeys
  * in prose that names it, so an unstripped scan would pass on the explanation of
  * a line that had been deleted.
@@ -215,10 +228,14 @@ describe('the container cannot elevate, and sees almost nothing of the host', ()
     expect(serviceBlock('studio')).toContain("user: '${AGE_STUDIO_UID}:${AGE_STUDIO_GID}'");
     expect(COMPOSE_BODY).not.toMatch(/user:\s*['"]?0[:'"]/);
 
-    const script = stripped(SCRIPT);
-    expect(script).toContain("stat -c %u '${AGE_VPS_CLIENT_RECORD_FILE}'");
-    expect(script, 'the deploy must refuse a root-owned record rather than run as root').toMatch(
-      /uid\\?" = '0'/,
+    // ⚠️ ADR-0077 D3: the derivation moved into the wrapper. Both ends are
+    // asserted — the script must still reach it, and it must still derive.
+    expect(stripped(SCRIPT)).toContain('${WRAPPER_COMPOSE_UP}');
+    const wrapper = stripped(COMPOSE_UP_WRAPPER);
+    expect(wrapper).toContain('stat -c %u "$RECORD"');
+    expect(wrapper).toContain("RECORD='/var/lib/age-operator/clients.json'");
+    expect(wrapper, 'the deploy must refuse a root-owned record rather than run as root').toMatch(
+      /\$uid" = '0'/,
     );
   });
 });
@@ -253,7 +270,8 @@ describe('the boundary is proven, not asserted', () => {
     // 🛑 THE OWNER ASKED FOR NETWORK REACHABILITY, 🚫 NOT FOR AN APPLICATION
     // QUERY THAT RETURNS NOTHING. A query can fail for a dozen reasons that have
     // nothing to do with the network.
-    const body = stripped(SCRIPT);
+    expect(stripped(SCRIPT)).toContain('${WRAPPER_PROBE} exec-probe age-studio peer-reachability');
+    const body = stripped(PROBE_WRAPPER);
     expect(body).toContain('docker exec age-studio');
     expect(body).toContain("require('node:net')");
   });
@@ -262,7 +280,7 @@ describe('the boundary is proven, not asserted', () => {
     // ⚠️ A deployment that denied every address would pass a naive "nothing is
     // reachable" check and be entirely broken. The probe must assert BOTH
     // directions, or it proves nothing about the console working at all.
-    const body = stripped(SCRIPT);
+    const body = stripped(PROBE_WRAPPER);
     expect(body).toContain("'ALLOWED'");
     expect(body).toContain("'DENIED'");
     expect(body).toContain('age-postgres');

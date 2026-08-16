@@ -1,0 +1,23 @@
+# ADR-0077 D1/D2/D3 — the entire root surface of the AGE deployment account.
+#
+# 🛑 `age-deploy` IS IN NO GROUP BUT ITS OWN, AND SPECIFICALLY 🚫 NOT `docker`
+# AND 🚫 NOT `sudo`. Either one alone is root on this host.
+#
+# 🚫 NO `ALL`. 🚫 No shell. 🚫 No `docker`, `nginx`, `certbot`, `systemctl`,
+# `sh`, `bash`, `tee` or `install` as a directly permitted command — free
+# arguments to any one of those is root by another name
+# (`docker run -v /:/host`, `certbot --deploy-hook`, `systemctl link`).
+#
+# ⚠️ The trailing `""` is load-bearing: it permits the command with NO arguments
+# at all. It is a second layer over each wrapper's own argument refusal, 🚫 not a
+# substitute for it.
+#
+# ⚠️ Certbot has NO entry, by decision (ADR-0077 D4). `/etc/letsencrypt` is
+# root-owned 0700 and `certbot.timer` renews on the system schedule; the deploy
+# identity is not part of renewal, and issuance for a new hostname is an owner
+# act performed by hand.
+
+age-deploy ALL=(root) NOPASSWD: /usr/local/sbin/age-deploy-compose-up ""
+age-deploy ALL=(root) NOPASSWD: /usr/local/sbin/age-deploy-derive-env ""
+age-deploy ALL=(root) NOPASSWD: /usr/local/sbin/age-deploy-nginx-apply ""
+age-deploy ALL=(root) NOPASSWD: /usr/local/sbin/age-deploy-docker-probe
