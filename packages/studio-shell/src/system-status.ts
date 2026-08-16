@@ -80,16 +80,29 @@ export function presentSystemStatus(input: SystemStatusInput): readonly StatusFa
       // an operator as verified fact.
       //
       // ⚠️ IT NOW DESCRIBES ONLY WHAT IS ACTUALLY CHECKED: the start command
-      // pins a loopback host, a guard holds that pin, and the value shown is
-      // passed through the same policy. 🚫 It must NOT say "refuses to start"
-      // again unless a startup refusal really runs, and 🚫 it must never claim
-      // the console is unreachable.
+      // pins a bind host, a guard holds that pin, and the value shown is passed
+      // through the same policy. 🚫 It must NOT say "refuses to start" again
+      // unless a startup refusal really runs, and 🚫 it must never claim the
+      // console is unreachable.
+      //
+      // 🛑 THE SECOND CORRECTION, FOUND IN A REAL BROWSER ON THE PUBLISHED
+      // CONSOLE (2026-08-16). After ADR-0076 D2 this card showed `0.0.0.0:3100`
+      // — sound, because a container's bind is scoped to its own namespace and
+      // the PUBLICATION is what confines it — while the sentence beside it still
+      // said "the one loopback policy". 🚫 AN OPERATOR READING `0.0.0.0` UNDER A
+      // SENTENCE ABOUT LOOPBACK, MARKED `Known`, IS BEING SHOWN A CONTRADICTION
+      // AND ASKED TO ASSUME IT IS FINE. There are TWO boundaries now
+      // (`ConsoleListenerBoundary`), and the card must not describe one of them
+      // as the only one.
       detail:
         'This is the host the console is configured to bind — pinned in its start command and ' +
-        'checked against the one loopback policy. AGE cannot observe the socket it actually ' +
-        'bound, so this is a configuration fact, not a measurement. Loopback is necessary, not ' +
-        'sufficient: a proxy, tunnel or published container port in front of this listener ' +
-        'defeats it entirely, and AGE cannot see that from here.',
+        'checked against the bind policy for its boundary. There are two: a console running ' +
+        'directly on a host must bind loopback, and a console running in a container binds ' +
+        'every address of its own namespace, which is confined instead by publishing that port ' +
+        'on host loopback only. AGE cannot observe the socket it actually bound, nor how the ' +
+        'port was published, so this is a configuration fact, not a measurement. The bind is ' +
+        'necessary, not sufficient: a proxy, tunnel or wider port publication in front of this ' +
+        'listener defeats it entirely, and AGE cannot see that from here.',
     }),
     Object.freeze({
       id: 'identity',
