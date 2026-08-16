@@ -178,6 +178,25 @@ echo "==> Building and starting the container (🚫 no published console port)"
   AGE_STUDIO_UID=\"\$uid\" AGE_STUDIO_GID=\"\$gid\" \
   docker compose -f '${COMPOSE_FILE}' up -d --build"
 
+echo "==> The console must actually be SERVING, 🚫 not merely started"
+# 🛑 **`up -d` SUCCEEDS FOR A CONTAINER THAT IS CRASH-LOOPING.** ⚠️ MEASURED: a
+# permissions fault at start put the console in `restarting` and this script
+# reported a clean deployment anyway — the same failure class as a CI job that
+# executes no steps. 🚫 `State.Running` alone is not enough either: a restarting
+# container is "running" for part of every cycle. The question is whether the
+# one route an unauthenticated caller may reach ANSWERS.
+"${SSH[@]}" "set -euo pipefail
+  for attempt in \$(seq 1 30); do
+    if docker exec age-studio node -e \"fetch('http://127.0.0.1:3100/sign-in').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\" 2>/dev/null; then
+      echo '    serving: /sign-in answers inside the container'
+      exit 0
+    fi
+    sleep 4
+  done
+  echo 'REFUSED: the console never served /sign-in. It is not deployed.' >&2
+  docker logs --tail 30 age-studio >&2 || true
+  exit 1"
+
 echo "==> D7: proving the boundary FROM INSIDE THE RUNNING CONTAINER"
 # 🛑 **THE OWNER ASKED FOR REACHABILITY, 🚫 NOT FOR AN APPLICATION QUERY THAT
 # RETURNS NOTHING.** A query can fail for a dozen reasons that have nothing to do
