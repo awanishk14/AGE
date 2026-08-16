@@ -308,3 +308,107 @@ it is exactly the class of error ADR-0075 D6 exists to prevent.
    authenticated operator selecting or FORGING an unauthorized `clientId` gains nothing.** 🚫 **A
    successful empty result is NOT proof of isolation** (the owner's words, and ADR-0074 §6 item 5).
 6. 🛠️ Slice 4 — the public bind, LAST.
+
+---
+
+## 6. ✅ SLICE 3 — VERIFIED ON THE REAL VPS (2026-08-15)
+
+⚠️ **Recorded here from the session that ran it; the commands and their raw output are in that
+session, 🚫 not re-run at the time of writing.** What was measured on the box, 🚫 not in CI:
+
+- A token belonging to **another organization** is refused with the **SAME `refused=1`** as a string
+  of garbage. 🛑 The two answers are byte-identical — a prober learns nothing about whether the
+  credential was ever real.
+- Asking for **another organization's REAL business** is byte-identical to asking for an **invented**
+  one. 🛑 **THIS IS THE POINT OF AGE-INV-SEL-1** — "not yours" and "no such business" are ONE opaque
+  refusal, so selection can only ever NARROW.
+- **Logout writes `revokedAt`, and the old cookie is then REFUSED.** 🚫 Proven by the same cookie
+  being refused, 🚫 never by a redirect to a login screen (§4.4's standard).
+- 🚫 **A forged `clientId` gained nothing** — the negative test §5.5 item 5 required, 🚫 not an empty
+  result set presented as isolation.
+
+### 6.1 🚫 WHAT SLICE 3 STILL DID NOT PROVE
+
+- 🛑 **Isolation between two REAL operators in two REAL organizations is still unproven**, because
+  **Operator 2 does not exist**. Provisioning it is a HUMAN ACT (ADR-0068 §0.1c) — 🚫 do not build a
+  provisioning path to close this.
+- 🛑 **Rate limiting on sign-in does not exist** (slice 2b, still owed; baseline finding 6).
+
+---
+
+## 7. SLICE 4 — THE CODE IS ON `main`, THE EXPOSURE IS NOT DONE (2026-08-16)
+
+🛑 **`main` is `22795b9`; post-merge CI success with 15 EXECUTED STEPS, matched to the FULL sha.**
+🛑 **NOTHING IS EXPOSED: no port is open, no vhost is installed, no DNS record exists, and the
+Studio is still bound to `127.0.0.1:3100` behind the tunnel.** ⚠️ A reader who takes "slice 4
+merged" to mean "AGE is public" has read this section backwards.
+
+| PR   | What landed                                                                                                                                                               |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #350 | Secrets off the remote command line — ⚠️ **a remote command line is PUBLIC on that host**; assignments now travel on **stdin**.                                           |
+| #352 | The systemd sandbox: `NoNewPrivileges` + `IPAddressDeny=any` with only `127.0.0.1/32` and `::1/128` allowed, `ProtectSystem=strict`, `RestrictAddressFamilies`. 7 guards. |
+| #353 | A **malformed sign-in body is a REFUSAL, 🚫 not a 500.**                                                                                                                  |
+| #354 | **ADR-0076 `Proposed`** — merged ONLY to record the decision request. 🚫 **NOT accepted.**                                                                                |
+| #355 | The nginx vhost, `scripts/expose-studio-public.sh`, 17 guards, and the security baseline.                                                                                 |
+
+### 7.1 The finding that mattered most — a 500 on the one public route
+
+🛑 **`/sign-in/submit` IS THE ONLY ROUTE AN UNAUTHENTICATED CALLER ON THE PUBLIC INTERNET CAN
+REACH.** Every other route redirects before it does anything. `request.formData()` **throws** on a
+body that is not a form — an empty POST, a JSON body, a truncated multipart — and the throw was
+unguarded, so the measured answer was a **500**. That is wrong twice over: **nothing failed** (a
+caller sent nonsense), and a 500 is precisely the response an attacker works to provoke, because it
+is where stack traces come from. It is also the first thing any scanner sends at a new host.
+
+🛑 **THE FIX COLLAPSES IT INTO THE SAME `refused=1` AS A WRONG TOKEN.** A distinguishable answer for
+"malformed body" versus "wrong token" tells a prober which half of their guess was right. ⚠️ **The
+request's SHAPE must never become distinguishable from the CORRECTNESS of the credential in it** —
+that is the same rule as §6's two byte-identical refusals, applied one layer earlier.
+
+### 7.2 The sandbox, and the residue it does NOT remove
+
+`IPAddressDeny=any` was **verified by making it fail**: a `systemd-run` unit carrying identical
+rules was refused when it reached for `172.18.0.1:5432`, so the Docker bridge networks really are
+gone. ⚠️ **It cannot express a port rule on loopback.** So the Studio host process can still open
+**`127.0.0.1:5432`, the peer product's store**, which is published there by `docker-proxy`.
+
+Measured, 🚫 not assumed: all three loopback database ports are `docker-proxy` publications, none
+reachable off-box; a raw startup-packet probe to 5432 returned **auth-request code 10 = SCRAM-SHA-256**,
+so it is **not `trust`**; and **no peer credential is readable by the service account.**
+
+🛑 **THAT RESIDUE IS WHAT ADR-0076 IS ABOUT, AND THE DIRECTIVE IN `deploy-studio.sh` MUST NOT BE READ
+AS CLOSING IT.** A guard test asserts the un-stripped source still contains both `ADR-0076` and
+`127.0.0.1:5432`, so the caveat cannot be deleted while the directive is kept.
+
+### 7.3 The exposure script REFUSES rather than assumes
+
+`scripts/expose-studio-public.sh` will not proceed unless, **on the box**, the service is active,
+`ss -ltn` equals **exactly** `127.0.0.1:${AGE_STUDIO_PORT}`, `/`, `/businesses` and `/diagnostics`
+all redirect, and a bad token produces `/sign-in?refused=`. 🛑 **The boundary is re-confirmed at the
+moment of exposure, 🚫 not inherited from a green CI run taken hours earlier.**
+
+### 7.4 🛑 WHAT SLICE 4 HAS NOT PROVEN — AND CANNOT UNTIL IT RUNS
+
+- 🚫 **No browser has ever loaded AGE over HTTPS.** All twelve real-browser acceptance checks are
+  **unrun**. 🚫 Do not report any of them from CI.
+- 🚫 **The product walkthrough is unassessed** — onboarding/discovery, business selection, BIF,
+  Sources/PDF, Evidence, Intelligence, Peer Products, Diagnostics.
+- 🚫 **The headers, the redirect, the method allow-list and the TLS configuration are UNAPPLIED
+  FILES.** A vhost in the repo has protected nothing.
+- 🛑 **Rate limiting on sign-in is still absent** — and it matters more the moment the door is public.
+
+### 7.5 🛠️ THE TWO BLOCKERS, BOTH THE OWNER'S
+
+1. 🛠️ **An ACME email** (`AGE_ACME_EMAIL`) — certbot registers it for expiry notices. 🚫 There is no
+   correct value the architect can invent, and without the origin certificate Cloudflare Full
+   (strict) answers **526** with nothing in the origin log.
+2. 🛑 **ADR-0076 must be decided** — **A** accept the residue · **B** containerise · **C** a network
+   namespace. ⚠️ **B WOULD CHANGE AN ACCEPTED DECISION**: `apps/studio/next.config.mjs` refuses a
+   Dockerfile **BY NAME** (OX-INV-1). The architect recommended **A now, C as fallback, 🚫 not B**,
+   and 🚫 **DID NOT SELF-ACCEPT IT.**
+
+🛠️ **THE EXACT NEXT COMMAND, once both are answered:**
+
+```
+AGE_PUBLIC_HOST=age.digitaldadi.agency AGE_ACME_EMAIL=<owner> bash scripts/expose-studio-public.sh
+```
