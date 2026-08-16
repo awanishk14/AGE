@@ -237,10 +237,34 @@ describe('the sign-in door is rate limited, and 🚫 nothing else is', () => {
   it('declares a zone keyed on the one address a caller cannot choose', () => {
     expect(VHOST_BODY).toMatch(/limit_req_zone\s+\$binary_remote_addr\s+zone=age_signin:/);
 
-    // 🚫 **NOT `CF-Connecting-IP`, AND NOT ANY OTHER REQUEST HEADER.** This
-    // origin is reachable directly by IP, so a header-derived key is
-    // attacker-supplied — and a key the attacker picks is not a limit.
+    // 🚫 **NOT `$http_anything`.** A key read straight off a request header is a
+    // key the caller picks, and a key the caller picks is not a limit.
     expect(VHOST_BODY).not.toMatch(/limit_req_zone\s+\$http_/);
+  });
+
+  it('makes $remote_addr the visitor by trusting a RANGE, 🚫 not a header', () => {
+    // 🛑 **`real_ip_header` WITHOUT `set_real_ip_from` DOES NOTHING**, and this
+    // vhost shipped exactly that defect once. ⚠️ MEASURED both ways: behind the
+    // edge pool the limit above was invisible from the internet while working
+    // perfectly at the origin. The trust must be bound to the proxy's ranges —
+    // then a direct caller keeps its own address whatever headers it sends.
+    const trusted = bodyLines(VHOST).filter((line) => line.trim().startsWith('set_real_ip_from '));
+
+    // 🛑 **A PARTIAL LIST IS THE FAILURE MODE, 🚫 NOT AN ABSENT ONE.** Ranges
+    // dropped one at a time still leave a file that looks configured, and the
+    // callers arriving through the missing range are exactly the ones counted
+    // as the edge node again — quiet dilution, no error anywhere. Cloudflare
+    // publishes 22; ⚠️ if they publish more, raise this, 🚫 never lower it.
+    expect(trusted.length).toBeGreaterThanOrEqual(22);
+    expect(VHOST_BODY).toContain('real_ip_header CF-Connecting-IP;');
+
+    // 🚫 A bare header trust would hand every direct caller a free key rotation.
+    for (const line of bodyLines(VHOST).filter((l) => l.trim().startsWith('real_ip_header'))) {
+      expect(
+        trusted.length,
+        `${line.trim()} is set, but nothing is trusted to send it`,
+      ).toBeGreaterThan(0);
+    }
   });
 
   it('applies the limit to the sign-in door by exact match', () => {
