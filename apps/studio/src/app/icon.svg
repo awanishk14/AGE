@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="AGE">
+  <rect width="32" height="32" rx="7" fill="#0B1220" />
+  <path
+    d="M9 23 L16 8 L23 23"
+    fill="none"
+    stroke="#7DD3FC"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path d="M12.4 18.2 H19.6" fill="none" stroke="#7DD3FC" stroke-width="3" stroke-linecap="round" />
+</svg>
