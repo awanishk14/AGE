@@ -126,12 +126,18 @@ describe('the hosted product is the demo, and it is not AGE Studio', () => {
     expect(existsSync(join(REPO, 'apps', 'api', 'Dockerfile'))).toBe(true);
   });
 
-  it('🛑 does not deploy the console, and could not', () => {
-    // 🚫 ADR-0057 OX-INV-1 stands UNAMENDED. Deploying Studio is a REVERSAL,
-    // not an extension, and needs its own ADR.
+  it('🛑 does not deploy the console — THIS stack is the demo, and only the demo', () => {
+    // ⚠️ **THE THIRD ASSERTION HERE USED TO BE `Dockerfile` DOES NOT EXIST, ON
+    // THE GROUND THAT "ADR-0057 OX-INV-1 STANDS UNAMENDED". ADR-0076 D1/D2
+    // AMENDED IT** — by the Product Owner, through the ADR the old comment
+    // demanded, 🚫 not by silently deleting the guard.
+    //
+    // 🛑 WHAT THIS TEST STILL PROVES IS UNCHANGED AND STILL MATTERS: the DEMO
+    // stack does not carry the console. The console has its own compose file,
+    // its own network pair and its own proxy, and 🚫 the two must never be
+    // merged — the demo's terminator is public and reads no database.
     expect(BODY).not.toContain('apps/studio');
     expect(CADDY).not.toContain('studio');
-    expect(existsSync(join(REPO, 'apps', 'studio', 'Dockerfile'))).toBe(false);
   });
 
   it('reaches the app only through the terminator', () => {

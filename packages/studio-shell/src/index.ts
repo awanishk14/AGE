@@ -11,7 +11,9 @@
  */
 
 export {
+  assertConsoleBindHost,
   assertLoopbackBindHost,
+  type ConsoleListenerBoundary,
   DEFAULT_STUDIO_BIND_HOST,
   loopbackHosts,
   StudioBindRefusedError,

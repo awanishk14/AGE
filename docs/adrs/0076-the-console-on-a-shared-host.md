@@ -124,6 +124,36 @@ already has `age-internal` carrying `age-postgres`. 🛑 **The console is the ON
 product on that host still running outside a container.** That is precisely the asymmetry the owner
 described, measured rather than asserted.
 
+## 0.4b ⚠️ ERRATUM — D3's "PUBLISHES NO PORT AT ALL" WAS DRAFTED ON A PREMISE THAT MEASURED FALSE
+
+🛑 **MEASURED ON THE REAL VPS AFTER THE DECISIONS BELOW WERE WRITTEN:** the host's own nginx binds
+`0.0.0.0:80` and `0.0.0.0:443` and already serves **five other products' vhosts**
+(`aivisibilityscanner`, `digitaldadi.agency`, `drishti`, `rankops`, `snara`). D4's reverse proxy was
+drafted as a container publishing `80:80`/`443:443`. 🚫 **It cannot: those ports are taken, and
+taking them would take five live sites down.** ⚠️ This ADR's own §2 forbids touching a peer's
+deployment, so migrating their vhosts into an AGE-owned proxy is 🚫 refused, not deferred.
+
+⚠️ **AND THE OBVIOUS REPAIR IS WORTH LESS THAN IT LOOKS.** A container proxy published on
+`127.0.0.1:8100`, fronted by the host nginx, would keep D3 literally true — and would forward every
+request to the console unconditionally, so **any process on that host could reach the console
+through it exactly as it could reach a published `127.0.0.1:3100`.** 🛑 **The security difference is
+nil**; the difference is one more hop and one more config file. A shape that reads as stronger
+without being stronger is the kind of thing this repository refuses by name.
+
+🛑 **SO D3 IS AMENDED, AND ITS FALSIFIED SENTENCE IS KEPT BELOW RATHER THAN ERASED.** The studio
+container publishes **exactly one port, on host loopback only**: `127.0.0.1:3100:3100`. The
+enumerated boundary of amended OX-INV-1 is therefore **host loopback** — the same boundary the
+console has had since ADR-0057 D2, now reached through a publication rather than a bind.
+
+⚠️ **WHAT THIS DOES NOT COST.** 🛑 **D1 IS UNTOUCHED, AND D1 IS THE OWNER'S PRINCIPLE.** The console
+still runs in a namespace attached to `age-internal` and nothing else, so it still has **no route to
+SNARA's postgres, SNARA's redis, or any peer's store** — publication is inbound, and it grants the
+console no outbound reach whatever. The violation §0.4 measured is removed in full. What is lost is
+only D3's extra claim, which this topology never supported.
+
+🚫 **THIS IS AN ERRATUM ON A MEASUREMENT, 🚫 NOT A RELAXATION OF THE OWNER'S DECISION**, and it is
+flagged for the Product Owner's confirmation rather than presented as settled.
+
 ## 1. The question, stated precisely
 
 > Is "the AGE process can open a TCP socket to a peer's database, but holds no credential for it and
@@ -225,15 +255,20 @@ The amended invariant states the boundary rather than one implementation of it:
 > in a container. 🚫 There is no third mode, and 🚫 neither mode is selectable by an environment
 > variable.**
 
-**D3 — 🛑 THE STUDIO CONTAINER PUBLISHES NO PORT AT ALL.** 🚫 Not `3100`, 🚫 not on `127.0.0.1`, 🚫 not
-on any interface. It is reachable **only** from the reverse proxy over an internal Docker network.
-⚠️ This is **strictly stronger than the host-loopback bind it replaces**: today any process on the
-host can open `127.0.0.1:3100`; afterwards, nothing outside that network can reach it at all.
+**D3 — 🛑 THE STUDIO CONTAINER PUBLISHES ONE PORT, ON HOST LOOPBACK, AND 🚫 NOTHING ELSE.**
+⚠️ **AMENDED BY §0.4b — READ IT.** The published mapping is exactly `127.0.0.1:3100:3100`; 🚫 never
+`0.0.0.0`, 🚫 never a second port, 🚫 never the database. **As originally drafted D3 read:**
+_"THE STUDIO CONTAINER PUBLISHES NO PORT AT ALL … strictly stronger than the host-loopback bind it
+replaces"_ — ⚠️ **that was measured false**: the host's nginx already owns `80`/`443` for five peer
+vhosts, and the only D3-preserving alternative forwards to the console from host loopback anyway.
+🚫 **The falsified sentence is kept here on purpose**, so nobody re-derives it from scratch.
 
-**D4 — TWO NETWORKS, AND THE PROXY IS ON ONLY ONE.** `age-internal` carries the console and
-`age-postgres`. A separate edge network carries the console and the reverse proxy. 🛑 **The reverse
-proxy is NEVER attached to `age-internal`**, so the public-facing component has **no route to any
-database** — the owner's fifth and sixth proofs, by construction.
+**D4 — ONE NETWORK, AND IT CARRIES NO PEER.** `age-internal` carries the console and `age-postgres`;
+🛑 **the console is attached to that network and to nothing else.** ⚠️ **AMENDED BY §0.4b:** the
+separate edge network and the AGE-owned reverse-proxy container are 🚫 **not built** — the host's
+existing nginx is the public terminator, it reaches the console over host loopback, and it has no
+Docker network membership at all, so **the public-facing component still has no route to any
+database** (the owner's fifth and sixth proofs) by a plainer construction than the one drafted.
 
 **D5 — THE OPERATOR'S WORKSPACE AND CLIENT RECORD FILE ARE BIND-MOUNTED READ-ONLY**, at the same
 paths, and 🚫 nothing else from the host is mounted. ⚠️ ADR-0054's rule that an operator file's path

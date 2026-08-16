@@ -43,7 +43,8 @@ import {
 } from '@age/operator-workspace';
 import { decodeOperatorDocument } from '@age/operator-document-decoder';
 import {
-  assertLoopbackBindHost,
+  assertConsoleBindHost,
+  type ConsoleListenerBoundary,
   DEFAULT_STUDIO_BIND_HOST,
   type ClientRecordDraft,
   type DiscoveryDraft,
@@ -461,7 +462,28 @@ export function revokeSessionById(
  * value that the policy never saw is the whole defect.
  */
 export function boundHost(): string {
-  return assertLoopbackBindHost(DEFAULT_STUDIO_BIND_HOST);
+  return assertConsoleBindHost(
+    consoleBoundary() === 'loopback-published-container' ? '0.0.0.0' : DEFAULT_STUDIO_BIND_HOST,
+    consoleBoundary(),
+  );
+}
+
+/**
+ * Which boundary the console is actually running behind (ADR-0076 D2).
+ *
+ * 🛑 **A FILESYSTEM OBSERVATION, 🚫 NOT A CONFIGURATION READ.** `/.dockerenv` is
+ * written by the container runtime; there is deliberately no environment
+ * variable, flag or parameter here, because the one thing this function must
+ * never become is a way to SELECT a boundary.
+ *
+ * ⚠️ **ITS LIMIT, STATED PLAINLY:** it reports where the process believes it is
+ * running, which is what the console DISPLAYS. It does 🚫 not decide the bind —
+ * the start command does that (`start` vs `start:container`). If the two ever
+ * disagreed, the screen would be wrong and the boundary would not change; that
+ * is the harmless direction, and it is why this is not an authorization input.
+ */
+function consoleBoundary(): ConsoleListenerBoundary {
+  return existsSync('/.dockerenv') ? 'loopback-published-container' : 'host-loopback';
 }
 
 /** The port the console was started on. */
