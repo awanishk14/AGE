@@ -152,10 +152,50 @@ echo "==> Building and starting the container (🚫 no published console port)"
 # redirects every protected route correctly, but throws the instant a real
 # session is presented. That failure was MEASURED on this VPS while every test
 # in the repository was green.
-"${SSH[@]}" "cd '${AGE_VPS_PATH}' && \
+#
+# 🛑 THE UID IS DERIVED FROM THE RECORD FILE, 🚫 NOT CHOSEN AND 🚫 NOT DEFAULTED.
+# The operator's record is `0600` and their workspace `0700`; the image's own
+# user is `node`, whose uid belongs to a DIFFERENT REAL ACCOUNT on this shared
+# host. ⚠️ MEASURED: both mounts present, every read `Permission denied`, and the
+# console then said — honestly — that it had found no businesses.
+# 🚫 The repair is not `chmod o+r` on a real business's data. The one uid that is
+# certainly right is the one that owns the file the console must open.
+"${SSH[@]}" "set -euo pipefail
+  cd '${AGE_VPS_PATH}'
+  if ! uid=\$(stat -c %u '${AGE_VPS_CLIENT_RECORD_FILE}' 2>/dev/null); then
+    echo 'REFUSED: cannot stat ${AGE_VPS_CLIENT_RECORD_FILE}.' >&2
+    echo '  The console would start and report no businesses. Nothing is guessed here.' >&2
+    exit 2
+  fi
+  gid=\$(stat -c %g '${AGE_VPS_CLIENT_RECORD_FILE}')
+  if [ \"\$uid\" = '0' ]; then
+    echo 'REFUSED: the operator record is owned by root; the console must not run as root.' >&2
+    exit 2
+  fi
+  echo \"    running as \$uid:\$gid — the owner of the record file\"
   AGE_VPS_DISCOVERY_WORKSPACE='${AGE_VPS_DISCOVERY_WORKSPACE}' \
   AGE_VPS_CLIENT_RECORD_FILE='${AGE_VPS_CLIENT_RECORD_FILE}' \
+  AGE_STUDIO_UID=\"\$uid\" AGE_STUDIO_GID=\"\$gid\" \
   docker compose -f '${COMPOSE_FILE}' up -d --build"
+
+echo "==> The console must actually be SERVING, 🚫 not merely started"
+# 🛑 **`up -d` SUCCEEDS FOR A CONTAINER THAT IS CRASH-LOOPING.** ⚠️ MEASURED: a
+# permissions fault at start put the console in `restarting` and this script
+# reported a clean deployment anyway — the same failure class as a CI job that
+# executes no steps. 🚫 `State.Running` alone is not enough either: a restarting
+# container is "running" for part of every cycle. The question is whether the
+# one route an unauthenticated caller may reach ANSWERS.
+"${SSH[@]}" "set -euo pipefail
+  for attempt in \$(seq 1 30); do
+    if docker exec age-studio node -e \"fetch('http://127.0.0.1:3100/sign-in').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\" 2>/dev/null; then
+      echo '    serving: /sign-in answers inside the container'
+      exit 0
+    fi
+    sleep 4
+  done
+  echo 'REFUSED: the console never served /sign-in. It is not deployed.' >&2
+  docker logs --tail 30 age-studio >&2 || true
+  exit 1"
 
 echo "==> D7: proving the boundary FROM INSIDE THE RUNNING CONTAINER"
 # 🛑 **THE OWNER ASKED FOR REACHABILITY, 🚫 NOT FOR AN APPLICATION QUERY THAT

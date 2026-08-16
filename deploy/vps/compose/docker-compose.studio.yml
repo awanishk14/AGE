@@ -61,6 +61,24 @@ services:
     # mounts above, on purpose — the container sees the operator's files at the
     # operator's own addresses, so a path the operator can read back out of the
     # console is a path that means something on their box.
+    # 🛑 **THE CONSOLE RUNS AS THE OWNER OF THE FILES IT READS, 🚫 NOT AS THE
+    # IMAGE'S OWN USER.** ⚠️ MEASURED: the operator's record is `0600` and their
+    # workspace `0700`, both owned by the deploy account, and the image runs as
+    # `node` — uid 1000, which on this host is a REAL SEPARATE ACCOUNT
+    # (`ubuntu`). So the mounts were present and every read was
+    # `Permission denied`.
+    #
+    # 🚫 **THE FIX IS NOT `chmod o+r`.** Widening the operator's client record on
+    # a shared host would hand a real business's data to another account — the
+    # exact thing `0600` is there to prevent, and ADR-0053 D3's concern in the
+    # filesystem. 🛑 Matching the uid keeps the host permissions EXACTLY as they
+    # are and gives no other account anything.
+    #
+    # ⚠️ DERIVED FROM THE RECORD FILE ITSELF by `scripts/deploy-studio.sh`,
+    # 🚫 never defaulted and 🚫 never a literal here: the one uid that is
+    # certainly right is the one that owns the file the console must open. The
+    # script REFUSES if it cannot stat it, and REFUSES uid 0.
+    user: '${AGE_STUDIO_UID}:${AGE_STUDIO_GID}'
     environment:
       AGE_CLIENT_RECORD_FILE: ${AGE_VPS_CLIENT_RECORD_FILE}
       AGE_DISCOVERY_WORKSPACE: ${AGE_VPS_DISCOVERY_WORKSPACE}
