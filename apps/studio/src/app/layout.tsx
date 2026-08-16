@@ -8,7 +8,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'AGE Studio',
-  description: 'Local operator console for AGE. No business execution.',
+  description: 'Operator console for AGE. No business execution.',
 };
 
 /**
@@ -53,9 +53,21 @@ export default async function RootLayout({ children }: { readonly children: Reac
               read it while looking at their own business's answers would have
               to decide which of the two the console was lying about.
             */}
+            {/*
+              ⚠️ CORRECTED 2026-08-16. It said "runs on your machine … nothing
+              is sent anywhere". 🛑 THE FIRST HALF BECAME FALSE WHEN THE CONSOLE
+              WAS PUBLISHED (ADR-0074 §7 slice 4) — it runs in a container on a
+              shared VPS, reachable over the internet behind a session boundary
+              — and the second half read as a claim about the network that an
+              operator on a public URL can see is not true of their own traffic.
+              ⚠️ What IS still true is the thing the banner exists to say:
+              ADR-0069 D1 — AGE HAS NO OUTBOUND WRITE SURFACE, so nothing it
+              reads is sent to any external system. That is the claim now, and
+              it is the one the architecture actually guarantees.
+            */}
             <header className="border-b border-[hsl(var(--age-border))] px-8 py-3 text-xs text-[hsl(var(--age-text-muted))]">
-              No business execution · runs on your machine, against files you named · nothing is
-              sent anywhere
+              No business execution · reads only the files you named · sends nothing to any external
+              system
             </header>
             <div className="flex-1">{children}</div>
           </div>

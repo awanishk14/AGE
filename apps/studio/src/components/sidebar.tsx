@@ -26,8 +26,20 @@ export function Sidebar({ signedIn }: { readonly signedIn: boolean }) {
     <nav aria-label="AGE Studio" className="w-72 shrink-0 border-r border-[hsl(var(--age-border))]">
       <div className="px-4 py-5">
         <p className="text-sm font-semibold tracking-tight">AGE Studio</p>
+        {/*
+          ⚠️ CORRECTED 2026-08-16. It said "Local operator console · 127.0.0.1".
+          🛑 THAT BECAME FALSE THE DAY THE CONSOLE WAS PUBLISHED (ADR-0074 §7
+          slice 4): an operator reading it on `https://age.digitaldadi.agency`
+          is being told the surface is local when it is on the public internet
+          behind a session boundary. ⚠️ A screen claiming a boundary the
+          architecture has changed is as dishonest as one claiming a capability
+          that does not exist — the same rule that removed "read-only" from the
+          banner. 🚫 Do not replace it with a printed host: this component would
+          then have to learn where it is running, and the request's own host is
+          caller-controlled (`redirect-host-independence.test.ts`).
+        */}
         <p className="mt-1 text-xs text-[hsl(var(--age-text-muted))]">
-          Local operator console · 127.0.0.1
+          Operator console · no business execution
         </p>
       </div>
 

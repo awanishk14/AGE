@@ -187,6 +187,20 @@ describe('the container cannot elevate, and sees almost nothing of the host', ()
     }
   });
 
+  it('🛑 NAMES the two paths it mounts, or the console cannot see them', () => {
+    // ⚠️ MEASURED ON THE REAL DEPLOYMENT, AFTER THE MOUNTS WERE ALREADY RIGHT:
+    // the console reported *"No client record file is configured, so the console
+    // has not looked for one"* — the HONEST answer, because ADR-0054 D2/D3 refuse
+    // a defaulted path and nothing had told the container where to look.
+    // 🛑 A mount without the variable is a deployment that is silently empty of
+    // every business, and 🚫 that reads exactly like a business having no data.
+    // ⚠️ The values must be the SAME expressions as the mounts, so the path the
+    // console names is the path it can actually open.
+    const block = serviceBlock('studio');
+    expect(block).toContain('AGE_CLIENT_RECORD_FILE: ${AGE_VPS_CLIENT_RECORD_FILE}');
+    expect(block).toContain('AGE_DISCOVERY_WORKSPACE: ${AGE_VPS_DISCOVERY_WORKSPACE}');
+  });
+
   it('does not run the console as root', () => {
     expect(stripped(DOCKERFILE)).toContain('USER node');
   });

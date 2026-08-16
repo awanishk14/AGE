@@ -51,6 +51,19 @@ services:
     # `scripts/deploy-studio.sh` derives it on the host from the provisioned one.
     env_file:
       - /etc/age-studio/age-studio.container.env
+    # 🛑 **MOUNTING A PATH IS NOT NAMING IT.** ⚠️ MEASURED ON THE REAL
+    # DEPLOYMENT: both paths below were bind-mounted correctly and the console
+    # still reported *"No client record file is configured, so the console has
+    # not looked for one"* — the honest answer, because ADR-0054 D2/D3 REFUSE a
+    # defaulted path and nothing had told the container where to look. The
+    # variables belong here, 🚫 not in the secret env file: they are
+    # configuration, 🚫 not credentials, and 🛑 they are the SAME paths as the
+    # mounts above, on purpose — the container sees the operator's files at the
+    # operator's own addresses, so a path the operator can read back out of the
+    # console is a path that means something on their box.
+    environment:
+      AGE_CLIENT_RECORD_FILE: ${AGE_VPS_CLIENT_RECORD_FILE}
+      AGE_DISCOVERY_WORKSPACE: ${AGE_VPS_DISCOVERY_WORKSPACE}
     volumes:
       # 🛑 READ-ONLY, and only these two (D5). The operator's workspace and the
       # client record file are the ONLY host paths the console may see.
