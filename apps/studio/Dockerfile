@@ -56,9 +56,26 @@ WORKDIR /age
 # else. ⚠️ MEASURED: the first deployment crash-looped on
 # `getaddrinfo EAI_AGAIN registry.npmjs.org`. That failure is evidence FOR D1,
 # not against it, but the runtime must not depend on the reach it refuses.
-RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
+#
+# 🛑 **AND BAKE IT WHERE ANY UID CAN READ IT.** ⚠️ MEASURED, SECOND CRASH-LOOP:
+# corepack's default home is the RUNNING USER's `~/.cache`, so with
+# `user: 1001:1001` in the compose file — the uid that owns the operator's
+# files — it resolved to `/.cache`, could not create it, and fell back to
+# DOWNLOADING pnpm on a container with no route to the internet. The failure
+# printed `EACCES` and then `EAI_AGAIN`, which reads like a network fault and is
+# a permissions one. 🚫 The console must not depend on the uid it runs as.
+ENV COREPACK_HOME=/opt/corepack
+ENV HOME=/tmp
+RUN mkdir -p /opt/corepack \
+  && corepack enable \
+  && corepack prepare pnpm@9.12.0 --activate \
+  && chmod -R a+rX /opt/corepack
 
+# ⚠️ `a+rX` on the tree, so the console reads its own code whichever uid the
+# deployment gives it (the owner of the operator's record — see the compose
+# file). 🚫 NOT `a+w`: readable is not writable, and nothing here is written.
 COPY --from=build --chown=node:node /age /age
+RUN chmod -R a+rX /age
 
 # 🚫 Not root. A compromise of the console is the threat ADR-0076 is about, and
 # the container's own user is the last of the several boundaries between that
