@@ -198,11 +198,18 @@ export function SourcesPanel({
       <div className="rounded border border-[hsl(var(--age-border))] p-4">
         <h2 className="text-sm font-semibold">Read a source document</h2>
         <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
-          AGE reads one file you name, on your machine, outside this repository, and shows you its
-          own sentences verbatim. It happens once, when you press.
+          AGE reads one file you name, on the machine this console runs on, outside this repository,
+          and shows you its own sentences verbatim. It happens once, when you press.
         </p>
+        {/*
+          ⚠️ CORRECTED 2026-08-16. "on your machine" was written when the console
+          was a loopback process on the operator's own box. Since ADR-0074 §7
+          slice 4 it is a container on the VPS, and the file it names is one
+          bind-mounted there — 🛑 still a file the operator chose, still never
+          sent anywhere, but 🚫 not on the machine holding the browser.
+        */}
         <p className="mt-2 text-xs text-[hsl(var(--age-text-muted))]">
-          Plain text and PDF. A PDF is decoded here, on this machine — nothing is fetched,
+          Plain text and PDF. A PDF is decoded where this console runs — nothing is fetched,
           downloaded, uploaded or contacted, and no document is ever sent anywhere to be read. AGE
           does not read images of text, so a scanned PDF with no text layer will say so rather than
           be guessed at. DOCX is not decoded at all: a second decoder is a decision that has not

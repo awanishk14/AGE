@@ -412,3 +412,87 @@ moment of exposure, 🚫 not inherited from a green CI run taken hours earlier.*
 ```
 AGE_PUBLIC_HOST=age.digitaldadi.agency AGE_ACME_EMAIL=<owner> bash scripts/expose-studio-public.sh
 ```
+
+---
+
+## 8. ✅ SLICE 4 IS LIVE — `https://age.digitaldadi.agency` (2026-08-16)
+
+Both §7.5 blockers were answered by the owner: the ACME email, and ADR-0076 **B — containerise**,
+on their own principle: _"all my applications on the VPS are containerised specifically so that if
+one application is compromised, it cannot automatically reach the others."_
+
+### 8.1 The boundary was PROVEN, 🚫 not asserted
+
+🛑 **A RAW TCP CONNECT FROM INSIDE THE RUNNING CONTAINER, ON THE REAL VPS** — the owner asked for
+network reachability, 🚫 not for an application query that returned nothing. Measured:
+
+| From the console's namespace       | Result                    | Expected      |
+| ---------------------------------- | ------------------------- | ------------- |
+| AGE postgres (`age-internal`)      | **ALLOWED**               | ALLOWED       |
+| SNARA postgres `172.19.0.4:5432`   | **DENIED**                | DENIED        |
+| RankOps postgres `172.21.0.2:5432` | **DENIED**                | DENIED        |
+| Drishti postgres `172.18.0.2:5432` | **DENIED**                | DENIED        |
+| Scanner mysql `172.20.0.3:3306`    | **DENIED**                | DENIED        |
+| the console's own listener         | `127.0.0.1:3100` **only** | loopback only |
+
+⚠️ **AGE's own store must be REACHABLE**, or a deployment that denied everything would pass a naive
+"nothing is reachable" check and be entirely broken. Both directions are asserted.
+⚠️ The same probes are re-run **AFTER** exposure (`expose-studio-public.sh` step 5), because that is
+the moment a defect in the console becomes reachable from the internet.
+
+### 8.2 🛑 THE ERRATUM THE OWNER MUST CONFIRM — ADR-0076 §0.4b
+
+ADR-0076 D3/D4 as written had the console publish **no host port at all**, behind an **AGE-owned
+nginx** on `age-edge` publishing 80/443. 🛑 **THAT COULD NEVER HAVE RUN**: the host's own nginx
+already binds `0.0.0.0:80` and `:443` and serves **five peer vhosts**; an AGE-owned edge would fail
+to bind and take those five sites down with it. The container therefore publishes exactly
+`127.0.0.1:3100:3100` and the **host** nginx terminates TLS and proxies over loopback.
+🚫 **D1 IS UNTOUCHED** — what containerising removes is **OUTBOUND** reach, and that is the owner's
+actual principle. ⚠️ **This is a change to an accepted ADR and is flagged for the owner, 🚫 not
+presented as settled.**
+
+### 8.3 Four defects the containerisation exposed, each fixed with its reason recorded
+
+1. **The runtime fetched its package manager at start.** `corepack enable` alone left pnpm to be
+   downloaded on first invocation, and the container has **no route to the internet** — it
+   crash-looped on `EAI_AGAIN registry.npmjs.org`. 🛑 That failure is evidence **FOR** D1, but the
+   runtime must not depend on the reach it refuses: `corepack prepare pnpm@9.12.0 --activate`.
+2. **The deploy rewrote `DATABASE_URL` to a Docker DNS _name_.** ADR-0061 **A5 REFUSES A HOST NAME
+   BY NAME** — judging it would mean resolving it — so the console threw on the first real session.
+   🛑 **THE GUARD WAS RIGHT AND THE DEPLOYMENT WAS WRONG**: AGE's store is now **pinned** at
+   `172.23.0.2` on its own network and the rewrite names that address. 🚫 This is **not** ADR-0075
+   D4's refused case — that refuses reaching a **peer's** bridge address, assigned by somebody
+   else's deployment.
+3. **Redirects were built from the caller's own host.** In its namespace the console binds
+   `0.0.0.0`, so a refused sign-in sent the browser to `http://0.0.0.0:3100/sign-in`. 🚫 The repair
+   is **NOT** a forwarded-host header — `request.url` derives from a header the CALLER controls, so
+   an absolute redirect built from it is a **Host-header injection primitive on the one route an
+   unauthenticated caller can reach**. Every `Location` is now **relative**, and
+   `redirect-host-independence.test.ts` refuses both shapes. ⚠️ Made to fail by mutation.
+4. 🛑 **MOUNTING A PATH IS NOT NAMING IT.** The operator's workspace and client record file were
+   bind-mounted read-only (D5) and the console still answered _"No client record file is
+   configured, so the console has not looked for one"_ — **the honest answer**, because ADR-0054
+   D2/D3 refuse a defaulted path. ⚠️ **A deployment silently empty of every business reads exactly
+   like a business having no data.** Both variables are now named in the compose file, at the same
+   addresses they are mounted at, and a guard asserts it (made to fail by mutation).
+
+### 8.4 Three on-screen claims the public deployment made FALSE, and corrected
+
+⚠️ **A screen claiming a boundary the architecture has changed is as dishonest as one claiming a
+capability that does not exist** — the rule that removed "read-only" from the banner (#232).
+
+- sidebar _"Local operator console · 127.0.0.1"_ → **"Operator console · no business execution"**.
+  🚫 Not replaced with a printed host: the component would then have to learn where it runs, and the
+  request's own host is caller-controlled (§8.3 item 3).
+- banner _"runs on your machine … nothing is sent anywhere"_ → **"reads only the files you named ·
+  sends nothing to any external system"** — ADR-0069 **D1**, the claim the architecture actually
+  guarantees.
+- sources panel _"decoded here, on this machine"_ → **"where this console runs"**.
+
+### 8.5 🚫 WHAT IS STILL NOT PROVEN
+
+- 🚫 **Rate limiting on sign-in is STILL ABSENT**, and it matters more now the door is public.
+- 🚫 **ADR-0076 D8 IS OPEN**: AGE's own store is still published on `127.0.0.1:5442` for the
+  host-side capture CLI, so a compromised **peer** can still reach AGE's database. That is the
+  mirror image of the problem D1 solved and it is deliberately unresolved.
+- 🚫 The remaining real-browser acceptance checks and the product walkthrough — see the report.
