@@ -152,9 +152,30 @@ echo "==> Building and starting the container (🚫 no published console port)"
 # redirects every protected route correctly, but throws the instant a real
 # session is presented. That failure was MEASURED on this VPS while every test
 # in the repository was green.
-"${SSH[@]}" "cd '${AGE_VPS_PATH}' && \
+#
+# 🛑 THE UID IS DERIVED FROM THE RECORD FILE, 🚫 NOT CHOSEN AND 🚫 NOT DEFAULTED.
+# The operator's record is `0600` and their workspace `0700`; the image's own
+# user is `node`, whose uid belongs to a DIFFERENT REAL ACCOUNT on this shared
+# host. ⚠️ MEASURED: both mounts present, every read `Permission denied`, and the
+# console then said — honestly — that it had found no businesses.
+# 🚫 The repair is not `chmod o+r` on a real business's data. The one uid that is
+# certainly right is the one that owns the file the console must open.
+"${SSH[@]}" "set -euo pipefail
+  cd '${AGE_VPS_PATH}'
+  if ! uid=\$(stat -c %u '${AGE_VPS_CLIENT_RECORD_FILE}' 2>/dev/null); then
+    echo 'REFUSED: cannot stat ${AGE_VPS_CLIENT_RECORD_FILE}.' >&2
+    echo '  The console would start and report no businesses. Nothing is guessed here.' >&2
+    exit 2
+  fi
+  gid=\$(stat -c %g '${AGE_VPS_CLIENT_RECORD_FILE}')
+  if [ \"\$uid\" = '0' ]; then
+    echo 'REFUSED: the operator record is owned by root; the console must not run as root.' >&2
+    exit 2
+  fi
+  echo \"    running as \$uid:\$gid — the owner of the record file\"
   AGE_VPS_DISCOVERY_WORKSPACE='${AGE_VPS_DISCOVERY_WORKSPACE}' \
   AGE_VPS_CLIENT_RECORD_FILE='${AGE_VPS_CLIENT_RECORD_FILE}' \
+  AGE_STUDIO_UID=\"\$uid\" AGE_STUDIO_GID=\"\$gid\" \
   docker compose -f '${COMPOSE_FILE}' up -d --build"
 
 echo "==> D7: proving the boundary FROM INSIDE THE RUNNING CONTAINER"

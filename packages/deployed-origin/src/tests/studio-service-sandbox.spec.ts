@@ -204,6 +204,23 @@ describe('the container cannot elevate, and sees almost nothing of the host', ()
   it('does not run the console as root', () => {
     expect(stripped(DOCKERFILE)).toContain('USER node');
   });
+
+  it('🛑 runs as the DERIVED owner of the record file, 🚫 never a literal uid', () => {
+    // ⚠️ The compose `user:` OVERRIDES the image's `USER node`, so it is the line
+    // that actually decides. 🛑 It must be a substitution: a literal here is a
+    // host fact written into the repository, and the day the account changes the
+    // console reads nothing and reports — honestly — that it found no
+    // businesses. 🚫 And it must never be `0`; the deploy script refuses that
+    // too, from the other side.
+    expect(serviceBlock('studio')).toContain("user: '${AGE_STUDIO_UID}:${AGE_STUDIO_GID}'");
+    expect(COMPOSE_BODY).not.toMatch(/user:\s*['"]?0[:'"]/);
+
+    const script = stripped(SCRIPT);
+    expect(script).toContain("stat -c %u '${AGE_VPS_CLIENT_RECORD_FILE}'");
+    expect(script, 'the deploy must refuse a root-owned record rather than run as root').toMatch(
+      /uid\\?" = '0'/,
+    );
+  });
 });
 
 describe('no credential reaches an image layer or a command line', () => {
