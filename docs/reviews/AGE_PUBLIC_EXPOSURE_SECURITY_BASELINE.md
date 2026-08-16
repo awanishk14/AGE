@@ -37,7 +37,7 @@ box**.
 | 3   | **MEDIUM** | The host process could route to six Docker bridge networks carrying peer stores                                                              | **FIXED** — `IPAddressDeny=any`; a bridge connect is **denied**, measured                                                                                  |
 | 4   | **MEDIUM** | A peer store is published on `127.0.0.1:5432`, which loopback rules cannot exclude                                                           | ⏸️ **OPEN — ADR-0076 `Proposed`.** Reachable at TCP level; the server answers **SCRAM-SHA-256**, and no peer credential is readable by the service account |
 | 5   | **MEDIUM** | No security headers on the origin                                                                                                            | **FIXED** — the vhost, §3 below                                                                                                                            |
-| 6   | **MEDIUM** | No rate limiting on `/sign-in/submit`; 20 bad attempts all answered normally                                                                 | ⏸️ **OPEN** — its own slice (Phase 6C). ⚠️ Recorded so it is not mistaken for absent                                                                       |
+| 6   | **MEDIUM** | No rate limiting on `/sign-in/submit`; 20 bad attempts all answered normally                                                                 | ⏸️ **OPEN AS RECORDED** — its own slice (Phase 6C). ⚠️ Recorded so it is not mistaken for absent. **→ SUPERSEDED 2026-08-16, §6**                          |
 | 7   | **LOW**    | A malformed POST body to `/sign-in/submit` produced a **500** (unguarded `formData()`)                                                       | **FIXED** — collapses into the same `refused=1`                                                                                                            |
 | 8   | **LOW**    | `sharp@0.34.5` (libvips CVEs) is pinned by next and not separately upgradable                                                                | **MITIGATED** — nothing imports `next/image`; `/_next/image` is denied at the proxy                                                                        |
 | 9   | **INFO**   | `X-Powered-By: Next.js` disclosed the framework                                                                                              | **FIXED** — `proxy_hide_header`                                                                                                                            |
@@ -82,8 +82,50 @@ are the responses an attacker works hardest to provoke.
 ## 5. What is deliberately still open
 
 1. **ADR-0076 (`Proposed`)** — the loopback residue in finding 4. 🚫 Not self-accepted; it is a
-   decision request.
-2. **Rate limiting on sign-in** (finding 6) — its own slice.
-3. **A strict `script-src`** — needs nonce middleware and its own slice.
+   decision request. **→ ACCEPTED by the owner (option B); see §6's dated entries.**
+2. **Rate limiting on sign-in** (finding 6) — its own slice. **→ SHIPPED 2026-08-16, §6.**
+3. **A strict `script-src`** — needs nonce middleware and its own slice. ⏸️ **STILL OPEN.**
 4. 🛑 **Nothing here discharges ADR-0055 D7**, and 🛑 **RLS remains coherence, never authorization**
    (ADR-0046 D5).
+
+## 6. Dated changes since the baseline was recorded
+
+> ⚠️ **APPEND HERE; 🚫 do not rewrite §2.** An entry above states what was true on the day of first
+> exposure. An entry below states what changed, when, and under which ADR.
+
+### 2026-08-16 — finding 4 CLOSED (ADR-0076 D1, `Accepted` by the owner, option B)
+
+The console now runs in a container with **no route to any peer store**, proven by raw TCP connect
+**from inside the running container** on every deploy: AGE's own store ALLOWED; SNARA, RankOps and
+Drishti PostgreSQL and the Scanner MySQL all DENIED. ⚠️ **ADR-0076 D8 REMAINS OPEN** — peers can
+still reach AGE's published `127.0.0.1:5442`; the direction that was the violation is the one closed.
+
+### 2026-08-16 — finding 6 CLOSED (#360), and finding 10 found by measuring the fix (#361)
+
+🛑 **A CONTROL THAT PASSES `nginx -t`, RELOADS CLEANLY AND DOES NOTHING IS THE WORST KIND**, because
+every signal available without leaving the box says it is working.
+
+**Finding 10 (MEDIUM, new):** the vhost carried `real_ip_header X-Forwarded-For` with **no
+`set_real_ip_from`** — a directive that trusts nobody and therefore does nothing. `$remote_addr`
+stayed the Cloudflare edge node, so the new limit was diluted across the edge pool. Fixed by binding
+the trust to Cloudflare's 22 published ranges with `real_ip_header CF-Connecting-IP`, which is
+believed **only** when the connection itself comes from one of those ranges — a caller going straight
+at the origin keeps its own address whatever headers it sends.
+
+`limit_req` was installed and **measured from the internet**, twice:
+
+| Path                                     | Before finding 10 was fixed    | After                           |
+| ---------------------------------------- | ------------------------------ | ------------------------------- |
+| 15 rapid attempts **via Cloudflare**     | `303` ×15 — no delay, no `429` | throttled, identically to below |
+| 6 sequential attempts **at the origin**  | delayed to one per 5s          | unchanged                       |
+| 12 concurrent attempts **at the origin** | `303`, `429` ×6, then `303`    | unchanged                       |
+
+⚠️ Same nginx, same directive, opposite outcomes — the key was the **edge node**, not the visitor,
+so the attempts landed in as many buckets as the edge pool has addresses. 🚫 **A limit proven only on
+the path nobody uses is not a limit.** Both paths are checked separately now.
+
+⚠️ Confirmed alongside it: a person making five sequential attempts is **queued, never refused**
+(`burst=5`, 🚫 no `nodelay`), and ordinary page loads are **not** rate limited at all.
+
+🛑 **IT IS A TRANSPORT CONTROL, 🚫 NOT A SECOND AUTHENTICATION**, and 🚫 must never grow into one.
+The `429` carries no information about whether the token was correct — the same refusal rule as #353.
