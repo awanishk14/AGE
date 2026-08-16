@@ -1,31 +1,40 @@
 #!/usr/bin/env bash
 #
-# Put AGE Studio on a host the Product Owner can reach — WITHOUT crossing
-# ADR-0057 D2.
+# Deploy AGE Studio to the VPS AS A CONTAINER — ADR-0076 D1–D7.
 #
 # ─────────────────────────────────────────────────────────────────────────────
-# 🛑 WHAT THIS SCRIPT DELIBERATELY DOES NOT DO.
+# 🛑 WHAT CHANGED, AND WHY THIS SCRIPT NO LONGER REFUSES A PROXY.
 #
-# D2 (OX-INV-1): the console binds `127.0.0.1` or refuses to start — "no flag,
-# no environment override, no degraded mode". The ADR then says, in its own
-# words, that "a reverse proxy, an SSH tunnel, or a published container port in
-# front of a loopback listener defeats it completely", and that "the operator
-# remains responsible for the rest".
+# This script used to install NO reverse proxy, publish NO port and write NO
+# vhost, because `apps/studio` had no sign-in: exposing it would have published
+# an UNAUTHENTICATED console. ADR-0074 slices 2/3 gave it a verified-session
+# boundary (measured on this VPS: a cross-organisation token is refused with the
+# same `refused=1` as garbage, logout writes `revokedAt`, and the old cookie is
+# then refused), so that reason is spent. 🚫 The old refusals were not dropped
+# silently — the ADR records the change, and the guards in
+# `packages/studio-shell/src/studio-bind-configuration.spec.ts` were rewritten
+# to hold the crossings that ARE still crossings.
 #
-# So this script installs NO reverse proxy, publishes NO port, opens NO firewall
-# rule and writes NO nginx/caddy site. The console listens on the VPS's own
-# loopback, and the owner reaches it by forwarding a local port over SSH — the
-# one arrangement where the person at the other end has already authenticated to
-# the host. `apps/studio` has no sign-in of its own; an exposed console would be
-# an unauthenticated console, which is a different product decision and needs
-# its own `Proposed` ADR.
+# 🛑 THE ONE THE OWNER ASKED FOR. Every other product on this host is
+# containerised specifically so a compromise of one cannot reach the others. The
+# console was the last component of any product still running on the host, where
+# `IPAddressAllow=127.0.0.1/32` cannot express a PORT rule — so it could open a
+# peer's PostgreSQL published on loopback. ⚠️ THAT WAS MEASURED, NOT ASSUMED.
+# ADR-0076 D1 removes the reach rather than filtering it.
 #
-# 🚫 DO NOT "just add nginx" to make the URL nicer. That is the crossing.
-# 🚫 DO NOT add a Dockerfile — `apps/studio/next.config.mjs` refuses one by name.
+#   studio  → age-internal (AGE's own store) AND NOTHING ELSE.
+#           → published on 127.0.0.1:3100 ONLY.
+#
+# ⚠️ AN EARLIER DRAFT BUILT AN AGE-OWNED nginx PUBLISHING 80/443 AND PUBLISHED
+# NOTHING FOR THE CONSOLE. 🚫 That proxy could not exist: the host's own nginx
+# already binds both ports and serves five peer vhosts. ADR-0076 §0.4b records
+# the measurement. The host nginx is the public terminator; it has no Docker
+# network membership, so it still has NO ROUTE TO ANY DATABASE.
 #
 # ⚠️ Nothing here is defaulted. Every address, path and workspace location is
-# named by the operator, and the script refuses rather than guess — the same
-# rule the console itself follows for `AGE_DISCOVERY_WORKSPACE`.
+# named by the operator, and the script refuses rather than guess.
+#
+# 🚫 NO CREDENTIAL EVER REACHES A COMMAND LINE, A BUILD ARGUMENT OR A LOG (D6).
 
 set -euo pipefail
 
@@ -38,8 +47,6 @@ require() {
   fi
 }
 
-# Where to put it. 🚫 No fallbacks: a wrong-host deploy is not recoverable by
-# reading the script afterwards.
 require AGE_VPS_HOST
 require AGE_VPS_USER
 require AGE_VPS_PORT
@@ -47,7 +54,8 @@ require AGE_VPS_PATH
 
 # ⚠️ The operator's own data locations ON THE VPS, outside the checkout.
 # ADR-0054 D2/D3: an operator file's path is never defaulted, and the workspace
-# must not live inside the repository.
+# must not live inside the repository. ⚠️ ADR-0076 D5 bind-mounts exactly these
+# two, READ-ONLY, and nothing else.
 require AGE_VPS_DISCOVERY_WORKSPACE
 require AGE_VPS_CLIENT_RECORD_FILE
 
@@ -61,16 +69,14 @@ case "$AGE_VPS_DISCOVERY_WORKSPACE" in
 esac
 
 SSH=(ssh -p "$AGE_VPS_PORT" "${AGE_VPS_USER}@${AGE_VPS_HOST}")
-SERVICE="age-studio"
+COMPOSE_FILE="deploy/vps/compose/docker-compose.studio.yml"
+HOST_ENV="/etc/age-studio/age-studio.env"
+CONTAINER_ENV="/etc/age-studio/age-studio.container.env"
 
-echo "==> Checking the host answers"
-"${SSH[@]}" 'echo "    node $(node -v), pnpm $(pnpm -v)"'
+echo "==> Checking the host answers, and that Docker is there"
+"${SSH[@]}" 'echo "    $(docker --version), $(docker compose version)"'
 
 echo "==> Copying the repository (🚫 never the operator's workspace, 🚫 never .env)"
-# ⚠️ `--delete` keeps the remote checkout an exact copy — a file removed here
-# must not linger there and get imported. The workspace lives outside this path
-# (asserted above), so nothing of the operator's is in reach of it.
-#
 # ⚠️ THE FALLBACK IS NOT A CONVENIENCE. `rsync` is absent from a stock Git Bash
 # on Windows, which is where this repository is developed. `git archive` ships
 # ONLY TRACKED FILES, so it excludes the untracked handover documents, every
@@ -98,120 +104,117 @@ rsync -az --delete \
   ./ "${AGE_VPS_USER}@${AGE_VPS_HOST}:${AGE_VPS_PATH}/"
 fi
 
-echo "==> Installing and building on the host"
-# 🛑 `prisma:generate` RUNS BEFORE THE BUILD, AND THE ORDER IS THE POINT. Next
-# traces `@prisma/client` into `.next/server/chunks/*` at BUILD time. Without a
-# generated client at that moment it bundles the stub, and the deployment then
-# starts, serves `/sign-in`, redirects every protected route correctly — and
-# throws `@prisma/client did not initialize yet` the instant a real session is
-# presented. ⚠️ Generating afterwards does NOT fix it: the stub is already
-# inside the bundle. That failure was MEASURED on the real VPS, and every test
-# in the repository was green while it stood.
-"${SSH[@]}" "cd '${AGE_VPS_PATH}' && pnpm install --frozen-lockfile && pnpm --filter @age/persistence run prisma:generate && pnpm --filter @age/studio build"
-
-echo "==> Writing the service (loopback only)"
-# ⚠️ The unit runs `pnpm --filter @age/studio start`, which is
-# `next start -H 127.0.0.1 -p 3100`. 🚫 The host is NOT a variable here: the
-# start command carries the pinned constant, and `boundHost()` asserts the same
-# one. Two places, one policy, no override.
-"${SSH[@]}" "sudo tee /etc/systemd/system/${SERVICE}.service >/dev/null" <<UNIT
-[Unit]
-Description=AGE Studio (operator console, loopback only)
-After=network.target
-
-[Service]
-Type=simple
-User=${AGE_VPS_USER}
-WorkingDirectory=${AGE_VPS_PATH}
-Environment=NODE_ENV=production
-Environment=AGE_DISCOVERY_WORKSPACE=${AGE_VPS_DISCOVERY_WORKSPACE}
-Environment=AGE_CLIENT_RECORD_FILE=${AGE_VPS_CLIENT_RECORD_FILE}
-# 🛑 THE CREDENTIAL LIVES ON THE SERVER, NEVER IN THIS REPOSITORY.
-# \`scripts/provision-studio-database.sh\` writes it root-owned, mode 600.
-# ⚠️ NO LEADING \`-\`: an absent file must stop the service. ADR-0061 A6 item 2 —
-# a deployment that starts without its secrets is a deployment nobody knows is
-# misconfigured, and 🚫 there is no default and no generated substitute.
-EnvironmentFile=/etc/age-studio/age-studio.env
-ExecStart=/usr/bin/env pnpm --filter @age/studio start
-Restart=on-failure
-
-# ── The sandbox (ADR-0074 §7 slice 4) ─────────────────────────────────────────
+echo "==> Deriving the container's env file from the provisioned one"
+# 🛑 THE ONLY DIFFERENCE IS THE DATABASE HOST, AND IT IS A FACT ABOUT NAMESPACES,
+# 🚫 NOT A SETTING. The host service reached AGE's store through its loopback
+# publication `127.0.0.1:5442`. That publication does not exist inside the
+# container's namespace; on `age-internal` the store answers as
+# `age-postgres:5432`. ⚠️ The rewrite happens ON THE HOST, in place, on a
+# root-owned 600 file — 🚫 the value is never read back, printed, or carried on a
+# command line (D6).
 #
-# 🛑 **THE SINGLE MOST IMPORTANT LINE IN THIS FILE IS \`NoNewPrivileges\`.** The
-# account this service runs as holds \`NOPASSWD: ALL\` on a host it SHARES WITH
-# FOUR OTHER PRODUCTS. Until the console was reachable only through an SSH
-# tunnel that was a theoretical concern; the moment it answers the public
-# internet, any code-execution defect in it is root on that shared host, and the
-# blast radius is every peer's database. ⚠️ \`NoNewPrivileges\` makes the kernel
-# ignore setuid for this process AND EVERY CHILD IT WILL EVER HAVE, so \`sudo\`
-# inside the service simply cannot elevate. 🚫 Do not remove it to make a
-# deployment step convenient — deployment runs over ssh, not through the service.
-NoNewPrivileges=yes
+# 🚫 If the provisioned file is missing, this REFUSES. ADR-0061 A6 item 2: a
+# deployment that starts without its secrets is a deployment nobody knows is
+# misconfigured, and there is no default and no generated substitute.
+"${SSH[@]}" "set -euo pipefail
+  if ! sudo test -f '${HOST_ENV}'; then
+    echo 'REFUSED: ${HOST_ENV} does not exist.' >&2
+    echo '  Run scripts/provision-studio-database.sh first. Nothing is generated here.' >&2
+    exit 2
+  fi
+  sudo sh -c \"sed -E 's#@127\\.0\\.0\\.1:5442/#@age-postgres:5432/#' '${HOST_ENV}' > '${CONTAINER_ENV}'\"
+  sudo chmod 600 '${CONTAINER_ENV}'
+  sudo chown root:root '${CONTAINER_ENV}'
+  if ! sudo grep -q '@age-postgres:5432/' '${CONTAINER_ENV}'; then
+    echo 'REFUSED: the derived env file does not name age-postgres:5432.' >&2
+    echo '  The provisioned DATABASE_URL is not in the expected form; fix it by hand.' >&2
+    exit 2
+  fi
+  echo '    (derived, 600, root-owned — value never printed)'"
 
-# ⚠️ **AND THE ONE THAT ANSWERS "AGE MUST NOT REACH A PEER'S DATABASE" WITH A
-# MECHANISM RATHER THAN A PROMISE.** The console makes no outbound call at all —
-# it is model-free, fetches no URL, and speaks to exactly one database on
-# loopback. Everything else is denied, which removes the Docker bridge subnets
-# (172.16/12) where the peer stores live from this process's reach entirely.
-# 🚫 It does NOT remove the peer instance published on 127.0.0.1:5432 — loopback
-# has to stay open for AGE's own store on 127.0.0.1:5442, and a port-level rule
-# is not expressible here. ⚠️ That residue is what ADR-0076 is about; 🚫 do not
-# read this line as closing it.
-IPAddressDeny=any
-IPAddressAllow=127.0.0.1/32
-IPAddressAllow=::1/128
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+echo "==> Building and starting the container (🚫 no published console port)"
+# ⚠️ `prisma:generate` RUNS BEFORE `next build` INSIDE THE IMAGE, and the order
+# is the point — see `apps/studio/Dockerfile`. Next traces `@prisma/client` into
+# `.next/server/chunks/*` at BUILD time; without a generated client at that
+# moment it bundles the stub, and the deployment then serves `/sign-in` and
+# redirects every protected route correctly, but throws the instant a real
+# session is presented. That failure was MEASURED on this VPS while every test
+# in the repository was green.
+"${SSH[@]}" "cd '${AGE_VPS_PATH}' && \
+  AGE_VPS_DISCOVERY_WORKSPACE='${AGE_VPS_DISCOVERY_WORKSPACE}' \
+  AGE_VPS_CLIENT_RECORD_FILE='${AGE_VPS_CLIENT_RECORD_FILE}' \
+  docker compose -f '${COMPOSE_FILE}' up -d --build"
 
-# ⚠️ The rest is ordinary systemd sandboxing: the filesystem is read-only apart
-# from the checkout and the operator's own workspace, /tmp is private, and the
-# kernel surfaces a web console has no business touching are closed.
-PrivateTmp=yes
-PrivateDevices=yes
-ProtectSystem=strict
-ProtectHome=read-only
-ReadWritePaths=${AGE_VPS_PATH} ${AGE_VPS_DISCOVERY_WORKSPACE}
-ProtectKernelTunables=yes
-ProtectKernelModules=yes
-ProtectControlGroups=yes
-ProtectClock=yes
-RestrictSUIDSGID=yes
-RestrictRealtime=yes
-LockPersonality=yes
+echo "==> D7: proving the boundary FROM INSIDE THE RUNNING CONTAINER"
+# 🛑 **THE OWNER ASKED FOR REACHABILITY, 🚫 NOT FOR AN APPLICATION QUERY THAT
+# RETURNS NOTHING.** A query can fail for a dozen reasons that have nothing to do
+# with the network. This opens a RAW TCP CONNECTION to each address and reports
+# what the kernel in that namespace actually permits.
+#
+# ⚠️ AGE's own store must be REACHABLE. A deployment that denied everything would
+# pass a naive "nothing is reachable" check and be entirely broken.
+"${SSH[@]}" "cd '${AGE_VPS_PATH}' && docker exec age-studio node -e \"
+const net = require('node:net');
+const targets = [
+  ['AGE postgres (age-internal)', 'age-postgres', 5432, 'ALLOWED'],
+  ['SNARA postgres', '172.19.0.4', 5432, 'DENIED'],
+  ['RankOps postgres', '172.21.0.2', 5432, 'DENIED'],
+  ['Drishti postgres', '172.18.0.2', 5432, 'DENIED'],
+  ['Scanner mysql', '172.20.0.3', 3306, 'DENIED'],
+];
+let failures = 0;
+const probe = ([label, host, port, expected]) => new Promise((resolve) => {
+  const socket = net.connect({ host, port });
+  const done = (actual) => {
+    socket.destroy();
+    const ok = actual === expected;
+    if (!ok) failures += 1;
+    console.log((ok ? '    ok   ' : '    FAIL ') + label + ' -> ' + actual + ' (expected ' + expected + ')');
+    resolve();
+  };
+  socket.setTimeout(3000);
+  socket.on('connect', () => done('ALLOWED'));
+  socket.on('timeout', () => done('DENIED'));
+  socket.on('error', () => done('DENIED'));
+});
+(async () => {
+  for (const target of targets) await probe(target);
+  if (failures > 0) { console.error('REFUSED: the container boundary is not what ADR-0076 D7 requires.'); process.exit(1); }
+  console.log('    (ADR-0076 D7 satisfied from inside the container)');
+})();
+\""
 
-[Install]
-WantedBy=multi-user.target
-UNIT
+echo "==> Confirming the console is published on LOOPBACK ONLY (D3)"
+# 🛑 THE CHECK THAT MATTERS, AND IT IS NOT "IS IT UP". A `ports:` key reading
+# `3100:3100` starts exactly as cleanly and puts the console on the public
+# internet with no TLS and no session boundary in front of it. So the test is
+# on the ADDRESS: every listener on 3100 must be a loopback one.
+"${SSH[@]}" "public=\$(ss -ltn 2>/dev/null | awk '\$4 ~ /:3100\$/ {print \$4}' | grep -v '^127\.0\.0\.1:' || true)
+  if [ -n \"\$public\" ]; then
+    echo \"    FAIL: 3100 is published on a non-loopback address: \$public\" >&2
+    exit 1
+  fi
+  if ! ss -ltn 2>/dev/null | awk '\$4 ~ /:3100\$/' | grep -q '127\.0\.0\.1:3100'; then
+    echo '    FAIL: nothing is published on 127.0.0.1:3100 — the host nginx could not reach the console.' >&2
+    exit 1
+  fi
+  echo '    ok   127.0.0.1:3100 only'"
 
-"${SSH[@]}" "sudo systemctl daemon-reload && sudo systemctl enable --now ${SERVICE} && sudo systemctl restart ${SERVICE}"
+cat <<NEXT
 
-echo "==> Confirming it is listening on loopback AND NOWHERE ELSE"
-# 🛑 THE ONE CHECK THAT MATTERS. A console reachable off 127.0.0.1 is an
-# unauthenticated console on the public internet. If this ever prints anything
-# but a loopback address, stop the service before doing anything else.
-"${SSH[@]}" "ss -ltnp 2>/dev/null | grep ':3100' || echo '    (nothing listening on 3100 yet — check: journalctl -u ${SERVICE} -n 50)'"
+==> Done. The console runs in a container published on host loopback only.
 
-cat <<TUNNEL
+    ⚠️ It has NO ROUTE TO ANY PEER DATABASE — proven above from inside the
+    running container, not inferred from a query that returned nothing. TLS and
+    the public hostname are \`scripts/expose-studio-public.sh\`.
 
-==> Done. To open it, the Product Owner runs THIS on their own machine:
+    ⚠️ THE TUNNEL IS NO LONGER THE AUTHENTICATION, AND NO LONGER THE TRANSPORT.
+    The console has a real boundary: every route but the sign-in door requires a
+    session token provisioned as an act, verified against a row in this
+    deployment's store, and revoked on sign-out.
 
-      ssh -N -L 3100:127.0.0.1:3100 -p ${AGE_VPS_PORT} ${AGE_VPS_USER}@${AGE_VPS_HOST}
-
-    and then opens  http://127.0.0.1:3100  in a browser.
-
-    🛑 THE TUNNEL IS NO LONGER THE AUTHENTICATION (ADR-0074 §7 slice 2). The
-    console now has a real boundary: every route but the sign-in door requires a
-    session token that was provisioned as an act, verified against a row in this
-    deployment's store, and revoked on sign-out. Reaching the port is no longer
-    enough to see anything.
-
-    ⚠️ THE TUNNEL IS STILL THE TRANSPORT, AND STILL REQUIRED. The service is
-    bound to 127.0.0.1 and 🚫 nothing is published: there is no port, no proxy
-    and no vhost. The public bind, TLS and the boundary in front of it are
-    ADR-0074 §7 slice 4, and the Product Owner's instruction stands until then —
-    "do not expose the Studio unauthenticated even temporarily".
-
-    ⚠️ THE UNIT WILL NOT START WITHOUT AGE_STUDIO_ORGANIZATION_ID. It is written
-    into /etc/age-studio/age-studio.env by scripts/provision-studio-database.sh.
-    It is the RLS lookup scope, 🚫 not an authorization: every entitlement
-    decision is taken from the session row that comes back.
-TUNNEL
+    ⚠️ THE CONTAINER WILL NOT START WITHOUT AGE_STUDIO_ORGANIZATION_ID. It is
+    written into ${HOST_ENV} by scripts/provision-studio-database.sh and derived
+    into ${CONTAINER_ENV} above. It is the RLS lookup scope, 🚫 not an
+    authorization: every entitlement decision is taken from the session row.
+NEXT

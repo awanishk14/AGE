@@ -1,0 +1,82 @@
+# AGE Studio in its own namespace — ADR-0076 D1/D3/D5/D6, D3/D4 as amended by §0.4b.
+#
+# 🛑 **THE SHAPE IS THE SECURITY PROPERTY, 🚫 NOT A CONVENIENCE.**
+#
+#   studio → age-internal, and NOTHING ELSE
+#          → published on 127.0.0.1:3100 ONLY
+#
+# 🛑 **ONE NETWORK, AND IT CARRIES NO PEER** (D4 as amended). `age-internal`
+# carries the console and `age-postgres`. SNARA's postgres and redis — the pair
+# the §0.4 measurement found REACHABLE from the host process this replaces — are
+# on `infra_default`, which this namespace has no route to. 🚫 An extra entry
+# under `networks:` puts a peer's database back inside the console's reach and
+# nothing anywhere would report a change, so a guard asserts the list exactly.
+#
+# ⚠️ **THE PUBLICATION IS INBOUND AND GRANTS THE CONSOLE NOTHING.** `127.0.0.1`
+# is load-bearing: `3100:3100` would publish on every interface, including the
+# public one, and the console would be on the internet without TLS or the
+# session boundary. 🚫 There is no second port, and 🚫 the database is never
+# published from this file.
+#
+# ⚠️ **THIS FILE USED TO CARRY AN `age-edge` NETWORK AND AN AGE-OWNED nginx
+# PUBLISHING 80/443.** It could not exist: the host's own nginx already binds
+# both and serves five peer vhosts. ⚠️ **§0.4b RECORDS THE MEASUREMENT** — the
+# host nginx is the public terminator and reaches the console over loopback.
+#
+# ⚠️ `age-internal` is EXTERNAL: it already exists and carries `age-postgres`
+# (ADR-0075). 🚫 This file must never create, modify or attach a peer's network.
+
+services:
+  studio:
+    build:
+      context: ../../..
+      dockerfile: apps/studio/Dockerfile
+    image: age-studio:local
+    container_name: age-studio
+    restart: unless-stopped
+    ports:
+      # 🛑 HOST LOOPBACK ONLY. See the note above — a guard asserts this exact
+      # mapping, because `3100:3100` looks almost identical and is public.
+      - '127.0.0.1:3100:3100'
+    networks:
+      - age-internal
+    # 🚫 No secret literal here (D6). The env file is HOST-SIDE, root-owned, mode
+    # 600, and OUTSIDE THE CHECKOUT — 🚫 never committed, 🚫 never a build
+    # argument, 🚫 never a command-line value.
+    #
+    # ⚠️ IT IS A DIFFERENT FILE FROM THE HOST SERVICE'S, AND THE DIFFERENCE IS
+    # ONE LINE: `DATABASE_URL` names `age-postgres:5432` — 🛑 the CONTAINER's
+    # route to AGE's own store on `age-internal`, 🚫 not the host's
+    # `127.0.0.1:5442` publication, which does not exist inside this namespace.
+    # `scripts/deploy-studio.sh` derives it on the host from the provisioned one.
+    env_file:
+      - /etc/age-studio/age-studio.container.env
+    volumes:
+      # 🛑 READ-ONLY, and only these two (D5). The operator's workspace and the
+      # client record file are the ONLY host paths the console may see.
+      # ⚠️ ADR-0054 is unchanged: the paths are configuration, never defaulted,
+      # and still refused if they fall inside the repository.
+      - ${AGE_VPS_DISCOVERY_WORKSPACE}:${AGE_VPS_DISCOVERY_WORKSPACE}:ro
+      - ${AGE_VPS_CLIENT_RECORD_FILE}:${AGE_VPS_CLIENT_RECORD_FILE}:ro
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      # ⚠️ `/sign-in` is the only route an unauthenticated caller reaches, so it
+      # is the only honest health probe. 🚫 A protected route would report
+      # unhealthy for a correct redirect.
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3100/sign-in').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+networks:
+  age-internal:
+    external: true
+    name: age-internal

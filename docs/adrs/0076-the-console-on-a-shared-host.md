@@ -1,17 +1,15 @@
 # ADR-0076 — The console on a shared host: what `IPAddressDeny` closed, what it did not, and whether Studio is containerised
 
-Status: **Proposed** (2026-08-16)
-
-🛑 **THIS ADR AUTHORIZES NOTHING.** It is a decision request. 🚫 It must not be self-accepted: the
-§2 mandate covers decisions the architect can reason to, and this one turns on how the Product Owner
-weighs a residual risk on a host that carries four of their products. ⚠️ Read D-options as options,
-🚫 not as a plan.
+Status: **Accepted** (2026-08-16) — by the **Product Owner**, in their own words (§0.3).
+🚫 **NOT self-accepted.** ⚠️ The acceptance is **bounded by §0.3b**: the owner rejected option A and
+set the principle; the residual engineering choice — B's exact shape — is the architect's under the §2
+mandate and is recorded as D1–D8, 🚫 not as the owner's words.
 
 Depends on: ADR-0074 **D8/D9** (the deployed console and its door) · ADR-0075 **D1–D6** (AGE's own
 database and the boundary a peer may never cross) · ADR-0061 **A5/A6** · ADR-0057 **D2** (OX-INV-1,
 the loopback bind) · ADR-0071 **D1/D5** (the peer transport is operator-mediated) · ADR-0046 **D5**
 (RLS is coherence, never authorization).
-Amends: nothing. Supersedes: nothing.
+Amends: **ADR-0057 D2 (OX-INV-1)** — see D2, explicitly and in one place. Supersedes: nothing.
 
 ---
 
@@ -64,6 +62,98 @@ service active, loopback-only, its own store still reachable, and a **Docker bri
 `127.0.0.1:5442`, and a systemd address rule cannot express a port. So the console process can still
 open a socket to a peer's database. **That residue is the whole subject of this ADR.**
 
+## 0.3 THE OWNER'S DECISION (2026-08-16), VERBATIM
+
+> _"One important architectural clarification: all my applications on the VPS are containerised
+> specifically so that if one application is compromised, it cannot automatically reach the others.
+> Therefore, before public exposure of AGE, reassess ADR-0076 against this principle. I do not want
+> to simply accept AGE Studio's current host-level ability to reach peer PostgreSQL services."_
+>
+> _"Test network reachability directly, not merely whether an application query returns data."_
+>
+> _"If containerising Studio is the cleanest way to achieve the same isolation model as the other
+> applications, pursue that through the required ADR rather than silently overriding an existing
+> decision."_
+
+🛑 **OPTION A IS REJECTED.** 🚫 The residue in §0.2 item 4 may not be accepted as a residual risk,
+and 🚫 the public bind may not proceed on the #352 sandbox alone — which is what §5's closing line
+previously contemplated and what §4 previously recommended. ⚠️ **The architect's recommendation was
+WRONG against the owner's actual security model**, and finding 8 is why the evidence in §0.2 stands
+while the conclusion drawn from it did not.
+
+⚠️ **THE PRINCIPLE IS NOW EXPLICIT AND IS THE THING TO SATISFY:** isolation is a **containment
+boundary**, 🚫 not a credential. The question is 🚫 never "could AGE authenticate to a peer store" but
+**"if the console is compromised, what can the compromised process reach at all."**
+
+### 0.3b 🚫 WHAT THE OWNER DID _NOT_ DECIDE
+
+⚠️ Recorded so no later reader mistakes the architect's work for the owner's instruction:
+
+- 🚫 They did **not** choose between B and C. They said containerise **if it is the cleanest way to
+  achieve the same isolation model**. §4 now argues that it is, on the measurement in §0.4 — that
+  argument is the architect's.
+- 🚫 They did **not** specify how the operator workspace and client record file reach the container
+  (§5 item 2), nor the container's own bind/publication shape. D4–D6 decide those.
+- 🚫 They did **not** answer §5 item 3 — whether the symmetric fact that **peers can reach AGE's
+  `5442`** is in scope. D8 records it as still open, 🚫 not as closed.
+
+## 0.4 THE DIRECT REACHABILITY MEASUREMENT (2026-08-16) — the owner's test, run their way
+
+🛑 **A RAW TCP CONNECT FROM THE CONSOLE'S OWN SANDBOX CONTEXT, 🚫 NOT AN APPLICATION QUERY.** Run via
+`systemd-run` carrying the shipped unit's rules, as the service user, on the real VPS:
+
+| From the console process, to                    | Result                            |
+| ----------------------------------------------- | --------------------------------- |
+| AGE postgres `127.0.0.1:5442`                   | **REACHABLE** — required, correct |
+| **SNARA postgres `127.0.0.1:5432`**             | 🛑 **REACHABLE — THE VIOLATION**  |
+| **SNARA redis `127.0.0.1:6379`**                | 🛑 **REACHABLE — THE VIOLATION**  |
+| SNARA postgres `172.19.0.4:5432` (container IP) | denied                            |
+| RankOps postgres `172.21.0.2:5432`              | denied                            |
+| Drishti postgres `172.18.0.2:5432`              | denied                            |
+| Scanner MySQL `172.20.0.3:3306`                 | denied                            |
+| AGE postgres `172.23.0.2:5432` (container IP)   | denied                            |
+
+⚠️ **ONE CORRECTION TO §0.2 ITEM 4:** the peer store published on `127.0.0.1:5432` is **SNARA's**,
+🚫 not RankOps'. RankOps', Drishti's and the scanner's stores are **not published to the host at
+all** — they are reachable only inside their own bridge networks, which `IPAddressDeny=any` already
+closes. 🛑 **So the entire violation is the loopback-published SNARA pair, and nothing else.**
+
+⚠️ **AND THE TOPOLOGY IS THE ARGUMENT FOR B:** every peer product already sits on its own Docker
+network (`rankops-internal`, `drishti_internal`, `infra_default`, `scanner-infra_default`), and AGE
+already has `age-internal` carrying `age-postgres`. 🛑 **The console is the ONLY component of any
+product on that host still running outside a container.** That is precisely the asymmetry the owner
+described, measured rather than asserted.
+
+## 0.4b ⚠️ ERRATUM — D3's "PUBLISHES NO PORT AT ALL" WAS DRAFTED ON A PREMISE THAT MEASURED FALSE
+
+🛑 **MEASURED ON THE REAL VPS AFTER THE DECISIONS BELOW WERE WRITTEN:** the host's own nginx binds
+`0.0.0.0:80` and `0.0.0.0:443` and already serves **five other products' vhosts**
+(`aivisibilityscanner`, `digitaldadi.agency`, `drishti`, `rankops`, `snara`). D4's reverse proxy was
+drafted as a container publishing `80:80`/`443:443`. 🚫 **It cannot: those ports are taken, and
+taking them would take five live sites down.** ⚠️ This ADR's own §2 forbids touching a peer's
+deployment, so migrating their vhosts into an AGE-owned proxy is 🚫 refused, not deferred.
+
+⚠️ **AND THE OBVIOUS REPAIR IS WORTH LESS THAN IT LOOKS.** A container proxy published on
+`127.0.0.1:8100`, fronted by the host nginx, would keep D3 literally true — and would forward every
+request to the console unconditionally, so **any process on that host could reach the console
+through it exactly as it could reach a published `127.0.0.1:3100`.** 🛑 **The security difference is
+nil**; the difference is one more hop and one more config file. A shape that reads as stronger
+without being stronger is the kind of thing this repository refuses by name.
+
+🛑 **SO D3 IS AMENDED, AND ITS FALSIFIED SENTENCE IS KEPT BELOW RATHER THAN ERASED.** The studio
+container publishes **exactly one port, on host loopback only**: `127.0.0.1:3100:3100`. The
+enumerated boundary of amended OX-INV-1 is therefore **host loopback** — the same boundary the
+console has had since ADR-0057 D2, now reached through a publication rather than a bind.
+
+⚠️ **WHAT THIS DOES NOT COST.** 🛑 **D1 IS UNTOUCHED, AND D1 IS THE OWNER'S PRINCIPLE.** The console
+still runs in a namespace attached to `age-internal` and nothing else, so it still has **no route to
+SNARA's postgres, SNARA's redis, or any peer's store** — publication is inbound, and it grants the
+console no outbound reach whatever. The violation §0.4 measured is removed in full. What is lost is
+only D3's extra claim, which this topology never supported.
+
+🚫 **THIS IS AN ERRATUM ON A MEASUREMENT, 🚫 NOT A RELAXATION OF THE OWNER'S DECISION**, and it is
+flagged for the Product Owner's confirmation rather than presented as settled.
+
 ## 1. The question, stated precisely
 
 > Is "the AGE process can open a TCP socket to a peer's database, but holds no credential for it and
@@ -79,7 +169,8 @@ code execution inside the console, what is one hop away?
 
 - 🚫 **No AGE code gains a peer database client, connection string, driver or credential** — not
   behind a flag, not for diagnostics, not "read-only". ADR-0075 D3 is unamended by this ADR.
-- 🚫 **The console does not stop binding loopback.** OX-INV-1 stands: any option that publishes
+- 🚫 **The console's listener never becomes reachable from the network.** ⚠️ **D2 AMENDS HOW THIS IS
+  EXPRESSED** — the boundary, not the literal string `127.0.0.1` — but any option that publishes
   `3100` on a public interface is refused, whatever else it does.
 - 🚫 **No peer's container, network, volume or configuration is modified to accommodate AGE.**
 - 🚫 **The reverse proxy does not become the authentication** (ADR-0074), whichever option is taken.
@@ -123,26 +214,83 @@ process may reach `127.0.0.1:5442` and nothing else on loopback.
 - ⚠️ It is the option that gets the security property of B without B's cost, and the option most
   likely to break in a way nobody notices until the console cannot reach its own database.
 
-## 4. The architect's recommendation (⚠️ a recommendation, 🚫 not a decision)
+## 4. ⚠️ THE SUPERSEDED RECOMMENDATION — kept, 🚫 not deleted
 
-**Option A, recorded explicitly as an accepted residual, with Option C as the answer if the risk
-appetite is lower** — and 🚫 **not Option B**, on the ground that it buys the same property as C
-while demanding an amendment to a refusal (`next.config.mjs`) that is currently doing useful work
-elsewhere, and while moving the measured, working build order into an unbuilt image on the same day
-the console is first exposed publicly.
+The architect recommended **A, with C as fallback, explicitly not B**, on the ground that B demanded
+an amendment to `next.config.mjs`'s refusal and moved a measured build order into an unbuilt image
+on the day of first exposure.
 
-⚠️ **Finding 8 applies to this paragraph.** Adopt the evidence in §0.2 and this conclusion
-separately; the evidence stands whichever option is chosen, and the architect's recommendation has
-been wrong before (ADR-0075 §0.1 records exactly that).
+🛑 **THAT RECOMMENDATION IS SUPERSEDED BY §0.3 AND IS LEFT HERE ON PURPOSE.** It weighed build risk
+against a boundary the owner had already decided elsewhere — every other application on the host is
+containerised for exactly this reason. ⚠️ **A cost argument is not a security argument**, and
+"nothing further to build" was doing more work in that paragraph than it was entitled to.
 
-## 5. What the Product Owner is being asked to decide
+### 4b Why B and 🚫 not C, on the measurement
 
-1. **A, B or C** — the disposition of the loopback residue in §0.2 item 4.
-2. If **B**: 🛑 an explicit amendment to `apps/studio/next.config.mjs`'s refusal of a Dockerfile, in
-   the owner's own words, plus a decision on how the operator's workspace and client record file
-   reach the container.
-3. Whether the symmetric fact — **peers can reach AGE's `5442` on host loopback by the same
-   argument** — is in scope here or is a separate question about the peers' own deployments.
+C (an nftables rule or a private netns) can produce the same table as B. It is refused because:
 
-🛑 **Until this is accepted, the deployment shape does not change.** The public bind proceeds on the
-sandbox already verified (#352); this ADR neither blocks it nor is discharged by it.
+- 🚫 **It is a mechanism unique to AGE.** Five products on the host already express this boundary one
+  way — a container on its own network. A sixth, bespoke, socket-level rule is the copy that gets
+  relaxed, and the one nobody else on the host knows exists.
+- 🚫 **It fails silently in the dangerous direction.** A dropped nftables rule after a reboot or a
+  Docker restart restores peer reachability with the console still running and every screen green.
+  A container with no route cannot regain one by forgetting a rule.
+- ✅ **B removes the reach rather than filtering it** — the property the owner asked for, by
+  construction rather than by policy.
+
+## 5. DECISIONS
+
+**D1 — `apps/studio` IS CONTAINERISED**, on AGE's own Docker network, as every other product on the
+host already is. Option A is refused; option C is refused.
+
+**D2 — 🛑 OX-INV-1 IS AMENDED, EXPLICITLY AND IN ONE PLACE.** ADR-0057 D2 said the console binds
+loopback or refuses to start, and `next.config.mjs` refused a Dockerfile **by name** because "a
+published container port in front of a loopback listener defeats the whole invariant."
+⚠️ **THAT SENTENCE IS STILL TRUE, AND D3 IS WHY IT DOES NOT APPLY.** The invariant's _purpose_ was
+never the string `127.0.0.1`; it was **"the console listener is not reachable from the network."**
+The amended invariant states the boundary rather than one implementation of it:
+
+> **OX-INV-1 (amended): the console's listener is reachable only from an explicitly enumerated
+> boundary — host loopback when it runs on a host, or an UNPUBLISHED container network when it runs
+> in a container. 🚫 There is no third mode, and 🚫 neither mode is selectable by an environment
+> variable.**
+
+**D3 — 🛑 THE STUDIO CONTAINER PUBLISHES ONE PORT, ON HOST LOOPBACK, AND 🚫 NOTHING ELSE.**
+⚠️ **AMENDED BY §0.4b — READ IT.** The published mapping is exactly `127.0.0.1:3100:3100`; 🚫 never
+`0.0.0.0`, 🚫 never a second port, 🚫 never the database. **As originally drafted D3 read:**
+_"THE STUDIO CONTAINER PUBLISHES NO PORT AT ALL … strictly stronger than the host-loopback bind it
+replaces"_ — ⚠️ **that was measured false**: the host's nginx already owns `80`/`443` for five peer
+vhosts, and the only D3-preserving alternative forwards to the console from host loopback anyway.
+🚫 **The falsified sentence is kept here on purpose**, so nobody re-derives it from scratch.
+
+**D4 — ONE NETWORK, AND IT CARRIES NO PEER.** `age-internal` carries the console and `age-postgres`;
+🛑 **the console is attached to that network and to nothing else.** ⚠️ **AMENDED BY §0.4b:** the
+separate edge network and the AGE-owned reverse-proxy container are 🚫 **not built** — the host's
+existing nginx is the public terminator, it reaches the console over host loopback, and it has no
+Docker network membership at all, so **the public-facing component still has no route to any
+database** (the owner's fifth and sixth proofs) by a plainer construction than the one drafted.
+
+**D5 — THE OPERATOR'S WORKSPACE AND CLIENT RECORD FILE ARE BIND-MOUNTED READ-ONLY**, at the same
+paths, and 🚫 nothing else from the host is mounted. ⚠️ ADR-0054's rule that an operator file's path
+is never defaulted is unchanged: the paths still arrive as configuration and are still refused if
+they fall inside the repository.
+
+**D6 — 🚫 NO SECRET REACHES THE CONTAINER THROUGH A COMMAND LINE OR AN IMAGE LAYER.** The database
+URL arrives as an env file readable only by the deploy user, 🚫 never `--build-arg`, 🚫 never `ENV` in
+the Dockerfile, 🚫 never a compose literal. ⚠️ #350's rule extends unchanged: a command line is
+public on that host.
+
+**D7 — 🛑 THE BOUNDARY IS PROVEN BY DIRECT REACHABILITY FROM INSIDE THE RUNNING CONTAINER**, in the
+owner's words: _"Test network reachability directly, not merely whether an application query returns
+data."_ 🚫 A green screen is not proof. The §0.4 table is re-run **from inside the container** and
+must invert for the two SNARA rows.
+
+**D8 — ⚠️ THE SYMMETRIC QUESTION STAYS OPEN.** Peers can still reach AGE's `127.0.0.1:5442` on host
+loopback by the same argument. 🚫 That is **NOT** discharged here and 🚫 must not be described as
+closed; it is a question about the peers' deployments and AGE's publication, and it needs its own
+decision. ⚠️ Removing the `5442` publication would break the host-side capture CLI (ADR-0055/0060),
+so it is 🚫 not a free change.
+
+🛑 **WHAT IS STILL REFUSED, UNCHANGED BY D1:** §2 stands in full — 🚫 no peer database client,
+credential or connection string enters AGE; 🚫 no peer's container, network or configuration is
+modified to accommodate AGE; 🚫 the reverse proxy does not become the authentication.

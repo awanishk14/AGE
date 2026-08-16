@@ -57,14 +57,23 @@ echo "==> 1/6 The console must already have a boundary. Checking it, on the box.
 remote AGE_STUDIO_PORT="$AGE_STUDIO_PORT" <<'REMOTE'
 set -euo pipefail
 
-if ! systemctl is-active --quiet age-studio; then
-  echo "REFUSED: age-studio is not running. There is nothing to publish." >&2
+# ⚠️ THE CONSOLE IS A CONTAINER SINCE ADR-0076 D1, 🚫 NO LONGER A SYSTEMD UNIT.
+# This asked `systemctl is-active age-studio`, which on the new deployment
+# answers "inactive" for a console that is running perfectly — a refusal that
+# would read exactly like a broken deployment.
+if [ "$(docker inspect -f '{{.State.Running}}' age-studio 2>/dev/null || echo false)" != "true" ]; then
+  echo "REFUSED: the age-studio container is not running. There is nothing to publish." >&2
   exit 1
 fi
 
 # 🛑 LOOPBACK, AND NOWHERE ELSE. If the console were already listening on a
 # public interface, putting a proxy in front of it would decorate a door that
 # nobody has to use — the exact shape ADR-0061 A6 refuses by name.
+#
+# ⚠️ UNCHANGED BY CONTAINERISATION, AND THAT IS THE POINT: the publication
+# `127.0.0.1:3100:3100` appears here exactly as the host bind did, so this check
+# still reads the thing that decides who can reach the console. 🚫 It would NOT
+# be satisfied by `3100:3100`, which is the mistake worth catching.
 listening="$(ss -ltn | awk -v p=":${AGE_STUDIO_PORT}$" '$4 ~ p {print $4}')"
 if [ "$listening" != "127.0.0.1:${AGE_STUDIO_PORT}" ]; then
   echo "REFUSED: the console is listening on '${listening}', not 127.0.0.1:${AGE_STUDIO_PORT} alone." >&2
@@ -175,6 +184,27 @@ if sudo -n ss -ltn | grep -qE '^\S+\s+\S+\s+\S+\s+(0\.0\.0\.0|\*|\[::\]):5442'; 
   echo "REFUSED: AGE's database is listening on a public interface." >&2
   exit 1
 fi
+
+# 🛑 AND THE CONSOLE MUST STILL HAVE NO ROUTE TO A PEER'S STORE (ADR-0076 D7).
+# ⚠️ THIS IS THE MOMENT IT MATTERS MOST: the console has just become reachable
+# from the internet, so a defect in it is now reachable from the internet too.
+# 🚫 A raw TCP connect, 🚫 not an application query that returned nothing.
+docker exec age-studio node -e "
+const net = require('node:net');
+const peers = [['172.19.0.4',5432],['172.21.0.2',5432],['172.18.0.2',5432],['172.20.0.3',3306]];
+let bad = 0;
+Promise.all(peers.map(([host, port]) => new Promise((resolve) => {
+  const s = net.connect({ host, port });
+  const done = (reachable) => { s.destroy(); if (reachable) { bad += 1; console.error('    REACHABLE: ' + host + ':' + port); } resolve(); };
+  s.setTimeout(2000);
+  s.on('connect', () => done(true));
+  s.on('timeout', () => done(false));
+  s.on('error', () => done(false));
+}))).then(() => {
+  if (bad > 0) { console.error('REFUSED: the console can reach a peer database.'); process.exit(1); }
+  console.log('    no peer database is reachable from the console');
+});
+"
 
 echo "    console still loopback-only; database still private"
 REMOTE

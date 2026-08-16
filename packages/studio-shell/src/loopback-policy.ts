@@ -81,3 +81,65 @@ export function assertLoopbackBindHost(host: string): string {
 export function loopbackHosts(): readonly string[] {
   return LOOPBACK_HOSTS;
 }
+
+/**
+ * OX-INV-1 AS AMENDED BY ADR-0076 D2, WITH D3 AS AMENDED BY THAT ADR'S §0.4b.
+ *
+ * 🛑 **THE RULE DID NOT WEAKEN; ITS SUBJECT BECAME EXPLICIT.** The invariant was
+ * never about the string `127.0.0.1` — it was about the console's listener not
+ * being reachable from the network. `assertLoopbackBindHost` above expresses
+ * that for a process on a host. A container expresses the SAME boundary
+ * differently: the listener binds every address of its own namespace, and the
+ * deployment publishes it on host loopback and nowhere else.
+ *
+ * ⚠️ **WHY `0.0.0.0` IS ACCEPTED HERE AND NOWHERE ELSE.** Inside a namespace it
+ * means "every address of THIS container", which is one interface nothing else
+ * shares. What decides who can reach it is the PUBLICATION, not the bind — and
+ * `127.0.0.1:3100:3100` in the compose file confines that to host loopback,
+ * exactly the boundary ADR-0057 D2 has always required.
+ *
+ * 🛑 **SO THE ONE LINE THAT MATTERS IS NOT IN THIS FILE**, and pretending
+ * otherwise is how this gets undone: `3100:3100` publishes on every interface,
+ * including the public one, and this function would still return `0.0.0.0`
+ * happily. ⚠️ A guard in
+ * `packages/deployed-origin/src/tests/studio-service-sandbox.spec.ts` asserts
+ * the exact published mapping for that reason.
+ *
+ * ⚠️ **AN EARLIER DRAFT OF THIS COMMENT CLAIMED THE CONTAINER PUBLISHED NOTHING
+ * AND WAS THEREFORE "STRICTLY STRONGER" THAN A HOST BIND. 🚫 THAT WAS MEASURED
+ * FALSE** — the host's nginx already owns 80/443 for five peer vhosts, so an
+ * AGE-owned edge proxy could not exist, and every alternative reaches the
+ * console from host loopback anyway (ADR-0076 §0.4b). The reachability the
+ * container DOES remove is OUTBOUND: 🛑 the console can no longer open SNARA's
+ * loopback-published postgres and redis, which is the violation D1 was for.
+ *
+ * 🚫 **THE BOUNDARY IS AN ARGUMENT, NOT AN ENVIRONMENT VARIABLE.** It is passed
+ * in by the caller and there are exactly two values. A `process.env` read here
+ * would let a misconfigured host silently select the permissive branch — the
+ * class of error `assertLoopbackBindHost` refuses by having no override.
+ */
+export type ConsoleListenerBoundary = 'host-loopback' | 'loopback-published-container';
+
+/** The address a container-mode console binds — every address of ITS OWN namespace. */
+const CONTAINER_NAMESPACE_HOST = '0.0.0.0' as const;
+
+export function assertConsoleBindHost(host: string, boundary: ConsoleListenerBoundary): string {
+  if (boundary === 'host-loopback') {
+    return assertLoopbackBindHost(host);
+  }
+
+  const normalized = typeof host === 'string' ? host.trim() : '';
+
+  if (normalized !== CONTAINER_NAMESPACE_HOST) {
+    throw new StudioBindRefusedError(
+      `AGE Studio refuses to start: inside its container the bind host must be ` +
+        `${CONTAINER_NAMESPACE_HOST}, not ${JSON.stringify(normalized)}. ` +
+        'Binding loopback inside a container would make the console unreachable through its own ' +
+        'published port, and the deployment would answer with a connection refused it could not ' +
+        'explain (ADR-0076 D2/D3). Note that this mode is sound ONLY while that publication is ' +
+        'confined to 127.0.0.1; publishing on every interface defeats the invariant.',
+    );
+  }
+
+  return normalized;
+}

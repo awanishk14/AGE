@@ -57,7 +57,7 @@ describe('the artifacts exist and are actually being read', () => {
   });
 });
 
-describe('the console is reached ONLY through the proxy, and only on loopback', () => {
+describe('the console is reached ONLY through the proxy, on one internal name', () => {
   /** Every upstream this vhost is willing to speak to. */
   const upstreams = bodyLines(VHOST)
     .map((line) => line.trim())
@@ -68,11 +68,16 @@ describe('the console is reached ONLY through the proxy, and only on loopback', 
     expect(upstreams.length).toBeGreaterThan(0);
   });
 
-  it('proxies to the loopback console and 🚫 nothing else', () => {
+  it('proxies to the one console service and 🚫 nothing else', () => {
     // 🛑 A SECOND UPSTREAM IS A SECOND PRODUCT PUBLISHED UNDER AGE'S NAME AND
-    // AGE'S CERTIFICATE. On this box the neighbouring ports are peer products —
-    // one mistyped digit here would put RankOps behind age.digitaldadi.agency,
-    // with a valid padlock and no error anywhere.
+    // AGE'S CERTIFICATE. One mistyped name here would put a peer behind
+    // age.digitaldadi.agency, with a valid padlock and no error anywhere.
+    //
+    // ⚠️ **AN INTERMEDIATE DRAFT MADE THIS `http://studio:3100`**, a Docker
+    // service name on an AGE-owned proxy. 🚫 That proxy could not exist: the
+    // host's nginx already owns 80/443 for five peer vhosts (ADR-0076 §0.4b).
+    // The console is published on host loopback instead, so the upstream is a
+    // host address again — and this equality is what stops it becoming a peer's.
     expect(upstreams).toEqual(['http://127.0.0.1:3100']);
   });
 

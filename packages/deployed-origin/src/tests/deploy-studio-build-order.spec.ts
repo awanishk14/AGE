@@ -24,46 +24,64 @@ import { describe, expect, it } from 'vitest';
  * individually correct and only their sequence is wrong.
  */
 
+/**
+ * ⚠️ **THIS GUARD MOVED WITH THE BUILD, IT WAS NOT WEAKENED.** ADR-0076 D1 put
+ * the console in a container, so the install-generate-build sequence is no
+ * longer three lines of one ssh invocation — it is three `RUN` layers of
+ * `apps/studio/Dockerfile`. The failure it protects against is UNCHANGED and
+ * still invisible to a green repository, so the assertions follow the steps to
+ * their new home rather than being deleted with them.
+ */
 const REPO = join(__dirname, '..', '..', '..', '..');
-const SCRIPT_PATH = join(REPO, 'scripts', 'deploy-studio.sh');
+const DOCKERFILE_PATH = join(REPO, 'apps', 'studio', 'Dockerfile');
 
-const SCRIPT = readFileSync(SCRIPT_PATH, 'utf8');
+const DOCKERFILE = readFileSync(DOCKERFILE_PATH, 'utf8');
 
 /** ⚠️ Comments come off first — this file's own explanation names both steps. */
-const SCRIPT_BODY = SCRIPT.split('\n')
+const BUILD_BODY = DOCKERFILE.split('\n')
   .filter((line) => !line.trimStart().startsWith('#'))
   .join('\n');
 
 describe('there is something to examine', () => {
-  it('found the deploy script', () => {
-    expect(existsSync(SCRIPT_PATH)).toBe(true);
-    expect(SCRIPT_BODY.length).toBeGreaterThan(1000);
+  it('found the image that builds the console', () => {
+    expect(existsSync(DOCKERFILE_PATH)).toBe(true);
+    expect(BUILD_BODY.length).toBeGreaterThan(400);
   });
 });
 
 describe('the Prisma client exists before the bundle that traces it', () => {
   it('runs the generate step at all', () => {
-    expect(SCRIPT_BODY).toContain('prisma:generate');
+    expect(BUILD_BODY).toContain('prisma:generate');
   });
 
   it('🛑 runs it BEFORE the Studio build', () => {
-    const generated = SCRIPT_BODY.indexOf('prisma:generate');
-    const built = SCRIPT_BODY.indexOf('@age/studio build');
+    const generated = BUILD_BODY.indexOf('prisma:generate');
+    const built = BUILD_BODY.indexOf('@age/studio build');
 
     expect(generated).toBeGreaterThan(-1);
     expect(built).toBeGreaterThan(-1);
     expect(generated).toBeLessThan(built);
   });
 
-  it('does both in the same remote invocation as the install', () => {
-    // ⚠️ Split across two ssh calls they would still be ordered — but an
-    // operator re-running only the build would silently reintroduce the stub.
-    const line = SCRIPT_BODY.split('\n').find((candidate) =>
-      candidate.includes('@age/studio build'),
-    );
+  it('installs before it generates, in the same image', () => {
+    // ⚠️ In a script the three steps shared one ssh invocation so a re-run
+    // could not do only the last. A Dockerfile gives that for free — the layers
+    // are ordered and cached together — but the INSTALL must still precede the
+    // generate, or the generate runs without the Prisma CLI at all.
+    const installed = BUILD_BODY.indexOf('pnpm install --frozen-lockfile');
 
-    expect(line).toBeDefined();
-    expect(line).toContain('pnpm install --frozen-lockfile');
-    expect(line).toContain('prisma:generate');
+    expect(installed).toBeGreaterThan(-1);
+    expect(installed).toBeLessThan(BUILD_BODY.indexOf('prisma:generate'));
+  });
+
+  it('🚫 does not leave a second, unordered copy of the sequence in the deploy script', () => {
+    // 🛑 TWO PLACES THAT BUILD IS HOW ONE OF THEM QUIETLY LOSES THE ORDER. The
+    // script now delegates the build to the image; it must not run its own.
+    const script = readFileSync(join(REPO, 'scripts', 'deploy-studio.sh'), 'utf8')
+      .split('\n')
+      .filter((line) => !line.trimStart().startsWith('#'))
+      .join('\n');
+
+    expect(script).not.toContain('@age/studio build');
   });
 });
