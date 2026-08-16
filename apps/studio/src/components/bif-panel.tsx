@@ -87,8 +87,9 @@ export function BifPanel({ clientId, generate }: BifPanelProps) {
           className="mt-1 w-full max-w-sm rounded border border-[hsl(var(--age-border))] bg-transparent px-2 py-1 font-mono text-sm"
         />
         <p className="mt-1 text-xs text-[hsl(var(--age-text-muted))]">
-          AGE has no sign-in yet, so it cannot know who you are. Provenance records the name you
-          give here and nothing else — it is never guessed.
+          Your session says which account signed in. It does not say who is accountable for this
+          attribution, so provenance records the name you give here and nothing else — never the
+          session’s account, and never guessed.
         </p>
 
         <button
