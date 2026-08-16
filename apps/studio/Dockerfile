@@ -49,7 +49,14 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /age
-RUN corepack enable
+
+# 🛑 **BAKE THE PACKAGE MANAGER; 🚫 DO NOT FETCH IT AT START.** `corepack enable`
+# alone leaves pnpm to be DOWNLOADED on first invocation, and this container has
+# no route to the internet — `age-internal` carries AGE's store and nothing
+# else. ⚠️ MEASURED: the first deployment crash-looped on
+# `getaddrinfo EAI_AGAIN registry.npmjs.org`. That failure is evidence FOR D1,
+# not against it, but the runtime must not depend on the reach it refuses.
+RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 
 COPY --from=build --chown=node:node /age /age
 

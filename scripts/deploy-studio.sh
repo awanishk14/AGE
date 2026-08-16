@@ -72,6 +72,7 @@ SSH=(ssh -p "$AGE_VPS_PORT" "${AGE_VPS_USER}@${AGE_VPS_HOST}")
 COMPOSE_FILE="deploy/vps/compose/docker-compose.studio.yml"
 HOST_ENV="/etc/age-studio/age-studio.env"
 CONTAINER_ENV="/etc/age-studio/age-studio.container.env"
+SECRET_DIR="/etc/age-studio"
 
 echo "==> Checking the host answers, and that Docker is there"
 "${SSH[@]}" 'echo "    $(docker --version), $(docker compose version)"'
@@ -124,13 +125,24 @@ echo "==> Deriving the container's env file from the provisioned one"
   fi
   sudo sh -c \"sed -E 's#@127\\.0\\.0\\.1:5442/#@age-postgres:5432/#' '${HOST_ENV}' > '${CONTAINER_ENV}'\"
   sudo chmod 600 '${CONTAINER_ENV}'
-  sudo chown root:root '${CONTAINER_ENV}'
+  # ⚠️ THE DEPLOY USER, 🚫 NOT root. \`docker compose\` reads \`env_file\` on the
+  # CLIENT side, as the invoking user — a root-owned 600 file fails with
+  # \"permission denied\" that names the path and not the reason. 600 still means
+  # no other account on this shared host can read the database URL, which is
+  # what D6 requires; \"root-owned\" was never the requirement.
+  sudo chown '${AGE_VPS_USER}':'${AGE_VPS_USER}' '${CONTAINER_ENV}'
+  # ⚠️ AND THE DIRECTORY MUST BE TRAVERSABLE BY THAT USER, or the 600 above is
+  # irrelevant — the open fails on the PATH. 750 with the deploy user's group:
+  # 🚫 no other account on this shared host gains anything, and the sibling
+  # \`age-postgres.env\` stays root-owned 600 and unreadable to them.
+  sudo chgrp '${AGE_VPS_USER}' '${SECRET_DIR}'
+  sudo chmod 750 '${SECRET_DIR}'
   if ! sudo grep -q '@age-postgres:5432/' '${CONTAINER_ENV}'; then
     echo 'REFUSED: the derived env file does not name age-postgres:5432.' >&2
     echo '  The provisioned DATABASE_URL is not in the expected form; fix it by hand.' >&2
     exit 2
   fi
-  echo '    (derived, 600, root-owned — value never printed)'"
+  echo '    (derived, 600, deploy-user-owned — value never printed)'"
 
 echo "==> Building and starting the container (🚫 no published console port)"
 # ⚠️ `prisma:generate` RUNS BEFORE `next build` INSIDE THE IMAGE, and the order
