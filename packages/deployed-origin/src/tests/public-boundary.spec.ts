@@ -78,7 +78,14 @@ describe('the console is reached ONLY through the proxy, on one internal name', 
     // host's nginx already owns 80/443 for five peer vhosts (ADR-0076 §0.4b).
     // The console is published on host loopback instead, so the upstream is a
     // host address again — and this equality is what stops it becoming a peer's.
-    expect(upstreams).toEqual(['http://127.0.0.1:3100']);
+    //
+    // ⚠️ **DEDUPED, 🚫 NOT INDEXED.** The sign-in door is its own exact-match
+    // location so it can carry a rate limit, and nginx locations do not inherit
+    // `proxy_pass` — so the directive legitimately appears more than once. What
+    // must hold is that every occurrence names the SAME upstream, which is
+    // exactly what a set of size one says.
+    expect([...new Set(upstreams)]).toEqual(['http://127.0.0.1:3100']);
+    expect(upstreams.length).toBeGreaterThanOrEqual(2);
   });
 
   it('🚫 never proxies over plaintext port 80', () => {
@@ -219,5 +226,41 @@ describe('the exposure script refuses to publish an unprotected console', () => 
     // already absent.
     expect(SCRIPT_BODY).toContain("printf 'export %s=%q\\n'");
     expect(SCRIPT_BODY).toContain('| "${SSH[@]}" bash -s');
+  });
+});
+
+describe('the sign-in door is rate limited, and 🚫 nothing else is', () => {
+  // 🛑 **A TRANSPORT CONTROL, 🚫 A SECOND AUTHENTICATION.** ⚠️ MEASURED on the
+  // live origin before this existed: 15 bad tokens submitted back to back all
+  // answered `303`, with nothing at any layer counting them.
+
+  it('declares a zone keyed on the one address a caller cannot choose', () => {
+    expect(VHOST_BODY).toMatch(/limit_req_zone\s+\$binary_remote_addr\s+zone=age_signin:/);
+
+    // 🚫 **NOT `CF-Connecting-IP`, AND NOT ANY OTHER REQUEST HEADER.** This
+    // origin is reachable directly by IP, so a header-derived key is
+    // attacker-supplied — and a key the attacker picks is not a limit.
+    expect(VHOST_BODY).not.toMatch(/limit_req_zone\s+\$http_/);
+  });
+
+  it('applies the limit to the sign-in door by exact match', () => {
+    expect(VHOST_BODY).toContain('location = /sign-in/submit {');
+
+    const door = VHOST_BODY.slice(VHOST_BODY.indexOf('location = /sign-in/submit {'));
+    expect(door.slice(0, door.indexOf('}'))).toContain('limit_req zone=age_signin');
+  });
+
+  it('answers 429, so a throttled caller learns nothing about the token', () => {
+    // 🚫 A rate limit that answered differently for a correct token would leak
+    // exactly what #353 refused to leak: request shape must stay
+    // indistinguishable from credential correctness.
+    expect(VHOST_BODY).toContain('limit_req_status 429;');
+  });
+
+  it('🚫 does not throttle the authenticated console itself', () => {
+    // ⚠️ A limit on `location /` at a rate low enough to matter at the door
+    // would lock a working operator out of their own console mid-session.
+    const catchAll = VHOST_BODY.slice(VHOST_BODY.indexOf('location / {'));
+    expect(catchAll.slice(0, catchAll.indexOf('\n    }'))).not.toContain('limit_req ');
   });
 });
