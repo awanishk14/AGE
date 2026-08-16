@@ -27,13 +27,23 @@
 # already SNARA's, and a defaulted port is how AGE would have ended up dialling
 # another product's database while every test still passed.
 #
-# ⚠️ WHY A HOST PORT AT ALL. The console runs as a host process (ADR-0057 §0.6
-# still refuses a Dockerfile for `apps/studio`; ADR-0075 §4 records revisiting it
-# as an open question, 🚫 not as this slice). A host process reaches a container
-# through a published port or through a peer's bridge address — and ADR-0075 D4
-# refuses the second by name, because an address assigned by somebody else's
-# deployment is a dependency nobody told AGE about. Loopback-published is the
-# arrangement that leaves AGE depending on AGE.
+# ⚠️ WHY A HOST PORT AT ALL — ⚠️ UPDATED 2026-08-16, ADR-0076 D1. The console is
+# NO LONGER a host process; it is a container on `age-internal` and reaches this
+# store over that network. The loopback publication stays for the operator's own
+# HOST-side tools — `age-capture`, the relay CLI, `psql` during a migration —
+# which are still processes on this box. 🚫 It is not the console's path.
+#
+# 🛑 AND THE ADDRESS IS PINNED, BECAUSE ADR-0061 A5 REFUSES A NAME. The console's
+# `DATABASE_URL` must give an ADDRESS: judging a host name would mean resolving
+# it, and a name that resolves privately today may not tomorrow. `age-postgres`
+# is a Docker DNS name, so it is refused exactly like any other name — ⚠️ that
+# refusal FIRED on the first containerised deployment, which is why this line
+# exists. A DHCP-assigned bridge address would satisfy the guard and then move
+# on the next recreate, so it is fixed here.
+#
+# ⚠️ THIS IS 🚫 NOT THE CASE ADR-0075 D4 REFUSES. D4 refuses reaching a PEER's
+# bridge address — an address assigned by somebody else's deployment. This one is
+# assigned by AGE's own compose file, on AGE's own network, to AGE's own store.
 #
 # ⚠️ EVERY SECRET IS REQUIRED AT STARTUP. The `:?` form means absent is a REFUSAL
 # TO START; 🚫 never `:-`, because a default password is a published one. 🚫 No
@@ -63,7 +73,10 @@ services:
       # AGE row, and this is what makes that true.
       - age_postgres_data:/var/lib/postgresql/data
     networks:
-      - age-internal
+      age-internal:
+        # 🛑 PINNED, 🚫 NOT ASSIGNED. See the header: the console names this
+        # address, so it must not change when the container is recreated.
+        ipv4_address: 172.23.0.2
     healthcheck:
       # ⚠️ Named explicitly: `pg_isready` with no arguments checks the image's
       # default user, which is not necessarily this one.
@@ -80,3 +93,9 @@ volumes:
 networks:
   age-internal:
     name: age-internal
+    ipam:
+      config:
+        # ⚠️ The subnet the network already has. It is written out so the pinned
+        # address above is checkable against something in this repository rather
+        # than against whatever Docker happened to choose on one host.
+        - subnet: 172.23.0.0/16

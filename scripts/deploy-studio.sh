@@ -123,7 +123,7 @@ echo "==> Deriving the container's env file from the provisioned one"
     echo '  Run scripts/provision-studio-database.sh first. Nothing is generated here.' >&2
     exit 2
   fi
-  sudo sh -c \"sed -E 's#@127\\.0\\.0\\.1:5442/#@age-postgres:5432/#' '${HOST_ENV}' > '${CONTAINER_ENV}'\"
+  sudo sh -c \"sed -E 's#@127\\.0\\.0\\.1:5442/#@172.23.0.2:5432/#' '${HOST_ENV}' > '${CONTAINER_ENV}'\"
   sudo chmod 600 '${CONTAINER_ENV}'
   # ⚠️ THE DEPLOY USER, 🚫 NOT root. \`docker compose\` reads \`env_file\` on the
   # CLIENT side, as the invoking user — a root-owned 600 file fails with
@@ -137,8 +137,8 @@ echo "==> Deriving the container's env file from the provisioned one"
   # \`age-postgres.env\` stays root-owned 600 and unreadable to them.
   sudo chgrp '${AGE_VPS_USER}' '${SECRET_DIR}'
   sudo chmod 750 '${SECRET_DIR}'
-  if ! sudo grep -q '@age-postgres:5432/' '${CONTAINER_ENV}'; then
-    echo 'REFUSED: the derived env file does not name age-postgres:5432.' >&2
+  if ! sudo grep -q '@172.23.0.2:5432/' '${CONTAINER_ENV}'; then
+    echo 'REFUSED: the derived env file does not name 172.23.0.2:5432.' >&2
     echo '  The provisioned DATABASE_URL is not in the expected form; fix it by hand.' >&2
     exit 2
   fi
