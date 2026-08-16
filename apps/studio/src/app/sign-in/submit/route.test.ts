@@ -64,10 +64,9 @@ describe('a body that is not a form is refused, 🚫 never a 500', () => {
       const response = await POST(new Request(URL_UNDER_TEST, { method: 'POST', ...init }));
 
       expect(response.status, `${label} did not produce a redirect`).toBe(303);
-      expect(
-        new URL(response.headers.get('Location') ?? '').search,
-        `${label} produced a different answer`,
-      ).toBe('?refused=1');
+      expect(response.headers.get('Location'), `${label} produced a different answer`).toBe(
+        '/sign-in?refused=1',
+      );
 
       // 🛑 A refusal SETS NO COOKIE. The failure that would matter here is a
       // session handed out on the way to saying no.
@@ -98,7 +97,7 @@ describe('a body that is not a form is refused, 🚫 never a 500', () => {
     );
 
     expect(response.status).toBe(303);
-    expect(new URL(response.headers.get('Location') ?? '').search).toBe('?refused=1');
+    expect(response.headers.get('Location')).toBe('/sign-in?refused=1');
     expect(response.headers.get('Set-Cookie')).toBeNull();
   });
 });

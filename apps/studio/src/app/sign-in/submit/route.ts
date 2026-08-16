@@ -28,7 +28,7 @@ export async function POST(request: Request): Promise<Response> {
   const lookupOrganizationId = sessionLookupOrganizationId();
 
   if (lookupOrganizationId === undefined) {
-    return refuse('not-configured', request);
+    return refuse('not-configured');
   }
 
   // 🛑 **A MALFORMED BODY IS A REFUSAL, 🚫 NOT AN EXCEPTION.** `formData()`
@@ -44,13 +44,13 @@ export async function POST(request: Request): Promise<Response> {
   try {
     form = await request.formData();
   } catch {
-    return refuse('1', request);
+    return refuse('1');
   }
 
   const presented = form.get('token');
 
   if (typeof presented !== 'string' || presented === '') {
-    return refuse('1', request);
+    return refuse('1');
   }
 
   const verification = await verifySessionToken(presented, lookupOrganizationId);
@@ -59,7 +59,7 @@ export async function POST(request: Request): Promise<Response> {
     // ⚠️ 🚫 THE FIVE REASONS ARE NOT COLLAPSED INSIDE AGE — they are collapsed on
     // the way OUT, to an unauthenticated caller, and only here. Telling them
     // `revoked` rather than `no-such-session` confirms the token was once real.
-    return refuse('1', request);
+    return refuse('1');
   }
 
   // 🚫 The row is the authority, re-checked on EVERY later request. This cookie
@@ -73,13 +73,29 @@ export async function POST(request: Request): Promise<Response> {
     // ⚠️ 303, so the browser follows with GET. A 302 after a POST is
     // under-specified and some clients re-POST.
     status: 303,
-    headers: { Location: new URL('/', request.url).toString(), 'Set-Cookie': cookie },
+    headers: { Location: '/', 'Set-Cookie': cookie },
   });
 }
 
-function refuse(marker: string, request: Request): Response {
+/**
+ * 🛑 **A RELATIVE `Location`, AND THAT IS A SECURITY DECISION, 🚫 NOT A STYLE.**
+ *
+ * These redirects used to be built with `new URL(path, request.url)`. ⚠️ MEASURED
+ * ON THE REAL DEPLOYMENT: inside its container the console binds `0.0.0.0`, so
+ * `request.url` became `http://0.0.0.0:3100/...` and the refusal sent a browser
+ * to an address that is not a destination.
+ *
+ * 🚫 The fix is NOT to read a forwarded host header. `request.url` is derived
+ * from a header the CALLER controls, so an absolute redirect built from it is a
+ * Host-header injection primitive: on the one route an unauthenticated caller on
+ * the public internet can reach, it would let that caller choose where a
+ * refused sign-in lands. RFC 7231 allows a relative reference, the browser
+ * resolves it against the address it actually used, and there is then no host
+ * in this code at all to poison.
+ */
+function refuse(marker: string): Response {
   return new Response(null, {
     status: 303,
-    headers: { Location: new URL(`/sign-in?refused=${marker}`, request.url).toString() },
+    headers: { Location: `/sign-in?refused=${marker}` },
   });
 }

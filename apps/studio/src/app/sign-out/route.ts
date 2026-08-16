@@ -22,7 +22,9 @@ export const dynamic = 'force-dynamic';
  * could trigger; `SameSite=Strict` covers the cookie, but a route that ends a
  * session on a read is the wrong shape regardless.
  */
-export async function POST(request: Request): Promise<Response> {
+// ⚠️ 🚫 NO PARAMETER. The redirect below is RELATIVE, so nothing here reads the
+// request's host — see the note in `sign-in/submit/route.ts`.
+export async function POST(): Promise<Response> {
   // 🚫 The outcome is not branched on. `already-ended` means somebody revoked it
   // first, which is the same destination — 🚫 and it is never reported as an
   // error, because nothing about it needs fixing.
@@ -31,7 +33,7 @@ export async function POST(request: Request): Promise<Response> {
   return new Response(null, {
     status: 303,
     headers: {
-      Location: new URL('/sign-in', request.url).toString(),
+      Location: '/sign-in',
       'Set-Cookie': expireSessionCookie(),
     },
   });
