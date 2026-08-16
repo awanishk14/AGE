@@ -1,9 +1,10 @@
 # ADR-0077 — The account that deploys AGE: a dedicated identity, and the root it does not get
 
-Status: **Proposed** (2026-08-16) — 🚫 **NOT self-accepted, and 🚫 NOT to be self-accepted.**
-This ADR changes who holds root on a shared host carrying four other products. It is a decision
-request for the **Product Owner**. ⚠️ The §2 mandate covers architecture inside AGE; it does not
-cover redrawing the privilege boundary of a box AGE shares with peers it does not own.
+Status: **Accepted** (2026-08-17) — ⚠️ **BY THE PRODUCT OWNER, 🚫 NOT self-accepted.**
+This ADR changes who holds root on a shared host carrying four other products, so it was a decision
+request for the **Product Owner** and was answered by them. ⚠️ The §2 mandate covers architecture
+inside AGE; it does not cover redrawing the privilege boundary of a box AGE shares with peers it does
+not own — see §0.1b for the acceptance, verbatim.
 
 Depends on: ADR-0076 **D1–D8** (the console on a shared host) · ADR-0075 **D1–D6** (AGE's own
 database and the boundary between peers) · ADR-0074 **D8/D9** · ADR-0054 **D2/D3** (an operator
@@ -12,6 +13,43 @@ records are never widened).
 Amends: **ADR-0076 §0.2 item 6** — see §0.2b, which corrects it. Supersedes: nothing.
 
 ---
+
+## 0.1b The acceptance, verbatim (Product Owner, 2026-08-17)
+
+> _"Accept ADR-0077 as Product Owner._
+>
+> _Status may now be flipped from Proposed to Accepted with my acceptance recorded verbatim._
+>
+> _Then proceed with Slice 2 only:_
+>
+> _Create age-deploy on the real VPS._
+> _Install the four root-owned 0755 root:root wrappers exactly as ADR-0077 specifies._
+> _Install the narrowly scoped sudoers rules._
+> _Migrate AGE deployment path to /home/age-deploy/age._
+> _Migrate /var/lib/age-operator ownership to age-deploy without changing its contents or permissions
+> beyond what is required._
+> _Ensure AGE Studio continues running unprivileged with the correct UID._
+> _Re-deploy AGE using AGE_VPS_USER=age-deploy._
+> _Do not modify RankOps, SNARA, Drishti, Scanner or their databases/secrets._
+> _Do not resolve ADR-0076 D8 in this slice._
+> _Do not take down or change the public URL https://age.digitaldadi.agency._
+>
+> _Security acceptance on the real VPS is mandatory._ […] _Also test the negative cases, not merely
+> successful deployment._ _Run the real browser acceptance after deployment._
+>
+> _Do not start ADR-0076 D8, RankOps ecosystem work, or another product slice afterward. Stop and
+> report the measured result first._
+>
+> _Report only what was actually proven on the VPS. Do not treat successful CI as proof of
+> host-level security."_
+
+⚠️ **The acceptance is of the ADR as written — 🚫 it did not widen it.** §2.1, §2.2 and §5 stand
+unchanged: `drishti` keeps its root-equivalent access to the peers, ADR-0076 D8 stays open, and the
+public URL stays public. The owner named the last two by hand.
+
+⚠️ The elision above is the enumerated verification list, which is reproduced in full as the slice-2
+acceptance criteria in `docs/reviews/ADR0077_DEPLOY_IDENTITY_CHECKPOINT.md` — 🚫 nothing was dropped
+that changes the decision.
 
 ## 0.1 Why this ADR exists
 
