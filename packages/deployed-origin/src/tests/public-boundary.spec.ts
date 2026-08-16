@@ -197,7 +197,9 @@ describe('the proxy is not, and must not become, the authentication', () => {
 describe('the exposure script refuses to publish an unprotected console', () => {
   it('checks the loopback bind BEFORE it installs anything', () => {
     const bindCheck = SCRIPT_BODY.indexOf('127.0.0.1:${AGE_STUDIO_PORT}');
-    const install = SCRIPT_BODY.indexOf('sites-available');
+    // ⚠️ ADR-0077 D3: the vhost is installed by the root-owned wrapper now, so
+    // the install step in THIS script is the call to it.
+    const install = SCRIPT_BODY.indexOf('age-deploy-nginx-apply');
     expect(bindCheck).toBeGreaterThan(-1);
     expect(install).toBeGreaterThan(bindCheck);
   });

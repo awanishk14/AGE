@@ -286,11 +286,22 @@ describe('AGE Studio bind configuration', () => {
    * silently; they were replaced by the crossings that still ARE crossings.
    */
   it('ships no deployment path that publishes the console or credentials', () => {
+    // ⚠️ ADR-0077 D3 SPLIT THE DEPLOYMENT PATH IN TWO. `age-deploy` has no
+    // `sudo docker`, so the compose and exec halves now live in root-owned
+    // wrappers. 🛑 THE SCAN MUST FOLLOW THEM: scanning only the script would
+    // declare the crossings absent from a file they had simply moved out of.
     const script = repoFile('scripts/deploy-studio.sh');
+    const wrappers = [
+      'deploy/vps/wrappers/age-deploy-compose-up',
+      'deploy/vps/wrappers/age-deploy-docker-probe',
+      'deploy/vps/wrappers/age-deploy-derive-env',
+      'deploy/vps/wrappers/age-deploy-nginx-apply',
+    ].map((path) => repoFile(path));
 
     // ⚠️ The script EXPLAINS which crossings it refuses, so comments are
     // stripped before the scan — the same rule as the source guard above.
-    const commands = script
+    const commands = [script, ...wrappers]
+      .join('\n')
       .split('\n')
       .filter((line) => !/^\s*#/.test(line))
       .join('\n');
@@ -321,7 +332,12 @@ describe('AGE Studio bind configuration', () => {
     // ⚠️ THE POSITIVE HALF: a script that did nothing would also pass the scan
     // above. It must actually deploy THE CONTAINERISED console (ADR-0076 D1)
     // and prove the boundary FROM INSIDE the running container (D7).
-    expect(script).toMatch(/docker-compose\.studio\.yml/);
-    expect(script).toMatch(/docker (compose|exec)/);
+    // ⚠️ Both ends, since D3 moved the operation: the script must still reach
+    // the wrappers, and the wrappers must still do the thing.
+    expect(script).toMatch(/age-deploy-compose-up/);
+    expect(script).toMatch(/age-deploy-docker-probe/);
+    const wrapperBodies = wrappers.join('\n');
+    expect(wrapperBodies).toMatch(/docker-compose\.studio\.yml/);
+    expect(wrapperBodies).toMatch(/docker (compose|exec)/);
   });
 });
