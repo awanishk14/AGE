@@ -71,11 +71,17 @@ RUN mkdir -p /opt/corepack \
   && corepack prepare pnpm@9.12.0 --activate \
   && chmod -R a+rX /opt/corepack
 
-# ⚠️ `a+rX` on the tree, so the console reads its own code whichever uid the
-# deployment gives it (the owner of the operator's record — see the compose
-# file). 🚫 NOT `a+w`: readable is not writable, and nothing here is written.
-COPY --from=build --chown=node:node /age /age
-RUN chmod -R a+rX /age
+# ⚠️ **ROOT-OWNED AND WORLD-READABLE, 🚫 NOT OWNED BY THE RUNNING USER.** The
+# console reads its own code whichever uid the deployment gives it (the owner of
+# the operator's record — see the compose file), and the tree's modes come
+# straight from the repo, which is already `a+rX`.
+#
+# 🚫 **DO NOT ADD `RUN chmod -R a+rX /age`.** ⚠️ MEASURED TWICE: a recursive
+# chmod over the workspace — `node_modules` included — reset the deploy's SSH
+# session mid-build both times, leaving a HALF-BUILT IMAGE that the previous
+# container kept crash-looping in front of. Nothing here is written, and nothing
+# here needs its owner changed.
+COPY --from=build /age /age
 
 # 🚫 Not root. A compromise of the console is the threat ADR-0076 is about, and
 # the container's own user is the last of the several boundaries between that
