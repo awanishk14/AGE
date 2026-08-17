@@ -1,0 +1,98 @@
+# The capture CLI, inside AGE's own store namespace — ADR-0078 option C, slice C1.
+#
+# 🛑 **THE SHAPE IS THE SECURITY PROPERTY, 🚫 NOT A CONVENIENCE.**
+#
+#   capture → network_mode: container:age-postgres, and NOTHING ELSE
+#           → no `ports:`, no `networks:`, no route to any peer
+#
+# ⚠️ **WHY A SHARED NAMESPACE RATHER THAN AN `age-internal` ATTACHMENT.** Both
+# reach the store. Only this one keeps the capture chain naming a **LOOPBACK**
+# address: inside `age-postgres`'s namespace, `127.0.0.1:5432` IS AGE's store,
+# so `assertLocalDatabaseTarget` passes **UNMODIFIED**. 🛑 Attaching to
+# `age-internal` instead would force the URL to name `172.23.0.2` — a BRIDGE
+# address — and the only way to make that pass is to relax the very refusal
+# ADR-0061 A5 and ADR-0075 D4 shipped. 🚫 **The boundary must not be bought by
+# weakening a guard**, and the owner's C1 instruction says so by name.
+#
+# ⚠️ **`network_mode` AND `networks:` ARE MUTUALLY EXCLUSIVE, AND THAT IS THE
+# POINT.** This service cannot acquire a peer network without deleting the line
+# that gives it the store, so the two failure modes cannot coexist quietly.
+# A guard asserts the exact `network_mode` string and the absence of both
+# `ports:` and `networks:`.
+#
+# 🛑 **THIS IS A ONE-SHOT, 🚫 NOT A SERVICE.** There is no `restart:`, no
+# `container_name` and no long-lived process — it is invoked as
+# `docker compose ... run --rm capture <args>` by `scripts/run-capture.sh`.
+# 🚫 Do not give it a `restart: unless-stopped`: a capture run is an ACT.
+#
+# 🚫 **NO SECRET LITERAL AND NO `env_file:` HERE** (ADR-0076 D6). The credential
+# arrives as a read-only BIND MOUNT of the derived env file, which the ADR-0077
+# wrapper already `chown`s to the deploy account at mode 600 — so no mode is
+# widened, the source `root:root 0600` file is never mounted, and the value is
+# never a command-line argument. See `apps/capture/docker-entrypoint.sh` for why
+# the container route is computed inside the namespace and never persisted.
+
+services:
+  capture:
+    # ⚠️ THE CONSOLE'S OWN IMAGE, 🚫 not a second one. `@age/capture` is already
+    # in it (`apps/studio/Dockerfile` builds the bin), so the CLI that runs here
+    # is byte-identical to the code the console was built from. 🚫 A separate
+    # image would be a second copy free to drift.
+    image: age-studio:local
+    # ⚠️ `docker compose run` will not build this; the studio compose file owns
+    # the build, and `scripts/deploy-studio.sh` runs it first.
+    #
+    # 🛑 THE ONE LINE THAT MAKES THIS SAFE. `age-postgres` is AGE's store
+    # (ADR-0075). Sharing its network namespace gives this container exactly the
+    # store's own view of the network and NOTHING beyond it — 🚫 no bridge, no
+    # peer, and no host publication is involved at any point.
+    network_mode: 'container:age-postgres'
+    # 🛑 THE CLI IS EXECUTED THROUGH `sh`, 🚫 NOT AS AN EXECUTABLE. The repo is
+    # developed on Windows, where the exec bit does not survive, so relying on
+    # `+x` would produce a container that builds and then fails to start.
+    entrypoint: ['/bin/sh', '/age/apps/capture/docker-entrypoint.sh']
+    # ⚠️ DERIVED FROM THE RECORD FILE ITSELF by `scripts/run-capture.sh` — the
+    # same rule and the same reason as the studio service: the container reads
+    # the operator's `0600` files, so it must run as the uid that owns them.
+    # 🚫 **NOT `chmod o+r`**, and 🚫 never a literal here.
+    user: '${AGE_STUDIO_UID}:${AGE_STUDIO_GID}'
+    environment:
+      # ⚠️ Configuration, 🚫 not credentials — and the SAME paths as the mounts
+      # below, so a path the operator types is a path that means something on
+      # their own box (ADR-0054 D2/D3 still refuse a defaulted path).
+      AGE_CLIENT_RECORD_FILE: ${AGE_VPS_CLIENT_RECORD_FILE}
+      AGE_DISCOVERY_WORKSPACE: ${AGE_VPS_DISCOVERY_WORKSPACE}
+    volumes:
+      # 🛑 READ-ONLY, and only these three. The operator's workspace, their
+      # client record, and the derived env file. 🚫 Nothing is written to the
+      # host by a capture run; the snapshot it appends goes to the STORE.
+      - ${AGE_VPS_DISCOVERY_WORKSPACE}:${AGE_VPS_DISCOVERY_WORKSPACE}:ro
+      - ${AGE_VPS_CLIENT_RECORD_FILE}:${AGE_VPS_CLIENT_RECORD_FILE}:ro
+      - /etc/age-studio/age-studio.container.env:/run/age/provisioned.env:ro
+    security_opt:
+      - no-new-privileges:true
+
+  # 🛑 MIGRATIONS RUN THROUGH THE SAME NAMESPACE, AND FOR THE SAME REASON.
+  # ⚠️ Until C1 these ran ON THE HOST against `127.0.0.1:${AGE_DB_HOST_PORT}`,
+  # which made the publication load-bearing for provisioning as well as for
+  # capture. C3 cannot remove the publication while that is true, so this
+  # service is part of C1, 🚫 not an extra.
+  migrate:
+    image: age-studio:local
+    network_mode: 'container:age-postgres'
+    # 🚫 **THE OWNER URL IS NEVER AN ARGUMENT.** Compose interpolates it from the
+    # caller's ENVIRONMENT, so the credential never appears in `argv` and never
+    # reaches `ps` on a host shared with four other products (#350).
+    # ⚠️ `:?` makes an absent value a REFUSAL, 🚫 not an unscoped default.
+    environment:
+      DATABASE_URL: ${AGE_DB_OWNER_URL_CONTAINER:?the container-route owner URL must be stated}
+    # 🛑 `migrate deploy`, 🚫 NEVER `migrate dev`. `dev` may reset the database,
+    # and this one holds a real business's snapshots.
+    entrypoint: ['pnpm', '--filter', '@age/persistence', 'prisma:migrate:deploy']
+    # 🚫 No volumes. A migration reads the repo baked into the image and writes
+    # only to the store; it has no business seeing an operator's files.
+    security_opt:
+      - no-new-privileges:true
+# 🚫 **NO `networks:` BLOCK.** Compose rejects one alongside `network_mode`, and
+# a guard asserts its absence so the rejection can never be "fixed" by dropping
+# the `network_mode` line instead.

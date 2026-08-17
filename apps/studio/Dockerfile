@@ -42,6 +42,15 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @age/persistence run prisma:generate
 RUN pnpm --filter @age/studio build
 
+# 🛑 ADR-0078 C1 — THE CAPTURE CLI IS BUILT INTO THIS SAME IMAGE, ON PURPOSE.
+# `@age/capture` is already IN this tree (the console imports
+# `deployed-console-composition`), so a second image would be a second copy of
+# the same code that could drift from the console's. ⚠️ `apps/capture/dist` is
+# NOT tracked, so without this step the bin the entrypoint execs does not exist.
+# 🚫 This adds no network reach and no secret: the capture container gets its
+# boundary from `network_mode`, 🚫 never from anything baked here.
+RUN pnpm --filter @age/capture build
+
 FROM node:22-bookworm-slim AS runtime
 
 RUN apt-get update \

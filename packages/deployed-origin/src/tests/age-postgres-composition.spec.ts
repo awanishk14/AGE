@@ -29,6 +29,11 @@ const SCRIPT_PATH = join(REPO, 'scripts', 'provision-studio-database.sh');
 
 const COMPOSE = readFileSync(COMPOSE_PATH, 'utf8');
 const SCRIPT = readFileSync(SCRIPT_PATH, 'utf8');
+// ⚠️ ADR-0078 C1 — the migration now runs here, so the guard reads here too.
+const CAPTURE_COMPOSE = readFileSync(
+  join(REPO, 'deploy', 'vps', 'compose', 'docker-compose.age-capture.yml'),
+  'utf8',
+);
 
 /**
  * ⚠️ Comments come off before every scan. Both files EXPLAIN the rules they
@@ -41,6 +46,8 @@ function bodyLines(source: string): string[] {
 
 const COMPOSE_BODY = bodyLines(COMPOSE).join('\n');
 const SCRIPT_BODY = bodyLines(SCRIPT).join('\n');
+// ⚠️ Stripped for the same reason: this file's own comment forbids `migrate dev`.
+const CAPTURE_COMPOSE_BODY = bodyLines(CAPTURE_COMPOSE).join('\n');
 
 /** Every published port, as written. */
 function publishedPorts(source: string): string[] {
@@ -163,9 +170,30 @@ describe('the provisioning script targets AGE, and can no longer target a neighb
   it('🛑 hardcodes no port into the connection string', () => {
     // ⚠️ THE ORIGINAL BUG, ASSERTED AGAINST BY SHAPE. The port is interpolated
     // from the required variable; the literal cannot come back.
-    expect(SCRIPT_BODY).not.toContain('127.0.0.1:5432');
     expect(SCRIPT_BODY).toContain('@127.0.0.1:%s/%s?schema=public');
     expect(SCRIPT_BODY).toContain('require AGE_DB_HOST_PORT');
+
+    // 🛑 **THE LITERAL IS NO LONGER ABSENT, AND THE NARROWING IS THE POINT.**
+    // ADR-0078 C1 moved migrations into a container that shares
+    // `age-postgres`'s network namespace, where `127.0.0.1:5432` IS AGE's own
+    // store — so the script must build that authority once, to rewrite the owner
+    // URL onto the container route.
+    //
+    // 🚫 **AND ON THE HOST THAT SAME STRING IS A PEER'S DATABASE.** SNARA's
+    // postgres is what `127.0.0.1:5432` means outside the namespace, which is
+    // why `AGE_DB_HOST_PORT=5432` is refused by name two tests below. So the
+    // rule is narrowed rather than dropped: every occurrence must be a COMPLETE
+    // authority in the container rewrite (`@…/`), 🚫 never a bare host:port that
+    // could be pasted into anything host-side.
+    const occurrences = SCRIPT_BODY.match(/127\.0\.0\.1:5432/g) ?? [];
+    const authorities = SCRIPT_BODY.match(/@127\.0\.0\.1:5432\//g) ?? [];
+    expect(occurrences).toHaveLength(2);
+    expect(authorities).toHaveLength(occurrences.length);
+    // ⚠️ And the rewrite must FAIL CLOSED, or an unrewritten URL would migrate
+    // through the host port again and still report success.
+    expect(SCRIPT).toContain(
+      'REFUSED: AGE_DB_OWNER_URL could not be rewritten to the container route.',
+    );
   });
 
   it('refuses 5432 by name', () => {
@@ -196,8 +224,19 @@ describe('the provisioning script targets AGE, and can no longer target a neighb
 
   it('applies the committed migrations and 🚫 never authors new ones', () => {
     // 🚫 `migrate dev` would write SQL nobody reviewed onto a real store.
-    expect(SCRIPT_BODY).toContain('prisma:migrate:deploy');
+    //
+    // ⚠️ **THE OPERATION MOVED; THE GUARD FOLLOWED IT** — the same thing ADR-0077
+    // did when the root half of the deploy went into wrappers. ADR-0078 C1 runs
+    // migrations in the `migrate` compose service instead of on the host, because
+    // while they ran against the published port C3 could not have removed that
+    // publication at all. 🚫 Asserting only one end would let the operation be
+    // deleted at the other.
+    expect(SCRIPT_BODY).toContain('docker-compose.age-capture.yml');
+    expect(SCRIPT_BODY).toContain('run --rm migrate');
+    expect(CAPTURE_COMPOSE_BODY).toContain("'prisma:migrate:deploy'");
     expect(SCRIPT_BODY).not.toContain('migrate dev');
+    expect(CAPTURE_COMPOSE_BODY).not.toContain('migrate dev');
+    expect(CAPTURE_COMPOSE_BODY).not.toContain('migrate:dev');
   });
 
   it('runs the console as the NON-OWNER role, with RLS applying to it', () => {
