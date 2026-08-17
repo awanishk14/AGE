@@ -57,8 +57,16 @@ independent source. Returns a **new** BIF; input unmutated; `status` stays `Draf
   input → cross-tenant access is a **compile error**, not a silent ignore.
 - **`apps/capture`** (`@age/capture`, bin `age-capture`) — the CLI. Three modules, three
   responsibilities, **do not merge them**: `capture-runner.ts` owns every **decision** as a pure
-  function of `argv` + an injected `CaptureRuntime`; `capture-composition.ts` owns the D6 chain and
-  **the only production `new PrismaClient(`**; `main.ts` owns every **effect**. Barrel exports the
+  function of `argv` + an injected `CaptureRuntime`; `capture-composition.ts` owns the D6 chain;
+  `main.ts` owns every **effect**. ⚠️ **CORRECTED 2026-08-17 — measured against `main`, not against
+  this document's own earlier claim.** `capture-composition.ts` is 🚫 **no longer** the only
+  production `new PrismaClient(`: ADR-0074's deployed console added
+  `deployed-console-composition.ts` and `deployed-session-composition.ts`, which construct it too.
+  🛑 **THE INVARIANT THAT ACTUALLY HOLDS IS THE ONE WORTH STATING** — every production
+  `new PrismaClient(` in the repository lives inside `apps/capture`, and `@prisma/client` is imported
+  by **exactly those three composition modules and nothing else**. 🚫 Do not restore the narrower
+  sentence: it was false while reading as an invariant, which is the worst shape a claim can take.
+  Barrel exports the
   pure surface only — the composition root is a **separate export path `@age/capture/composition`**,
   so importing the package never drags in `@prisma/client`. Details: checkpoint doc §7.
 
