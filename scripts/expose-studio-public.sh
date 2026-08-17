@@ -146,10 +146,29 @@ if [ "$listening" != "127.0.0.1:${AGE_STUDIO_PORT}" ]; then
   exit 1
 fi
 
-# 🛑 AND THE DATABASE MUST STILL BE PRIVATE. AGE's own store publishes to
-# 127.0.0.1 only (ADR-0075); a peer's store is none of AGE's business either way.
-if ss -ltn | grep -qE '^\S+\s+\S+\s+\S+\s+(0\.0\.0\.0|\*|\[::\]):5442'; then
-  echo "REFUSED: AGE's database is listening on a public interface." >&2
+# 🛑 AND THE DATABASE MUST STILL PUBLISH NOTHING — ADR-0078 C3.
+#
+# ⚠️ **THE CHECK WAS NARROWED, 🚫 NOT DROPPED.** It used to ask whether AGE's
+# store had appeared on a PUBLIC interface on its host port. C3 removed the host
+# publication entirely, so that question now has no subject: with no binding at
+# all the pattern cannot match, and the step would report "still private" without
+# having examined anything. ⚠️ A check that passes because its subject vanished
+# is the shape of guard this repo forbids.
+#
+# 🛑 So it asks the stronger question C3 actually establishes — 🚫 is ANYTHING
+# listening on AGE's old store port, on ANY interface, loopback included?
+#
+# ⚠️ **`ss` IS THE RIGHT INSTRUMENT HERE, AND 🚫 NOT `docker inspect`.** This step
+# runs as the DEPLOY account, which ADR-0077 deliberately gives no docker group
+# and four fixed-argument wrappers — 🚫 and C3 must not add a fifth to make its
+# own verification convenient. What this account CAN observe is the host's own
+# listener table, and that is precisely the exposure C3 closed: host-level TCP
+# reachability. ⚠️ It is a HOST fact, and it proves nothing about the container
+# network, which is checked separately below.
+if ss -ltn | grep -qE ':5442\s'; then
+  echo "REFUSED: something is listening on AGE's former store port." >&2
+  echo "  ADR-0078 C3 removed that publication; a listener means it came back," >&2
+  echo "  or a neighbour has taken the port. 🚫 Nothing is echoed here." >&2
   exit 1
 fi
 
@@ -160,7 +179,7 @@ fi
 # 🛑 ADR-0077 D3 WRAPPER 4 — the probe text is FIXED INSIDE THE WRAPPER.
 sudo -n /usr/local/sbin/age-deploy-docker-probe exec-probe age-studio peer-reachability
 
-echo "    console still loopback-only; database still private"
+echo "    console still loopback-only; store no longer host-published"
 REMOTE
 
 echo "==> 4/4 Done."

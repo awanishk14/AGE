@@ -84,8 +84,13 @@ describe('the artifacts exist and there is something to examine', () => {
     expect(SCRIPT_BODY.length).toBeGreaterThan(1000);
   });
 
-  it('found ports to examine', () => {
-    expect(publishedPorts(COMPOSE).length).toBe(1);
+  it('🛑 finds NO published port — and that is the C3 fact, not a missing fixture', () => {
+    // ⚠️ **THIS ASSERTION REPLACED ITS OWN OPPOSITE.** Until ADR-0078 C3 it read
+    // `toBe(1)`, and the tests below examined that one entry. C3 removed the
+    // publication, so the honest guard is that there is nothing to examine —
+    // 🚫 stated here explicitly rather than left as a loop that now iterates
+    // zero times and passes in silence.
+    expect(publishedPorts(COMPOSE)).toEqual([]);
   });
 });
 
@@ -112,38 +117,37 @@ describe("AGE's store is AGE's own — D1", () => {
   });
 });
 
-describe('the store is not public, and not on 5432', () => {
-  it('publishes on loopback, written out', () => {
-    const ports = publishedPorts(COMPOSE);
-    expect(ports.length).toBe(1);
-    expect(ports[0]?.startsWith('127.0.0.1:')).toBe(true);
+describe('🛑 the store publishes NOTHING to the host — ADR-0078 C3', () => {
+  it('has no `ports:` key at all', () => {
+    // 🛑 **THE ABSENCE IS THE DECISION, SO IT IS ASSERTED ON THE KEY ITSELF.**
+    // `publishedPorts` returning `[]` is also true of a `ports:` key with an
+    // empty list, or of one whose entries this parser failed to recognise —
+    // ⚠️ two states that would let a real publication through a green test.
+    expect(publishedPorts(COMPOSE)).toEqual([]);
+    expect(bodyLines(COMPOSE).some((line) => line.trim() === 'ports:')).toBe(false);
   });
 
-  it('🚫 publishes on no other interface', () => {
-    for (const port of publishedPorts(COMPOSE)) {
-      expect(port.startsWith('0.0.0.0:'), port).toBe(false);
-      expect(port.startsWith('::'), port).toBe(false);
-      // 🚫 A bare `5432:5432` binds every interface AND punches the host firewall.
-      expect(/^\d+:\d+$/.test(port), port).toBe(false);
-    }
+  it('🚫 names no host port variable anywhere — the CONCEPT is gone, not renamed', () => {
+    // ⚠️ The owner's instruction was explicit: 🚫 do not simply change 5442 to
+    // another value; the concept must disappear from production configuration.
+    // ⚠️ Comments are stripped above, so this file's own account of what it no
+    // longer does cannot satisfy — or fail — its own rule.
+    expect(COMPOSE_BODY).not.toContain('AGE_DB_HOST_PORT');
+    expect(COMPOSE_BODY).not.toContain('5442');
   });
 
-  it('🛑 defaults the host port to nothing', () => {
-    // ⚠️ THE DEFAULT IS THE BUG. A defaulted port is how AGE would have dialled
-    // another product's database while every test still passed.
-    expect(COMPOSE_BODY).toContain('${AGE_DB_HOST_PORT:?');
+  it('🚫 publishes 5432 to the host either — the neighbour argument still stands', () => {
+    // 🛑 On this VPS `127.0.0.1:5432` is ANOTHER PRODUCT'S postgres. The reason
+    // C3 is safe is that AGE reaches `5432` inside its OWN namespace, where the
+    // name means AGE's store — 🚫 that must never become a host binding.
     expect(COMPOSE_BODY).not.toContain('127.0.0.1:5432:');
+    expect(COMPOSE_BODY).not.toContain('5432:5432');
   });
 });
 
 describe('an absent secret is a refusal to start', () => {
   it('requires every one of them explicitly', () => {
-    for (const variable of [
-      'AGE_DB_SUPERUSER',
-      'AGE_DB_SUPERUSER_PASSWORD',
-      'AGE_DB_NAME',
-      'AGE_DB_HOST_PORT',
-    ]) {
+    for (const variable of ['AGE_DB_SUPERUSER', 'AGE_DB_SUPERUSER_PASSWORD', 'AGE_DB_NAME']) {
       expect(COMPOSE, variable).toContain(`\${${variable}:?`);
     }
   });
@@ -169,45 +173,54 @@ describe('the provisioning script targets AGE, and can no longer target a neighb
     expect(SCRIPT_BODY).toContain('age-postgres');
   });
 
-  it('🛑 hardcodes no port into the connection string', () => {
-    // ⚠️ THE ORIGINAL BUG, ASSERTED AGAINST BY SHAPE. The port is interpolated
-    // from the required variable; the literal cannot come back.
-    expect(SCRIPT_BODY).toContain('@127.0.0.1:%s/%s?schema=public');
-    expect(SCRIPT_BODY).toContain('require AGE_DB_HOST_PORT');
+  it('🛑 writes the CONTAINER ROUTE into the console’s connection string', () => {
+    // 🛑 **ADR-0078 C3.** The console's URL used to name AGE's host publication
+    // and be rewritten afterwards by the ADR-0077 derive-env wrapper. With the
+    // publication gone the host form addresses nothing, so the route is written
+    // once, here, and 🚫 no longer interpolates a port variable at all.
+    expect(SCRIPT_BODY).toContain('@172.23.0.2:5432/%s?schema=public');
+    expect(SCRIPT_BODY).not.toContain('require AGE_DB_HOST_PORT');
 
-    // 🛑 **THE LITERAL IS NO LONGER ABSENT, AND THE NARROWING IS THE POINT.**
-    // ADR-0078 C1 moved migrations into a container that shares
-    // `age-postgres`'s network namespace, where `127.0.0.1:5432` IS AGE's own
-    // store — so the script must build that authority once, to rewrite the owner
-    // URL onto the container route.
-    //
-    // 🚫 **AND ON THE HOST THAT SAME STRING IS A PEER'S DATABASE.** SNARA's
-    // postgres is what `127.0.0.1:5432` means outside the namespace, which is
-    // why `AGE_DB_HOST_PORT=5432` is refused by name two tests below. So the
-    // rule is narrowed rather than dropped: every occurrence must be a COMPLETE
-    // authority in the container rewrite (`@…/`), 🚫 never a bare host:port that
-    // could be pasted into anything host-side.
+    // 🚫 **AND NO HOST-SIDE AUTHORITY MAY COME BACK.** On this VPS
+    // `127.0.0.1:5432` is a PEER'S postgres outside the namespace, so every
+    // remaining occurrence must be a COMPLETE authority in the container
+    // rewrite (`@…/`) — 🚫 never a bare host:port that could be pasted into
+    // anything that runs on the host.
     const occurrences = SCRIPT_BODY.match(/127\.0\.0\.1:5432/g) ?? [];
     const authorities = SCRIPT_BODY.match(/@127\.0\.0\.1:5432\//g) ?? [];
     expect(occurrences).toHaveLength(2);
     expect(authorities).toHaveLength(occurrences.length);
-    // ⚠️ And the rewrite must FAIL CLOSED, or an unrewritten URL would migrate
-    // through the host port again and still report success.
+    // ⚠️ And the rewrite must FAIL CLOSED, or an unrewritten URL would address
+    // a port that no longer exists and the step would still report success.
     expect(SCRIPT).toContain(
       'REFUSED: AGE_DB_OWNER_URL could not be rewritten to the container route.',
     );
   });
 
-  it('refuses 5432 by name', () => {
-    expect(SCRIPT_BODY).toContain('AGE_DB_HOST_PORT" = "5432"');
-    expect(SCRIPT).toContain('REFUSED: AGE_DB_HOST_PORT is 5432.');
+  it('🚫 no longer speaks of a host port at all — the concept is gone', () => {
+    // ⚠️ **THE TWO REFUSALS THIS REPLACES WERE NOT DELETED TO GO GREEN.** Both
+    // asked whether the owner URL's HOST AUTHORITY named AGE or a neighbour.
+    // Since C1 that authority is rewritten before use, so neither question can
+    // change the outcome — 🚫 and a guard that cannot change an outcome is worse
+    // than none, because it still reads as protection.
+    expect(SCRIPT_BODY).not.toContain('AGE_DB_HOST_PORT');
+    expect(SCRIPT_BODY).not.toContain('5442');
   });
 
-  it('refuses an owner URL that addresses somebody else', () => {
-    // ⚠️ A migration applied to the wrong instance does not report itself: it
-    // creates AGE's tables inside a peer's database and then works.
-    expect(SCRIPT).toContain('REFUSED: AGE_DB_OWNER_URL addresses port 5432.');
-    expect(SCRIPT).toContain("REFUSED: AGE_DB_OWNER_URL does not address AGE's own store.");
+  it('🛑 refuses an owner URL naming somebody else’s DATABASE — the half that survived', () => {
+    // 🛑 **THE REWRITE REPLACES THE AUTHORITY AND 🚫 NOTHING ELSE**, so the
+    // database name still comes from the operator's URL. A URL naming a peer's
+    // database would be rewritten onto AGE's own server and then look for that
+    // database there. ⚠️ This is the narrowed successor to the deleted pair,
+    // 🚫 not an unrelated new rule.
+    expect(SCRIPT).toContain("REFUSED: AGE_DB_OWNER_URL does not name AGE's own database.");
+    expect(SCRIPT_BODY).toContain('owner_url_database');
+  });
+
+  it('🛑 refuses a store that publishes a host port, measured on the RUNNING container', () => {
+    // ⚠️ The compose file says what the operator intends; this says what is
+    // actually running, which is where a hand-added `-p` would appear.
+    expect(SCRIPT).toContain('REFUSED: ${CONTAINER} publishes a host port.');
   });
 
   it('defaults nothing it requires', () => {
@@ -216,7 +229,6 @@ describe('the provisioning script targets AGE, and can no longer target a neighb
       'AGE_DB_SUPERUSER',
       'AGE_DB_SUPERUSER_PASSWORD',
       'AGE_DB_APP_PASSWORD',
-      'AGE_DB_HOST_PORT',
       'AGE_DB_OWNER_URL',
       'AGE_STUDIO_ORGANIZATION_ID',
     ]) {
@@ -269,11 +281,15 @@ describe('the provisioning script targets AGE, and can no longer target a neighb
     for (const token of ['caddy', 'nginx', 'certbot', 'ufw allow']) {
       expect(SCRIPT_BODY.toLowerCase(), token).not.toContain(token);
     }
-    // ⚠️ `0.0.0.0` IS NOT ON THAT LIST, ON PURPOSE. The script contains it —
-    // inside the check that REFUSES a container publishing off loopback. A scan
-    // that banned the string outright would have deleted the guard against the
-    // very thing it was meant to catch.
-    expect(SCRIPT_BODY).toContain('REFUSED: ${CONTAINER} publishes a port off loopback.');
+    // 🛑 **`0.0.0.0` CAN NOW BE BANNED OUTRIGHT, AND THE REASON IS ADR-0078 C3.**
+    // ⚠️ It used to be excluded from that list deliberately: the script carried
+    // the string inside the check that refused a container publishing OFF
+    // loopback, so a blanket scan would have deleted the guard against the very
+    // thing it was meant to catch. C3 replaced that check with one that refuses
+    // ANY host binding — which needs no interface literal at all — so the
+    // exception has no subject left and the stricter rule is the honest one.
+    expect(SCRIPT_BODY).not.toContain('0.0.0.0');
+    expect(SCRIPT_BODY).toContain('REFUSED: ${CONTAINER} publishes a host port.');
   });
 });
 

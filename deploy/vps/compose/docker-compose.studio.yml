@@ -44,11 +44,11 @@ services:
     # 600, and OUTSIDE THE CHECKOUT — 🚫 never committed, 🚫 never a build
     # argument, 🚫 never a command-line value.
     #
-    # ⚠️ IT IS A DIFFERENT FILE FROM THE HOST SERVICE'S, AND THE DIFFERENCE IS
-    # ONE LINE: `DATABASE_URL` names `age-postgres:5432` — 🛑 the CONTAINER's
-    # route to AGE's own store on `age-internal`, 🚫 not the host's
-    # `127.0.0.1:5442` publication, which does not exist inside this namespace.
-    # `scripts/deploy-studio.sh` derives it on the host from the provisioned one.
+    # ⚠️ `DATABASE_URL` names AGE's own store on `age-internal` at its pinned
+    # address — 🛑 the CONTAINER's route, and since ADR-0078 C3 the ONLY route
+    # there is: the host publication this file once had to talk readers out of
+    # no longer exists. `scripts/deploy-studio.sh` derives this file on the host
+    # from the provisioned one, which now names that same route directly.
     env_file:
       - /etc/age-studio/age-studio.container.env
     # 🛑 **MOUNTING A PATH IS NOT NAMING IT.** ⚠️ MEASURED ON THE REAL

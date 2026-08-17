@@ -12,8 +12,11 @@
 # passes UNMODIFIED. 🚫 No guard is relaxed to obtain the boundary.
 #
 # 🛑 **AND `127.0.0.1:5432` MUST NEVER BE WRITTEN INTO A HOST-SIDE FILE.** On this
-# VPS the host's own `127.0.0.1:5432` is **SNARA's postgres** — which is exactly
-# why `provision-studio-database.sh` REFUSES `AGE_DB_HOST_PORT=5432`. A
+# VPS the host's own `127.0.0.1:5432` is **SNARA's postgres**. ⚠️ Until ADR-0078
+# C3 that hazard was policed by `provision-studio-database.sh` refusing
+# `AGE_DB_HOST_PORT=5432`; C3 removed the host publication and the variable with
+# it, so the hazard is now held off STRUCTURALLY — there is no host-side AGE
+# authority left for anyone to get wrong. A
 # provisioned env file carrying that string would be correct inside this
 # namespace and would point AGE at a PEER's database anywhere else, and nothing
 # would report the difference. 🚫 So the string is produced HERE, in the only

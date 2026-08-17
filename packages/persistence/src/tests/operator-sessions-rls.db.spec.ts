@@ -13,7 +13,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
  * and cleaning up between tests.
  *
  * 🛑 WHAT THIS PROVES AND WHAT IT DOES NOT. It proves the application role can
- * read only its own organization's sessions and cannot write at all. It does
+ * read only its own organization's sessions, that it cannot create or erase one,
+ * and that the ONE write it does hold — `revoked_at`, ADR-0074 D3 — reaches only
+ * rows inside the scope the transaction named. It does
  * 🚫 NOT prove isolation as an authorization property — RLS is coherence
  * (ADR-0046 D5), and the emptiness of a result set is never the proof: every
  * "cannot see" case below is paired with a row the OWNER can still count, so a
@@ -98,6 +100,41 @@ async function readAs(organizationId: string | undefined): Promise<Array<Record<
              "revoked_at" AS "revokedAt"
       FROM "operator_sessions"`;
   });
+}
+
+/**
+ * Revokes as the application role, in the SHAPE the production revocation uses.
+ *
+ * ⚠️ **THE PREDICATE IS DELIBERATELY THE PRODUCTION ONE** —
+ * `operator-session-revocation.ts` names `sessionId` and `revokedAt IS NULL`
+ * and 🚫 does NOT name the organization: the scoping is the transaction's
+ * `set_config` and the `FOR UPDATE` policy above it. Writing the organization
+ * into the predicate here would test a query AGE does not run, and would hide
+ * the very thing these cases exist to observe.
+ */
+async function revokeAs(
+  organizationId: string | undefined,
+  sessionId: string,
+  revokedAt: string,
+): Promise<number> {
+  return app.$transaction(async (tx) => {
+    if (organizationId !== undefined) {
+      await tx.$executeRaw`SELECT set_config('age.organization_id', ${organizationId}, true)`;
+    }
+
+    return tx.$executeRaw`
+      UPDATE "operator_sessions" SET "revoked_at" = ${revokedAt}
+      WHERE "session_id" = ${sessionId} AND "revoked_at" IS NULL`;
+  });
+}
+
+/** What the OWNER — who is not filtered by the policy — sees on one row. */
+async function revokedAtAsOwner(sessionId: string): Promise<string | null> {
+  const rows = await owner.$queryRaw<Array<{ revokedAt: string | null }>>`
+    SELECT "revoked_at" AS "revokedAt" FROM "operator_sessions"
+    WHERE "session_id" = ${sessionId}`;
+
+  return rows[0]?.revokedAt ?? null;
 }
 
 beforeAll(async () => {
@@ -221,5 +258,130 @@ describe('a real row survives the normalizer that guards every read', () => {
     // ⚠️ The point is that a row from PostgreSQL — not a hand-built object — is
     // what the untrusted-input rule is applied to.
     expect(normalizeSessionRecord(rows[0])).toEqual({ ...MINE });
+  });
+});
+
+/**
+ * 🛑 **THE ONE WRITE THE APPLICATION ROLE HOLDS — ADR-0074 D3, migration
+ * `20260815000000_operator_session_revocation`.**
+ *
+ * ⚠️ **WHY THIS BLOCK EXISTS.** That migration granted `UPDATE ("revoked_at")`
+ * and added a `FOR UPDATE` policy, and NOTHING in the repository exercised
+ * either one. The two failures it left uncovered pull in opposite directions and
+ * both are silent:
+ *
+ *   - the grant or the policy goes missing → every logout returns
+ *     `already-ended` and the token stays LIVE, while the console reports a
+ *     successful sign-out;
+ *   - the policy is widened, or its `USING` clause is dropped → one deployment
+ *     can end another organization's sessions.
+ *
+ * 🚫 Neither is visible to `table_privileges`, which is where the existing
+ * "SELECT and nothing else" case looks — a COLUMN-level grant does not appear
+ * there. That case still guards against `GRANT UPDATE ON TABLE`; it says nothing
+ * about what is actually granted, so it cannot stand in for these.
+ *
+ * 🛑 **AND RLS IS NOT WHAT IS BEING CLAIMED HERE** (ADR-0046 D5). These cases do
+ * 🚫 not prove isolation as an authorization property. They prove the database
+ * still behaves the way the code above it assumes — coherence — and every
+ * "cannot" below is paired with a row the OWNER can still see unrevoked, so a
+ * write that simply matched nothing for the wrong reason fails.
+ */
+describe('🛑 revocation — the application role may END a session and 🚫 never start one', () => {
+  const REVOKED_AT = '2026-08-15T12:00:00.000Z';
+
+  it('revokes the session inside its own scope', async () => {
+    await plant(MINE);
+
+    expect(await revokeAs('org-alpha', 'session-mine', REVOKED_AT)).toBe(1);
+    expect(await revokedAtAsOwner('session-mine')).toBe(REVOKED_AT);
+  });
+
+  it('🚫 cannot revoke another organization’s session, while that row still exists', async () => {
+    await plant(MINE);
+    await plant(THEIRS);
+
+    // Scoped to org-beta, naming org-alpha's session by its exact id.
+    expect(await revokeAs('org-beta', 'session-mine', REVOKED_AT)).toBe(0);
+
+    // 🛑 The pairing that makes the line above evidence: the row is still there,
+    // and it is still LIVE. An empty match is never the proof.
+    expect(await countAsOwner()).toBe(2);
+    expect(await revokedAtAsOwner('session-mine')).toBeNull();
+  });
+
+  it('🛑 fails closed when nothing scoped the transaction', async () => {
+    await plant(MINE);
+
+    expect(await revokeAs(undefined, 'session-mine', REVOKED_AT)).toBe(0);
+    expect(await revokedAtAsOwner('session-mine')).toBeNull();
+  });
+
+  /**
+   * 🛑 **THE CASE THAT ISOLATES THE `FOR UPDATE` POLICY, AND WHY IT LOOKS ODD.**
+   *
+   * ⚠️ Measured, 🚫 not assumed: widening `operator_sessions_revoke_in_scope` to
+   * `USING (true)` does NOT break the cross-organization case above. PostgreSQL
+   * applies the SELECT policy as well whenever an UPDATE's `WHERE` reads a
+   * column — so the production predicate (`WHERE session_id = …`) is scoped by
+   * the SELECT policy, and the UPDATE policy is the SECOND lock on that door.
+   *
+   * 🛑 That is defence in depth, 🚫 not redundancy — and it means the case above
+   * proves the BOUNDARY while proving nothing about which policy holds it. This
+   * one closes that: an UNQUALIFIED update reads no column, so the SELECT policy
+   * never engages and `USING` is the only thing standing there. 🚫 Delete it and
+   * the `FOR UPDATE` policy becomes untested again.
+   */
+  it('🛑 an unqualified update reaches only the scope it named — the `FOR UPDATE` policy alone', async () => {
+    await plant(MINE);
+    await plant(THEIRS);
+
+    const touched = await app.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('age.organization_id', 'org-beta', true)`;
+      return tx.$executeRaw`UPDATE "operator_sessions" SET "revoked_at" = ${REVOKED_AT}`;
+    });
+
+    expect(touched).toBe(1);
+    expect(await revokedAtAsOwner('session-theirs')).toBe(REVOKED_AT);
+    // 🛑 Paired, so an update that matched nothing at all cannot pass as a pass.
+    expect(await revokedAtAsOwner('session-mine')).toBeNull();
+  });
+
+  it('🚫 is second-press safe — an already-revoked row matches nothing', async () => {
+    await plant({ ...MINE, revokedAt: REVOKED_AT });
+
+    // ⚠️ `already-ended`, 🚫 not an error and 🚫 not a second revocation instant.
+    expect(await revokeAs('org-alpha', 'session-mine', '2026-08-15T13:00:00.000Z')).toBe(0);
+    expect(await revokedAtAsOwner('session-mine')).toBe(REVOKED_AT);
+  });
+
+  it('🚫 cannot re-tenant a row through the write it does hold', async () => {
+    await plant(MINE);
+
+    await expect(
+      app.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('age.organization_id', 'org-alpha', true)`;
+        return tx.$executeRaw`UPDATE "operator_sessions" SET "organization_id" = 'org-beta'`;
+      }),
+    ).rejects.toThrow();
+
+    const rows = await owner.$queryRaw<Array<{ organizationId: string }>>`
+      SELECT "organization_id" AS "organizationId" FROM "operator_sessions"`;
+    expect(rows[0]?.organizationId).toBe('org-alpha');
+  });
+
+  it('🚫 cannot repoint the token digest through the write it does hold', async () => {
+    await plant(MINE);
+
+    await expect(
+      app.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('age.organization_id', 'org-alpha', true)`;
+        return tx.$executeRaw`UPDATE "operator_sessions" SET "token_hash" = ${'d'.repeat(64)}`;
+      }),
+    ).rejects.toThrow();
+
+    const rows = await owner.$queryRaw<Array<{ tokenHash: string }>>`
+      SELECT "token_hash" AS "tokenHash" FROM "operator_sessions"`;
+    expect(rows[0]?.tokenHash).toBe(MINE.tokenHash);
   });
 });
