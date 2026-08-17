@@ -344,7 +344,21 @@ esac
 remote   AGE_VPS_PATH="$AGE_VPS_PATH"   AGE_DB_OWNER_URL_CONTAINER="$AGE_DB_OWNER_URL_CONTAINER" <<'REMOTE'
 set -euo pipefail
 
-cd "$AGE_VPS_PATH"
+# 🛑 🚫 **NO `cd` INTO THE DEPLOY PATH, AND THAT IS NOT A STYLE CHOICE.** Since
+# ADR-0077 the checkout lives at `/home/age-deploy/age` owned by `age-deploy`,
+# and this script runs as the OWNER account — which is deliberately NOT that
+# account and cannot even traverse the directory. The compose file is named by
+# ABSOLUTE PATH and read by the sudo'd process (root), and
+# `--project-directory` supplies the relative-path base compose would otherwise
+# have taken from the working directory.
+# ⚠️ This was invisible to every local gate and to CI: it can only fail on a box
+# where the two identities are actually separate, and it did.
+CAPTURE_COMPOSE="${AGE_VPS_PATH}/deploy/vps/compose/docker-compose.age-capture.yml"
+if ! sudo test -r "$CAPTURE_COMPOSE"; then
+  echo "REFUSED: the capture compose file is not present at ${CAPTURE_COMPOSE}." >&2
+  echo "  The deployment predates ADR-0078 C1; deploy first, then provision." >&2
+  exit 2
+fi
 # 🚫 THE CREDENTIAL IS NOT AN ARGUMENT. It is already exported here (the `remote`
 # helper put it on stdin), and the compose file interpolates it from this
 # environment into the service's `environment:` — so it never enters any argv.
@@ -355,7 +369,7 @@ export AGE_DB_OWNER_URL_CONTAINER
 # 🚫 Do not reach for `sudo -E`: that forwards the whole environment, including
 # every other credential this script is holding.
 sudo --preserve-env=AGE_DB_OWNER_URL_CONTAINER \
-  docker compose -f deploy/vps/compose/docker-compose.age-capture.yml \
+  docker compose -f "$CAPTURE_COMPOSE" --project-directory "$AGE_VPS_PATH" \
   run --rm migrate
 REMOTE
 

@@ -73,17 +73,32 @@ SSH=(ssh -p "$AGE_VPS_PORT" "${AGE_VPS_USER}@${AGE_VPS_HOST}")
   cat <<'REMOTE'
 set -euo pipefail
 
-cd "$AGE_VPS_PATH"
+# 🛑 🚫 **NOTHING HERE MAY `cd` INTO THE DEPLOY PATH OR READ THE OPERATOR FILES
+# DIRECTLY.** Since ADR-0077 the checkout is `/home/age-deploy/age` and
+# `/var/lib/age-operator` is mode 700, both owned by `age-deploy` — and this
+# script runs as the OWNER account, which is deliberately NOT that account.
+# The owner reaches them only through `sudo`, and the compose file is therefore
+# named by ABSOLUTE PATH with `--project-directory` supplying the base compose
+# would otherwise take from the working directory.
+# ⚠️ 🛑 **THE SEPARATION IS THE POINT, 🚫 NOT AN OBSTACLE.** The repair is never
+# to widen a mode or to move the files back under the owner; it is to reach them
+# as root for exactly the two facts needed, which is what happens below.
+CAPTURE_COMPOSE="${AGE_VPS_PATH}/deploy/vps/compose/docker-compose.age-capture.yml"
+if ! sudo test -r "$CAPTURE_COMPOSE"; then
+  echo "REFUSED: the capture compose file is not present at ${CAPTURE_COMPOSE}." >&2
+  echo "  The deployment predates ADR-0078 C1; deploy first, then capture." >&2
+  exit 2
+fi
 
 # 🛑 THE UID IS DERIVED FROM THE RECORD FILE, 🚫 NOT CHOSEN. Identical rule and
 # identical reason to the ADR-0077 compose wrapper: the container reads the
 # operator's 0600 files, so it must run as the account that owns them, and the
 # repair for a permission fault is 🚫 never `chmod o+r` on a real client's record.
-if ! uid="$(stat -c %u "$AGE_VPS_CLIENT_RECORD_FILE" 2>/dev/null)"; then
+if ! uid="$(sudo stat -c %u "$AGE_VPS_CLIENT_RECORD_FILE" 2>/dev/null)"; then
   echo "REFUSED: cannot stat the operator record; nothing is guessed here." >&2
   exit 2
 fi
-gid="$(stat -c %g "$AGE_VPS_CLIENT_RECORD_FILE")"
+gid="$(sudo stat -c %g "$AGE_VPS_CLIENT_RECORD_FILE")"
 
 if [ "$uid" = '0' ]; then
   echo "REFUSED: the operator record is owned by root; capture must not run as root." >&2
@@ -106,7 +121,7 @@ AGE_VPS_CLIENT_RECORD_FILE="$AGE_VPS_CLIENT_RECORD_FILE" \
 AGE_STUDIO_UID="$uid" \
 AGE_STUDIO_GID="$gid" \
   sudo --preserve-env=AGE_VPS_DISCOVERY_WORKSPACE,AGE_VPS_CLIENT_RECORD_FILE,AGE_STUDIO_UID,AGE_STUDIO_GID \
-  docker compose -f deploy/vps/compose/docker-compose.age-capture.yml \
+  docker compose -f "$CAPTURE_COMPOSE" --project-directory "$AGE_VPS_PATH" \
   run --rm capture "$@"
 REMOTE
 } | "${SSH[@]}" bash -s
