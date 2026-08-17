@@ -70,6 +70,7 @@ const COMPOSE_CODE = withoutComments(COMPOSE);
  * rule matches the token the rule forbids.
  */
 const PROVISION_CODE = withoutComments(PROVISION);
+const RUN_CAPTURE_CODE = withoutComments(RUN_CAPTURE);
 
 describe('the capture container reaches AGE’s store through the store’s own namespace', () => {
   it('reads every file it guards, and none of them is empty', () => {
@@ -198,6 +199,53 @@ describe('provisioning and migrations left the host publication behind', () => {
     // business's snapshots and `dev` may reset it.
     expect(COMPOSE_CODE).toContain("'prisma:migrate:deploy'");
     expect(COMPOSE_CODE).not.toContain('migrate:dev');
+  });
+});
+
+describe('the owner account reaches the deploy path without owning it', () => {
+  /**
+   * 🛑 **THE DEFECT THIS EXISTS TO PREVENT WAS REAL, AND ONLY THE VPS FOUND IT.**
+   * Since ADR-0077 the checkout is `/home/age-deploy/age` and
+   * `/var/lib/age-operator` is mode 700, both owned by `age-deploy`. Both scripts
+   * run as the OWNER account, which is deliberately NOT that account — so a
+   * `cd "$AGE_VPS_PATH"` or a bare `stat` on the record file is a permission
+   * denial, and every local gate and CI run passed straight over it.
+   *
+   * 🚫 **THE REPAIR IS NEVER TO WIDEN A MODE OR MOVE THE FILES BACK.** The
+   * separation is ADR-0077's whole point. These assertions pin the repair that
+   * was actually made: reach them as root for exactly the facts needed.
+   */
+  it('never changes into the deploy path it cannot traverse', () => {
+    expect(PROVISION_CODE).not.toMatch(/^\s*cd "\$AGE_VPS_PATH"\s*$/m);
+    expect(RUN_CAPTURE_CODE).not.toMatch(/^\s*cd "\$AGE_VPS_PATH"\s*$/m);
+  });
+
+  it('names the compose file absolutely and supplies the project directory', () => {
+    // ⚠️ `--project-directory` replaces the base compose would otherwise have
+    // taken from the working directory — 🚫 without it, relative paths inside
+    // the compose file would resolve against the caller's home.
+    for (const body of [PROVISION_CODE, RUN_CAPTURE_CODE]) {
+      expect(body).toContain(
+        'CAPTURE_COMPOSE="${AGE_VPS_PATH}/deploy/vps/compose/docker-compose.age-capture.yml"',
+      );
+      expect(body).toContain('docker compose -f "$CAPTURE_COMPOSE" --project-directory');
+    }
+  });
+
+  it('refuses when the deployment predates C1 rather than failing obscurely', () => {
+    // ⚠️ `network_mode: container:…` and a missing compose file both fail with
+    // messages that name neither cause. The refusal is stated here instead.
+    for (const body of [PROVISION_CODE, RUN_CAPTURE_CODE]) {
+      expect(body).toContain('sudo test -r "$CAPTURE_COMPOSE"');
+      expect(body).toContain('REFUSED: the capture compose file is not present at');
+    }
+  });
+
+  it('reads the operator’s record as root, never as the owner directly', () => {
+    // 🚫 A bare `stat` here is the defect, not a simplification.
+    expect(RUN_CAPTURE_CODE).toContain('sudo stat -c %u "$AGE_VPS_CLIENT_RECORD_FILE"');
+    expect(RUN_CAPTURE_CODE).toContain('sudo stat -c %g "$AGE_VPS_CLIENT_RECORD_FILE"');
+    expect(RUN_CAPTURE_CODE).not.toMatch(/[^o] stat -c %[ug] "\$AGE_VPS_CLIENT_RECORD_FILE"/);
   });
 });
 
