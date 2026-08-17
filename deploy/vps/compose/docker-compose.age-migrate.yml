@@ -1,0 +1,50 @@
+# Applying the committed migrations, inside AGE's own store namespace.
+# ADR-0078 option C, slice C1 — corrected in C2 on the evidence of the real box.
+#
+# 🛑 **WHY THIS IS ITS OWN FILE AND 🚫 NOT A SECOND SERVICE NEXT TO `capture`.**
+# It WAS a second service, and the VPS refused it:
+#
+#     invalid spec: ::ro: empty section between colons
+#
+# ⚠️ **COMPOSE VALIDATES EVERY SERVICE IN THE FILE, 🚫 NOT ONLY THE ONE BEING
+# RUN.** `docker compose run --rm migrate` still interpolated and validated the
+# `capture` service — whose mounts name the operator's workspace and record file.
+# A migration has no business knowing those paths, so the caller does not export
+# them, so they interpolated to empty strings and the mount spec collapsed.
+# 🚫 **THE REPAIR IS NOT TO EXPORT PLACEHOLDER PATHS** so the validation passes:
+# that would make an unset operator path a silent empty mount rather than a
+# refusal, which is the same class of defect the `:?` below exists to prevent.
+# The two acts genuinely need different inputs, so they get different files.
+#
+# 🛑 **THE NAMESPACE IS THE SECURITY PROPERTY.** Until C1 migrations ran ON THE
+# HOST against `127.0.0.1:${AGE_DB_HOST_PORT}`, which made the publication
+# load-bearing for provisioning as well as for capture — C3 cannot remove the
+# publication while that is true. Inside `age-postgres`'s namespace
+# `127.0.0.1:5432` IS AGE's store, so no host port is involved at any point.
+
+services:
+  migrate:
+    # ⚠️ THE CONSOLE'S OWN IMAGE, 🚫 not a second one — the same reason as the
+    # capture service: the migrations applied here are the ones the console was
+    # built from, and a separate image would be a copy free to drift.
+    image: age-studio:local
+    # 🛑 THE ONE LINE THAT DECIDES REACHABILITY. 🚫 No bridge, no peer, and no
+    # host publication.
+    network_mode: 'container:age-postgres'
+    # 🚫 **THE OWNER URL IS NEVER AN ARGUMENT.** Compose interpolates it from the
+    # caller's ENVIRONMENT, so the credential never appears in `argv` and never
+    # reaches `ps` on a host shared with four other products (#350).
+    # ⚠️ `:?` makes an absent value a REFUSAL, 🚫 not an unscoped default.
+    environment:
+      DATABASE_URL: ${AGE_DB_OWNER_URL_CONTAINER:?the container-route owner URL must be stated}
+    # 🛑 `migrate deploy`, 🚫 NEVER `migrate dev`. `dev` may reset the database,
+    # and this one holds a real business's snapshots.
+    entrypoint: ['pnpm', '--filter', '@age/persistence', 'prisma:migrate:deploy']
+    # 🚫 No volumes. A migration reads the repo baked into the image and writes
+    # only to the store; it has no business seeing an operator's files. ⚠️ That
+    # is also exactly why it could not share a file with the capture service.
+    security_opt:
+      - no-new-privileges:true
+# 🚫 **NO `networks:` BLOCK.** Compose rejects one alongside `network_mode`, and
+# a guard asserts its absence so the rejection can never be "fixed" by dropping
+# the `network_mode` line instead.

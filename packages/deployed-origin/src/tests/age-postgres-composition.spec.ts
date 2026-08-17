@@ -30,8 +30,10 @@ const SCRIPT_PATH = join(REPO, 'scripts', 'provision-studio-database.sh');
 const COMPOSE = readFileSync(COMPOSE_PATH, 'utf8');
 const SCRIPT = readFileSync(SCRIPT_PATH, 'utf8');
 // ⚠️ ADR-0078 C1 — the migration now runs here, so the guard reads here too.
-const CAPTURE_COMPOSE = readFileSync(
-  join(REPO, 'deploy', 'vps', 'compose', 'docker-compose.age-capture.yml'),
+// ⚠️ C2 moved it into its OWN file: compose validates every service in a file,
+// and the capture service's operator mounts have no place in a migration run.
+const MIGRATE_COMPOSE = readFileSync(
+  join(REPO, 'deploy', 'vps', 'compose', 'docker-compose.age-migrate.yml'),
   'utf8',
 );
 
@@ -47,7 +49,7 @@ function bodyLines(source: string): string[] {
 const COMPOSE_BODY = bodyLines(COMPOSE).join('\n');
 const SCRIPT_BODY = bodyLines(SCRIPT).join('\n');
 // ⚠️ Stripped for the same reason: this file's own comment forbids `migrate dev`.
-const CAPTURE_COMPOSE_BODY = bodyLines(CAPTURE_COMPOSE).join('\n');
+const MIGRATE_COMPOSE_BODY = bodyLines(MIGRATE_COMPOSE).join('\n');
 
 /** Every published port, as written. */
 function publishedPorts(source: string): string[] {
@@ -231,12 +233,12 @@ describe('the provisioning script targets AGE, and can no longer target a neighb
     // while they ran against the published port C3 could not have removed that
     // publication at all. 🚫 Asserting only one end would let the operation be
     // deleted at the other.
-    expect(SCRIPT_BODY).toContain('docker-compose.age-capture.yml');
+    expect(SCRIPT_BODY).toContain('docker-compose.age-migrate.yml');
     expect(SCRIPT_BODY).toContain('run --rm migrate');
-    expect(CAPTURE_COMPOSE_BODY).toContain("'prisma:migrate:deploy'");
+    expect(MIGRATE_COMPOSE_BODY).toContain("'prisma:migrate:deploy'");
     expect(SCRIPT_BODY).not.toContain('migrate dev');
-    expect(CAPTURE_COMPOSE_BODY).not.toContain('migrate dev');
-    expect(CAPTURE_COMPOSE_BODY).not.toContain('migrate:dev');
+    expect(MIGRATE_COMPOSE_BODY).not.toContain('migrate dev');
+    expect(MIGRATE_COMPOSE_BODY).not.toContain('migrate:dev');
   });
 
   it('runs the console as the NON-OWNER role, with RLS applying to it', () => {

@@ -72,27 +72,6 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # 🛑 MIGRATIONS RUN THROUGH THE SAME NAMESPACE, AND FOR THE SAME REASON.
-  # ⚠️ Until C1 these ran ON THE HOST against `127.0.0.1:${AGE_DB_HOST_PORT}`,
-  # which made the publication load-bearing for provisioning as well as for
-  # capture. C3 cannot remove the publication while that is true, so this
-  # service is part of C1, 🚫 not an extra.
-  migrate:
-    image: age-studio:local
-    network_mode: 'container:age-postgres'
-    # 🚫 **THE OWNER URL IS NEVER AN ARGUMENT.** Compose interpolates it from the
-    # caller's ENVIRONMENT, so the credential never appears in `argv` and never
-    # reaches `ps` on a host shared with four other products (#350).
-    # ⚠️ `:?` makes an absent value a REFUSAL, 🚫 not an unscoped default.
-    environment:
-      DATABASE_URL: ${AGE_DB_OWNER_URL_CONTAINER:?the container-route owner URL must be stated}
-    # 🛑 `migrate deploy`, 🚫 NEVER `migrate dev`. `dev` may reset the database,
-    # and this one holds a real business's snapshots.
-    entrypoint: ['pnpm', '--filter', '@age/persistence', 'prisma:migrate:deploy']
-    # 🚫 No volumes. A migration reads the repo baked into the image and writes
-    # only to the store; it has no business seeing an operator's files.
-    security_opt:
-      - no-new-privileges:true
 # 🚫 **NO `networks:` BLOCK.** Compose rejects one alongside `network_mode`, and
 # a guard asserts its absence so the rejection can never be "fixed" by dropping
 # the `network_mode` line instead.

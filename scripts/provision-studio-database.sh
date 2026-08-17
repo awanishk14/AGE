@@ -353,9 +353,9 @@ set -euo pipefail
 # have taken from the working directory.
 # ⚠️ This was invisible to every local gate and to CI: it can only fail on a box
 # where the two identities are actually separate, and it did.
-CAPTURE_COMPOSE="${AGE_VPS_PATH}/deploy/vps/compose/docker-compose.age-capture.yml"
-if ! sudo test -r "$CAPTURE_COMPOSE"; then
-  echo "REFUSED: the capture compose file is not present at ${CAPTURE_COMPOSE}." >&2
+MIGRATE_COMPOSE="${AGE_VPS_PATH}/deploy/vps/compose/docker-compose.age-migrate.yml"
+if ! sudo test -r "$MIGRATE_COMPOSE"; then
+  echo "REFUSED: the migrate compose file is not present at ${MIGRATE_COMPOSE}." >&2
   echo "  The deployment predates ADR-0078 C1; deploy first, then provision." >&2
   exit 2
 fi
@@ -369,7 +369,7 @@ export AGE_DB_OWNER_URL_CONTAINER
 # 🚫 Do not reach for `sudo -E`: that forwards the whole environment, including
 # every other credential this script is holding.
 sudo --preserve-env=AGE_DB_OWNER_URL_CONTAINER \
-  docker compose -f "$CAPTURE_COMPOSE" --project-directory "$AGE_VPS_PATH" \
+  docker compose -f "$MIGRATE_COMPOSE" --project-directory "$AGE_VPS_PATH" \
   run --rm migrate
 REMOTE
 
