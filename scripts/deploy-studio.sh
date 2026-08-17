@@ -128,13 +128,14 @@ rsync -az --delete \
 fi
 
 echo "==> Deriving the container's env file from the provisioned one"
-# 🛑 THE ONLY DIFFERENCE IS THE DATABASE HOST, AND IT IS A FACT ABOUT NAMESPACES,
-# 🚫 NOT A SETTING. The host service reached AGE's store through its loopback
-# publication `127.0.0.1:5442`. That publication does not exist inside the
-# container's namespace; on `age-internal` the store answers as
-# `age-postgres:5432`. ⚠️ The rewrite happens ON THE HOST, in place, on a
-# root-owned 600 file — 🚫 the value is never read back, printed, or carried on a
-# command line (D6).
+# 🛑 **THERE IS NO LONGER A DIFFERENCE TO DERIVE** — ADR-0078 C3. The host
+# service once reached AGE's store through a loopback publication that does not
+# exist inside the container's namespace, so this step rewrote the authority.
+# C3 removed that publication, and provisioning now writes the container route
+# directly, so the wrapper COPIES and then VERIFIES rather than substituting.
+# ⚠️ The step is kept because the verification is: a provisioned file predating
+# C3 must FAIL here rather than start a console pointed at a port that is gone.
+# 🚫 The value is never read back, printed, or carried on a command line (D6).
 #
 # 🚫 If the provisioned file is missing, this REFUSES. ADR-0061 A6 item 2: a
 # deployment that starts without its secrets is a deployment nobody knows is

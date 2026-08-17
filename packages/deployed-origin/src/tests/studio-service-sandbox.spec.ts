@@ -154,9 +154,9 @@ describe('the console is published on host loopback, and 🚫 nowhere else', () 
   });
 
   it('🚫 publishes the database from this file, ever', () => {
-    // ⚠️ `age-postgres` is published on `127.0.0.1:5442` by ADR-0075's own
-    // stack, for the host-side capture CLI. 🚫 This file must not add a second
-    // publication of it, on any interface.
+    // ⚠️ Since ADR-0078 C3 `age-postgres` publishes NOTHING to the host at all.
+    // 🚫 This file must not be where a publication of it comes back — on any
+    // interface, on any port, for any reason.
     expect(COMPOSE_BODY).not.toContain('5442');
     expect(COMPOSE_BODY).not.toContain('5432:');
   });
@@ -287,11 +287,17 @@ describe('the boundary is proven, not asserted', () => {
   });
 
   it('🚫 does not claim the symmetric question is closed', () => {
-    // ⚠️ ADR-0076 D8. AGE's own store is still PUBLISHED on `127.0.0.1:5442`
-    // for the host-side capture CLI, so a compromised PEER can still reach AGE's
-    // database. That is the mirror image of the problem this ADR solved, it is
-    // deliberately still open, and this assertion is here so a later edit cannot
-    // quietly delete the caveat while keeping the mechanism.
+    // ⚠️ **ADR-0076 D8 — THE MECHANISM IS GONE; THE DECISION IS STILL THE
+    // OWNER'S.** ADR-0078 C3 removed the host publication that WAS D8's measured
+    // exposure, so the specific path a compromised peer could have taken to
+    // AGE's store no longer exists. 🚫 That is not the same as D8 being closed:
+    // closing a decision record is an owner act, and 🚫 an architect must not
+    // retire one by shipping the code it was about.
+    //
+    // 🛑 **AND THE HONEST CLAIM STAYS NARROW** (ADR-0078 §7): the store is **no
+    // longer host-published**, 🚫 not "unreachable" — the docker-capable account
+    // on this shared host remains root-equivalent and can still enter a
+    // namespace. ⚠️ That is ADR-0077's host-identity problem, 🚫 not D8's.
     expect(SCRIPT).toContain('ADR-0076');
   });
 });

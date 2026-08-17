@@ -85,9 +85,13 @@ require AGE_DB_SUPERUSER
 require AGE_DB_SUPERUSER_PASSWORD
 require AGE_DB_APP_PASSWORD
 
-# 🛑 THE HOST PORT AGE'S OWN STORE PUBLISHES ON LOOPBACK. Required, with NO
-# DEFAULT — see the refusal below for why this one is not a matter of taste.
-require AGE_DB_HOST_PORT
+# 🚫 **`AGE_DB_HOST_PORT` IS GONE, AND IT IS NOT COMING BACK** — ADR-0078 C3.
+# AGE's store no longer publishes a host port, so there is no host port for this
+# script to require, refuse, validate or write. ⚠️ The variable was not renamed
+# or defaulted: the CONCEPT was removed, which is what the owner asked for
+# ("do not simply change 5442 to another value"). Every operation this script
+# performs now reaches the store either by `docker exec` or through a container
+# on `age-internal`.
 
 # The owner connection, used ONLY by this script and ONLY for the length of the
 # migration. 🚫 It is never written to the unit file.
@@ -109,43 +113,37 @@ require AGE_STUDIO_ORGANIZATION_ID
 # ─────────────────────────────────────────────────────────────────────────────
 # 🛑 THE TWO REFUSALS THAT EXIST BECAUSE THIS SCRIPT ONCE GOT THEM WRONG.
 
-# 🛑 5432 IS SOMEBODY ELSE'S. On the VPS this script targets, `127.0.0.1:5432`
-# is already published by another product's Postgres. AGE publishing there would
-# either fail to start or — depending on which came up first — leave AGE's
-# connection string pointing into a database that is not AGE's.
+# 🛑 **THE REFUSALS WERE NARROWED TO FOLLOW THE CHANGE, 🚫 NOT RELAXED TO PASS**
+# — ADR-0078 C3.
 #
-# ⚠️ The refusal is on the number, not on the current occupant, and that is
-# deliberate: it must keep refusing after the neighbour moves, because the reason
-# is "this port is the one everybody assumes", not "SNARA is there today".
-if [ "$AGE_DB_HOST_PORT" = "5432" ]; then
-  echo "REFUSED: AGE_DB_HOST_PORT is 5432." >&2
-  echo "  That is the port every Postgres on a shared host is assumed to be on," >&2
-  echo "  and on this VPS another product already publishes it. Pick a port that" >&2
-  echo "  belongs to AGE (ADR-0075 D1/D4)." >&2
+# ⚠️ **WHAT THE OLD PAIR ACTUALLY PROTECTED.** Both refusals asked the same
+# question in two shapes: *does this owner URL address AGE's store, or the
+# neighbour's?* That question was answerable only because the URL's HOST
+# AUTHORITY decided which instance got the migration — AGE on
+# `127.0.0.1:${AGE_DB_HOST_PORT}`, SNARA on `127.0.0.1:5432`.
+#
+# 🛑 **THAT AUTHORITY NO LONGER DECIDES ANYTHING.** Since C1 the migration runs
+# in a container sharing `age-postgres`'s namespace, and this script REWRITES the
+# authority onto `@127.0.0.1:5432/` before it goes anywhere (see the rewrite
+# below, which fails closed). Whatever host and port the operator supplies is
+# discarded. So a guard on the supplied port would now be asserting something
+# that cannot affect the outcome — 🚫 a guard that has become vacuous is worse
+# than no guard, because it still reads as protection.
+#
+# ⚠️ **AND THE HAZARD IT LEAVES BEHIND IS THE `DATABASE`, NOT THE HOST.** The
+# rewrite replaces the authority and 🚫 nothing else, so the PATH — the database
+# name — still comes from the operator's URL. A URL naming a peer's database
+# would now be rewritten onto AGE's own server and then look for that database
+# there. So the surviving question is asked about the half that survived.
+owner_url_database=${AGE_DB_OWNER_URL##*/}
+owner_url_database=${owner_url_database%%\?*}
+if [ "$owner_url_database" != "$AGE_DB_NAME" ]; then
+  echo "REFUSED: AGE_DB_OWNER_URL does not name AGE's own database." >&2
+  echo "  Expected the database to be ${AGE_DB_NAME} (ADR-0075 D6)." >&2
+  echo "  🚫 Neither the URL nor the name it did carry is echoed — a connection" >&2
+  echo "     string carries a password, and the position is enough to fix it." >&2
   exit 2
 fi
-
-# 🛑 THE OWNER URL MUST ADDRESS AGE'S OWN STORE, NOT A NEIGHBOUR'S. A migration
-# applied to the wrong instance is not a mistake that reports itself: it creates
-# AGE's tables inside somebody else's database and then works.
-case "$AGE_DB_OWNER_URL" in
-  *:5432/*)
-    echo "REFUSED: AGE_DB_OWNER_URL addresses port 5432." >&2
-    echo "  AGE's own store is published on AGE_DB_HOST_PORT (${AGE_DB_HOST_PORT})." >&2
-    echo "  🚫 Migrations are never applied to a peer product's database (ADR-0075 D6)." >&2
-    exit 2
-    ;;
-esac
-
-case "$AGE_DB_OWNER_URL" in
-  *"127.0.0.1:${AGE_DB_HOST_PORT}"* | *"localhost:${AGE_DB_HOST_PORT}"*) ;;
-  *)
-    echo "REFUSED: AGE_DB_OWNER_URL does not address AGE's own store." >&2
-    echo "  Expected loopback on port ${AGE_DB_HOST_PORT}." >&2
-    echo "  🚫 The host is not echoed here — a connection string carries a password." >&2
-    exit 2
-    ;;
-esac
 
 SSH=(ssh -p "$AGE_VPS_PORT" "${AGE_VPS_USER}@${AGE_VPS_HOST}")
 
@@ -191,7 +189,7 @@ echo "==> Writing the store's own env file and bringing up ${CONTAINER}"
 #
 # 🛑 THE ENV FILE HOLDS THE SUPERUSER PASSWORD. Root-owned, mode 600, on the
 # server, 🚫 never committed, 🚫 never rsynced, 🚫 never echoed.
-remote   AGE_DB_NAME="$AGE_DB_NAME"   AGE_DB_SUPERUSER="$AGE_DB_SUPERUSER"   AGE_DB_SUPERUSER_PASSWORD="$AGE_DB_SUPERUSER_PASSWORD"   AGE_DB_HOST_PORT="$AGE_DB_HOST_PORT"   COMPOSE_FILE="$COMPOSE_FILE"   COMPOSE_ENV="$COMPOSE_ENV" <<'REMOTE'
+remote   AGE_DB_NAME="$AGE_DB_NAME"   AGE_DB_SUPERUSER="$AGE_DB_SUPERUSER"   AGE_DB_SUPERUSER_PASSWORD="$AGE_DB_SUPERUSER_PASSWORD"   COMPOSE_FILE="$COMPOSE_FILE"   COMPOSE_ENV="$COMPOSE_ENV" <<'REMOTE'
 set -euo pipefail
 
 sudo install -d -m 700 -o root -g root /etc/age-studio
@@ -201,7 +199,6 @@ umask 077
   printf 'AGE_DB_NAME=%s\n' "$AGE_DB_NAME"
   printf 'AGE_DB_SUPERUSER=%s\n' "$AGE_DB_SUPERUSER"
   printf 'AGE_DB_SUPERUSER_PASSWORD=%s\n' "$AGE_DB_SUPERUSER_PASSWORD"
-  printf 'AGE_DB_HOST_PORT=%s\n' "$AGE_DB_HOST_PORT"
 } | sudo tee "$COMPOSE_ENV" >/dev/null
 sudo chown root:root "$COMPOSE_ENV"
 sudo chmod 600 "$COMPOSE_ENV"
@@ -256,15 +253,34 @@ for peer in rankops snara drishti; do
   esac
 done
 
-# 🚫 AND NOT PUBLIC. The published binding must be loopback.
+# 🛑 **AND IT PUBLISHES NOTHING AT ALL** — ADR-0078 C3, measured on the RUNNING
+# container rather than read off the compose file.
+#
+# ⚠️ **THE OLD CHECK WOULD NOW PASS BY SAYING NOTHING.** It asked "is any
+# published binding off loopback?", which an UNPUBLISHED container answers
+# vacuously — the guard would go green on the very state it was meant to police
+# and on the state C3 forbids alike. So it is narrowed to the fact C3 actually
+# establishes: 🚫 no host binding, on any interface, on any port.
+#
+# 🛑 **THE TEST IS FOR `HostPort`, 🚫 NOT FOR AN EMPTY MAP, AND THAT WAS MEASURED
+# THE HARD WAY.** An unpublished `age-postgres` reports `{"5432/tcp":null}` and
+# 🚫 NOT `{}`: the postgres image `EXPOSE`s 5432, so the KEY survives with a null
+# binding. ⚠️ A first draft of this guard compared against `{}` and would have
+# REFUSED a correctly-unpublished store on the real box while passing every gate
+# in the repository — the exact failure this file's other comments keep warning
+# about. A published port is the ONLY thing that puts `"HostPort"` in this JSON.
 binding=$(sudo docker inspect "$CONTAINER" --format '{{json .NetworkSettings.Ports}}')
 case "$binding" in
-  *'"HostIp":"0.0.0.0"'* | *'"HostIp":"::"'*)
-    echo "REFUSED: ${CONTAINER} publishes a port off loopback." >&2
+  *'"HostPort"'*)
+    echo "REFUSED: ${CONTAINER} publishes a host port." >&2
+    echo "  ADR-0078 C3 removed AGE's host publication; capture and migrations" >&2
+    echo "  reach the store through its own network namespace instead." >&2
+    echo "  🚫 Do not re-add a port to debug — recreate the container from the" >&2
+    echo "     committed compose file, which no longer has a \`ports:\` key." >&2
     exit 1
     ;;
 esac
-echo "    published:  $binding"
+echo "    published:  $binding (no host port — ADR-0078 C3)"
 REMOTE
 
 echo "==> Creating the non-owner application role"
@@ -378,15 +394,21 @@ echo "==> Writing the service's EnvironmentFile (mode 600, root-owned)"
 # only, and 🚫 it is never committed, never rsynced and never echoed. The deploy
 # script excludes every `.env*` by construction.
 #
-# ⚠️ 127.0.0.1 AND AGE'S OWN PORT. `selectDeployedDatabaseComposition` refuses a
-# publicly reachable host ABOVE `new PrismaClient(`, so a store that was
-# accidentally exposed stops the console rather than being used by it — but that
-# check cannot tell AGE's loopback database from a neighbour's, which is why the
-# port is required and 5432 is refused above.
+# 🛑 **THE CONTAINER ROUTE IS WRITTEN DIRECTLY NOW** — ADR-0078 C3. This line
+# used to write `@127.0.0.1:${AGE_DB_HOST_PORT}/`, which the ADR-0077 derive-env
+# wrapper then rewrote to `@172.23.0.2:5432/` for the console's namespace. With
+# the publication gone the host form addresses NOTHING, so writing it and
+# immediately rewriting it would be a step that exists only to be undone.
+#
+# ⚠️ **172.23.0.2 IS PINNED, 🚫 NOT ASSIGNED** — `docker-compose.age-postgres.yml`
+# fixes it precisely so this string stays true when the container is recreated.
+# ⚠️ `selectDeployedDatabaseComposition` refuses a PUBLICLY REACHABLE host above
+# `new PrismaClient(`, so this address passes for the right reason: it is on
+# AGE's own private network, 🚫 not because the check was loosened.
 # ⚠️ `AGE_STUDIO_ORGANIZATION_ID` is an identifier, 🚫 not a credential — but it
 # goes down the same pipe as everything else, because a second way of reaching
 # the server is a second place a secret can be put by mistake.
-remote   AGE_DB_NAME="$AGE_DB_NAME"   AGE_DB_APP_PASSWORD="$AGE_DB_APP_PASSWORD"   AGE_DB_HOST_PORT="$AGE_DB_HOST_PORT"   AGE_STUDIO_ORGANIZATION_ID="$AGE_STUDIO_ORGANIZATION_ID" <<'REMOTE'
+remote   AGE_DB_NAME="$AGE_DB_NAME"   AGE_DB_APP_PASSWORD="$AGE_DB_APP_PASSWORD"   AGE_STUDIO_ORGANIZATION_ID="$AGE_STUDIO_ORGANIZATION_ID" <<'REMOTE'
 set -euo pipefail
 
 sudo install -d -m 700 -o root -g root /etc/age-studio
@@ -397,8 +419,8 @@ umask 077
 # is defaulted, and a file carrying only one of them is a misconfiguration the
 # operator finds at the door instead of silently.
 {
-  printf 'DATABASE_URL_APP=postgresql://age_app:%s@127.0.0.1:%s/%s?schema=public\n' \
-    "$AGE_DB_APP_PASSWORD" "$AGE_DB_HOST_PORT" "$AGE_DB_NAME"
+  printf 'DATABASE_URL_APP=postgresql://age_app:%s@172.23.0.2:5432/%s?schema=public\n' \
+    "$AGE_DB_APP_PASSWORD" "$AGE_DB_NAME"
   printf 'AGE_STUDIO_ORGANIZATION_ID=%s\n' "$AGE_STUDIO_ORGANIZATION_ID"
 } |
   sudo tee /etc/age-studio/age-studio.env >/dev/null

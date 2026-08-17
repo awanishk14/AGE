@@ -26,10 +26,22 @@ if [ ! -f "$SOURCE" ]; then
   exit 2
 fi
 
-# 🛑 THE ONLY DIFFERENCE IS THE DATABASE HOST, AND IT IS A FACT ABOUT NAMESPACES,
-# 🚫 NOT A SETTING. The host publication `127.0.0.1:5442` does not exist inside
-# the container's namespace.
-sed -E 's#@127\.0\.0\.1:5442/#@172.23.0.2:5432/#' "$SOURCE" > "$DERIVED"
+# 🛑 **THIS NO LONGER REWRITES ANYTHING** — ADR-0078 C3.
+#
+# ⚠️ **WHAT IT USED TO DO, AND WHY IT STOPPED.** Until C3 the provisioned file
+# named AGE's HOST PUBLICATION, and this step substituted
+# `@127.0.0.1:5442/` → `@172.23.0.2:5432/` because that publication does not
+# exist inside the container's namespace. C3 removed the publication, so
+# `provision-studio-database.sh` now writes the container route directly and
+# there is nothing left to substitute. 🚫 A substitution kept "just in case"
+# would be a rule nobody can test — the pattern would never match, and its
+# silence would read as success.
+#
+# 🛑 **THE VERIFICATION BELOW IS WHAT CARRIES THE WEIGHT NOW**, and it is why
+# this remains a derive step rather than a symlink: the container's env file must
+# be separately owned and separately checked, and a source file that predates C3
+# must FAIL here rather than start a console pointed at a port that is gone.
+cp "$SOURCE" "$DERIVED"
 chmod 600 "$DERIVED"
 
 # ⚠️ THE DEPLOY USER, 🚫 NOT root. `docker compose` reads `env_file` on the
@@ -41,7 +53,9 @@ chmod 750 "$SECRET_DIR"
 
 if ! grep -q '@172.23.0.2:5432/' "$DERIVED"; then
   echo "REFUSED: the derived env file does not name the container route." >&2
-  echo "  The provisioned DATABASE_URL is not in the expected form; fix it by hand." >&2
+  echo "  Since ADR-0078 C3 the provisioned DATABASE_URL must already address" >&2
+  echo "  the container route; a file naming a host port predates C3." >&2
+  echo "  Re-run scripts/provision-studio-database.sh. 🚫 Nothing is rewritten here." >&2
   exit 2
 fi
 

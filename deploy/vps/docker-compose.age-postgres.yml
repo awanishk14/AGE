@@ -65,9 +65,25 @@ services:
       POSTGRES_USER: ${AGE_DB_SUPERUSER:?the superuser name must be stated}
       POSTGRES_PASSWORD: ${AGE_DB_SUPERUSER_PASSWORD:?the superuser password must be stated}
       POSTGRES_DB: ${AGE_DB_NAME:?the database name must be stated}
-    ports:
-      # 🛑 LOOPBACK ONLY. The address half is written out; 🚫 do not shorten it.
-      - '127.0.0.1:${AGE_DB_HOST_PORT:?the host port must be stated}:5432'
+    # 🛑 **THERE IS NO `ports:` KEY, AND ITS ABSENCE IS THE DECISION** — ADR-0078
+    # C3. AGE's store published `127.0.0.1:${AGE_DB_HOST_PORT}` until C3, because
+    # the capture CLI and the migration both ran as HOST processes against it.
+    # C1 moved both into containers that share this container's network
+    # namespace, and C2 proved that path does real work — a scored BIF snapshot
+    # written and read back under its own scope, 🚫 not merely a TCP connect.
+    # With no host consumer left, the publication was reachability nobody needed.
+    #
+    # ⚠️ **THE HONEST CLAIM IS NARROW, 🚫 AND MUST NOT BE WIDENED** (ADR-0078 §7).
+    # This store is **no longer host-published, and reachable only inside the
+    # `age-internal` network by authorised AGE components.** 🚫 It is NOT
+    # "unreachable": a root-equivalent account on this box can still enter a
+    # namespace or `docker exec`, and that is ADR-0077's host-identity problem,
+    # 🚫 not something this file can close.
+    #
+    # 🚫 **DO NOT ADD A PORT BACK "TEMPORARILY" TO DEBUG.** The two operations
+    # that would want one already have container routes — see
+    # `deploy/vps/compose/docker-compose.age-capture.yml` and
+    # `docker-compose.age-migrate.yml`.
     volumes:
       # ⚠️ AGE'S OWN VOLUME (D1). A peer's restore must never be able to move an
       # AGE row, and this is what makes that true.
