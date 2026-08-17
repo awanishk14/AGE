@@ -31,8 +31,24 @@ const ENTRYPOINT_PATH = join(REPO, 'apps', 'capture', 'docker-entrypoint.sh');
 const DOCKERFILE_PATH = join(REPO, 'apps', 'studio', 'Dockerfile');
 const PROVISION_PATH = join(REPO, 'scripts', 'provision-studio-database.sh');
 const RUN_CAPTURE_PATH = join(REPO, 'scripts', 'run-capture.sh');
+/**
+ * ⚠️ **A SECOND COMPOSE FILE, AND THE SPLIT IS LOAD-BEARING.** Compose validates
+ * EVERY service in a file, not only the one being run, so a `migrate` service
+ * sitting beside `capture` was still interpolating the operator's workspace and
+ * record paths — which a migration is deliberately never given. On the real box
+ * that collapsed into `invalid spec: ::ro: empty section between colons`.
+ * 🚫 The repair is not to export placeholder paths so validation passes.
+ */
+const MIGRATE_COMPOSE_PATH = join(
+  REPO,
+  'deploy',
+  'vps',
+  'compose',
+  'docker-compose.age-migrate.yml',
+);
 
 const COMPOSE = readFileSync(COMPOSE_PATH, 'utf8');
+const MIGRATE_COMPOSE = readFileSync(MIGRATE_COMPOSE_PATH, 'utf8');
 const ENTRYPOINT = readFileSync(ENTRYPOINT_PATH, 'utf8');
 const DOCKERFILE = readFileSync(DOCKERFILE_PATH, 'utf8');
 const PROVISION = readFileSync(PROVISION_PATH, 'utf8');
@@ -45,6 +61,7 @@ const RUN_CAPTURE = readFileSync(RUN_CAPTURE_PATH, 'utf8');
  */
 const SOURCES = {
   compose: COMPOSE,
+  migrateCompose: MIGRATE_COMPOSE,
   entrypoint: ENTRYPOINT,
   dockerfile: DOCKERFILE,
   provision: PROVISION,
@@ -71,11 +88,12 @@ const COMPOSE_CODE = withoutComments(COMPOSE);
  */
 const PROVISION_CODE = withoutComments(PROVISION);
 const RUN_CAPTURE_CODE = withoutComments(RUN_CAPTURE);
+const MIGRATE_COMPOSE_CODE = withoutComments(MIGRATE_COMPOSE);
 
 describe('the capture container reaches AGE’s store through the store’s own namespace', () => {
   it('reads every file it guards, and none of them is empty', () => {
     const names = Object.keys(SOURCES);
-    expect(names).toHaveLength(5);
+    expect(names).toHaveLength(6);
     for (const [name, body] of Object.entries(SOURCES)) {
       expect(body.length, `${name} was read as empty`).toBeGreaterThan(200);
     }
@@ -137,6 +155,42 @@ describe('the capture container reaches AGE’s store through the store’s own 
   });
 });
 
+describe('the migration reaches the same store the same way, from its own file', () => {
+  /**
+   * 🛑 **THE SPLIT IS THE FIX FOR A REAL FAILURE, 🚫 NOT TIDINESS.** With
+   * `migrate` beside `capture`, `docker compose run --rm migrate` still
+   * interpolated and validated the capture service's mounts — the operator's
+   * workspace and record file, which a migration is deliberately never given —
+   * and the run died on `invalid spec: ::ro: empty section between colons`.
+   */
+  it('joins the same namespace and declares no networks or ports', () => {
+    expect(MIGRATE_COMPOSE_CODE).toContain("network_mode: 'container:age-postgres'");
+    expect(MIGRATE_COMPOSE_CODE).not.toContain('networks:');
+    expect(MIGRATE_COMPOSE_CODE).not.toContain('ports:');
+  });
+
+  it('is given no operator path at all, which is why it needed its own file', () => {
+    // 🚫 No volumes, and 🚫 no interpolation of an operator path — the two
+    // together are what let this run without the capture caller's environment.
+    expect(MIGRATE_COMPOSE_CODE).not.toContain('volumes:');
+    expect(MIGRATE_COMPOSE_CODE).not.toContain('AGE_VPS_DISCOVERY_WORKSPACE');
+    expect(MIGRATE_COMPOSE_CODE).not.toContain('AGE_VPS_CLIENT_RECORD_FILE');
+    expect(MIGRATE_COMPOSE_CODE).not.toContain('AGE_STUDIO_UID');
+  });
+
+  it('holds the migration and the capture file holds no migration', () => {
+    // ⚠️ Both ends, so the service cannot quietly reappear in both files.
+    expect(MIGRATE_COMPOSE_CODE).toContain('migrate:');
+    expect(COMPOSE_CODE).not.toContain('migrate:');
+    expect(COMPOSE_CODE).not.toContain('prisma:migrate:deploy');
+  });
+
+  it('never takes a credential from an env_file or a literal', () => {
+    expect(MIGRATE_COMPOSE_CODE).not.toContain('env_file:');
+    expect(MIGRATE_COMPOSE_CODE).not.toContain('postgresql://');
+  });
+});
+
 describe('the container route is computed in the namespace and never persisted', () => {
   it('rewrites whatever authority the file names to the namespace route', () => {
     expect(ENTRYPOINT).toContain("CONTAINER_HOST='127.0.0.1:5432'");
@@ -171,7 +225,7 @@ describe('provisioning and migrations left the host publication behind', () => {
     // the published port, C3 could not have removed that publication at all.
     // ⚠️ Two substrings rather than one spanning the line break: the checkout is
     // CRLF on this platform, so a `\n` in the expected text does not match.
-    expect(PROVISION_CODE).toContain('docker-compose.age-capture.yml');
+    expect(PROVISION_CODE).toContain('docker-compose.age-migrate.yml');
     expect(PROVISION_CODE).toContain('run --rm migrate');
     expect(PROVISION_CODE).not.toMatch(
       /^\s*pnpm --filter @age\/persistence prisma:migrate:deploy\s*$/m,
@@ -191,14 +245,14 @@ describe('provisioning and migrations left the host publication behind', () => {
     // forward every other credential this script is holding.
     expect(PROVISION_CODE).toContain('sudo --preserve-env=AGE_DB_OWNER_URL_CONTAINER');
     expect(PROVISION_CODE).not.toContain('sudo -E');
-    expect(COMPOSE_CODE).toContain('DATABASE_URL: ${AGE_DB_OWNER_URL_CONTAINER:?');
+    expect(MIGRATE_COMPOSE_CODE).toContain('DATABASE_URL: ${AGE_DB_OWNER_URL_CONTAINER:?');
   });
 
   it('applies the committed migrations and never authors new ones', () => {
     // 🛑 `migrate deploy`, 🚫 never `migrate dev` — this store holds a real
     // business's snapshots and `dev` may reset it.
-    expect(COMPOSE_CODE).toContain("'prisma:migrate:deploy'");
-    expect(COMPOSE_CODE).not.toContain('migrate:dev');
+    expect(MIGRATE_COMPOSE_CODE).toContain("'prisma:migrate:deploy'");
+    expect(MIGRATE_COMPOSE_CODE).not.toContain('migrate:dev');
   });
 });
 
@@ -224,21 +278,23 @@ describe('the owner account reaches the deploy path without owning it', () => {
     // ⚠️ `--project-directory` replaces the base compose would otherwise have
     // taken from the working directory — 🚫 without it, relative paths inside
     // the compose file would resolve against the caller's home.
-    for (const body of [PROVISION_CODE, RUN_CAPTURE_CODE]) {
-      expect(body).toContain(
-        'CAPTURE_COMPOSE="${AGE_VPS_PATH}/deploy/vps/compose/docker-compose.age-capture.yml"',
-      );
-      expect(body).toContain('docker compose -f "$CAPTURE_COMPOSE" --project-directory');
-    }
+    expect(RUN_CAPTURE_CODE).toContain(
+      'CAPTURE_COMPOSE="${AGE_VPS_PATH}/deploy/vps/compose/docker-compose.age-capture.yml"',
+    );
+    expect(RUN_CAPTURE_CODE).toContain('docker compose -f "$CAPTURE_COMPOSE" --project-directory');
+    expect(PROVISION_CODE).toContain(
+      'MIGRATE_COMPOSE="${AGE_VPS_PATH}/deploy/vps/compose/docker-compose.age-migrate.yml"',
+    );
+    expect(PROVISION_CODE).toContain('docker compose -f "$MIGRATE_COMPOSE" --project-directory');
   });
 
   it('refuses when the deployment predates C1 rather than failing obscurely', () => {
     // ⚠️ `network_mode: container:…` and a missing compose file both fail with
     // messages that name neither cause. The refusal is stated here instead.
-    for (const body of [PROVISION_CODE, RUN_CAPTURE_CODE]) {
-      expect(body).toContain('sudo test -r "$CAPTURE_COMPOSE"');
-      expect(body).toContain('REFUSED: the capture compose file is not present at');
-    }
+    expect(RUN_CAPTURE_CODE).toContain('sudo test -r "$CAPTURE_COMPOSE"');
+    expect(RUN_CAPTURE_CODE).toContain('REFUSED: the capture compose file is not present at');
+    expect(PROVISION_CODE).toContain('sudo test -r "$MIGRATE_COMPOSE"');
+    expect(PROVISION_CODE).toContain('REFUSED: the migrate compose file is not present at');
   });
 
   it('reads the operator’s record as root, never as the owner directly', () => {
