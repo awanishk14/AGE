@@ -316,11 +316,47 @@ echo "==> Applying the COMMITTED migrations as the OWNER"
 # ⚠️ It previously rode the remote command line under a comment asserting the
 # opposite — the most valuable single line this change removes, because it is
 # the highest-privilege credential in the script.
-remote   AGE_VPS_PATH="$AGE_VPS_PATH"   DATABASE_URL="$AGE_DB_OWNER_URL" <<'REMOTE'
+#
+# 🛑 **ADR-0078 C1 — THIS STEP NO LONGER TOUCHES THE HOST PUBLICATION.** It used
+# to run on the host against `127.0.0.1:${AGE_DB_HOST_PORT}`, which made the
+# publication load-bearing for PROVISIONING as well as for capture — so C3 could
+# not have removed the publication while this line stood. It now runs in a
+# container sharing `age-postgres`'s network namespace, where `127.0.0.1:5432`
+# IS AGE's store. 🚫 No guard is relaxed to get there: the URL still names a
+# loopback address, exactly as `assertLocalDatabaseTarget` requires.
+#
+# ⚠️ THE REWRITE IS ANCHORED ON THE AUTHORITY (`@host:port/`) and excludes `@`
+# and `/` from the host, so it can never run into the credential.
+AGE_DB_OWNER_URL_CONTAINER=$(
+  printf '%s' "$AGE_DB_OWNER_URL" | sed -E 's#@[^@/]+:[0-9]+/#@127.0.0.1:5432/#'
+)
+# ⚠️ FAIL CLOSED. An unrewritten URL would silently migrate through the host port
+# again and the step would still report success.
+case "$AGE_DB_OWNER_URL_CONTAINER" in
+  *'@127.0.0.1:5432/'*) ;;
+  *)
+    # 🚫 The URL is not printed. The refusal names the shape, never the value.
+    echo "REFUSED: AGE_DB_OWNER_URL could not be rewritten to the container route." >&2
+    exit 1
+    ;;
+esac
+
+remote   AGE_VPS_PATH="$AGE_VPS_PATH"   AGE_DB_OWNER_URL_CONTAINER="$AGE_DB_OWNER_URL_CONTAINER" <<'REMOTE'
 set -euo pipefail
 
 cd "$AGE_VPS_PATH"
-pnpm --filter @age/persistence prisma:migrate:deploy
+# 🚫 THE CREDENTIAL IS NOT AN ARGUMENT. It is already exported here (the `remote`
+# helper put it on stdin), and the compose file interpolates it from this
+# environment into the service's `environment:` — so it never enters any argv.
+export AGE_DB_OWNER_URL_CONTAINER
+# ⚠️ `--preserve-env=<NAME>` AND NOTHING WIDER. Plain `sudo` clears the
+# environment, so the compose interpolation would see an empty value and the
+# `:?` in the compose file would REFUSE — a correct failure, but the wrong one.
+# 🚫 Do not reach for `sudo -E`: that forwards the whole environment, including
+# every other credential this script is holding.
+sudo --preserve-env=AGE_DB_OWNER_URL_CONTAINER \
+  docker compose -f deploy/vps/compose/docker-compose.age-capture.yml \
+  run --rm migrate
 REMOTE
 
 echo "==> Writing the service's EnvironmentFile (mode 600, root-owned)"
