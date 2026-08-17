@@ -323,3 +323,36 @@ describe('the image actually carries the binary the entrypoint execs', () => {
     expect(COMPOSE_CODE).not.toContain('dockerfile:');
   });
 });
+
+describe('the entrypoint survives being shipped from a Windows checkout', () => {
+  /**
+   * 🛑 **THE THIRD DEFECT THAT ONLY THE REAL BOX COULD FIND.** The entrypoint is
+   * the first shell script AGE executes INSIDE a Linux container, and it died
+   * there with `set: Illegal option -` — not a syntax error, a carriage return.
+   * This repo is developed on Windows, git checked the file out CRLF, and
+   * `rsync` shipped those bytes verbatim; to `dash` the `\r` is part of the
+   * token. 🚫 The repair is not `dos2unix` on the box or `sed -i` in the
+   * Dockerfile — both leave the committed bytes wrong.
+   */
+  const GITATTRIBUTES = readFileSync(join(REPO, '.gitattributes'), 'utf8');
+
+  it('declares LF for every shell script, once, for the whole repository', () => {
+    expect(GITATTRIBUTES.length).toBeGreaterThan(0);
+    expect(GITATTRIBUTES).toContain('*.sh text eol=lf');
+  });
+
+  it('carries no carriage return in the file dash actually executes', () => {
+    // ⚠️ Read as BYTES. A `utf8` read still contains the `\r`, but reading the
+    // buffer says plainly that this assertion is about what ships, not about
+    // what an editor displays.
+    const bytes = readFileSync(ENTRYPOINT_PATH);
+    expect(bytes.length).toBeGreaterThan(0);
+    expect(bytes.includes(0x0d)).toBe(false);
+  });
+
+  it('holds the same rule for the script that invokes it', () => {
+    const bytes = readFileSync(RUN_CAPTURE_PATH);
+    expect(bytes.length).toBeGreaterThan(0);
+    expect(bytes.includes(0x0d)).toBe(false);
+  });
+});

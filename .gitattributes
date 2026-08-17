@@ -1,0 +1,25 @@
+# 🛑 SHELL SCRIPTS ARE LF, ALWAYS — ADR-0078 C2, on the evidence of the real box.
+#
+# `apps/capture/docker-entrypoint.sh` is the first shell script AGE executes
+# INSIDE a Linux container, and it died there:
+#
+#     docker-entrypoint.sh: 35: : not found
+#     docker-entrypoint.sh: 36: set: Illegal option -
+#
+# It was not a syntax error. This repository is developed on Windows, git
+# checked the file out with CRLF, and `rsync` shipped those bytes verbatim. To
+# `/bin/sh` the trailing `\r` is part of the token, so `set -eu` became
+# `set -eu<CR>` — an illegal option — and every comment line became a command.
+#
+# ⚠️ WHY NOTHING CAUGHT IT. Every other `.sh` in this repo runs either in the
+# operator's Git Bash (which tolerates CRLF) or is read as TEXT by a guard.
+# This one is executed by dash in a container, which is the only place the
+# bytes matter — the same shape as the two defects before it: invisible to
+# every local gate and to CI, and fatal on the first real run.
+#
+# 🚫 The repair is not `dos2unix` on the box, and not `sed -i` in the
+# Dockerfile: both leave the committed bytes wrong and would have to be
+# remembered forever. The line endings are declared here, once, for every
+# script — and a guard in `packages/deployed-origin` asserts the entrypoint
+# carries no carriage return so this cannot regress silently.
+*.sh text eol=lf
