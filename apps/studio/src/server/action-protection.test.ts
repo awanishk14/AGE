@@ -47,7 +47,18 @@ function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 }
 
-const GUARD = 'await requireVerifiedSession()';
+/**
+ * 🛑 **SLICE 4 NARROWED THIS GUARD; it did 🚫 NOT relax it.** The rule used to
+ * be *"every action establishes a verified session"*. It is now *"every action
+ * establishes a SCOPE"* - strictly more, because `requireScopedAccess` calls the
+ * session boundary itself and then names a capability and a subject on top.
+ *
+ * ⚠️ An action reverting to the bare session boundary would still be admitted,
+ * still work, and still pass the OLD rule - which is exactly why the old string
+ * is asserted ABSENT rather than merely no longer required.
+ */
+const GUARD = 'await requireScopedAccess(';
+const BYPASSED_GUARD = 'requireVerifiedSession';
 
 describe('the studio server-action contract', () => {
   const found = readdirSync(SERVER_ROOT).filter(
@@ -75,7 +86,15 @@ describe('the studio server-action contract', () => {
       expect(source).toContain("'use server'");
     });
 
-    it('establishes a verified session in EVERY exported action', () => {
+    it('reaches the session boundary only through the scope boundary', () => {
+      expect(
+        source,
+        `${name} calls the session boundary directly. Slice 4 composes the scope ON TOP of it; ` +
+          `an action that stops at the session has been admitted but never authorized.`,
+      ).not.toContain(BYPASSED_GUARD);
+    });
+
+    it('establishes a SCOPE in EVERY exported action, naming a capability', () => {
       const bodies = [...source.matchAll(/export async function (\w+)\(/g)];
       expect(bodies.length).toBeGreaterThan(0);
 
@@ -86,9 +105,18 @@ describe('the studio server-action contract', () => {
 
         expect(
           body,
-          `${name}: ${actionName} does not call the session boundary. A server action is an ` +
+          `${name}: ${actionName} does not call the scope boundary. A server action is an ` +
             `endpoint; the page that renders its button does not protect it.`,
         ).toContain(GUARD);
+
+        // 🛑 THE CAPABILITY IS A LITERAL AT THE CALL SITE, 🚫 NEVER A VARIABLE.
+        // A capability computed from an argument is the caller choosing its own
+        // permission, which is AGE-INV-SEL-1 wearing a different hat.
+        expect(
+          body,
+          `${name}: ${actionName} does not name a capability literal. A capability read from a ` +
+            `variable is the caller choosing what it is allowed to do.`,
+        ).toMatch(/requireScopedAccess\(\s*'[a-z]+\.[a-z]+'\s*,/);
       }
     });
 
@@ -134,7 +162,7 @@ describe('the studio server-action contract', () => {
       ).not.toMatch(/export async function[\s\S]*?entitledOrganizationId:\s*string/);
 
       if (source.includes('session.organizationId')) {
-        expect(source).toContain('const session = await requireVerifiedSession()');
+        expect(source).toContain('const { session } = await requireScopedAccess(');
       }
     });
   });

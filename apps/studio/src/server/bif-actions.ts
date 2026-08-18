@@ -1,7 +1,7 @@
 'use server';
 
 import { generateBifFromAnswerFile, type GenerateBifOutcome } from './operator-environment';
-import { requireVerifiedSession } from './session-boundary';
+import { requireScopedAccess } from './request-scope';
 
 /**
  * The one thing the operator can do on the BIF screen.
@@ -20,9 +20,15 @@ import { requireVerifiedSession } from './session-boundary';
  * 🚫 This file decides nothing and touches nothing — effects stay in the one
  * effect module.
  *
+ * 🛑 **SLICE 4: THE GUARD IS NOW `requireScopedAccess`, AND IT NAMES A
+ * CAPABILITY AND A SUBJECT.** Being admitted is 🚫 not being authorized: the
+ * session says WHO is asking, and the scope - re-read from the store on THIS
+ * request, 🚫 never carried on the token - says how far. ⚠️ A refusal leaves as
+ * an opaque 404, 🚫 never an empty result.
+ *
  * 🛑 **THE ACTION ESTABLISHES ITS OWN ENTITLEMENT** (AGE-INV-SEL-1, ADR-0074 §7
  * slice 3). A `'use server'` function is a BROWSER-REACHABLE ENDPOINT, so the
- * `requireVerifiedSession()` call on the page that renders the button protects
+ * `requireScopedAccess()` call on the page that renders the button protects
  * the PAGE and 🚫 nothing else. 🚫 Do not remove this call on the grounds that
  * "the screen is already behind the boundary" — the screen is not what is
  * being called.
@@ -35,7 +41,7 @@ export async function generateBifAction(
   clientId: string,
   changedBy: string,
 ): Promise<GenerateBifOutcome> {
-  const session = await requireVerifiedSession();
+  const { session } = await requireScopedAccess('snapshot.score', clientId);
 
   return generateBifFromAnswerFile(session.organizationId, clientId, changedBy);
 }

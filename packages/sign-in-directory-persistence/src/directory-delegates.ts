@@ -16,10 +16,22 @@
  * ADR **and** its own migration.
  */
 
-/** 🚫 An email and nothing else. There is no id lookup: sign-in knows a name, not a row. */
-export interface DirectoryAccountWhere {
-  readonly email: string;
-}
+/**
+ * The two ways one account may be named — and 🚫 there is no third.
+ *
+ * 🛑 **A UNION, 🚫 NOT AN OBJECT WITH TWO OPTIONAL FIELDS.** ADR-0079 slice 4
+ * added the by-id arm, because re-deriving a signed-in operator's scope on every
+ * request starts from the `accountId` the session row already holds — it knows a
+ * ROW, where sign-in knows a NAME. ⚠️ The type was made NARROWER to admit it,
+ * not wider: an object carrying both optional keys would accept `{}`, and an
+ * unconstrained `findUnique` returns an arbitrary row rather than none.
+ *
+ * 🚫 **NEITHER ARM CAN EXPRESS A LIST.** Both name exactly one account, and
+ * there is still no way to ask which accounts exist.
+ */
+export type DirectoryAccountWhere =
+  | { readonly email: string; readonly accountId?: never }
+  | { readonly accountId: string; readonly email?: never };
 
 export interface DirectoryAccountDelegate {
   /**

@@ -3,7 +3,7 @@
 import { clientRecordDraftFromFormEntries } from '@age/studio-shell';
 
 import { createClientRecord, type CreateClientOutcome } from './operator-environment';
-import { requireVerifiedSession } from './session-boundary';
+import { requireScopedAccess } from './request-scope';
 
 /**
  * Creating a client — the operator's explicit act.
@@ -30,7 +30,7 @@ import { requireVerifiedSession } from './session-boundary';
  * disclose anything about the organization they named.
  */
 export async function createClientAction(formData: FormData): Promise<CreateClientOutcome> {
-  const session = await requireVerifiedSession();
+  const { session } = await requireScopedAccess('client.create', null);
 
   const entries: Record<string, string> = {};
   for (const [key, value] of formData.entries()) {

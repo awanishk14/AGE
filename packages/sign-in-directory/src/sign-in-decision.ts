@@ -48,6 +48,16 @@ export interface AdmittedOperator {
   readonly organizationId: string;
   readonly membershipId: string;
   readonly roleBundle: string;
+  /**
+   * ⚠️ **CARRIED FROM SLICE 4, AND THEY ARE THE ROW'S WORDS, 🚫 NOT A
+   * CONCLUSION.** `scopeForMembership` turns them into a scope, in its own pure
+   * package, afterwards. Reporting them here rather than re-reading the row
+   * downstream is what keeps ONE admission decision: the fields a scope is built
+   * from are the fields admission already looked at.
+   */
+  readonly scopeKind: string;
+  /** ⚠️ `null` for an agency membership. 🚫 An absent client is never "all clients". */
+  readonly clientId: string | null;
 }
 
 export type SignInDecision =
@@ -140,6 +150,8 @@ export function decideSignIn(entry: DirectoryEntry, organizationId: string): Sig
       organizationId,
       membershipId: admitting.membershipId,
       roleBundle: admitting.roleBundle,
+      scopeKind: admitting.scopeKind,
+      clientId: admitting.clientId,
     }),
   });
 }

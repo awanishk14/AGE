@@ -35,30 +35,64 @@ export function signInDirectoryRead(
   runner: DirectoryScopeRunner,
   scope: DirectoryScope,
 ): (email: string) => Promise<DirectoryEntry> {
-  return async (email: string): Promise<DirectoryEntry> =>
-    runner.runInScope({ organizationId: scope.organizationId }, async (delegates) => {
-      const accountRow: unknown = await delegates.accounts.findUnique({ where: { email } });
-      const account = normalizeAccount(accountRow);
+  return (email: string): Promise<DirectoryEntry> => entryFor(runner, scope, { email });
+}
 
-      // ⚠️ No account means no memberships to ask about, and asking anyway would
-      // be a membership read with no account id to give it.
-      if (account === undefined) {
-        return Object.freeze({ account: undefined, memberships: Object.freeze([]) });
-      }
+/**
+ * The same directory read, reached by the account id a session row already
+ * holds - ADR-0079 §6 slice 4.
+ *
+ * 🛑 **IT IS THE SAME READ AND FEEDS THE SAME DECISION, DELIBERATELY.**
+ * ADR-0079 §2 property 2: *the scope is read from the database on every
+ * request, never from a token claim* - so a demoted, revoked or disabled
+ * operator loses their reach on the NEXT request. That is only true if the
+ * per-request question is the SAME question sign-in asked; a second, gentler
+ * re-check here is how the two drift, and the copy that gets relaxed still
+ * passes its own tests.
+ *
+ * 🚫 **IT DECIDES 🚫THING**, exactly as its sibling. It fetches rows;
+ * `decideSignIn` reasons over them.
+ */
+export function directoryEntryByAccountRead(
+  runner: DirectoryScopeRunner,
+  scope: DirectoryScope,
+): (accountId: string) => Promise<DirectoryEntry> {
+  return (accountId: string): Promise<DirectoryEntry> => entryFor(runner, scope, { accountId });
+}
 
-      const membershipRows = await delegates.memberships.findMany({
-        where: { accountId: account.accountId },
-      });
+/**
+ * ⚠️ **ONE BODY FOR BOTH DOORS.** The normalization, the drop-a-malformed-row
+ * rule and the no-account short circuit are the same facts however the account
+ * was named, and two copies of them would be two chances to disagree.
+ */
+function entryFor(
+  runner: DirectoryScopeRunner,
+  scope: DirectoryScope,
+  where: { readonly email: string } | { readonly accountId: string },
+): Promise<DirectoryEntry> {
+  return runner.runInScope({ organizationId: scope.organizationId }, async (delegates) => {
+    const accountRow: unknown = await delegates.accounts.findUnique({ where });
+    const account = normalizeAccount(accountRow);
 
-      return Object.freeze({
-        account,
-        memberships: Object.freeze(
-          membershipRows
-            .map(normalizeMembership)
-            .filter((membership): membership is DirectoryMembership => membership !== undefined),
-        ),
-      });
+    // ⚠️ No account means no memberships to ask about, and asking anyway would
+    // be a membership read with no account id to give it.
+    if (account === undefined) {
+      return Object.freeze({ account: undefined, memberships: Object.freeze([]) });
+    }
+
+    const membershipRows = await delegates.memberships.findMany({
+      where: { accountId: account.accountId },
     });
+
+    return Object.freeze({
+      account,
+      memberships: Object.freeze(
+        membershipRows
+          .map(normalizeMembership)
+          .filter((membership): membership is DirectoryMembership => membership !== undefined),
+      ),
+    });
+  });
 }
 
 function normalizeAccount(row: unknown): DirectoryAccount | undefined {

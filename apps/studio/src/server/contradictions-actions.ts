@@ -1,7 +1,7 @@
 'use server';
 
 import { reportContradictions, type ContradictionsOutcome } from './operator-environment';
-import { requireVerifiedSession } from './session-boundary';
+import { requireScopedAccess } from './request-scope';
 
 /**
  * The one thing the operator can do on the Contradictions screen.
@@ -13,9 +13,15 @@ import { requireVerifiedSession } from './session-boundary';
  * screen the act, and a recompute-on-open is class 3 under ADR-0057 D4 even
  * though its effect is entirely internal.
  *
+ * 🛑 **SLICE 4: THE GUARD IS NOW `requireScopedAccess`, AND IT NAMES A
+ * CAPABILITY AND A SUBJECT.** Being admitted is 🚫 not being authorized: the
+ * session says WHO is asking, and the scope - re-read from the store on THIS
+ * request, 🚫 never carried on the token - says how far. ⚠️ A refusal leaves as
+ * an opaque 404, 🚫 never an empty result.
+ *
  * 🛑 **THE ACTION ESTABLISHES ITS OWN ENTITLEMENT** (AGE-INV-SEL-1, ADR-0074 §7
  * slice 3). A `'use server'` function is a BROWSER-REACHABLE ENDPOINT, so the
- * `requireVerifiedSession()` call on the page that renders the button protects
+ * `requireScopedAccess()` call on the page that renders the button protects
  * the PAGE and 🚫 nothing else. 🚫 Do not remove this call on the grounds that
  * "the screen is already behind the boundary" — the screen is not what is
  * being called.
@@ -28,7 +34,7 @@ export async function reportContradictionsAction(
   clientId: string,
   changedBy: string,
 ): Promise<ContradictionsOutcome> {
-  const session = await requireVerifiedSession();
+  const { session } = await requireScopedAccess('snapshot.score', clientId);
 
   return reportContradictions(session.organizationId, clientId, changedBy);
 }

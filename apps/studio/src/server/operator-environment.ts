@@ -11,6 +11,10 @@ import {
   type SessionStoreConnection,
 } from '@age/capture/deployed-session-composition';
 import {
+  openDeployedPrismaScopeConnection,
+  type ScopeStoreConnection,
+} from '@age/capture/deployed-scope-composition';
+import {
   openDeployedPrismaSignInConnection,
   type IssuedSession,
   type SignInStoreConnection,
@@ -760,6 +764,50 @@ export async function exchangeGoogleAuthorizationCode(
     // an unauthenticated caller on the public internet can reach.
     return undefined;
   }
+}
+
+/**
+ * The scope door, opened for exactly one read and closed again - ADR-0079 §6
+ * slice 4.
+ *
+ * 🛑 **IT IS A DIFFERENT DOOR FROM THE SIGN-IN ONE, ON PURPOSE.** The sign-in
+ * door can INSERT a session; this read happens on EVERY request, and 🚫 a
+ * per-request read must not travel through a door that can mint a credential.
+ * The composition root next door carries the whole claim.
+ *
+ * ⚠️ **NOTHING HOLDS IT OPEN** - the same rule as every other read here
+ * (ADR-0055 D2).
+ */
+async function withScopeStore<T>(
+  operation: (store: ScopeStoreConnection) => Promise<T>,
+): Promise<T> {
+  const store = openDeployedPrismaScopeConnection({
+    acknowledgedRemote: CONSOLE_DATABASE_ACKNOWLEDGEMENT,
+  });
+
+  try {
+    return await operation(store);
+  } finally {
+    await store.close();
+  }
+}
+
+/**
+ * What this signed-in account may still reach, read fresh.
+ *
+ * 🛑 **READ ON EVERY REQUEST, 🚫 NEVER FROM A TOKEN CLAIM** (ADR-0079 §2
+ * property 2). AGE already re-checks `revokedAt` on every request; this makes
+ * the MEMBERSHIP agree with it, so a demoted, revoked or disabled operator loses
+ * their reach on the next request rather than at token expiry.
+ *
+ * 🚫 **IT DECIDES NOTHING.** `decideSignIn` reasons over these rows - the same
+ * decision sign-in took, 🚫 not a second gentler copy of it.
+ */
+export function readDirectoryEntryByAccount(
+  organizationId: string,
+  accountId: string,
+): Promise<DirectoryEntry> {
+  return withScopeStore((store) => store.findDirectoryEntryByAccount(organizationId, accountId));
 }
 
 /**

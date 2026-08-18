@@ -114,24 +114,46 @@ describe('exactly one implementation of the scope decision', () => {
 });
 
 /**
- * 🚫 THIS PACKAGE HAS NO CALLER, DELIBERATELY (index.ts says why).
+ * 🛑 **EXACTLY ONE CALLER, PINNED BY NAME.**
  *
- * ⚠️ Slice 4 — re-scoping every existing read — is where callers arrive, and it
- * owes a DEMONSTRATED cross-tenant refusal before it merges. Deleting this guard
- * to wire up one screen would discharge that requirement silently.
+ * ⚠️ Slice 1 shipped this as *"has no caller yet"*. Slice 4 is where the caller
+ * arrived, and the guard was **NARROWED, 🚫 not deleted** - deleting it to wire
+ * up one screen would have discharged ADR-0079 §6's cross-tenant requirement
+ * silently, which is the exact move this repo has been caught by before.
+ *
+ * 🛑 **THE RULE IS 'ONE COMPOSED BOUNDARY', 🚫 NOT 'FEW CALLERS'.** A second
+ * importer fails this even if it is careful, because the second careful importer
+ * is how the third careless one gets reviewed as normal.
+ *
+ * ⚠️ **THE SCAN IS PRODUCT-WIDE AND THE RULE IS PRODUCT-WIDE.** A narrow scan
+ * is not a narrow rule: every source file under `packages/` and `apps/` is read,
+ * and the permitted importer is named as a full path so a same-named file in
+ * another app cannot inherit the permission.
  */
-describe('@age/access-scope has no caller yet', () => {
-  it('is imported nowhere outside itself', () => {
+const PERMITTED_IMPORTER = join(REPO_ROOT, 'apps', 'studio', 'src', 'server', 'request-scope.ts');
+const PERMITTED_MANIFEST = join(REPO_ROOT, 'apps', 'studio', 'package.json');
+
+describe('@age/access-scope has exactly one caller', () => {
+  it('is imported by the one composed boundary and nothing else', () => {
     const importers = PRODUCT_FILES.filter(
       (file) =>
         !file.startsWith(PACKAGE_ROOT) &&
         stripComments(readFileSync(file, 'utf8')).includes('@age/access-scope'),
     );
 
-    expect(importers).toEqual([]);
+    expect(importers).toEqual([PERMITTED_IMPORTER]);
   });
 
-  it('is declared as a dependency of no other package', () => {
+  it('the permitted importer exists and actually decides', () => {
+    // ⚠️ Otherwise the assertion above keeps passing against a path that was
+    // renamed away, and reports an absent boundary as a satisfied one.
+    const source = stripComments(readFileSync(PERMITTED_IMPORTER, 'utf8'));
+
+    expect(source).toContain('decideAccess(');
+    expect(source).toContain('scopeForMembership(');
+  });
+
+  it('is declared as a dependency of the one app that composes it', () => {
     function manifests(dir: string): string[] {
       return readdirSync(dir).flatMap((entry) => {
         if (EXCLUDED_SEGMENTS.has(entry)) return [];
@@ -157,7 +179,7 @@ describe('@age/access-scope has no caller yet', () => {
       );
     });
 
-    expect(depending).toEqual([]);
+    expect(depending).toEqual([PERMITTED_MANIFEST]);
   });
 });
 

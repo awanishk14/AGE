@@ -11,7 +11,7 @@ import {
   type SourceConfirmationsOutcome,
   type SourceDocumentOutcome,
 } from './operator-environment';
-import { requireVerifiedSession } from './session-boundary';
+import { requireScopedAccess } from './request-scope';
 
 /**
  * The things the operator can do on the Sources screen (ADR-0066 D4, ADR-0073).
@@ -45,7 +45,10 @@ import { requireVerifiedSession } from './session-boundary';
 export async function readSourceDocumentAction(
   options: ReadOperatorSourceDocumentOptions,
 ): Promise<SourceDocumentOutcome> {
-  await requireVerifiedSession();
+  // 🛑 THE SUBJECT IS THE AGENCY ITSELF. This reads an operator's own file
+  // off the operator workspace by path policy; it names no business, so there is
+  // 🚫 no client to be the subject and 🚫 none may be invented to make one up.
+  await requireScopedAccess('snapshot.read', null);
 
   return readOperatorSourceDocument(options);
 }
@@ -53,7 +56,7 @@ export async function readSourceDocumentAction(
 export async function readSourceConfirmationsAction(
   clientId: string,
 ): Promise<SourceConfirmationsOutcome> {
-  const session = await requireVerifiedSession();
+  const { session } = await requireScopedAccess('snapshot.read', clientId);
 
   return readSourceConfirmations(session.organizationId, clientId);
 }
@@ -70,7 +73,7 @@ export interface RecordPassageInput {
 export async function recordPassageAction(
   input: RecordPassageInput,
 ): Promise<RecordSourceConfirmationOutcome> {
-  const session = await requireVerifiedSession();
+  const { session } = await requireScopedAccess('snapshot.capture', input.clientId);
 
   return recordSourceConfirmation(session.organizationId, input.clientId, {
     questionId: input.questionId,

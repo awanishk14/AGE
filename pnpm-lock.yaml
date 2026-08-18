@@ -240,6 +240,9 @@ importers:
 
   apps/studio:
     dependencies:
+      '@age/access-scope':
+        specifier: workspace:*
+        version: link:../../packages/access-scope
       '@age/business-discovery-contracts':
         specifier: workspace:*
         version: link:../../packages/business-discovery-contracts
