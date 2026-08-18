@@ -45,3 +45,17 @@ export {
   MINIMUM_SESSION_LIFETIME_SECONDS,
   sessionExpiryFrom,
 } from './session-lifetime';
+
+/**
+ * 🛑 **ADR-0079 §3 CORRECTED THIS PACKAGE'S HEADER: A SESSION MAY NOW BE
+ * ISSUED.** The header above says "minting a token is an effect and belongs to
+ * a composition root", and that is 🚫 NOT relaxed — the token still arrives as
+ * a parameter and this package still has no randomness, no clock and no
+ * database. What changed is that the SHAPE of an issued row now exists here,
+ * where the expiry ceiling and the digest already live, so that no caller can
+ * assemble a session that skipped either.
+ *
+ * 🚫 **ISSUING A SESSION IS NOT PROVISIONING AN ACCOUNT.** ADR-0079 overturned
+ * one refusal, and the `accounts` table holds `GRANT SELECT` alone.
+ */
+export { issuedSessionRecord, type SessionIssuanceRequest } from './session-issuance';
