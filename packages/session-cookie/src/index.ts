@@ -23,3 +23,21 @@ export {
   SessionCookieRefusedError,
   serializeSessionCookie,
 } from './session-cookie';
+
+/**
+ * 🛑 **ADR-0079 slice 3 — the two handshake cookies, and the ONE place in AGE
+ * where `SameSite=Lax` is correct.** A browser does not send a `Strict` cookie
+ * on the cross-site top-level navigation back from Google, so a `Strict`
+ * handshake cookie is not a stricter handshake, it is none at all. 🚫 The
+ * session cookie above is untouched and stays `Strict`.
+ */
+export {
+  expireHandshakeCookies,
+  HANDSHAKE_COOKIE_ATTRIBUTES,
+  HANDSHAKE_COOKIE_MAX_AGE_SECONDS,
+  HANDSHAKE_NONCE_COOKIE_NAME,
+  HANDSHAKE_STATE_COOKIE_NAME,
+  readHandshakeCookies,
+  serializeHandshakeCookies,
+  type SignInHandshake,
+} from './handshake-cookie';

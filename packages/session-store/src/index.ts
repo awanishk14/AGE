@@ -41,6 +41,7 @@ export {
 } from './session-verification';
 
 export {
+  ISSUED_SESSION_LIFETIME_SECONDS,
   MAXIMUM_SESSION_LIFETIME_SECONDS,
   MINIMUM_SESSION_LIFETIME_SECONDS,
   sessionExpiryFrom,

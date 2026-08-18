@@ -209,9 +209,17 @@ describe('the exposure script refuses to publish an unprotected console', () => 
     expect(SCRIPT_BODY).toContain('answered ${code} to an unauthenticated request');
   });
 
-  it('requires a garbage credential to be refused before exposing anything', () => {
-    expect(SCRIPT_BODY).toContain('token=not-a-real-token');
+  it('requires a FORGED CALLBACK to be refused before exposing anything', () => {
+    // 🛑 The probe follows the door. ⚠️ A callback arriving with no handshake
+    // cookie must be refused before the console spends a request on Google and
+    // long before it could reach the one authorized INSERT — so this is both the
+    // cheapest and the strongest check available without a browser.
+    expect(SCRIPT_BODY).toContain('/sign-in/callback?state=');
     expect(SCRIPT_BODY).toContain('/sign-in?refused=');
+
+    // 🚫 The retired paste-a-token probe is not left behind: a check aimed at a
+    // route that no longer exists passes for the wrong reason.
+    expect(SCRIPT_BODY).not.toContain('token=not-a-real-token');
   });
 
   it('re-checks the bind AFTER the reload', () => {
@@ -269,11 +277,35 @@ describe('the sign-in door is rate limited, and 🚫 nothing else is', () => {
     }
   });
 
-  it('applies the limit to the sign-in door by exact match', () => {
-    expect(VHOST_BODY).toContain('location = /sign-in/submit {');
+  it('applies the limit to BOTH halves of the sign-in door, by exact match', () => {
+    // 🛑 **BOTH, 🚫 NOT EITHER.** ADR-0079 slice 3 split the door in two, and the
+    // half that would be left unlimited is the expensive one: `/sign-in/callback`
+    // is the only route in AGE that makes an outbound request and the only one
+    // that can insert a session row. ⚠️ A limit on `start` alone would look
+    // configured and count nothing that matters — a caller replaying callbacks
+    // never asks for a handshake.
+    let examined = 0;
 
-    const door = VHOST_BODY.slice(VHOST_BODY.indexOf('location = /sign-in/submit {'));
-    expect(door.slice(0, door.indexOf('}'))).toContain('limit_req zone=age_signin');
+    for (const path of ['/sign-in/start', '/sign-in/callback']) {
+      examined += 1;
+      const marker = `location = ${path} {`;
+
+      expect(VHOST_BODY, `${path} has no exact-match location`).toContain(marker);
+
+      const door = VHOST_BODY.slice(VHOST_BODY.indexOf(marker));
+      expect(door.slice(0, door.indexOf('}')), `${path} is not rate limited`).toContain(
+        'limit_req zone=age_signin',
+      );
+    }
+
+    // ⚠️ Asserted after the loop: a list that silently emptied would otherwise
+    // report compliance without examining anything.
+    expect(examined).toBe(2);
+
+    // 🚫 **AND THE OLD DOOR IS GONE, 🚫 NOT MERELY UNUSED.** A stale exact-match
+    // location for a route that no longer exists is a rate limit protecting
+    // nothing, and it reads to the next person as though the door were covered.
+    expect(VHOST_BODY).not.toContain('/sign-in/submit');
   });
 
   it('answers 429, so a throttled caller learns nothing about the token', () => {

@@ -32,7 +32,16 @@ const APP_ROOT = resolve(process.cwd(), 'src', 'app');
  */
 const PUBLIC_ROUTES: ReadonlyMap<string, string> = new Map([
   ['sign-in/page.tsx', 'The door itself. It cannot stand behind itself.'],
-  ['sign-in/submit/route.ts', 'Verifies the presented token. It IS the boundary check.'],
+  [
+    'sign-in/start/route.ts',
+    'Begins the Google handshake. It mints a `state` and a `nonce` and admits nobody — a ' +
+      'session behind it would be a door that requires a session to reach the door.',
+  ],
+  [
+    'sign-in/callback/route.ts',
+    'Completes the handshake and IS the boundary check: it verifies the identity, reads the ' +
+      'provisioned rows and issues the session. Everything after it is protected by what it did.',
+  ],
   [
     'sign-out/route.ts',
     'Ends whatever session the request holds. It performs its own assessment and refuses ' +

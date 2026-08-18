@@ -33,6 +33,10 @@ const BANNED = [
   'Math.random(',
   'fetch(',
   'localStorage',
+  // 🛑 ADR-0079 slice 3 ADDED THIS. Sign-in mints a session token, a `state` and
+  // a `nonce`; a route that could mint one of them itself is a route that could
+  // mint a weaker one, and nothing outside the effect module would notice.
+  'node:crypto',
   '@prisma/client',
   '@age/persistence',
   // ⚠️ ADR-0064 D1 NARROWED THIS LIST, IT DID NOT DELETE FROM IT. The console
@@ -215,5 +219,38 @@ describe('apps/studio effect isolation', () => {
     // The narrowed door is the only way in.
     expect(source).not.toContain('PrismaOperatorSessionScopeRunner');
     expect(source).not.toContain('operatorSessionRevocation(');
+  });
+
+  /**
+   * 🛑 THE SIGN-IN EFFECTS ARE HERE AND NOWHERE ELSE (ADR-0079 §6 slice 3).
+   *
+   * ⚠️ WHY A GUARD. The two sign-in routes are exactly where the shortcut would
+   * be taken — they are the modules that WANT randomness (to mint a `state`), a
+   * clock (to check an expiry) and the network (to exchange a code), and each is
+   * one import away. The BANNED scan above catches the tokens; this catches the
+   * inverse, the effect module quietly LOSING them while something else grew
+   * them back.
+   *
+   * ⚠️ MADE TO FAIL BEFORE IT WAS TRUSTED: moving `randomBytes` into
+   * `sign-in/start/route.ts` fails the BANNED scan by name, and deleting the
+   * `fetch` wrapper here fails the second assertion.
+   */
+  it('performs the sign-in effects from the one effect module', () => {
+    const source = withoutComments(readFileSync(`${srcDir}${EFFECT_MODULE}`, 'utf8'));
+
+    expect(source).toContain('randomBytes(32)');
+    expect(source).toContain('GOOGLE_TOKEN_ENDPOINT');
+    expect(source).toContain("from '@age/capture/deployed-sign-in-composition'");
+
+    // 🛑 THE OUTBOUND REQUEST GOES TO A CONSTANT, 🚫 NEVER TO A CONFIGURED HOST.
+    // An endpoint read from the environment is URL fetching returning under
+    // another name, and it would be one variable away from AGE POSTing a client
+    // secret wherever a host said.
+    expect(source).not.toContain('AGE_STUDIO_GOOGLE_TOKEN');
+    expect(source).not.toContain('GOOGLE_ENDPOINT');
+
+    // 🚫 The console still cannot construct its own client or its own runner.
+    expect(source).not.toContain('PrismaDirectoryScopeRunner');
+    expect(source).not.toContain('operatorSessionIssuance(');
   });
 });
