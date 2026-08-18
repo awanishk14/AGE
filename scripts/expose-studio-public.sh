@@ -93,15 +93,19 @@ for path in / /businesses /diagnostics; do
   fi
 done
 
-# ⚠️ And a garbage credential must be REFUSED at the door.
-refusal="$(curl -sS -o /dev/null -w '%{redirect_url}' -X POST \
-  --data-urlencode 'token=not-a-real-token' "${base}/sign-in/submit")"
+# ⚠️ And a FORGED CALLBACK must be REFUSED at the door (ADR-0079 slice 3).
+# 🛑 This is the strongest cheap probe there is: it arrives with no handshake
+# cookie, so it must be refused BEFORE the console spends a request on Google,
+# and long before it could reach the one authorized INSERT. A 200, a 500 or a
+# redirect to `/` would each mean something very different, and all three would
+# mean the door is open.
+refusal="$(curl -sS -o /dev/null -w '%{redirect_url}' "${base}/sign-in/callback?state=not-a-real-state&code=not-a-real-code")"
 case "$refusal" in
   *"/sign-in?refused="*) : ;;
-  *) echo "REFUSED: a garbage token did not produce a refusal (got '${refusal}')." >&2; exit 1 ;;
+  *) echo "REFUSED: a forged callback did not produce a refusal (got '${refusal}')." >&2; exit 1 ;;
 esac
 
-echo "    boundary confirmed: loopback only, protected routes redirect, bad token refused"
+echo "    boundary confirmed: loopback only, protected routes redirect, forged callback refused"
 REMOTE
 
 # ─────────────────────────────────────────────────────────────────────────────

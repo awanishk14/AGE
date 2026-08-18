@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
  * and redirects every protected route to it exactly as designed. It fails only
  * when a REAL SESSION IS PRESENTED, with
  * `@prisma/client did not initialize yet`, as a 500 from
- * `/sign-in/submit`.
+ * `/sign-in/callback` (before ADR-0079 slice 3 replaced it, `/sign-in/submit`).
  *
  * ⚠️ **GENERATING AFTERWARDS DOES NOT FIX IT.** The stub is already inside the
  * bundle; the fix is a rebuild. That is why the assertion here is on the

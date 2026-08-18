@@ -13,7 +13,8 @@
     ".": "./src/index.ts",
     "./composition": "./src/capture-composition.ts",
     "./deployed-composition": "./src/deployed-console-composition.ts",
-    "./deployed-session-composition": "./src/deployed-session-composition.ts"
+    "./deployed-session-composition": "./src/deployed-session-composition.ts",
+    "./deployed-sign-in-composition": "./src/deployed-sign-in-composition.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/bundle.mjs",
@@ -37,7 +38,11 @@
     "@age/observation-association": "workspace:*",
     "@age/operator-file-policy": "workspace:*",
     "@age/scored-bif-snapshot-persistence": "workspace:*",
+    "@age/session-issuance-persistence": "workspace:*",
+    "@age/session-store": "workspace:*",
     "@age/session-store-persistence": "workspace:*",
+    "@age/sign-in-directory": "workspace:*",
+    "@age/sign-in-directory-persistence": "workspace:*",
     "@age/source-observation": "workspace:*",
     "@age/source-observation-persistence": "workspace:*",
     "@prisma/client": "^5.20.0",

@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 
 import {
   openDeployedPrismaObservationReadConnection,
@@ -9,8 +10,16 @@ import {
   type SessionRevocation,
   type SessionStoreConnection,
 } from '@age/capture/deployed-session-composition';
+import {
+  openDeployedPrismaSignInConnection,
+  type IssuedSession,
+  type SignInStoreConnection,
+} from '@age/capture/deployed-sign-in-composition';
+import { GOOGLE_TOKEN_ENDPOINT } from '@age/google-sign-in';
 import { REMOTE_ACKNOWLEDGEMENT } from '@age/deployed-database-target';
 import { verifyPresentedSessionToken, type SessionVerification } from '@age/session-store';
+import { ISSUED_SESSION_LIFETIME_SECONDS } from '@age/session-store';
+import type { DirectoryEntry } from '@age/sign-in-directory';
 import {
   assembleEvidence as assembleEvidenceIn,
   assessCapabilityReadiness as assessCapabilityReadinessIn,
@@ -603,5 +612,218 @@ export function readClientContextProjection(
     entitledOrganizationId,
     clientId,
     bifId,
+  );
+}
+
+/**
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🛑 **SIGN-IN'S EFFECTS — ADR-0079 §6 slice 3.**
+ *
+ * Four kinds of effect arrive with sign-in, and every one of them lands HERE
+ * rather than in a route: RANDOMNESS (the session token and the two handshake
+ * values), the NETWORK (one POST to Google's token endpoint), the ENVIRONMENT
+ * (the OAuth client), and the ONE authorized INSERT.
+ *
+ * 🚫 **THE PURE PACKAGES GAINED NONE OF THEM.** `@age/google-sign-in` builds a
+ * URL and reads claims; `@age/sign-in-directory` decides admission;
+ * `@age/session-store` computes the expiry and hashes the token. Not one of them
+ * can mint, fetch, read a clock or open a connection — which is why a test can
+ * drive every decision in sign-in without a network and without a database.
+ * ────────────────────────────────────────────────────────────────────────────
+ */
+
+/**
+ * The OAuth client this deployment signs in with.
+ *
+ * 🛑 **AN ABSENT VALUE REFUSES AND 🚫 DOES NOT DEFAULT**, exactly as
+ * `sessionLookupOrganizationId` refuses: a console that cannot say who it is to
+ * Google must admit nobody, and it must SAY SO by naming the VARIABLE, so the
+ * operator sees a misconfiguration rather than a sign-in that looks broken.
+ *
+ * 🚫 **A REFUSAL NAMES THE VARIABLE AND 🚫 NEVER THE VALUE.** One of these three
+ * is a client SECRET; a refusal that echoed it would put it in a log, a
+ * screenshot and a support message.
+ *
+ * ⚠️ **THE REDIRECT URI IS CONFIGURED, 🚫 NOT DERIVED FROM THE REQUEST.**
+ * `request.url` is built from a header the caller controls, and a redirect URI
+ * derived from one would be a Host-header injection primitive on the single
+ * route an unauthenticated caller on the public internet can reach — the exact
+ * defect measured on this deployment and fixed in the submit route. It must also
+ * match Google's registered value BYTE FOR BYTE, and a value assembled from a
+ * header cannot promise that.
+ */
+export interface GoogleSignInConfiguration {
+  readonly clientId: string;
+  readonly clientSecret: string;
+  readonly redirectUri: string;
+}
+
+export const GOOGLE_SIGN_IN_SETTINGS = [
+  'AGE_STUDIO_GOOGLE_CLIENT_ID',
+  'AGE_STUDIO_GOOGLE_CLIENT_SECRET',
+  'AGE_STUDIO_GOOGLE_REDIRECT_URI',
+] as const;
+
+export function googleSignInConfiguration(): GoogleSignInConfiguration | undefined {
+  const [clientId, clientSecret, redirectUri] = GOOGLE_SIGN_IN_SETTINGS.map(readRequiredSetting);
+
+  if (clientId === undefined || clientSecret === undefined || redirectUri === undefined) {
+    return undefined;
+  }
+
+  return { clientId, clientSecret, redirectUri };
+}
+
+/** ⚠️ Blank is ABSENT, 🚫 not a value — an empty `.env` line is a misconfiguration. */
+function readRequiredSetting(name: string): string | undefined {
+  const raw = process.env[name];
+
+  return raw === undefined || raw.trim() === '' ? undefined : raw.trim();
+}
+
+/**
+ * 32 bytes of cryptographic randomness, as hex.
+ *
+ * 🛑 **`randomBytes`, 🚫 NEVER `Math.random`.** The value this mints IS the
+ * session — a predictable one is a session anybody can present — and it is also
+ * the `state` that makes the callback unforgeable.
+ *
+ * ⚠️ **ONE MINT FOR ALL THREE VALUES, ON PURPOSE.** The token, the `state` and
+ * the `nonce` want exactly the same property, and three functions would be three
+ * places for one of them to quietly become weaker than the others.
+ */
+export function mintOpaqueValue(): string {
+  return randomBytes(32).toString('hex');
+}
+
+/**
+ * The instant sign-in is happening.
+ *
+ * ⚠️ Named separately from `CONSOLE_RUNTIME.now` only because the routes do not
+ * hold the runtime — 🚫 it is the same `new Date()`, not a second notion of time.
+ */
+export function signInNow(): Date {
+  return new Date();
+}
+
+/**
+ * 🛑 **THE ONLY OUTBOUND REQUEST AGE MAKES, AND ITS EXACT WIDTH.**
+ *
+ * One POST, to a CONSTANT URL — `GOOGLE_TOKEN_ENDPOINT`, a compile-time string
+ * from `@age/google-sign-in`, 🚫 never a value from a response, a claim, a
+ * discovery document or the environment. ⚠️ **THIS IS NOT AN OUTBOUND WRITE
+ * SURFACE** (ADR-0057 D4 class 3): AGE sends a code it has just received back to
+ * the issuer that minted it, and receives an identity. 🚫 It publishes nothing,
+ * relays nothing, and tells Google nothing about any client.
+ *
+ * 🚫 **NO URL FETCHING RETURNS BY THIS DOOR.** A caller cannot name a host, and
+ * there is no parameter here through which one could be introduced.
+ *
+ * ⚠️ **IT RETURNS THE RAW ID TOKEN AND JUDGES NOTHING.** Whether the claims are
+ * believable is `verifiedGoogleIdentity`'s answer, in a pure package, always.
+ * `undefined` covers every network failure, every non-200 and every response
+ * without a usable `id_token` — 🚫 they are deliberately not distinguished,
+ * because to an unauthenticated caller they must not be, and 🚫 the body is never
+ * logged: it carries a credential.
+ */
+export async function exchangeGoogleAuthorizationCode(
+  configuration: GoogleSignInConfiguration,
+  code: string,
+): Promise<string | undefined> {
+  try {
+    const response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Accept: 'application/json',
+      },
+      body: new URLSearchParams({
+        code,
+        client_id: configuration.clientId,
+        client_secret: configuration.clientSecret,
+        redirect_uri: configuration.redirectUri,
+        grant_type: 'authorization_code',
+      }).toString(),
+    });
+
+    if (!response.ok) return undefined;
+
+    const payload: unknown = await response.json();
+
+    if (typeof payload !== 'object' || payload === null) return undefined;
+
+    const idToken = (payload as Record<string, unknown>)['id_token'];
+
+    return typeof idToken === 'string' && idToken !== '' ? idToken : undefined;
+  } catch {
+    // ⚠️ A network failure is a REFUSED sign-in, 🚫 not a 500 from the one route
+    // an unauthenticated caller on the public internet can reach.
+    return undefined;
+  }
+}
+
+/**
+ * The sign-in door, opened for exactly one operation and closed again.
+ *
+ * ⚠️ **NOTHING HOLDS IT OPEN** — the same rule as every other read here
+ * (ADR-0055 D2). A module-level connection is a reference a screen could
+ * acquire; one opened and closed inside a call is not.
+ */
+async function withSignInStore<T>(
+  operation: (store: SignInStoreConnection) => Promise<T>,
+): Promise<T> {
+  const store = openDeployedPrismaSignInConnection({
+    acknowledgedRemote: CONSOLE_DATABASE_ACKNOWLEDGEMENT,
+  });
+
+  try {
+    return await operation(store);
+  } finally {
+    await store.close();
+  }
+}
+
+/**
+ * Who this address is, inside this deployment's organization.
+ *
+ * 🚫 **IT DECIDES NOTHING.** Admission is `decideSignIn`'s answer, in a pure
+ * package, afterwards — this door only fetches the rows that decision reasons
+ * over.
+ */
+export function readSignInDirectoryEntry(
+  organizationId: string,
+  email: string,
+): Promise<DirectoryEntry> {
+  return withSignInStore((store) => store.findDirectoryEntry(organizationId, email));
+}
+
+/**
+ * 🛑 **THE ONE ACT IN AGE THAT CREATES A CREDENTIAL, AND ITS EXACT WIDTH.**
+ *
+ * It writes ONE `operator_sessions` row for an account that ALREADY EXISTS.
+ * 🚫 It cannot create an account, cannot create a membership, cannot grant a role
+ * and cannot change what any of them mean — `accounts` and `account_memberships`
+ * hold `GRANT SELECT` and nothing else. **AGE MINTS NOTHING** is unchanged in
+ * every sense except the one ADR-0079 §3 named.
+ *
+ * ⚠️ **THE LIFETIME IS THE CONSTANT, 🚫 NOT A PARAMETER.** Eight hours, ADR-0079
+ * D4, the owner's answer, the same for every scope. A caller that could choose it
+ * would be a caller that could choose the ceiling.
+ */
+export function issueOperatorSession(
+  organizationId: string,
+  accountId: string,
+  token: string,
+  issuedAt: Date,
+): Promise<IssuedSession> {
+  return withSignInStore((store) =>
+    store.issue(organizationId, {
+      sessionId: mintOpaqueValue(),
+      organizationId,
+      accountId,
+      token,
+      issuedAt,
+      lifetimeSeconds: ISSUED_SESSION_LIFETIME_SECONDS,
+    }),
   );
 }

@@ -153,9 +153,21 @@ importers:
       '@age/scored-bif-snapshot-persistence':
         specifier: workspace:*
         version: link:../../packages/scored-bif-snapshot-persistence
+      '@age/session-issuance-persistence':
+        specifier: workspace:*
+        version: link:../../packages/session-issuance-persistence
+      '@age/session-store':
+        specifier: workspace:*
+        version: link:../../packages/session-store
       '@age/session-store-persistence':
         specifier: workspace:*
         version: link:../../packages/session-store-persistence
+      '@age/sign-in-directory':
+        specifier: workspace:*
+        version: link:../../packages/sign-in-directory
+      '@age/sign-in-directory-persistence':
+        specifier: workspace:*
+        version: link:../../packages/sign-in-directory-persistence
       '@age/source-observation':
         specifier: workspace:*
         version: link:../../packages/source-observation
@@ -249,6 +261,9 @@ importers:
       '@age/discovery-answer-file':
         specifier: workspace:*
         version: link:../../packages/discovery-answer-file
+      '@age/google-sign-in':
+        specifier: workspace:*
+        version: link:../../packages/google-sign-in
       '@age/operator-document-decoder':
         specifier: workspace:*
         version: link:../../packages/operator-document-decoder
@@ -264,6 +279,9 @@ importers:
       '@age/session-store':
         specifier: workspace:*
         version: link:../../packages/session-store
+      '@age/sign-in-directory':
+        specifier: workspace:*
+        version: link:../../packages/sign-in-directory
       '@age/studio-shell':
         specifier: workspace:*
         version: link:../../packages/studio-shell

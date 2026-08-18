@@ -23,7 +23,7 @@ export const dynamic = 'force-dynamic';
  * session on a read is the wrong shape regardless.
  */
 // ⚠️ 🚫 NO PARAMETER. The redirect below is RELATIVE, so nothing here reads the
-// request's host — see the note in `sign-in/submit/route.ts`.
+// request's host — see the note in `sign-in/callback/route.ts`.
 export async function POST(): Promise<Response> {
   // 🚫 The outcome is not branched on. `already-ended` means somebody revoked it
   // first, which is the same destination — 🚫 and it is never reported as an

@@ -208,22 +208,39 @@ describe('exactly one issuance entry point in the product', () => {
 });
 
 /**
- * 🚫 **THIS PACKAGE HAS NO CALLER YET, DELIBERATELY.** Sign-in is slice 3, and
- * it is where a token is first minted. ⚠️ The deployed console is deliberately
- * unreachable until then, and 🚫 wiring this up early is not the way to open it.
+ * 🛑 **THIS PACKAGE HAS EXACTLY ONE CALLER, AND IT IS A COMPOSITION DOOR.**
+ *
+ * ⚠️ **SLICE 2 SAID "NO CALLER"; SLICE 3 IS THE CALLER, AND THIS GUARD WAS
+ * NARROWED TO FOLLOW THE CHANGE 🚫 RATHER THAN WIDENED TO ADMIT IT.** Deleting it
+ * would have been the easy edit and the wrong one: what mattered was never
+ * "nobody calls this", it was **how many places CAN**. One composition door is
+ * still one door — a second importer, or a screen reaching past the door
+ * straight into this package, is exactly the second issuance path the whole
+ * arrangement exists to prevent.
+ *
+ * 🛑 AGE MINTS NOTHING BUT SESSIONS. 🚫 This package must never become
+ * reachable from anywhere that could mint an account or a membership instead.
  */
-describe('@age/session-issuance-persistence has no caller yet', () => {
-  it('is imported nowhere outside itself', () => {
+const COMPOSITION_DOOR = join(
+  REPO_ROOT,
+  'apps',
+  'capture',
+  'src',
+  'deployed-sign-in-composition.ts',
+);
+
+describe('@age/session-issuance-persistence has exactly one caller', () => {
+  it('is imported by the composition door and nothing else', () => {
     const importers = PRODUCT_FILES.filter(
       (file) =>
         !file.startsWith(PACKAGE_ROOT) &&
         stripComments(readFileSync(file, 'utf8')).includes('@age/session-issuance-persistence'),
     );
 
-    expect(importers).toEqual([]);
+    expect(importers).toEqual([COMPOSITION_DOOR]);
   });
 
-  it('is declared as a dependency of no other package', () => {
+  it('is declared as a dependency of that one package and no other', () => {
     function manifests(dir: string): string[] {
       return readdirSync(dir).flatMap((entry) => {
         if (EXCLUDED_SEGMENTS.has(entry)) return [];
@@ -249,6 +266,9 @@ describe('@age/session-issuance-persistence has no caller yet', () => {
       );
     });
 
-    expect(depending).toEqual([]);
+    // ⚠️ The MANIFEST is checked as well as the imports: a package that declares
+    // this dependency can import it at any time without a review noticing, so
+    // the reachable set is the union of the two, 🚫 not the imports alone.
+    expect(depending).toEqual([join(REPO_ROOT, 'apps', 'capture', 'package.json')]);
   });
 });
