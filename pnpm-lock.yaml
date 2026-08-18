@@ -1008,6 +1008,16 @@ importers:
         specifier: ^2.1.1
         version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(terser@5.48.0)
 
+  packages/sign-in-directory-persistence:
+    dependencies:
+      '@age/sign-in-directory':
+        specifier: workspace:*
+        version: link:../sign-in-directory
+    devDependencies:
+      vitest:
+        specifier: ^2.1.1
+        version: 2.1.9(@types/node@22.20.0)(jsdom@25.0.1)(terser@5.48.0)
+
   packages/source-observation:
     devDependencies:
       vitest:
