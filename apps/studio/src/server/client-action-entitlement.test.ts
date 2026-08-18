@@ -30,6 +30,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const requireVerifiedSession = vi.fn();
 const createClientRecord = vi.fn();
+const readDirectoryEntryByAccount = vi.fn();
 
 vi.mock('./session-boundary', () => ({
   requireVerifiedSession: () => requireVerifiedSession(),
@@ -37,7 +38,35 @@ vi.mock('./session-boundary', () => ({
 
 vi.mock('./operator-environment', () => ({
   createClientRecord: (draft: unknown) => createClientRecord(draft),
+  readDirectoryEntryByAccount: (organizationId: string, accountId: string) =>
+    readDirectoryEntryByAccount(organizationId, accountId),
 }));
+
+/**
+ * 🛑 **SLICE 4 PUT A SECOND READ IN FRONT OF THIS ACTION, AND IT IS STUBBED
+ * HONESTLY.** `requireScopedAccess` re-derives the scope from the store on every
+ * request, so this test now supplies a real membership row rather than a session
+ * alone. ⚠️ Stubbing the SCOPE instead of the ROW would have made the action
+ * pass while proving nothing about the decision that guards it.
+ */
+const ACCOUNT = 'account-fictional-operator';
+
+function agencyDirectoryEntry(organizationId: string) {
+  return {
+    account: { accountId: ACCOUNT, email: 'operator@fictional.invalid', disabledAt: null },
+    memberships: [
+      {
+        membershipId: 'membership-fictional-1',
+        accountId: ACCOUNT,
+        scopeKind: 'agency',
+        organizationId,
+        clientId: null,
+        roleBundle: 'agency-operator',
+        revokedAt: null,
+      },
+    ],
+  };
+}
 
 const { createClientAction } = await import('./client-actions');
 
@@ -57,7 +86,13 @@ describe('creating a business inside the organization the session covers', () =>
   beforeEach(() => {
     requireVerifiedSession.mockReset();
     createClientRecord.mockReset();
-    requireVerifiedSession.mockResolvedValue({ organizationId: SESSION_ORGANIZATION });
+    readDirectoryEntryByAccount.mockReset();
+    requireVerifiedSession.mockResolvedValue({
+      sessionId: 'session-fictional-1',
+      organizationId: SESSION_ORGANIZATION,
+      accountId: ACCOUNT,
+    });
+    readDirectoryEntryByAccount.mockResolvedValue(agencyDirectoryEntry(SESSION_ORGANIZATION));
     createClientRecord.mockReturnValue({ kind: 'created' });
   });
 

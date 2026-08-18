@@ -10,7 +10,7 @@ import {
   readRelayedObservations,
   type RelayedObservationsOutcome,
 } from './operator-environment';
-import { requireVerifiedSession } from './session-boundary';
+import { requireScopedAccess } from './request-scope';
 
 /**
  * The one thing the operator can do on the Peer Products screen: read what has
@@ -33,7 +33,7 @@ import { requireVerifiedSession } from './session-boundary';
 export async function readRelayedObservationsAction(
   clientId: string,
 ): Promise<RelayedObservationsOutcome> {
-  const session = await requireVerifiedSession();
+  const { session } = await requireScopedAccess('snapshot.read', clientId);
 
   return readRelayedObservations(session.organizationId, clientId);
 }
@@ -85,7 +85,7 @@ export async function readClientContextProjectionAction(
   // `organizationId` this action RETURNS still comes from the outcome, not from
   // the session — it is what AGE would tell the peer, 🚫 not a restatement of
   // who asked.
-  const session = await requireVerifiedSession();
+  const { session } = await requireScopedAccess('snapshot.read', clientId);
   const outcome = await readClientContextProjection(session.organizationId, clientId, bifId);
 
   // ⚠️ Every non-`projected` arm travels WHOLE, refusals included — a refusal is

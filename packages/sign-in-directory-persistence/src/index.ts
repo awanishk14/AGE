@@ -31,4 +31,4 @@ export {
   type DirectoryTransactionSource,
 } from './directory-scope-runner';
 
-export { signInDirectoryRead } from './directory-read';
+export { directoryEntryByAccountRead, signInDirectoryRead } from './directory-read';

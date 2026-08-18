@@ -44,6 +44,8 @@ describe('a provisioned agency operator is admitted', () => {
         organizationId: ORGANIZATION,
         membershipId: 'membership-fictional-1',
         roleBundle: 'agency-operator',
+        scopeKind: 'agency',
+        clientId: null,
       },
     });
   });
@@ -53,12 +55,20 @@ describe('a provisioned agency operator is admitted', () => {
 
     // 🛑 ADR-0062 D3. A session says who is asking; what that means is read per
     // request. If this ever grew a permission list, admin would become a flag.
+    //
+    // ⚠️ **SLICE 4 ADDED TWO FIELDS, AND THEY ARE THE ROW'S WORDS — 🚫 NOT A
+    // CONCLUSION.** `scopeKind` and `clientId` are copied off the membership so
+    // `scopeForMembership` can turn them into a scope in its own pure package;
+    // neither is a capability, a permission or a flag, and this list is asserted
+    // EXACTLY so a third field cannot arrive unnoticed.
     expect(decision.outcome).toBe('admitted');
     expect(Object.keys(decision.outcome === 'admitted' ? decision.operator : {}).sort()).toEqual([
       'accountId',
+      'clientId',
       'membershipId',
       'organizationId',
       'roleBundle',
+      'scopeKind',
     ]);
   });
 });

@@ -11,7 +11,7 @@ import {
   type SaveOutcome,
   type SubmitOutcome,
 } from './operator-environment';
-import { requireVerifiedSession } from './session-boundary';
+import { requireScopedAccess } from './request-scope';
 
 /**
  * The two things the operator can do on the Discovery screen.
@@ -26,7 +26,7 @@ import { requireVerifiedSession } from './session-boundary';
  *
  * 🛑 **EVERY ONE OF THEM ESTABLISHES ITS OWN ENTITLEMENT** (AGE-INV-SEL-1,
  * ADR-0074 §7 slice 3). A `'use server'` function is a BROWSER-REACHABLE
- * ENDPOINT: the `requireVerifiedSession()` call on the page that renders the
+ * ENDPOINT: the `requireScopedAccess()` call on the page that renders the
  * form protects the PAGE and 🚫 nothing else. ⚠️ The WRITE doors are gated too —
  * a gate on the read alone would leave a caller unable to see another
  * organization's draft and still able to overwrite it.
@@ -47,7 +47,7 @@ export async function saveDiscoveryDraftAction(
   clientId: string,
   formData: FormData,
 ): Promise<SaveOutcome> {
-  const session = await requireVerifiedSession();
+  const { session } = await requireScopedAccess('snapshot.capture', clientId);
 
   return writeDiscoveryDraft(
     session.organizationId,
@@ -61,7 +61,7 @@ export async function submitDiscoveryAction(
   clientId: string,
   formData: FormData,
 ): Promise<SubmitOutcome> {
-  const session = await requireVerifiedSession();
+  const { session } = await requireScopedAccess('snapshot.capture', clientId);
   const draft = draftFromFormEntries(entriesFrom(formData), STUDIO_QUESTIONNAIRE);
 
   // ⚠️ The draft is saved FIRST. If writing the answer file fails, the
@@ -74,7 +74,7 @@ export async function submitDiscoveryAction(
 
 /** Read the stored draft for the initial render. */
 export async function loadDiscoveryDraftAction(clientId: string): Promise<DraftOutcome> {
-  const session = await requireVerifiedSession();
+  const { session } = await requireScopedAccess('snapshot.read', clientId);
 
   return readDiscoveryDraft(session.organizationId, clientId);
 }

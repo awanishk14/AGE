@@ -13,6 +13,7 @@
     ".": "./src/index.ts",
     "./composition": "./src/capture-composition.ts",
     "./deployed-composition": "./src/deployed-console-composition.ts",
+    "./deployed-scope-composition": "./src/deployed-scope-composition.ts",
     "./deployed-session-composition": "./src/deployed-session-composition.ts",
     "./deployed-sign-in-composition": "./src/deployed-sign-in-composition.ts"
   },

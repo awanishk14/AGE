@@ -1,12 +1,14 @@
 /**
  * `@age/access-scope` — the pure scope model (ADR-0079, slice 1 of §6).
  *
- * 🚫 **THIS PACKAGE HAS NO CALLER YET, DELIBERATELY, AND A GUARD ASSERTS IT.**
- * ADR-0079 authorizes the MODEL and nothing else. Accounts, memberships and
- * session issuance are slice 2; sign-in is slice 3; re-scoping the existing
- * reads is slice 4 and is the dangerous one. Importing this from a route, a
- * screen or a query today would re-scope a read path without any of the guards
- * those slices owe.
+ * 🛑 **THIS PACKAGE NOW HAS EXACTLY ONE CALLER, AND A GUARD PINS IT BY NAME.**
+ * Slice 4 wired it, so the "no caller yet" guard was NARROWED rather than
+ * deleted: `apps/studio/src/server/request-scope.ts` is the one module permitted
+ * to import it, and a second importer fails the guard. 🚫 Importing this from a
+ * route, a screen or a query DIRECTLY is still refused - every one of them
+ * reaches the decision through that single composed boundary, so there is one
+ * place where "which scope is asking" is answered and one place to read when
+ * asking whether it is answered correctly.
  *
  * 🚫 **NOTHING HERE ISSUES, STORES, VERIFIES OR REVOKES ANYTHING.** It is the
  * SHAPE of who may reach what, and the refusals that make an unusable scope
@@ -44,3 +46,10 @@ export {
   type AccessRequest,
   type AccessSubject,
 } from './access-decision';
+
+export {
+  scopeForMembership,
+  type MembershipScopeDecision,
+  type ScopeRefusalReason,
+  type StoredMembership,
+} from './scope-of-membership';
