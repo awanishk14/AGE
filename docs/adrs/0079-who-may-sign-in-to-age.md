@@ -1,9 +1,9 @@
 # ADR-0079 — Who may sign in to AGE: three scopes, two renderings, and a real login page
 
-Status: **Proposed** (2026-08-18) — 🛑 **A DECISION REQUEST FOR THE PRODUCT OWNER. It authorizes
-NOTHING until accepted.** 🚫 Not self-accepted. ⚠️ **The SHAPE below is the owner's, given in
-conversation on 2026-08-18 and quoted verbatim in §0.1. What is still owed is the ACCEPTANCE** — see
-§8, which is deliberately the only thing standing between this document and slice 1.
+Status: **Accepted** (2026-08-18) — ⚠️ **BY THE PRODUCT OWNER, 🚫 NOT self-accepted.** This ADR
+overturns four shipped refusals, so it was a decision request for the **Product Owner** and was
+answered by them. The acceptance is recorded verbatim in §0.2, and the status was flipped in a
+**separate** PR from the one that proposed it.
 
 Depends on: ADR-0062 **D1/D2** · ADR-0074 **D3/D4** · ADR-0076 (container isolation).
 🛑 **Overturns, EXPLICITLY:** ADR-0055 **D7** · ADR-0068 **§0.1c** · ADR-0074 **D4** ·
@@ -25,6 +25,22 @@ And, answering the one question this ADR put back to them:
 ⚠️ **READ AS:** one snapshot underneath, **two RENDERINGS** over it — 🚫 not two separately
 maintained documents. **One source of truth, two views** (§4). 🛑 If the owner meant two independent
 artifacts, that changes §4 and this ADR must be corrected 🚫 rather than reinterpreted later.
+
+---
+
+## 0.2 The acceptance, verbatim (Product Owner, 2026-08-18)
+
+> _"Accepted as Product Owner. One snapshot two renderings, clients read-only, proceed with slice
+> 1"._
+
+⚠️ **This answers §7 D1 and D2 explicitly** — one snapshot with two renderings, and a client
+principal that is **read-only**. 🛑 **D3, D4 and D5 remain OPEN and are still the owner's**; slice 1
+🚫 does not depend on any of them, and 🚫 no later slice may assume an answer.
+
+⚠️ **Also decided, same message:** the two ADR-0078 gates (browser verification and the hand-planted
+session) are 🚫 **not** taken now — _"once we create login, we will go that path."_ 🛑 **So the
+deployed console stays UNREACHABLE until slice 3 lands.** That is the owner's explicit choice, 🚫
+not an oversight, and 🚫 it must not be quietly worked around by planting a row anyway.
 
 ---
 
