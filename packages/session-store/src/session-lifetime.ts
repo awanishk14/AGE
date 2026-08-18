@@ -19,6 +19,22 @@ import { SessionStoreRefusedError } from './session-record';
 /** Twelve hours. A working day, and then the operator signs in again. */
 export const MAXIMUM_SESSION_LIFETIME_SECONDS = 12 * 60 * 60;
 
+/**
+ * **Eight hours — the lifetime AGE actually issues** (ADR-0079 D4, answered by
+ * the Product Owner on 2026-08-18: *"8 hours"*, the same for every scope).
+ *
+ * ⚠️ **THIS IS A CHOICE BENEATH A CEILING, 🚫 NOT A REPLACEMENT FOR ONE.** The
+ * twelve-hour maximum above is the bound no lifetime may cross; this is the one
+ * number the product picks inside it. 🚫 The ceiling was NOT lowered to match, so
+ * the guard that refuses an over-long lifetime keeps testing something real.
+ *
+ * 🚫 **AND IT IS NOT PER-SCOPE.** The owner was offered a different lifetime for
+ * platform, agency and client and did not take it. A client session that lived
+ * longer than an operator's would be the longest-lived credential in the product
+ * held by the person with the least reason to be watching for its theft.
+ */
+export const ISSUED_SESSION_LIFETIME_SECONDS = 8 * 60 * 60;
+
 /** One minute. Below this a session is a mistake, not a policy. */
 export const MINIMUM_SESSION_LIFETIME_SECONDS = 60;
 
