@@ -4,8 +4,23 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Repo-wide source guard for the standing rule "snapshots are immutable
- * append-only: no `update`, no `delete`, no `upsert`, anywhere".
+ * Repo-wide source guard for the standing rule "an append-only table is never
+ * mutated: no `update`, no `delete`, no `upsert`, anywhere".
+ *
+ * 🛑 **IT COVERS BOTH APPEND-ONLY TABLES — `scored_bif_snapshots` AND
+ * `source_observations`** (ADR-0069: "append-only, matching the shipped snapshot
+ * discipline"). ⚠️ It began as the snapshot guard and was WIDENED rather than
+ * copied: two walks over the same tree asserting the same rule about two tables
+ * are two things that drift, and the copy that gets relaxed still passes its own
+ * tests.
+ *
+ * 🛑 **THE OBSERVATION HALF CLOSES A MEASURED GAP.** The receiver pattern named
+ * snapshots only, and `sourceObservation` contains none of the words it matched.
+ * A module calling `prisma.sourceObservation.updateMany(...)` and then
+ * `.deleteMany(...)` — rewriting and then destroying the record of what a source
+ * actually reported — passed **the whole repository**: 59 projects' tests,
+ * `typecheck` and `lint`, this guard included. ⚠️ Measured, by writing exactly
+ * that module and running exactly those three commands.
  *
  * WHAT ALREADY ENFORCED IT, AND WHERE THE HOLE WAS.
  *
@@ -43,7 +58,7 @@ const SCAN_ROOTS = ['packages', 'apps'];
  * deliberately — it inserts, and inserting is the one write this table allows.
  */
 const MUTATION =
-  /(snapshot|delegate|prisma)[a-z0-9_]*\s*\.\s*(update|upsert|delete|updateMany|deleteMany)\s*\(/i;
+  /(snapshot|observation|delegate|prisma)[a-z0-9_]*\s*\.\s*(update|upsert|delete|updateMany|deleteMany)\s*\(/i;
 
 /**
  * The repo has ~1,099 `.ts` files under `packages/` and `apps/` today. The
@@ -70,14 +85,14 @@ function allSourceFiles(): string[] {
   return SCAN_ROOTS.flatMap((root) => sourceFiles(join(REPO_ROOT, root)));
 }
 
-describe('scored BIF snapshots are append-only in source, repo-wide', () => {
+describe('the append-only tables are append-only in source, repo-wide', () => {
   it('finds the repository before asserting anything about it', () => {
     // Asserted first and separately: an empty walk must never be reportable as
     // compliance.
     expect(allSourceFiles().length).toBeGreaterThan(MINIMUM_FILES_SCANNED);
   });
 
-  it('calls no mutating Prisma method on a snapshot delegate anywhere', () => {
+  it('calls no mutating Prisma method on a snapshot or observation delegate anywhere', () => {
     const offenders: string[] = [];
     let filesScanned = 0;
 
@@ -109,6 +124,30 @@ describe('scored BIF snapshots are append-only in source, repo-wide', () => {
     expect(new Set(methods)).toEqual(new Set(['create', 'findUnique', 'findMany']));
   });
 
+  it('keeps the observation delegate to exactly its two non-mutating methods', () => {
+    // ⚠️ Reached across the package boundary on purpose. The rule is one rule;
+    // asserting half of it from over here and half from a sibling file is how
+    // the two halves start disagreeing.
+    const declaration = stripComments(
+      readFileSync(
+        join(
+          REPO_ROOT,
+          'packages',
+          'source-observation-persistence',
+          'src',
+          'source-observation-delegate.ts',
+        ),
+        'utf8',
+      ),
+    );
+    const start = declaration.indexOf('interface SourceObservationDelegate');
+    const body = declaration.slice(start, declaration.indexOf('\n}', start));
+    const methods = [...body.matchAll(/^\s{2}([a-zA-Z]+)\s*\(/gm)].map((match) => match[1]);
+
+    // Widening this interface IS the mutation, and would need its own ADR.
+    expect(new Set(methods)).toEqual(new Set(['create', 'findMany']));
+  });
+
   it('detects the thing it bans — the pattern is not vacuous', () => {
     /**
      * Assembled rather than written out, so this file stays INSIDE the scan
@@ -123,10 +162,16 @@ describe('scored BIF snapshots are append-only in source, repo-wide', () => {
     expect(MUTATION.test(call('snapshotDelegate', 'deleteMany'))).toBe(true);
     expect(MUTATION.test(call('this.delegate', 'upsert'))).toBe(true);
 
+    // ⚠️ The three shapes the observation half was blind to, named one by one.
+    expect(MUTATION.test(call('prisma.sourceObservation', 'updateMany'))).toBe(true);
+    expect(MUTATION.test(call('prisma.sourceObservation', 'deleteMany'))).toBe(true);
+    expect(MUTATION.test(call('this.observations', 'update'))).toBe(true);
+
     // …and does not fire on the ordinary collection calls a blanket ban would,
     // nor on the one write this table does allow.
     expect(MUTATION.test(call('seenIds', 'delete'))).toBe(false);
     expect(MUTATION.test(call('cache', 'update'))).toBe(false);
     expect(MUTATION.test(call('prisma.scoredBifSnapshot', 'create'))).toBe(false);
+    expect(MUTATION.test(call('prisma.sourceObservation', 'create'))).toBe(false);
   });
 });
