@@ -120,6 +120,70 @@ model OperatorSession {
   @@map("operator_sessions")
 }
 
+/// Account — WHO EXISTS (ADR-0079 slice 2 of §6).
+///
+/// AN IDENTITY, AND DELIBERATELY NOTHING ELSE. There is no credential column
+/// here and there is not going to be one: AGE's own code never compares a
+/// password (ADR-0061 A2), and ADR-0079 D3 — whether Google sign-in covers all
+/// three scopes or staff only — is still the owner's and is unanswered. A
+/// `passwordHash` field added "for later" is a field something eventually
+/// writes to.
+///
+/// NO ROLE HERE EITHER. What an account may reach is an `AccountMembership`,
+/// because the same person can be an agency operator in one organization and
+/// nothing at all in another. A role on the account would be a role everywhere,
+/// which is exactly the widening ADR-0079 §2 keeps out of the model.
+///
+/// AGE CANNOT CREATE ONE. The table holds `GRANT SELECT` and nothing else:
+/// issuing a SESSION is what ADR-0079 §3 overturned, and provisioning an
+/// ACCOUNT remains a human act performed out of band. `disabledAt` is how an
+/// account stops being usable; the row is never deleted, for the same reason a
+/// revoked session is not.
+model Account {
+  accountId   String  @id @map("account_id")
+  email       String  @unique(map: "accounts_email_key")
+  displayName String  @map("display_name")
+  createdAt   String  @map("created_at")
+  disabledAt  String? @map("disabled_at")
+
+  @@map("accounts")
+}
+
+/// AccountMembership — WHAT AN ACCOUNT MAY REACH, read per request.
+///
+/// SCOPE IS READ FROM THE DATABASE, NEVER FROM THE CREDENTIAL (ADR-0079 §2).
+/// The session carries no role, no `isAdmin` and no permission list (ADR-0062
+/// D3); it says who is asking, and this table says what that means today. A
+/// membership revoked a minute ago is therefore effective on the next request
+/// rather than at the next sign-in.
+///
+/// THE THREE SHAPES ARE ENFORCED BY A CHECK CONSTRAINT, not by this file.
+/// Prisma cannot express "a client membership must name a client and an agency
+/// membership must not", so the migration writes the constraint by hand and the
+/// live suite proves it rejects each malformed shape. A client membership that
+/// forgot its `clientId` would be an agency-wide membership wearing the word
+/// "client".
+///
+/// A PLATFORM MEMBERSHIP HAS A NULL `organizationId`, WHICH IS WHY IT IS
+/// INVISIBLE TO EVERY SCOPED READ. The RLS policy compares equality, and
+/// nothing equals NULL — so no tenant can discover that platform operators
+/// exist. `roleBundle` names a bundle from `@age/access-scope`; it is resolved
+/// to capability atoms once, at scope construction, and 🚫 no decision is ever
+/// taken against the name.
+model AccountMembership {
+  membershipId   String  @id @map("membership_id")
+  accountId      String  @map("account_id")
+  scopeKind      String  @map("scope_kind")
+  organizationId String? @map("organization_id")
+  clientId       String? @map("client_id")
+  roleBundle     String  @map("role_bundle")
+  createdAt      String  @map("created_at")
+  revokedAt      String? @map("revoked_at")
+
+  @@index([organizationId], map: "account_memberships_organization_idx")
+  @@map("account_memberships")
+}
+
 /// SourceObservation — what an external system OBSERVED (ADR-0069 §6, deliverable 2).
 ///
 /// THE THIRD CATEGORY, AND IT IS NOT THE OTHER TWO. A row here is neither what

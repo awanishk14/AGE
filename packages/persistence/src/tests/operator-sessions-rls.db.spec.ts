@@ -13,7 +13,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
  * and cleaning up between tests.
  *
  * 🛑 WHAT THIS PROVES AND WHAT IT DOES NOT. It proves the application role can
- * read only its own organization's sessions, that it cannot create or erase one,
+ * read only its own organization's sessions, that the session it MAY create
+ * (ADR-0079 §3) can only land inside the scope its transaction named, that it
+ * cannot erase one,
  * and that the ONE write it does hold — `revoked_at`, ADR-0074 D3 — reaches only
  * rows inside the scope the transaction named. It does
  * 🚫 NOT prove isolation as an authorization property — RLS is coherence
@@ -128,6 +130,35 @@ async function revokeAs(
   });
 }
 
+/**
+ * Issues as the application role, in the SHAPE the production issuance uses.
+ *
+ * ⚠️ **THE ORGANIZATION IS WRITTEN INTO THE ROW, 🚫 NEVER READ BACK OUT OF THE
+ * SETTING.** `operator-session-issuance.ts` builds the record first and sends
+ * every column explicitly; the `set_config` only SCOPES the transaction. A
+ * fixture that inserted `current_setting(...)` into `organization_id` would make
+ * the `WITH CHECK` policy tautologically true and could never fail.
+ */
+async function issueAs(
+  scopeOrganizationId: string | undefined,
+  sessionId: string,
+  rowOrganizationId: string,
+): Promise<void> {
+  await app.$transaction(async (tx) => {
+    if (scopeOrganizationId !== undefined) {
+      await tx.$executeRaw`SELECT set_config('age.organization_id', ${scopeOrganizationId}, true)`;
+    }
+
+    await tx.$executeRaw`
+      INSERT INTO "operator_sessions"
+        ("session_id", "organization_id", "account_id", "token_hash", "issued_at", "expires_at", "revoked_at")
+      VALUES (
+        ${sessionId}, ${rowOrganizationId}, 'operator-2', ${'c'.repeat(64)},
+        '2026-08-11T09:00:00.000Z', '2026-08-11T17:00:00.000Z', NULL
+      )`;
+  });
+}
+
 /** What the OWNER — who is not filtered by the policy — sees on one row. */
 async function revokedAtAsOwner(sessionId: string): Promise<string | null> {
   const rows = await owner.$queryRaw<Array<{ revokedAt: string | null }>>`
@@ -168,13 +199,20 @@ describe('the connected role is the one that can be constrained', () => {
     expect(rows[0]?.bypass).toBe(false);
   });
 
-  it('holds SELECT on the table and 🚫 nothing else', async () => {
+  /**
+   * ⚠️ **ADR-0079 §3 ADDED EXACTLY ONE PRIVILEGE HERE, AND THIS CASE IS WHY
+   * THE LIST IS EXACT RATHER THAN A CONTAINS-CHECK.** `INSERT` joined `SELECT`
+   * because AGE may now START a session. 🛑 `DELETE` did NOT, and neither did a
+   * table-wide `UPDATE` — the only update AGE holds is the column-scoped
+   * `UPDATE ("revoked_at")`, which 🚫 does not appear in this view at all.
+   */
+  it('holds SELECT and INSERT on the table and 🚫 nothing else', async () => {
     const rows = await app.$queryRaw<Array<{ privilege: string }>>`
       SELECT privilege_type AS "privilege"
       FROM information_schema.table_privileges
       WHERE table_name = 'operator_sessions' AND grantee = current_user`;
 
-    expect(rows.map((row) => row.privilege).sort()).toEqual(['SELECT']);
+    expect(rows.map((row) => row.privilege).sort()).toEqual(['INSERT', 'SELECT']);
   });
 });
 
@@ -215,19 +253,48 @@ describe('a scoped read sees its own organization, and only that', () => {
   });
 });
 
-describe('🛑 the application role cannot write a session — verification is not issuance', () => {
+/**
+ * 🛑 **WHAT ADR-0079 §3 CHANGED HERE, AND ONLY THIS.** This block used to be
+ * titled *"the application role cannot write a session"* and its first case
+ * asserted that an INSERT was rejected. The Product Owner accepted ADR-0079
+ * verbatim (§0.2), and its §3 replaces exactly one shipped refusal: *"AGE **may
+ * issue a session** after verifying an external identity. ⚠️ `GRANT INSERT` on
+ * the sessions table becomes necessary — 🛑 and the column-scoped
+ * `UPDATE ("revoked_at")` STAYS."*
+ *
+ * 🚫 **SO THE ASSERTION WAS NARROWED TO FOLLOW THE CHANGE, 🚫 NOT DELETED.**
+ * "Cannot INSERT" became "can INSERT only inside its own scope", which is a
+ * STRONGER thing to prove than the old case was: it needs the `WITH CHECK`
+ * policy to be present AND correct, where the old one passed on the mere
+ * absence of a grant. Everything else is untouched — 🚫 no DELETE, and 🚫 no
+ * UPDATE of any column but `revoked_at`.
+ */
+describe('🛑 the application role may START a session, and only inside its own scope', () => {
   beforeEach(async () => {
     await plant(MINE);
   });
 
-  it('🚫 cannot INSERT one', async () => {
-    await expect(
-      app.$executeRaw`
-        INSERT INTO "operator_sessions"
-          ("session_id", "organization_id", "account_id", "token_hash", "issued_at", "expires_at", "revoked_at")
-        VALUES ('forged', 'org-alpha', 'operator-2', ${'c'.repeat(64)},
-                '2026-08-11T09:00:00.000Z', '2026-08-11T17:00:00.000Z', NULL)`,
-    ).rejects.toThrow();
+  it('issues a session inside the scope the transaction named', async () => {
+    await issueAs('org-alpha', 'session-issued', 'org-alpha');
+
+    // 🛑 Counted by the OWNER, who is not filtered by the policy: a row the app
+    // role can no longer see would otherwise look like a row that never landed.
+    expect(await countAsOwner()).toBe(2);
+  });
+
+  it('🚫 cannot issue into another organization — the row is REFUSED, not re-scoped', async () => {
+    await expect(issueAs('org-alpha', 'session-forged', 'org-beta')).rejects.toThrow();
+
+    // ⚠️ The pairing that makes the rejection evidence: nothing landed anywhere,
+    // so the refusal is not a row quietly written into the caller's own tenancy.
+    expect(await countAsOwner()).toBe(1);
+  });
+
+  it('🛑 fails closed on an unscoped transaction — an unscoped session is refused', async () => {
+    // ⚠️ This is the case the `WITH CHECK` policy exists for, and it is LOUD
+    // where the unscoped UPDATE is silent: an INSERT that matches no policy
+    // raises, rather than affecting zero rows and looking like success.
+    await expect(issueAs(undefined, 'session-unscoped', 'org-alpha')).rejects.toThrow();
 
     expect(await countAsOwner()).toBe(1);
   });
@@ -240,6 +307,19 @@ describe('🛑 the application role cannot write a session — verification is n
     const rows = await owner.$queryRaw<Array<{ expiresAt: string }>>`
       SELECT "expires_at" AS "expiresAt" FROM "operator_sessions"`;
     expect(rows[0]?.expiresAt).toBe(MINE.expiresAt);
+  });
+
+  it('🚫 cannot re-tenant one by rewriting its organization', async () => {
+    // 🛑 The column grant is what refuses this, and it is worth its own case:
+    // an INSERT grant plus a table-wide UPDATE grant would let a caller move
+    // another tenant's session into its own scope in one statement.
+    await expect(
+      app.$executeRaw`UPDATE "operator_sessions" SET "organization_id" = 'org-beta'`,
+    ).rejects.toThrow();
+
+    const rows = await owner.$queryRaw<Array<{ organizationId: string }>>`
+      SELECT "organization_id" AS "organizationId" FROM "operator_sessions"`;
+    expect(rows[0]?.organizationId).toBe(MINE.organizationId);
   });
 
   it('🚫 cannot DELETE one — revocation is a column, never a missing row', async () => {

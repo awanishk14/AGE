@@ -14,6 +14,14 @@ import { describe, expect, it } from 'vitest';
  * and each of those is a decision an ADR refused by name. They are asserted in
  * the ordinary suite so the reversal has to argue with a red test on every PR.
  *
+ * ⚠️ **THE GRANT CASES BELOW ARE SCOPED TO THIS ONE MIGRATION FILE, AND THAT IS
+ * 🚫 NOT THE PRODUCT RULE.** What `age_app` may do to `operator_sessions` is a
+ * property of the whole migration SET — ADR-0074 D3 added a column-scoped UPDATE
+ * in a later file, and ADR-0079 §3 added an INSERT in a later one still. Those
+ * are asserted, exactly and across every migration, in
+ * `accounts-memberships-and-issuance-schema.spec.ts`. 🛑 Read these cases as
+ * *"this file grants nothing more than it did"*, 🚫 never as *"AGE cannot write"*.
+ *
  * 🚫 THIS IS NOT THE ISOLATION PROOF. Reading SQL never proves what PostgreSQL
  * does with it (ADR-0046 D5, and the reason the live suite connects as a
  * non-owner, NOBYPASSRLS role).
@@ -32,14 +40,29 @@ const MIGRATION = readFileSync(
  * must not satisfy a scan for that rule's violation. */
 const SQL = MIGRATION.replace(/^\s*--.*$/gm, '');
 
-/** The model block only, so `ScoredBifSnapshot`'s columns cannot answer for it. */
-const MODEL = SCHEMA.slice(SCHEMA.indexOf('model OperatorSession {'));
+/**
+ * The model block only, so 🚫 no OTHER model's columns can answer for it.
+ *
+ * ⚠️ **BOUNDED AT BOTH ENDS, AND IT HAS TO BE.** This used to slice from the
+ * model to the END OF THE FILE, which was correct only for as long as
+ * `OperatorSession` happened to be the last model in the schema. ADR-0079 added
+ * `AccountMembership` after it — a model that legitimately carries `role_bundle`
+ * and `client_id` — and every "the session row has no such column" case below
+ * would have started failing against a column that is 🚫 not on the session row
+ * at all. ⚠️ **A SCAN WIDER THAN ITS RULE IS AS WRONG AS ONE THAT IS NARROWER.**
+ */
+const MODEL_START = SCHEMA.indexOf('model OperatorSession {');
+const MODEL = SCHEMA.slice(MODEL_START, SCHEMA.indexOf('\n}', MODEL_START) + 2);
 
 describe('the migration file was read at all', () => {
   it('found both files, with content', () => {
     expect(SCHEMA.length).toBeGreaterThan(1000);
     expect(SQL).toContain('CREATE TABLE "operator_sessions"');
     expect(MODEL).toContain('@@map("operator_sessions")');
+    // 🛑 And the slice really ENDS: a MODEL that ran to the end of the file
+    // would let another model's columns satisfy — or violate — every case below.
+    expect(MODEL).not.toContain('model AccountMembership');
+    expect(SCHEMA).toContain('model AccountMembership');
   });
 });
 
