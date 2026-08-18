@@ -44,6 +44,58 @@ not an oversight, and 🚫 it must not be quietly worked around by planting a ro
 
 ---
 
+## 0.3 The remaining answers, verbatim (Product Owner, 2026-08-18)
+
+🛑 **D3, D4 AND D5 WERE OPEN WHEN THIS ADR WAS ACCEPTED.** ⚠️ Slice 3 cannot be built without D4 —
+a session must expire at some named instant — so the questions were put back to the owner in plain
+language before any of slice 3 was written. Their answers, exactly as given:
+
+**D4 — maximum session lifetime.** Asked as _"How long should someone stay signed in before they
+have to sign in again?"_, offered 8 hours / 12 hours / 7 days / different per scope. Answered:
+
+> _"8 hours (Recommended)"_
+
+⚠️ **READ AS: eight hours, the SAME for every scope** — the "different per scope" option was
+offered and 🚫 not taken. 🛑 The **12-hour ceiling in `session-lifetime.ts` STAYS** and 🚫 is not
+relaxed: eight hours is the lifetime AGE _asks_ for, the ceiling is the lifetime AGE will _permit_,
+and a chosen value that happens to sit under a bound 🚫 does not make the bound redundant.
+⚠️ _"Never expires"_ was never on the table and remains refused.
+
+**D3 — Google for all three scopes?** Answered:
+
+> _"Google for everyone (Recommended)"_
+
+⚠️ **READ AS: ONE sign-in path for platform, agency and client alike.** 🚫 No second credential
+kind, 🚫 no magic link, 🚫 no password — for anyone. A client therefore needs a Google account, and
+🛑 that is a **product** consequence the owner chose, 🚫 not an implementation detail. ⚠️ Slice 3
+still ships **staff first** (§6.3); what D3 settles is that the client path, when it arrives, is
+the SAME path — so 🚫 nothing in slice 3 may be shaped as "the staff-only way in".
+
+**The Google client itself.** Asked whether AGE has its own Google OAuth client. Answered:
+
+> _"rankops already has one, use same - E:\ai-powered-crm-projects\Rankops"_
+
+🛑 **READ AS: reuse the peer product's OAuth client ID and secret — and 🛑 THE VALUES ARE NEVER
+READ, DISPLAYED OR TYPED BY ANYONE.** ⚠️ The owner asked, fairly, why _they_ should have to paste
+it. **They should not, and they do not.** The transfer is done with `secretsafe pipe`, which
+streams a value from RankOps' env file straight into AGE's own `/etc/age-studio/*.env` over ssh
+**without the value ever reaching a terminal, a transcript or a log** — there is no code path in
+that tool that writes a secret to stdout. 🚫 The architect still never SEES the secret, which is
+the rule that matters; 🚫 and RankOps is not modified — the file is read by the tool, 🚫 never
+opened, and reading was already the only thing ever done to that repository.
+
+🛠️ **WHAT GENUINELY REMAINS THE OWNER'S, AND IT IS ONE CLICK:** adding AGE's redirect URI to that
+Google client in the Google console. ⚠️ That needs the owner's Google login, and 🚫 an agent does
+🚫 not sign in as them. ⚠️ **The risk was stated to the owner and the choice is theirs:** one client shared by
+two products means one leaked secret compromises both sign-ins, and whoever owns that Google
+project can revoke AGE's login. 🚫 Swapping to a dedicated client later changes two
+environment values and 🚫 no code — the design must keep it that way.
+
+**D5 — what a super admin sees — REMAINS OPEN.** ⚠️ It was 🚫 not asked, because it bears on the
+renderings (slice 5) and 🚫 nothing in slice 3 may assume an answer.
+
+---
+
 ## 1. 🛑 WHY THE OLD POSITION IS BEING OVERTURNED RATHER THAN DEFENDED
 
 ⚠️ AGE's shipped refusals — no client login, AGE mints nothing, a client is a subject — were written
@@ -188,8 +240,9 @@ nor an empty result**).
 
 - **D1.** Confirm §4's reading: **one snapshot, two renderings** (🚫 not two maintained documents).
 - **D2.** Confirm §5: **a client principal is READ-ONLY, permanently.**
-- **D3.** Google for **all three** scopes, or Google for staff and something else for clients?
-- **D4.** Maximum session lifetime, per scope. ⚠️ "Never expires" stays **refused**.
+- **D3.** ✅ **ANSWERED §0.3** — _"Google for everyone"_. One path for all three scopes.
+- **D4.** ✅ **ANSWERED §0.3** — _"8 hours"_, the same for every scope. 🛑 The 12-hour ceiling
+  STAYS. ⚠️ "Never expires" remains **refused**.
 - **D5.** Does a **super admin** see the agency rendering, the client rendering, or **both, labelled**?
   ⚠️ Recommended: **both, always labelled** — 🚫 an unlabelled view is how a candid line reaches a
   client by accident.
