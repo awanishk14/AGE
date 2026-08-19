@@ -282,6 +282,41 @@ describe('🛑 AGE mints nothing — a verified identity with no row is refused'
   });
 });
 
+describe('🛑 a platform operator is ADMITTED and still issued NOTHING (ADR-0082)', () => {
+  it('refuses at this edge rather than filing the session under the pinned tenant', async () => {
+    // 🛑 **THE FAILURE THIS PINS LOOKS LIKE A WORKING SIGN-IN.** Since ADR-0082
+    // slice B, `decideSignIn` ADMITS a platform operator, with
+    // `organizationId: null`. Issuance that can write a row without an
+    // organization does not exist yet, and the one-character version of
+    // shipping anyway — passing this deployment's pinned organization to
+    // `issueOperatorSession` — would file a platform operator's session under a
+    // TENANT. ⚠️ That is the substitution ADR-0082 D4 forbids, and 🚫 nothing
+    // downstream would ever report it.
+    world.entry = {
+      account: { accountId: 'account-fictional-operator', email: EMAIL, disabledAt: null },
+      memberships: [
+        {
+          membershipId: 'membership-fictional-platform',
+          accountId: 'account-fictional-operator',
+          scopeKind: 'platform',
+          organizationId: null,
+          clientId: null,
+          roleBundle: 'platform-admin',
+          revokedAt: null,
+        },
+      ],
+    };
+
+    const response = await callback(`?state=${STATE}&code=abc`);
+
+    expect(response.headers.get('Location')).toBe('/sign-in?refused=scope-not-served');
+    // 🛑 THE ASSERTION THAT MATTERS: 🚫 no row at all, and in particular 🚫 not
+    // one carrying `ORGANIZATION`.
+    expect(world.issued).toEqual([]);
+    expect(sessionCookie(response)).toBeUndefined();
+  });
+});
+
 describe('a provisioned operator is admitted, and the cookie matches the row', () => {
   it('issues one session and sets the cookie that points at it', async () => {
     const response = await callback(`?state=${STATE}&code=the-code`);
