@@ -78,5 +78,13 @@ CREATE POLICY "account_memberships_select_for_platform_sign_in" ON "account_memb
     USING (
         "account_memberships"."scope_kind" = 'platform'
         AND "account_memberships"."organization_id" IS NULL
+        -- ⚠️ **REVOKED ROWS STAY INVISIBLE HERE TOO**, matching the account
+        -- policy above rather than being one clause looser than it. 🚫 A revoked
+        -- membership is not a downgraded one, and no read in this product wants
+        -- to see one. ⚠️ The cost is named: a revoked platform operator is
+        -- refused as UNKNOWN rather than as REVOKED, because the database
+        -- declines to say which. That is the tighter fence, and 🚫 the refusal
+        -- shown to a person is the same either way.
+        AND "account_memberships"."revoked_at" IS NULL
         AND NULLIF(current_setting('age.platform_sign_in_email', true), '') IS NOT NULL
     );
