@@ -60,6 +60,28 @@ export function normalizeSessionRecord(row: unknown): SessionRecord {
     refuse('tokenHash', 'must be a SHA-256 digest — 64 lower-case hex characters');
   }
 
+  // 🛑 **THE MOST DANGEROUS ABSENCE IN THIS PRODUCT** (ADR-0083 D1). `null` is a
+  // PLATFORM session — the widest scope AGE has. So the key must be PRESENT and
+  // either a non-blank organization or exactly `null`; 🚫 `undefined` is refused
+  // here, because "the column was not read" turning into "this session belongs
+  // to no tenant" is a silent promotion, and it would look like a working
+  // sign-in. ⚠️ A blank string is refused too: it is neither a tenant nor the
+  // deliberate `null`.
+  if (!('organizationId' in source)) {
+    refuse('organizationId', 'must be present — an unread column is never a platform session');
+  }
+
+  const organizationId = source['organizationId'];
+  if (
+    organizationId !== null &&
+    (typeof organizationId !== 'string' || organizationId.trim() === '')
+  ) {
+    refuse(
+      'organizationId',
+      'must be an organization, or exactly `null` for a session that belongs to no tenant',
+    );
+  }
+
   const revokedAt = source['revokedAt'];
   if (revokedAt !== null && (typeof revokedAt !== 'string' || revokedAt.trim() === '')) {
     // ⚠️ `undefined` lands here on purpose. "The column was not read" must never
@@ -69,7 +91,7 @@ export function normalizeSessionRecord(row: unknown): SessionRecord {
 
   return {
     sessionId: requiredText(source, 'sessionId'),
-    organizationId: requiredText(source, 'organizationId'),
+    organizationId,
     accountId: requiredText(source, 'accountId'),
     tokenHash,
     issuedAt: requiredText(source, 'issuedAt'),

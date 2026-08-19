@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import type { OperatorSessionScopeRunner } from '@age/session-store-persistence';
@@ -49,6 +52,55 @@ function fakeRunner(
 }
 
 describe('operatorSessionIssuance', () => {
+  it('🛑 a session that belongs to NO organization is REFUSED, and 🚫 never written (ADR-0083)', async () => {
+    const log: string[] = [];
+    const delegate: OperatorSessionIssuanceDelegate = {
+      create: async () => {
+        log.push('create');
+        return {};
+      },
+    };
+
+    const issue = operatorSessionIssuance(fakeRunner(delegate, log), { organizationId: ORG });
+
+    // ⚠️ **REFUSED TWICE OVER, AND THE FIRST ONE WINS TODAY.** `issuedSessionRecord`
+    // already refuses an organization that is not a non-blank string, so the
+    // error here is the STORE's — that is the honest outcome to assert, 🚫 not
+    // the one I would prefer to see. The second refusal, inside this module, is
+    // asserted at the source level below: it is what stops a `null` from being
+    // filed under the scope the transaction happens to hold once ADR-0083's
+    // issuance slice makes such a record constructible.
+    await expect(
+      issue({ ...request(), organizationId: null } as unknown as ReturnType<typeof request>),
+    ).rejects.toThrow();
+
+    // 🛑 REFUSED BEFORE THE TRANSACTION, 🚫 not rolled back after it.
+    expect(log).toEqual([]);
+  });
+
+  it('🚫 does not file a null organization under the scope the caller holds', () => {
+    const source = readFileSync(join(__dirname, '..', 'operator-session-issuance.ts'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|[^:])\/\/.*$/gm, '$1');
+
+    // 🛑 THE ONE-LINE DANGEROUS ALTERNATIVE, REFUSED IN A TEST. Any of these
+    // would silently convert "this session has no tenant" into "this session
+    // belongs to whichever tenant the transaction already opened" — the
+    // substitution ADR-0082 D4 forbids.
+    for (const banned of [
+      'record.organizationId ?? scope.organizationId',
+      'record.organizationId ?? ',
+      'organizationId: scope.organizationId,',
+      'record.organizationId!',
+    ]) {
+      expect(`${banned}: ${source.includes(banned)}`).toBe(`${banned}: false`);
+    }
+
+    // ⚠️ And the refusal is PRESENT — a scan for what must be absent passes
+    // just as well on a file that lost the check entirely.
+    expect(source).toContain('record.organizationId === null');
+  });
+
   it('🛑 writes inside the scope — the scope is applied FIRST, by recorded order', async () => {
     const log: string[] = [];
     const delegate: OperatorSessionIssuanceDelegate = {

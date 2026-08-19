@@ -3,7 +3,7 @@ import {
   SessionStoreRefusedError,
   assessSession,
   hashSessionToken,
-  type VerifiedSession,
+  type SessionPrincipal,
 } from './session-record';
 
 /**
@@ -38,7 +38,12 @@ import {
  */
 
 export type SessionVerification =
-  | { readonly outcome: 'verified'; readonly session: VerifiedSession }
+  /**
+   * ⚠️ **THE PRINCIPAL, 🚫 NOT A SESSION** (ADR-0083 D1). A consumer must ask
+   * WHICH kind before it can read an organization, and a consumer that only
+   * serves tenants now says so in its own code rather than assuming it.
+   */
+  | { readonly outcome: 'verified'; readonly principal: SessionPrincipal }
   | {
       readonly outcome: 'unverified';
       readonly reason: 'malformed-token' | 'no-such-session' | 'revoked' | 'expired' | 'unreadable';
@@ -103,10 +108,10 @@ export async function verifyPresentedSessionToken(
 
   const assessment = assessSession(record, input.now);
 
-  // 🚫 `assessSession` is the ONLY way a record becomes a `VerifiedSession`, and
+  // 🚫 `assessSession` is the ONLY way a record becomes a verified principal, and
   // this module does not add a second. Revocation is checked before expiry
   // there, and that order is preserved by not re-deciding it here.
   return assessment.usable
-    ? Object.freeze({ outcome: 'verified' as const, session: assessment.session })
+    ? Object.freeze({ outcome: 'verified' as const, principal: assessment.principal })
     : unverified(assessment.reason);
 }

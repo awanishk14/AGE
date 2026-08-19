@@ -51,7 +51,20 @@ export type BoundaryRefusal =
    * ⚠️ A boundary that only handles the cases it believes possible is a boundary
    * that fails open the day one of them turns out to be possible.
    */
-  | 'organization-mismatch';
+  | 'organization-mismatch'
+  /**
+   * 🛑 The row verified, and it speaks for 🚫 NO organization — a PLATFORM
+   * principal (ADR-0083 D1). This console does not serve one YET, so it says so
+   * HERE, at the one composed edge, exactly as the sign-in callback declines to
+   * ISSUE one.
+   *
+   * ⚠️ **THIS IS A NARROWING, 🚫 NOT A WIDENED GUARD.** The organization check
+   * below is now written over the TENANT arm alone; a platform principal never
+   * reaches it and 🚫 must never be made to satisfy it by comparing an absent
+   * organization against the pinned one — that is the substitution ADR-0082 D4
+   * forbids. 🚫 Nothing became reachable that was not reachable before.
+   */
+  | 'platform-scope-not-yet-served';
 
 export type BoundaryDecision =
   | { readonly kind: 'admitted'; readonly session: VerifiedSession }
@@ -93,9 +106,15 @@ export function decideSessionBoundary(input: {
     return { kind: 'refused', reason: input.verification.reason };
   }
 
-  if (input.verification.session.organizationId !== input.lookupOrganizationId) {
+  const principal = input.verification.principal;
+
+  if (principal.scope === 'platform') {
+    return { kind: 'refused', reason: 'platform-scope-not-yet-served' };
+  }
+
+  if (principal.session.organizationId !== input.lookupOrganizationId) {
     return { kind: 'refused', reason: 'organization-mismatch' };
   }
 
-  return { kind: 'admitted', session: input.verification.session };
+  return { kind: 'admitted', session: principal.session };
 }
