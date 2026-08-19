@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -47,7 +47,7 @@ const sources = OWN_FILES.map(
 
 describe('the walk actually walked', () => {
   it('found every module of this package', () => {
-    expect(OWN_FILES.length).toBeGreaterThanOrEqual(4);
+    expect(OWN_FILES.length).toBeGreaterThanOrEqual(6);
   });
 });
 
@@ -88,9 +88,32 @@ describe('🛑 the scope is never optional and never defaulted', () => {
 
     // 🛑 One `set_config` line. Two is how the two drift, and the copy that gets
     // relaxed still passes its own tests.
-    expect(setters.map(([file]) => file.split(/[\\/]/).pop())).toEqual([
-      'directory-scope-runner.ts',
-    ]);
+    expect(setters.map(([file]) => basename(file))).toEqual(['directory-scope-runner.ts']);
+  });
+
+  it('sets `age.platform_sign_in_email` in exactly one file', () => {
+    // 🛑 ADR-0080 Option A's fence is ONE `set_config`, in the ONE runner that
+    // opens the platform transaction. A second writer of this setting is a
+    // second fence, and ⚠️ two fences are two chances to leave a gate open.
+    const setters = sources.filter(([, source]) => source.includes('age.platform_sign_in_email'));
+
+    expect(setters.map(([file]) => basename(file))).toEqual(['platform-directory-read.ts']);
+  });
+
+  it('🛑 keeps the two runners unconfusable — neither sets the other one’s setting', () => {
+    // ⚠️ THE RULE IS MUTUAL, AND A ONE-DIRECTION SCAN CANNOT SEE HALF OF IT. A
+    // tenant runner that also set the platform setting would carry the platform
+    // fence into every tenant request; a platform runner that also set
+    // `age.organization_id` would hand the platform reader one tenant's rows.
+    for (const [file, source] of sources) {
+      const base = basename(file);
+      if (base === 'directory-scope-runner.ts') {
+        expect(`${file}: ${source.includes('age.platform_sign_in_email')}`).toBe(`${file}: false`);
+      }
+      if (base === 'platform-directory-read.ts') {
+        expect(`${file}: ${source.includes('age.organization_id')}`).toBe(`${file}: false`);
+      }
+    }
   });
 
   it('🚫 offers no way to run unscoped', () => {
