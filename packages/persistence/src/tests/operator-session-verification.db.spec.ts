@@ -119,11 +119,18 @@ describe('a presented token, verified against the real store', () => {
 
     expect(verification.outcome).toBe('verified');
     if (verification.outcome !== 'verified') throw new Error('unreachable');
-    expect(verification.session.sessionId).toBe('session-fictional-live');
+    // ⚠️ **NARROWED TO THE TENANT ARM, 🚫 NOT CAST PAST IT** (ADR-0083 D1).
+    // A row read through the TENANT policy can only be a tenant principal — and
+    // the assertion below says so out loud, so a platform row arriving here
+    // would fail rather than be read as one.
+    expect(verification.principal.scope).toBe('tenant');
+    if (verification.principal.scope !== 'tenant') throw new Error('unreachable');
+
+    expect(verification.principal.session.sessionId).toBe('session-fictional-live');
     // 🛑 The session carries its OWN organization. 🚫 A caller's claim never
     // becomes the scope a later read runs under — `@age/entitled-read` derives
     // that from here (ADR-0062 D1).
-    expect(verification.session.organizationId).toBe(ORGANIZATION);
+    expect(verification.principal.session.organizationId).toBe(ORGANIZATION);
   });
 
   it('🚫 a token that was never minted is `no-such-session` — 🚫 not "invalid"', async () => {
