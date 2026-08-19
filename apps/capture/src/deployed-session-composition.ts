@@ -2,6 +2,8 @@ import { PrismaClient } from '@prisma/client';
 import {
   operatorSessionLookup,
   operatorSessionRevocation,
+  platformOperatorSessionLookup,
+  platformOperatorSessionRevocation,
   PrismaOperatorSessionScopeRunner,
   type OperatorSessionRevocationDelegate,
   type SessionRevocation,
@@ -70,6 +72,28 @@ export type { SessionRevocation };
 export interface SessionStoreConnection {
   /** ⚠️ A DIGEST, 🚫 never a token. The hashing happened before this layer. */
   readonly findByTokenHash: (organizationId: string, tokenHash: string) => Promise<unknown>;
+  /**
+   * The same read for a session that belongs to 🚫 NO organization — ADR-0083 D5.
+   *
+   * 🛑 **THERE IS NO ORGANIZATION PARAMETER, AND THAT IS THE POINT.** The
+   * fence is the digest itself, so 🚫 a caller cannot ask this question about a
+   * scope it is not already holding a credential for, and 🚫 cannot widen it by
+   * passing something else. ⚠️ A tenant row can 🚫 never come back from here:
+   * the policy also requires `organization_id IS NULL`.
+   */
+  readonly findPlatformByTokenHash: (tokenHash: string) => Promise<unknown>;
+  /**
+   * Ends one PLATFORM session, inside the digest fence it is presenting.
+   *
+   * ⚠️ The digest is the SCOPE and the session id is what is ended — two
+   * arguments because they are two facts, and 🚫 a logout that could name only
+   * one of them would be ending a session it is not holding.
+   */
+  readonly revokePlatform: (
+    presentedTokenHash: string,
+    sessionId: string,
+    revokedAt: string,
+  ) => Promise<SessionRevocation>;
   /** Ends one session. ⚠️ `revokedAt` is a parameter — this holds no clock. */
   readonly revoke: (
     organizationId: string,
@@ -102,8 +126,11 @@ export function openDeployedPrismaSessionConnection(
   return {
     findByTokenHash: (organizationId, tokenHash) =>
       operatorSessionLookup(readRunner, { organizationId })(tokenHash),
+    findPlatformByTokenHash: (tokenHash) => platformOperatorSessionLookup(readRunner)(tokenHash),
     revoke: (organizationId, sessionId, revokedAt) =>
       operatorSessionRevocation(revokeRunner, { organizationId })(sessionId, revokedAt),
+    revokePlatform: (presentedTokenHash, sessionId, revokedAt) =>
+      platformOperatorSessionRevocation(revokeRunner)(presentedTokenHash, sessionId, revokedAt),
     close: () => client.$disconnect(),
   };
 }

@@ -2,9 +2,10 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { readSessionCookie } from '@age/session-cookie';
-import type { VerifiedSession } from '@age/session-store';
+import { hashSessionToken, type VerifiedSession } from '@age/session-store';
 
 import {
+  revokePlatformSessionByDigest,
   revokeSessionById,
   sessionLookupOrganizationId,
   verifySessionToken,
@@ -97,7 +98,22 @@ export async function assessRequestSession(): Promise<BoundaryDecision> {
 export async function requireVerifiedSession(): Promise<VerifiedSession> {
   const decision = await assessRequestSession();
 
-  if (decision.kind === 'admitted') return decision.session;
+  if (decision.kind === 'admitted') {
+    // 🛑 **A PLATFORM PRINCIPAL IS ADMITTED AND STILL DOES NOT GET A TENANT
+    // PAGE.** 🚫 It is not "not signed in" — it is signed in, to a console
+    // whose sixteen pages render one agency's work. ADR-0083 authorizes the
+    // SHAPE of this principal and 🚫 explicitly not a rendering for it.
+    //
+    // ⚠️ The one-character alternative is to return
+    // `decision.principal.session` for both arms; the compiler refuses it,
+    // because a `VerifiedPlatformSession` has 🚫 no `organizationId` — which is
+    // the whole reason D1 chose a separate type over a nullable field.
+    if (decision.principal.scope === 'platform') {
+      redirect('/sign-in?refused=scope-not-served');
+    }
+
+    return decision.principal.session;
+  }
 
   if (decision.reason === 'deployment-not-configured') {
     // ⚠️ NAMES THE VARIABLE, 🚫 never a value. This is a misconfiguration of the
@@ -124,5 +140,31 @@ export async function endRequestSession(): Promise<'revoked' | 'already-ended'> 
 
   if (decision.kind !== 'admitted') return 'already-ended';
 
-  return revokeSessionById(decision.session.organizationId, decision.session.sessionId);
+  // 🛑 **BOTH PRINCIPALS CAN LOG OUT, AND THAT IS 🚫 NOT A SECOND
+  // REVOCATION RULE** (ADR-0083 D3). What differs is the SCOPE the one
+  // `updateMany` runs inside: a tenant, or the digest this request is already
+  // presenting. ⚠️ `assessSession` remains the only place revocation is READ,
+  // for both.
+  if (decision.principal.scope === 'platform') {
+    // ⚠️ **THE FENCE IS THE DIGEST OF THE TOKEN THIS REQUEST IS PRESENTING**
+    // (ADR-0083 D5), and it is re-derived from that token rather than carried
+    // on the principal: `VerifiedPlatformSession` holds `sessionId` and
+    // `accountId` and 🚫 deliberately no credential material. ⚠️ The hashing
+    // is `@age/session-store`'s one implementation, 🚫 not a second copy.
+    const token = await presentedToken();
+
+    // 🚫 An admitted principal presented a token by construction; if that ever
+    // stops being true, this ends nothing rather than ending something else.
+    if (token === undefined) return 'already-ended';
+
+    return revokePlatformSessionByDigest(
+      hashSessionToken(token),
+      decision.principal.session.sessionId,
+    );
+  }
+
+  return revokeSessionById(
+    decision.principal.session.organizationId,
+    decision.principal.session.sessionId,
+  );
 }

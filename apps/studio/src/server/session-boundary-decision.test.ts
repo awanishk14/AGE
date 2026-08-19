@@ -46,7 +46,7 @@ describe('decideSessionBoundary', () => {
         presentedCookie: TOKEN,
         verification: verified,
       }),
-    ).toEqual({ kind: 'admitted', session: verified.principal.session });
+    ).toEqual({ kind: 'admitted', principal: verified.principal });
   });
 
   it('🛑 refuses a console that was never told which organization it serves', () => {
@@ -97,31 +97,48 @@ describe('decideSessionBoundary', () => {
     ).toEqual({ kind: 'refused', reason: 'organization-mismatch' });
   });
 
-  it('🛑 refuses a PLATFORM principal, and 🚫 never as a mismatch (ADR-0083 D1)', () => {
-    // ⚠️ THE REASON MATTERS AS MUCH AS THE REFUSAL. Reporting this as
-    // `organization-mismatch` would say a row belonged to the wrong tenant,
-    // when in truth it belongs to none — and the operator would go looking for
-    // a membership that is not supposed to exist.
+  it('🛑 admits a PLATFORM principal AS a platform principal (ADR-0083 D1)', () => {
+    // ⚠️ **ADMITTED SAYS WHO, AND 🚫 STILL NOTHING ABOUT REACH.** What it
+    // must 🚫 never do is arrive wearing a tenant's clothes: the principal is
+    // handed back whole, so the caller has to narrow before it can read an
+    // organization — and on this arm there is none to read.
     expect(
       decideSessionBoundary({
         lookupOrganizationId: ORG,
         presentedCookie: TOKEN,
         verification: verifiedPlatform,
       }),
-    ).toEqual({ kind: 'refused', reason: 'platform-scope-not-yet-served' });
+    ).toEqual({ kind: 'admitted', principal: verifiedPlatform.principal });
   });
 
-  it('🚫 does not admit a platform principal by comparing an absent organization', () => {
+  it('🚫 admits a platform principal WITHOUT giving it an organization', () => {
     // 🛑 THE ONE-CHARACTER DANGEROUS ALTERNATIVE, REFUSED IN A TEST. If the
     // mismatch check were ever widened to treat "no organization" as "any
-    // organization", THIS is the call that would start being admitted.
+    // organization" — or if the pinned one were quietly copied onto this
+    // principal — THIS is the assertion that would start failing.
     const decision = decideSessionBoundary({
       lookupOrganizationId: ORG,
       presentedCookie: TOKEN,
       verification: verifiedPlatform,
     });
 
-    expect(decision.kind).toBe('refused');
+    expect(decision.kind).toBe('admitted');
+    if (decision.kind !== 'admitted') return;
+    expect(decision.principal.scope).toBe('platform');
+    expect(JSON.stringify(decision.principal)).not.toContain(ORG);
+    expect('organizationId' in decision.principal.session).toBe(false);
+  });
+
+  it('🛑 a TENANT principal in the wrong organization is STILL a mismatch', () => {
+    // ⚠️ The organization check was NARROWED to the tenant arm, 🚫 not deleted.
+    // This is the case that proves the narrowing did not take the rule with it.
+    expect(
+      decideSessionBoundary({
+        lookupOrganizationId: 'org-fictional-9',
+        presentedCookie: TOKEN,
+        verification: verified,
+      }),
+    ).toEqual({ kind: 'refused', reason: 'organization-mismatch' });
   });
 
   it('🚫 a missing verdict is never an admission', () => {

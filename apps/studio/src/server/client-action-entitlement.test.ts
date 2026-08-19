@@ -28,12 +28,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * describe, and the console would look as though it had accepted what was typed.
  */
 
-const requireVerifiedSession = vi.fn();
+const assessRequestSession = vi.fn();
+
+const admittedTenant = (session: Record<string, unknown>) => ({
+  kind: 'admitted' as const,
+  // ⚠️ Narrowed because the boundary hands back a PRINCIPAL since ADR-0083 D1.
+  // 🚫 A bare session here would be a shape the boundary cannot produce.
+  principal: { scope: 'tenant' as const, session },
+});
+
 const createClientRecord = vi.fn();
 const readDirectoryEntryByAccount = vi.fn();
 
 vi.mock('./session-boundary', () => ({
-  requireVerifiedSession: () => requireVerifiedSession(),
+  assessRequestSession: () => assessRequestSession(),
 }));
 
 vi.mock('./operator-environment', () => ({
@@ -84,14 +92,16 @@ function formFor(organizationId: string): FormData {
 
 describe('creating a business inside the organization the session covers', () => {
   beforeEach(() => {
-    requireVerifiedSession.mockReset();
+    assessRequestSession.mockReset();
     createClientRecord.mockReset();
     readDirectoryEntryByAccount.mockReset();
-    requireVerifiedSession.mockResolvedValue({
-      sessionId: 'session-fictional-1',
-      organizationId: SESSION_ORGANIZATION,
-      accountId: ACCOUNT,
-    });
+    assessRequestSession.mockResolvedValue(
+      admittedTenant({
+        sessionId: 'session-fictional-1',
+        organizationId: SESSION_ORGANIZATION,
+        accountId: ACCOUNT,
+      }),
+    );
     readDirectoryEntryByAccount.mockResolvedValue(agencyDirectoryEntry(SESSION_ORGANIZATION));
     createClientRecord.mockReturnValue({ kind: 'created' });
   });
@@ -143,9 +153,9 @@ describe('creating a business inside the organization the session covers', () =>
 
   it('🛑 establishes the session BEFORE it writes, on the happy path as well', async () => {
     const order: string[] = [];
-    requireVerifiedSession.mockImplementation(async () => {
+    assessRequestSession.mockImplementation(async () => {
       order.push('boundary');
-      return { organizationId: SESSION_ORGANIZATION };
+      return admittedTenant({ organizationId: SESSION_ORGANIZATION });
     });
     createClientRecord.mockImplementation(() => {
       order.push('write');
