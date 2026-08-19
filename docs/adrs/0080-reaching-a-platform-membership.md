@@ -1,8 +1,8 @@
 # ADR-0080 — Reaching a platform membership: how the super-admin signs in
 
-Status: **Proposed** (2026-08-18) — 🛑 **THIS AUTHORIZES NOTHING.** It is a decision request for the
-Product Owner. 🚫 It was not self-accepted, and 🚫 no code in this repository may cite it as
-authority until a **separate** PR flips this line carrying the owner's words verbatim.
+Status: **Accepted** (2026-08-19) — **OPTION A.** Accepted by the Product Owner, whose words are
+recorded verbatim in §6 below. 🚫 This was not self-accepted: the proposal was PR #385 and this
+line was flipped by a separate PR carrying the owner's answer.
 
 Depends on: ADR-0079 (three scopes, and the sign-in it authorized) · ADR-0046 **D5** (RLS is
 coherence, 🚫 not authorization) · ADR-0076 (container isolation).
@@ -112,3 +112,61 @@ choice is the decision.
 
 🛑 **Until a separate PR records the owner's answer verbatim, the honest state of the product is the
 one shipped: a platform membership is refused by name, and the screen says so.**
+
+---
+
+## 6. The Product Owner's decision (2026-08-19)
+
+Asked §4's question — _"Today, the super-admin account cannot log in. Which do you want?"_ — the
+owner answered, **verbatim and in full**:
+
+> super admin should be able to sign in, make awanishkumar0009@gmail.com a superadmin and can use
+> google aoth only yo login in
+
+⚠️ Reproduced exactly as written, typos included. 🚫 It is not tidied, and 🚫 nothing is read into
+it that it does not say.
+
+### What that settles
+
+- **D1 = Option A.** _"super admin should be able to sign in"_ is §4's choice **2**, "build the
+  super-admin login path now". 🛑 It is 🚫 **NOT** option 3: the owner did not take the "pretend
+  organization" shortcut, and §3 Option B stays refused — it would make every platform operator's
+  address readable inside every tenant-scoped transaction in the product.
+- **D2 does not arise.** It was conditional on Option C, which was not taken.
+- **Google only.** _"can use google aoth only yo login in"_ — 🛑 there is to be **no password path
+  for the super-admin**, and there is none in the product today. 🚫 This ADR does 🚫 not authorize one,
+  and 🚫 no later slice may add one by citing this ADR.
+
+### D3, decided by the architect under the standing autonomy grant
+
+⚠️ **The owner did 🚫 NOT answer D3, and this is the architect's decision, 🚫 not theirs.** It is
+recorded separately so it can be overturned without disturbing the words above.
+
+**The fenced reader reads `accounts` as well as `account_memberships`,** and 🚫 nothing else.
+
+The alternative in D3 — read the membership unscoped, then re-read the account **in scope** — is
+**not available for a platform membership**: that membership's `organization_id` **IS NULL**, so
+there is no scope to re-read it in. ⚠️ Choosing it anyway would mean inventing a scope to perform
+the re-read, which is Option B wearing a different hat.
+
+🛑 **The fence, which is the whole of what makes this Option A and 🚫 not a widened policy:**
+
+- It is reachable from **exactly one caller**, the sign-in callback, pinned by a guard by full path.
+- It runs **only after Google has verified an address**, and takes that address as its only input.
+- It reads **two tables and no others** — 🚫 no snapshots, 🚫 no clients, 🚫 no organizations.
+- It **writes nothing, to nothing, ever.** 🛑 AGE mints nothing; this reads rows a human
+  provisioned.
+- 🚫 The tenant-scoped reader is **unchanged**. Nothing already shipped gets wider, and the
+  structural invisibility §1 describes still holds for every other caller in the product.
+
+⚠️ **The blast radius of a defect here is "who the platform operators are", 🚫 never client
+data** — stated in §3 before the decision, and unchanged by it.
+
+### 🛠️ What this ADR still does 🚫 NOT authorize
+
+- 🚫 **No rendering.** ADR-0079 §4's two renderings are untouched; this is only about being let in.
+  A platform operator who signs in sees what the console already shows, 🚫 nothing more.
+- 🚫 **No provisioning path.** 🛑 Making `awanishkumar0009@gmail.com` a super-admin is a **human
+  act** against the deployed store — 🚫 not a feature, 🚫 not a script that ships, and 🚫 not
+  something AGE does for itself.
+- 🚫 **No peer→AGE direction** (ADR-0076 D8), which remains open and the owner's.
