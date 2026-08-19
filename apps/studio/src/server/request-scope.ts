@@ -2,15 +2,16 @@ import { notFound, redirect } from 'next/navigation';
 
 import {
   decideAccess,
+  platformScope,
   scopeForMembership,
   type AccessScope,
   type Capability,
 } from '@age/access-scope';
-import type { VerifiedSession } from '@age/session-store';
+import type { SessionPrincipal, VerifiedSession } from '@age/session-store';
 import { decideSignIn } from '@age/sign-in-directory';
 
 import { readDirectoryEntryByAccount } from './operator-environment';
-import { requireVerifiedSession } from './session-boundary';
+import { assessRequestSession } from './session-boundary';
 
 /**
  * **THE SCOPE BOUNDARY** — ADR-0079 §6 slice 4, and the thing that makes
@@ -51,8 +52,31 @@ import { requireVerifiedSession } from './session-boundary';
  * no database and no environment of its own.
  */
 
-/** What a request has proved: who is asking, and how far they can see. */
+/**
+ * What a request has proved: who is asking, and how far they can see.
+ *
+ * 🛑 **THE PRINCIPAL, 🚫 NOT A SESSION** (ADR-0083 D1). A caller that wants
+ * an organization has to NARROW to the tenant arm to get one, because the
+ * platform arm ❌ does not have the field. ⚠️ That is the whole reason option B
+ * was chosen over a nullable column: the check cannot be forgotten, because
+ * there is nothing to forget to check.
+ */
 export interface ScopedRequest {
+  readonly principal: SessionPrincipal;
+  readonly scope: AccessScope;
+}
+
+/**
+ * What a request has proved once it has passed {@link requireScopedAccess}.
+ *
+ * 🛑 **THE TENANT IS IN THE TYPE, BECAUSE THE GATE ALREADY PROVED IT.** The
+ * fourteen actions behind that gate read `scoped.session.organizationId`, and
+ * their code has ❌ not moved a byte across ADR-0083 (D2) — not because the
+ * change was avoided, but because a caller past a gate that refuses a platform
+ * principal provably holds a tenant one. ⚠️ The narrowing happens ONCE, at the
+ * gate, 🚫 rather than fourteen times behind it.
+ */
+export interface TenantScopedRequest {
   readonly session: VerifiedSession;
   readonly scope: AccessScope;
 }
@@ -65,7 +89,36 @@ export interface ScopedRequest {
  * {@link requireScopedAccess} — knowing your own scope is not permission.
  */
 export async function requireRequestScope(): Promise<ScopedRequest> {
-  const session = await requireVerifiedSession();
+  const decision = await assessRequestSession();
+
+  // ⚠️ The same destination `requireVerifiedSession` sends a refusal to, and
+  // 🚫 for the same reason: what was wrong with a credential is not a thing an
+  // unauthenticated caller is told.
+  if (decision.kind !== 'admitted') redirect('/sign-in');
+
+  const principal = decision.principal;
+
+  // 🛑 **THE BRANCH BETWEEN THE TWO PRINCIPALS, AND ADR-0083 D4 SAYS IT LIVES
+  // HERE AND NOWHERE ELSE.** `platformScope()` takes no arguments and is
+  // reachable only BY NAME — 🚫 never by parsing a row, which
+  // `scopeForMembership` refuses outright. So this line is the only way a
+  // platform scope can come into existence in the product, and it is reached
+  // only by a principal the store already verified as having no organization.
+  //
+  // 🚫 **NO DIRECTORY READ HAPPENS ON THIS ARM, AND THAT IS 🚫 NOT AN
+  // OVERSIGHT.** The tenant re-read below exists to catch a membership revoked
+  // since sign-in; the equivalent for a platform operator is a read this
+  // console does ❌ not have — `readDirectoryEntryByAccount` is scoped by
+  // organization, and there is none. ⚠️ Passing the pinned organization here
+  // to "make the re-read work" is exactly the substitution ADR-0082 D4 forbids.
+  // 🛑 The gap is REAL and is named in the checkpoint rather than papered over:
+  // a platform membership revoked mid-session is caught at token expiry, 🚫 not
+  // on the next request.
+  if (principal.scope === 'platform') {
+    return Object.freeze({ principal, scope: platformScope() });
+  }
+
+  const session = principal.session;
 
   const entry = await readDirectoryEntryByAccount(session.organizationId, session.accountId);
 
@@ -99,7 +152,7 @@ export async function requireRequestScope(): Promise<ScopedRequest> {
     redirect('/sign-in?refused=not-provisioned');
   }
 
-  return Object.freeze({ session, scope: scoped.scope });
+  return Object.freeze({ principal, scope: scoped.scope });
 }
 
 /**
@@ -118,13 +171,31 @@ export async function requireRequestScope(): Promise<ScopedRequest> {
 export async function requireScopedAccess(
   capability: Capability,
   clientId: string | null,
-): Promise<ScopedRequest> {
+): Promise<TenantScopedRequest> {
   const scoped = await requireRequestScope();
+
+  // 🛑 **A PLATFORM PRINCIPAL IS REFUSED HERE, BY NAME, AND 🚫 NOT BECAUSE IT
+  // LACKS THE CAPABILITY.** `platformScope()` holds every atom; what it does not
+  // have is a SUBJECT — `decideAccess` compares a scope against an agency, and
+  // this principal speaks for none. ⚠️ The tempting one-liner is to pass the
+  // deployment's pinned organization as `agencyId`; that would answer a question
+  // about a tenant nobody named, and ADR-0083 authorizes the SHAPE of this
+  // principal and 🚫 explicitly **not a reach** for it.
+  //
+  // ⚠️ **THIS IS A NARROWING, 🚫 NOT A WIDENED GUARD.** Before this slice a
+  // platform principal could not be admitted at all; after it, it is admitted,
+  // knows its own scope, and still reaches nothing. 🚫 Nothing became reachable
+  // that was not reachable before.
+  if (scoped.principal.scope === 'platform') {
+    notFound();
+  }
+
+  const session = scoped.principal.session;
 
   const decision = decideAccess({
     scope: scoped.scope,
     capability,
-    subject: { agencyId: scoped.session.organizationId, clientId },
+    subject: { agencyId: session.organizationId, clientId },
   });
 
   if (decision.answer === 'refused') {
@@ -134,5 +205,5 @@ export async function requireScopedAccess(
     notFound();
   }
 
-  return scoped;
+  return Object.freeze({ session, scope: scoped.scope });
 }

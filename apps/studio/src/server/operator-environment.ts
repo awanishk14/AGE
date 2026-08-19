@@ -430,9 +430,42 @@ export function verifySessionToken(
   return withSessionStore((store) =>
     verifyPresentedSessionToken({
       presentedToken,
-      findRowByTokenHash: (tokenHash) => store.findByTokenHash(organizationId, tokenHash),
+      // 🛑 **THE ONE COMPOSED READER, AND THE TWO CHANNELS ARE 🚫 NOT MERGED
+      // ANYWHERE ELSE** (ADR-0083 D5). Two reads, two fences, one after the
+      // other: the tenant policy compares an organization, the platform policy
+      // compares this digest against `organization_id IS NULL`. 🚫 Neither can
+      // return the other's row, so the order is not a precedence — at most one
+      // of them can answer at all.
+      //
+      // ⚠️ **`?? await` AND 🚫 NOT `||`.** A row is an object; the falsy
+      // values here are `null` and `undefined` alone, and a `||` would re-ask
+      // the second question about a row that legitimately came back empty in
+      // some other sense.
+      findRowByTokenHash: async (tokenHash) =>
+        (await store.findByTokenHash(organizationId, tokenHash)) ??
+        (await store.findPlatformByTokenHash(tokenHash)),
       now: new Date(),
     }),
+  );
+}
+
+/**
+ * Ends one PLATFORM session — ADR-0083 D5.
+ *
+ * 🛑 **THE DIGEST IS THE SCOPE, 🚫 NOT A SECOND IDENTIFIER OF THE ROW.** A
+ * platform session has no organization to be narrowed by, so the transaction is
+ * fenced on the digest the request is already presenting — which means 🚫 a
+ * caller cannot end a session it is not holding, and 🚫 cannot end a set.
+ *
+ * ⚠️ **IT IS THE SAME `updateMany` AND THE SAME TWO OUTCOMES** (ADR-0083 D3).
+ * 🚫 Revocation did not acquire a second implementation; the SCOPE did.
+ */
+export function revokePlatformSessionByDigest(
+  presentedTokenHash: string,
+  sessionId: string,
+): Promise<SessionRevocation> {
+  return withSessionStore((store) =>
+    store.revokePlatform(presentedTokenHash, sessionId, new Date().toISOString()),
   );
 }
 

@@ -22,7 +22,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * disclosed, and disclosure is what a tenant boundary exists to stop.
  */
 
-const requireVerifiedSession = vi.fn();
+const assessRequestSession = vi.fn();
+
+const admittedTenant = (session: Record<string, unknown>) => ({
+  kind: 'admitted' as const,
+  // ⚠️ Narrowed because the boundary hands back a PRINCIPAL since ADR-0083 D1.
+  // 🚫 A bare session here would be a shape the boundary cannot produce.
+  principal: { scope: 'tenant' as const, session },
+});
+
 const readStoredSnapshot = vi.fn();
 const readDirectoryEntryByAccount = vi.fn();
 const notFound = vi.fn(() => {
@@ -38,7 +46,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('./session-boundary', () => ({
-  requireVerifiedSession: () => requireVerifiedSession(),
+  assessRequestSession: () => assessRequestSession(),
 }));
 
 vi.mock('./operator-environment', () => ({
@@ -77,7 +85,7 @@ function entry(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  requireVerifiedSession.mockReset();
+  assessRequestSession.mockReset();
   readStoredSnapshot.mockReset();
   readDirectoryEntryByAccount.mockReset();
   notFound.mockClear();
@@ -86,11 +94,13 @@ beforeEach(() => {
   // ⚠️ A VALID SESSION IN EVERY CASE, INCLUDING THE REFUSED ONES. If the session
   // were the thing being invalidated, these tests would prove only that the
   // ADR-0074 boundary still works — which was never in doubt.
-  requireVerifiedSession.mockResolvedValue({
-    sessionId: 'session-fictional-1',
-    organizationId: SESSION_ORGANIZATION,
-    accountId: ACCOUNT,
-  });
+  assessRequestSession.mockResolvedValue(
+    admittedTenant({
+      sessionId: 'session-fictional-1',
+      organizationId: SESSION_ORGANIZATION,
+      accountId: ACCOUNT,
+    }),
+  );
   readStoredSnapshot.mockResolvedValue({ kind: 'found' });
 });
 

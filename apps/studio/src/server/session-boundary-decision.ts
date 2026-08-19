@@ -1,4 +1,4 @@
-import type { SessionVerification, VerifiedSession } from '@age/session-store';
+import type { SessionPrincipal, SessionVerification } from '@age/session-store';
 
 /**
  * The session boundary's DECISIONS — ADR-0074 §7 slice 2.
@@ -53,21 +53,30 @@ export type BoundaryRefusal =
    */
   | 'organization-mismatch'
   /**
-   * 🛑 The row verified, and it speaks for 🚫 NO organization — a PLATFORM
-   * principal (ADR-0083 D1). This console does not serve one YET, so it says so
-   * HERE, at the one composed edge, exactly as the sign-in callback declines to
-   * ISSUE one.
+   * 🛑 The row verified as a PLATFORM principal, and the page being asked for
+   * is a TENANT page (ADR-0083 D1).
    *
-   * ⚠️ **THIS IS A NARROWING, 🚫 NOT A WIDENED GUARD.** The organization check
-   * below is now written over the TENANT arm alone; a platform principal never
-   * reaches it and 🚫 must never be made to satisfy it by comparing an absent
-   * organization against the pinned one — that is the substitution ADR-0082 D4
-   * forbids. 🚫 Nothing became reachable that was not reachable before.
+   * ⚠️ **THIS IS A REFUSAL BY `requireVerifiedSession`, 🚫 NOT BY THE
+   * BOUNDARY.** The boundary now ADMITS a platform principal — it is a real
+   * principal, and pretending otherwise is what forced the old
+   * `platform-scope-not-yet-served`. What has 🚫 not been authorized is a
+   * platform RENDERING (ADR-0083 §"what this does not authorize"), so the
+   * sixteen tenant pages, whose type has not moved a byte, refuse it here.
+   *
+   * 🚫 **THE FIX IS NEVER TO COMPARE AN ABSENT ORGANIZATION AGAINST THE PINNED
+   * ONE.** That is the substitution ADR-0082 D4 forbids, and it would read as a
+   * working page.
    */
-  | 'platform-scope-not-yet-served';
+  | 'platform-principal-on-a-tenant-page';
 
 export type BoundaryDecision =
-  | { readonly kind: 'admitted'; readonly session: VerifiedSession }
+  /**
+   * 🛑 **THE PRINCIPAL, 🚫 NOT THE SESSION** (ADR-0083 D1). A platform
+   * principal is its own type with 🚫 no organization field at all, so there is
+   * nothing here for a caller to read an absent tenant out of — it has to
+   * NARROW, and the compiler makes it.
+   */
+  | { readonly kind: 'admitted'; readonly principal: SessionPrincipal }
   | { readonly kind: 'refused'; readonly reason: BoundaryRefusal };
 
 /**
@@ -108,13 +117,22 @@ export function decideSessionBoundary(input: {
 
   const principal = input.verification.principal;
 
-  if (principal.scope === 'platform') {
-    return { kind: 'refused', reason: 'platform-scope-not-yet-served' };
-  }
-
-  if (principal.session.organizationId !== input.lookupOrganizationId) {
+  // 🛑 **THE ORGANIZATION CHECK IS WRITTEN OVER THE TENANT ARM ALONE, AND THE
+  // NARROWING IS THE COMPILER'S.** A platform principal has 🚫 no
+  // `organizationId` to compare, so this is not a case that was skipped — it is
+  // a case that cannot be expressed. ⚠️ A future edit that reached for
+  // `input.lookupOrganizationId` on the platform arm would be filing a platform
+  // principal under the pinned tenant, which ADR-0082 D4 forbids by name.
+  if (
+    principal.scope === 'tenant' &&
+    principal.session.organizationId !== input.lookupOrganizationId
+  ) {
     return { kind: 'refused', reason: 'organization-mismatch' };
   }
 
-  return { kind: 'admitted', session: principal.session };
+  // ⚠️ **ADMITTED SAYS WHO, AND STILL 🚫 NOTHING ABOUT REACH.** A platform
+  // principal is admitted HERE and is refused by `requireVerifiedSession`, which
+  // serves tenant pages — admission and rendering are two decisions, and
+  // collapsing them is how the wrong one gets relaxed.
+  return { kind: 'admitted', principal };
 }
