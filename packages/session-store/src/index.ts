@@ -61,4 +61,9 @@ export {
  * 🚫 **ISSUING A SESSION IS NOT PROVISIONING AN ACCOUNT.** ADR-0079 overturned
  * one refusal, and the `accounts` table holds `GRANT SELECT` alone.
  */
-export { issuedSessionRecord, type SessionIssuanceRequest } from './session-issuance';
+export {
+  issuedSessionRecord,
+  platformIssuedSessionRecord,
+  type PlatformSessionIssuanceRequest,
+  type SessionIssuanceRequest,
+} from './session-issuance';

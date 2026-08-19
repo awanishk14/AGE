@@ -157,8 +157,13 @@ describe('🛑 a session is written in exactly two named modules, product-wide',
     // ⚠️ Asserted POSITIVELY too, and PER EXEMPTION: an exemption whose file
     // stopped containing the thing it was exempted for is an exemption nobody
     // would notice had become a hole.
-    expect(permittedWrites.get(REVOCATION_MODULE)).toBe(1);
-    expect(permittedWrites.get(ISSUANCE_MODULE)).toBe(1);
+    // ⚠️ **TWO SINCE ADR-0083 D5, AND THE NUMBER IS EXACT.** Each module now
+    // holds the SAME verb twice — once under a tenant scope, once under the
+    // digest fence a platform session runs in. 🚫 That is a second SCOPE, not a
+    // second place a session is written, and the count is pinned rather than
+    // relaxed to `toBeGreaterThan` so a THIRD call still fails here.
+    expect(permittedWrites.get(REVOCATION_MODULE)).toBe(2);
+    expect(permittedWrites.get(ISSUANCE_MODULE)).toBe(2);
   });
 
   it('🚫 keeps the revocation module to revocation — it may not create or delete', () => {

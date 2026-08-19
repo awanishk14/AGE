@@ -45,7 +45,13 @@ function fakeRunner(
 ): OperatorSessionScopeRunner<OperatorSessionIssuanceDelegate> {
   return {
     async runInScope(scope, operation) {
-      log.push(`scope:${scope.organizationId}`);
+      // ⚠️ Narrowed because the scope is a UNION since ADR-0083 D5. 🚫 A
+      // cast here would let a platform scope reach this path unnoticed.
+      log.push(
+        'platformSessionTokenHash' in scope
+          ? `platform-scope:${scope.platformSessionTokenHash}`
+          : `scope:${scope.organizationId}`,
+      );
       return operation(delegate);
     },
   };

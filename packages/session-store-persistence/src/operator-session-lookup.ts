@@ -62,3 +62,34 @@ export function operatorSessionLookup(
       return row;
     });
 }
+
+/**
+ * The same read, for a session that belongs to no organization — ADR-0083 **D5**.
+ *
+ * 🛑 **THE SCOPE IS NOT BOUND AT CONSTRUCTION, AND THAT IS THE DIFFERENCE
+ * THAT MATTERS.** The tenant lookup is handed an organization by whoever knows
+ * the scope, once. A platform session has no organization to be handed, so the
+ * fence is the digest being presented — which means the scope cannot be
+ * supplied by a caller at all: it IS the argument, and it is the same value the
+ * query then matches on. ⚠️ A caller therefore cannot name a scope it is not
+ * already inside, because naming one requires holding the credential it fences.
+ *
+ * 🚫 **IT REACHES EXACTLY ONE ROW, AND 🚫 NEVER ANOTHER PRINCIPAL'S.** The
+ * policy also requires `organization_id IS NULL`, so this read cannot return a
+ * TENANT row even if a digest collided — and a tenant read cannot return this
+ * one, because its policy compares an organization a NULL row never matches.
+ *
+ * ⚠️ Everything else is identical on purpose: `findUnique`, the row returned
+ * RAW as `unknown`, and `null` travelling as `null`. 🚫 None of the decisions
+ * this module refuses to make have been re-made here.
+ */
+export function platformOperatorSessionLookup(
+  runner: OperatorSessionScopeRunner,
+): (tokenHash: string) => Promise<unknown> {
+  return async (tokenHash: string): Promise<unknown> =>
+    runner.runInScope({ platformSessionTokenHash: tokenHash }, async (sessions) => {
+      const row: unknown = await sessions.findUnique({ where: { tokenHash } });
+
+      return row;
+    });
+}

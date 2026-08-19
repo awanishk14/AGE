@@ -41,9 +41,11 @@ export {
   type OperatorSessionScopeRunner,
   type OperatorSessionScopeTransaction,
   type OperatorSessionTransactionSource,
+  type PlatformSessionScope,
+  type SessionScope,
 } from './operator-session-scope-runner';
 
-export { operatorSessionLookup } from './operator-session-lookup';
+export { operatorSessionLookup, platformOperatorSessionLookup } from './operator-session-lookup';
 
 /**
  * 🛑 **ENDING A SESSION IS NOT STARTING ONE** (ADR-0074 §7 slice 2). The header
@@ -59,6 +61,7 @@ export { operatorSessionLookup } from './operator-session-lookup';
  */
 export {
   operatorSessionRevocation,
+  platformOperatorSessionRevocation,
   type OperatorSessionRevocationDelegate,
   type SessionRevocation,
 } from './operator-session-revocation';

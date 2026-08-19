@@ -21,6 +21,7 @@
 
 export {
   operatorSessionIssuance,
+  platformOperatorSessionIssuance,
   SessionIssuanceRefusedError,
   type IssuedSession,
   type OperatorSessionIssuanceDelegate,
