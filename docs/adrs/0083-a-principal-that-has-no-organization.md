@@ -1,10 +1,15 @@
 # ADR-0083 — A principal that has no organization
 
-Status: **Proposed** (2026-08-19)
+Status: **Accepted** (2026-08-19) — **OPTION B.** Accepted by the Product Owner, whose words are
+recorded verbatim in §5 and are the whole of what they decided. ⚠️ They answered **D1**; D2–D5 remain
+the architect's under the standing autonomy grant, and 🚫 acceptance of this ADR is 🚫 NOT
+corroboration of them.
 
-> 🛑 **A `Proposed` ADR AUTHORIZES NOTHING.** It is a decision request. 🚫 It will not be
-> self-accepted: the owner answers §4, and a **separate** PR flips this line carrying their words
-> verbatim (operating constitution §3.3).
+> 🛠️ **THIS ADR IS NOW ACCEPTED, AND §6 IS WHAT IT AUTHORIZES — 🚫 NOTHING BEYOND IT.** It was
+> opened as `Proposed` in PR #401 and the status is flipped here, in a **separate** PR carrying the
+> owner's words, as §3.3 of the operating constitution requires. ⚠️ The closing section still
+> stands: what is authorized is the **shape of a principal**, 🚫 not a rendering, 🚫 not a reach,
+> 🚫 not a deployment.
 
 Depends on: ADR-0082 (**Accepted**, Option A — the session row may have no organization; slices A
 and B merged at `8dd8c27` and `cd41863`) · ADR-0079 (three scopes; `platformScope()` takes no
@@ -134,15 +139,24 @@ risk into code that already works.
 
 ---
 
-## 5. The Product Owner's decision
+## 5. The Product Owner's decision (2026-08-19)
 
-_Not yet given. 🚫 This section is filled by a separate PR, verbatim._
+Asked the question as §4 states it, the Product Owner answered, **verbatim**:
+
+> ok and go ahead with option B
+
+⚠️ **THAT IS THE WHOLE OF IT, AND IT IS AN ANSWER TO D1 ALONE.** 🚫 It is not a review of the
+options' reasoning, 🚫 not corroboration of the architect's recommendation, and 🚫 not permission
+for anything §6 does not list. ⚠️ The recommendation in §4 was the architect's own — an owner
+choosing a recommended option is 🚫 **NOT** independent corroboration of it (constitution §3.3).
 
 ---
 
-## 6. What is decided here if this is accepted
+## 6. What is decided here
 
-**D1.** Which of A or B the platform principal takes — the owner's answer in §4.
+**D1. — DECIDED: OPTION B.** A platform principal is its **own type**. `VerifiedSession` stays
+**byte-identical**, and the absent organization is structurally unrepresentable rather than
+defended against. 🚫 Option A is refused; 🚫 option C stays refused on ADR-0082's ground.
 
 **D2.** The tenant path is unchanged and that is asserted by measurement, 🚫 not by reading: the
 existing session, entitlement and live-database suites pass untouched.
