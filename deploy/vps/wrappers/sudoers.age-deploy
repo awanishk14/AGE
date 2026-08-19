@@ -21,3 +21,9 @@ age-deploy ALL=(root) NOPASSWD: /usr/local/sbin/age-deploy-compose-up ""
 age-deploy ALL=(root) NOPASSWD: /usr/local/sbin/age-deploy-derive-env ""
 age-deploy ALL=(root) NOPASSWD: /usr/local/sbin/age-deploy-nginx-apply ""
 age-deploy ALL=(root) NOPASSWD: /usr/local/sbin/age-deploy-docker-probe
+
+# ADR-0081 D1 — the fifth wrapper, and the ONLY new privilege it authorizes.
+# It takes NO arguments (the trailing "" again) and reads NAME=value lines on
+# stdin, checked against a literal allow-list inside the wrapper.
+# 🚫 `DATABASE_URL_APP` is not on that list, by decision (ADR-0081 D2).
+age-deploy ALL=(root) NOPASSWD: /usr/local/sbin/age-deploy-settings-apply ""

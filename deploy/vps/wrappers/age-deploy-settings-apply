@@ -1,0 +1,144 @@
+#!/bin/bash
+#
+# ADR-0081 D1 — wrapper 5 of 5: write a NAMED setting into ONE named file.
+#
+# 🛑 REPLACES REACHING FOR THE ROOT-EQUIVALENT PEER ACCOUNT to append three
+# lines to a 0600 root-owned file. That is what happened on 2026-08-18, it
+# worked, and ADR-0081 §0.1 records it as the cost this wrapper removes.
+#
+# 🚫 THE PATH IS A LITERAL AND THE NAMES ARE AN ALLOW-LIST. A caller-supplied
+# path is an arbitrary root write; a caller-supplied NAME is the same thing one
+# step later. Both are refused structurally rather than validated cleverly.
+#
+# 🚫 A VALUE IS NEVER PRINTED, ECHOED, LOGGED, EVALUATED OR PASSED AS AN
+# ARGUMENT (ADR-0076 D6, ADR-0081 D4). This wrapper sets no shell trace, and a
+# future `set -x` in it is a defect, 🚫 not a debugging aid.
+
+set -euo pipefail
+
+if [ "$#" -ne 0 ]; then
+  echo "REFUSED: ${0} takes no arguments; settings arrive on stdin." >&2
+  exit 2
+fi
+
+TARGET='/etc/age-studio/age-studio.env'
+SECRET_DIR='/etc/age-studio'
+DERIVE='/usr/local/sbin/age-deploy-derive-env'
+
+# 🛑 THE ALLOW-LIST, AND IT IS LITERAL.
+#
+# 🚫 `DATABASE_URL_APP` IS DELIBERATELY ABSENT (ADR-0081 D2). It names the
+# container route, it is written once by the provisioning run, and a path that
+# could rewrite it is a path that could point the console at a database of the
+# caller's choosing. That is the single most valuable thing this wrapper could
+# be tricked into doing, so it cannot do it at all.
+ALLOWED='AGE_STUDIO_GOOGLE_CLIENT_ID AGE_STUDIO_GOOGLE_CLIENT_SECRET AGE_STUDIO_GOOGLE_REDIRECT_URI AGE_STUDIO_ORGANIZATION_ID'
+
+if [ ! -f "$TARGET" ]; then
+  echo "REFUSED: the provisioned env file does not exist." >&2
+  echo "  Run scripts/provision-studio-database.sh first. Nothing is created here." >&2
+  exit 2
+fi
+
+# ⚠️ READ EVERYTHING FIRST, VALIDATE EVERYTHING, THEN WRITE ONCE. A wrapper that
+# wrote as it read would leave a half-applied file behind on the first bad line.
+names=()
+values=()
+
+while IFS= read -r line || [ -n "$line" ]; do
+  case "$line" in
+    '') continue ;;
+  esac
+
+  case "$line" in
+    *=*) : ;;
+    *)
+      # 🚫 The offending line is NOT echoed. That branch is precisely how a
+      # redactor leaks; the position is enough to fix it.
+      echo "REFUSED: a line on stdin has no '='; nothing was written." >&2
+      exit 2
+      ;;
+  esac
+
+  name="${line%%=*}"
+  value="${line#*=}"
+
+  permitted='no'
+  for candidate in $ALLOWED; do
+    if [ "$name" = "$candidate" ]; then
+      permitted='yes'
+    fi
+  done
+
+  if [ "$permitted" != 'yes' ]; then
+    echo "REFUSED: '${name}' is not an allow-listed setting name." >&2
+    echo "  The whole input is refused; 🚫 no line was written." >&2
+    exit 2
+  fi
+
+  for seen in ${names[@]+"${names[@]}"}; do
+    if [ "$seen" = "$name" ]; then
+      echo "REFUSED: '${name}' appears twice in one input." >&2
+      exit 2
+    fi
+  done
+
+  names+=("$name")
+  values+=("$value")
+done
+
+if [ "${#names[@]}" -eq 0 ]; then
+  echo "REFUSED: stdin carried no settings." >&2
+  exit 2
+fi
+
+# ⚠️ ATOMIC, AND NEVER READABLE HALF-WRITTEN. The temporary file is created in
+# the same directory as the target so the `mv` is a rename rather than a copy,
+# and it is mode-restricted BEFORE it holds a value.
+STAGED="${TARGET}.staged"
+: >"$STAGED"
+chmod 600 "$STAGED"
+chown root:root "$STAGED"
+
+filtered="$(cat "$TARGET")"
+for name in "${names[@]}"; do
+  filtered="$(printf '%s\n' "$filtered" | grep -v "^${name}=" || true)"
+done
+
+printf '%s\n' "$filtered" >>"$STAGED"
+
+index=0
+while [ "$index" -lt "${#names[@]}" ]; do
+  printf '%s=%s\n' "${names[$index]}" "${values[$index]}" >>"$STAGED"
+  index=$((index + 1))
+done
+
+# 🛑 THE REFUSAL THAT CATCHES THE ACCIDENT RATHER THAN THE ATTACK (ADR-0081 D3):
+# a truncating edit that leaves a console unable to reach its own store.
+if ! grep -q '^DATABASE_URL_APP=' "$STAGED"; then
+  rm -f "$STAGED"
+  echo "REFUSED: the result no longer names the application database URL." >&2
+  echo "  Nothing was replaced; the existing file is untouched." >&2
+  exit 2
+fi
+
+mv "$STAGED" "$TARGET"
+chmod 600 "$TARGET"
+chown root:root "$TARGET"
+chgrp age-deploy "$SECRET_DIR"
+chmod 750 "$SECRET_DIR"
+
+# 🚫 NAME AND LENGTH, AND NOTHING ELSE (ADR-0081 D4).
+index=0
+while [ "$index" -lt "${#names[@]}" ]; do
+  value="${values[$index]}"
+  printf '    %s len=%s\n' "${names[$index]}" "${#value}"
+  index=$((index + 1))
+done
+
+# 🛑 THE RE-DERIVE IS PART OF THE WRITE (ADR-0081 D5). A settings write that is
+# not followed by a re-derive leaves two files disagreeing, the container keeps
+# the OLD value, and NOTHING FAILS. That silence is the failure mode this
+# wrapper exists to remove, and a caller who forgets a second command
+# reproduces it.
+"$DERIVE"

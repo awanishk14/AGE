@@ -287,3 +287,59 @@ in-container sign-in route still answers.
 - 🚫 **NOTHING IN `/opt/rankops`, `/opt/snara`, `/opt/dd-agency`, `/opt/dd-scanner` WAS TOUCHED** —
   not their files, not their containers, not their databases, not their secrets.
 - 🚫 No peer/ecosystem work, no other product slice.
+
+---
+
+## 10. ADR-0081 slice 2 — the fifth wrapper, authored but 🚫 NOT INSTALLED
+
+**What landed (repository only):** `deploy/vps/wrappers/age-deploy-settings-apply`, the fifth
+sudoers line with its trailing `""`, and the ADR-0081 D6 repository guards in
+`packages/deployed-origin/src/tests/deploy-wrapper-boundary.spec.ts`.
+
+🛑 **NOTHING WAS INSTALLED ON THE BOX.** The wrapper is not in `/usr/local/sbin`, the sudoers
+drop-in on the host is unchanged, and 🚫 no setting has been written by it. That is **slice 3**,
+together with the four D7 refusals demonstrated **as `age-deploy`** before the first successful
+write.
+
+### The existing guard failed first, exactly as D6.1 predicted
+
+Adding a fifth file to the wrapper directory failed the shipped guard **before** any test was
+edited — `expected [ 'age-deploy-compose-up', …(4) ] to deeply equal [ …(3) ]` and
+`expected 5 to be 4`. 🚫 The guard was **not widened to tolerate an unknown wrapper**; the expected
+set was extended to the wrapper this ADR names, and it still asserts the set exactly.
+
+### The mutation pass — seven breaks, each naming the exact violation
+
+| #   | Mutation                                              | What the failure said                                              |
+| --- | ----------------------------------------------------- | ------------------------------------------------------------------ |
+| 1   | `DATABASE_URL_APP` added to the allow-list            | _"expected 'ALLOWED=…' not to contain 'DATABASE_URL_APP'"_         |
+| 2   | the lost-database-url refusal deleted                 | the D3 assertion named the missing `grep -q '^DATABASE_URL_APP='`  |
+| 3   | the re-derive dropped                                 | _"to match /^\"\$DERIVE\"$/m"_ — D5's silence caught as absence    |
+| 4   | a setting name taken from `$1` instead of stdin       | the shipped no-argv guard: _"not to match /\$\{?[1-9]\b/"_         |
+| 5   | the report echoed the VALUE instead of `len=`         | the D4 assertion named the missing `printf '    %s len=%s\n'`      |
+| 6   | the staged file created BEFORE the input is validated | _"expected 1173 to be less than 611"_ — the ordering, by offset    |
+| 7   | the sudoers line removed                              | _"expected 4 to be 5"_, and the trailing-`""` check on `undefined` |
+
+⚠️ An eighth check was demonstrated separately: appending `docker restart age-studio` to the wrapper
+failed `/\bdocker\b/: expected true to be false`.
+
+### Behaviour, measured — and where it was measured
+
+The wrapper was run against a **temporary copy** with its two literal paths rewritten into a scratch
+directory (🚫 the real ones are literals and are not overridable, which is the point). Observed:
+
+- a two-setting write replaced the existing `AGE_STUDIO_ORGANIZATION_ID` line and appended the new
+  ones, printing only `NAME len=N`;
+- all six refusals of D3 fired with exit `2` — an argument, `DATABASE_URL_APP=…`, an unknown name, a
+  line with no `=`, a duplicate name, and empty stdin — and 🚫 **the file was byte-unchanged after
+  every one of them**.
+
+🛑 **THIS IS A WORKSTATION FACT, 🚫 NOT A VPS FACT.** File modes were not asserted here (this
+filesystem does not honour them), `chown root:root` was stubbed out, and `sudo` was not involved at
+all. Root ownership, `0755`, `sudo -n -l` listing exactly five entries, and `age-deploy` still being
+in no group but its own remain **host facts for slice 3**.
+
+### Repository gates
+
+`typecheck`, `lint` and `test --skip-nx-cache` each **64 projects**, exit 0; `@age/deployed-origin`
+**198 tests** (191 → 198); `pnpm --filter @age/persistence typecheck:db` exit 0.
