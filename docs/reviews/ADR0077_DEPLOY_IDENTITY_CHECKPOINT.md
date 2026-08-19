@@ -343,3 +343,154 @@ in no group but its own remain **host facts for slice 3**.
 
 `typecheck`, `lint` and `test --skip-nx-cache` each **64 projects**, exit 0; `@age/deployed-origin`
 **198 tests** (191 → 198); `pnpm --filter @age/persistence typecheck:db` exit 0.
+
+---
+
+## 11. ADR-0081 slice 3 — the fifth wrapper INSTALLED, and the four refusals measured first
+
+🛑 **EVERYTHING IN THIS SECTION IS A VPS FACT**, measured on `185.255.131.94` (`vmi3191673`) on
+2026-08-19 from the repository at `main` `757889a`. §10 above remains true of what it describes —
+it was a **workstation** fact, and it is 🚫 not rewritten here. Nothing in this section was inferred.
+
+### 11.1 The state BEFORE, measured
+
+`sudo -n -l` as `age-deploy` listed **four** entries — `compose-up`, `derive-env`, `nginx-apply`,
+`docker-probe` — and `id` reported `uid=1002(age-deploy) gid=1002(age-deploy) groups=1002(age-deploy)`.
+`/usr/local/sbin` held those four wrappers and 🚫 no fifth. `/etc/age-studio/age-studio.env` was
+`root:root 0600`, 418 bytes, `sha256 58819da5f6cc914c5e28fe67a687fc01adbccba14c80d0681c5f3d50791e19f8`.
+Its five names were `DATABASE_URL_APP`, `AGE_STUDIO_ORGANIZATION_ID`, `AGE_STUDIO_GOOGLE_CLIENT_ID`,
+`AGE_STUDIO_GOOGLE_CLIENT_SECRET`, `AGE_STUDIO_GOOGLE_REDIRECT_URI`. 🚫 No value was printed at any
+point in this slice.
+
+### 11.2 The installation, and 🛑 who performed it
+
+⚠️ **The install was performed by the root-equivalent peer deployment account**, because
+`age-deploy` cannot write `/usr/local/sbin` or `/etc/sudoers.d` and 🚫 must never be able to —
+a deployment identity that could install its own wrappers would be root with extra steps. This is
+the **one** act ADR-0081 still needs that account for, and 🚫 it is not the recurring cost §0.1
+describes: from here, a **setting change** no longer reaches for it.
+
+Order, and 🛑 the validation came before the drop-in was live:
+
+1. Both files were staged with `LF` endings (the checkout on this workstation is `CRLF`) and their
+   digests compared on both machines before anything was installed —
+   wrapper `8ad979143989c32a16b916595c5376bf88064910ee4846243525ffdc5e7077e3`,
+   drop-in `d38f73849992b8efb484ad188b4e746355a073a6c7660430811f41728d13374a`.
+2. `visudo -c -f` on the **staged** drop-in: `parsed OK`. A `diff` against the live one showed
+   **exactly one added line** (`4a5`), the `age-deploy-settings-apply ""` entry, and 🚫 no other
+   change. The live drop-in was copied to `/root/age-deploy.sudoers.bak.20260819` first —
+   ⚠️ a malformed drop-in locks out every wrapper.
+3. `install -o root -g root -m 0755` for the wrapper, `-m 0440` for the drop-in, then a full
+   `visudo -c`: all five files under `/etc/sudoers.d` `parsed OK`. Installed digests matched the
+   staged ones byte-for-byte.
+4. Immediately after install, before any wrapper run:
+   `age-studio.env` still `58819da5…`. **The installation itself wrote no setting.**
+
+### 11.3 🛑 THE FOUR D7 REFUSALS, AS `age-deploy`, BEFORE THE FIRST SUCCESSFUL WRITE
+
+| #   | attempt as `age-deploy`                       | exit | what refused it                                                    |
+| --- | --------------------------------------------- | ---- | ------------------------------------------------------------------ |
+| 1   | an argument (`--help`)                        | `1`  | 🛑 **`sudo` itself** — `sudo: a password is required`              |
+| 2   | `DATABASE_URL_APP=postgres://attacker/x`      | `2`  | `REFUSED: 'DATABASE_URL_APP' is not an allow-listed setting name.` |
+| 3   | an unknown name (`AGE_STUDIO_SOMETHING_ELSE`) | `2`  | `REFUSED: '…' is not an allow-listed setting name.`                |
+| 4   | a line with no `=`                            | `2`  | `REFUSED: a line on stdin has no '='; nothing was written.`        |
+
+Two further refusals were exercised in the same session: **empty stdin** (`REFUSED: stdin carried no
+settings.`) and a **duplicate name** (`REFUSED: '…' appears twice in one input.`), both exit `2`.
+
+⚠️ **Refusal 1 is worth reading carefully and 🚫 must not be reported as the wrapper's own check.**
+The sudoers entry's trailing `""` permits the command with **no arguments at all**, so `sudo` denied
+the invocation and the wrapper **never ran** — which is why the exit code is `1` and not the
+wrapper's `2`. The wrapper's own `$# -ne 0` refusal is therefore **unreachable through `sudo`**, and
+that is the intended two-layer shape ADR-0077 D3 describes: the drop-in refuses first, the wrapper
+refuses if it is ever reached another way. 🚫 It is not redundant, and 🚫 not evidence of the
+wrapper's own branch having executed here.
+
+**After all six refusals, `/etc/age-studio/age-studio.env` was byte-identical:**
+`58819da5f6cc914c5e28fe67a687fc01adbccba14c80d0681c5f3d50791e19f8` — the same digest as §11.1.
+🚫 No `.staged` residue was left behind. 🚫 The file was never printed; only its digest was taken.
+
+Measured separately, and it is the reason a digest is the only available comparison:
+`cat /etc/age-studio/age-studio.env` as `age-deploy` → `Permission denied`. 🛑 **The account that
+can write four named settings still cannot read the file it writes them into.**
+
+### 11.4 The one successful write (D3, D4, D5)
+
+Only after §11.3, `age-deploy` wrote **`AGE_STUDIO_GOOGLE_REDIRECT_URI`** on stdin. ⚠️ The value
+chosen was the setting's **existing** value — the repo-documented public callback URL
+`https://age.digitaldadi.agency/sign-in/callback` — confirmed equal to the deployed one **by
+comparison on the box**, 🚫 not by reading it out. A real write was required; changing a live
+setting was not, and 🛑 the pinned organization is an owner act that this slice does 🚫 not touch.
+
+The wrapper printed, and 🚫 nothing else:
+
+```
+    AGE_STUDIO_GOOGLE_REDIRECT_URI len=47
+    (derived, 600, deploy-user-owned — value never printed)
+```
+
+- **D4 honoured:** name and `len=` only. 🚫 No value, 🚫 no diff, 🚫 no digest of a value.
+- **D3 honoured:** the file is 418 bytes with the same five names; the sorted-line digest is
+  `fefa742eaf29626ad042e27fd7430841e70973421aee93685eba2b2d7cd1749c` **before and after** — the
+  existing line was removed and re-appended, so content is identical and only line **order** moved.
+  Modes survived the atomic replace: `age-studio.env` `root:root 0600`, `/etc/age-studio`
+  `root:age-deploy 0750`.
+- **D5 honoured, and this is the failure mode the wrapper exists to remove:**
+  `age-studio.container.env` is `age-deploy:age-deploy 0600` and its sorted-line digest is the same
+  `fefa742e…`. **The wrapper re-derived the container copy itself** — 🚫 no second command was run,
+  and 🚫 the two files do not disagree.
+
+### 11.5 The D6 host facts, measured as `age-deploy` — 🚫 which no repository test can assert
+
+```
+stat /usr/local/sbin/age-deploy-settings-apply  →  root:root 755
+test -w …                                       →  not writable by age-deploy
+id                                              →  uid=1002(age-deploy) gid=1002(age-deploy) groups=1002(age-deploy)
+groups                                          →  age-deploy
+sudo -n -l | grep -c 'NOPASSWD:'                →  5
+```
+
+The five entries, in full and with nothing else present: `age-deploy-compose-up ""`,
+`age-deploy-derive-env ""`, `age-deploy-nginx-apply ""`, `age-deploy-docker-probe`,
+`age-deploy-settings-apply ""`. 🛑 **`age-deploy` is still in no group but its own** — 🚫 not
+`docker`, 🚫 not `sudo`.
+
+### 11.6 🚫 What slice 3 did NOT do, and 🚫 must not be read as having done
+
+- 🚫 **Nothing was deployed.** The console still runs the pre-ADR-0079-slice-4 image, and 🚫 neither
+  2026-08-19 platform migration is applied. This slice changed **one setting's position in a file**
+  and installed a wrapper; 🚫 it changed no application behaviour.
+- 🚫 **No peer product, database, network, vhost, certificate or secret was touched.** 🚫 No change
+  to `drishti`'s rights — ⚠️ it remains `(ALL) NOPASSWD: ALL` and in the `docker` group, i.e.
+  **root-equivalent**, exactly as ADR-0081 §2.1 says it stays. 🚫 No new group for `age-deploy`.
+- 🚫 **The allow-list was not touched.** It is still the four names of D2 and 🚫 `DATABASE_URL_APP`
+  is still absent — 🛑 demonstrated by refusal, 🚫 not asserted.
+- 🚫 **No value was printed, echoed or logged**, and 🚫 no credential entered `argv`. 🚫 No `sudo -E`.
+- 🚫 **No browser was opened and nobody signed in.** That gate is still the owner's, and 🚫 this
+  section proves nothing about it.
+- ⚠️ **ADR-0081 §2.2 is now a live fact, not a forecast:** `age-deploy` **can** write four named
+  settings into one root-owned file. That is a real widening, and 🚫 installing it does not make it
+  narrow.
+
+### 11.7 One repository change came with this slice: a guard that only passed on `LF`
+
+⚠️ **Found by running the gates, 🚫 not by reading:** `deploy-wrapper-boundary.spec.ts`'s D6 guard 3
+extracted the allow-list with `.replace(/^ALLOWED='/, '').replace(/'$/, '').trim()`. On a **`CRLF`**
+checkout the line ends `…'\r`, so `/'$/` matched nothing, the trailing quote survived, and the guard
+failed with `"AGE_STUDIO_ORGANIZATION_ID'"`. On CI — Linux, `LF` — it passed, which is why slice 2
+merged green. 🛑 **A guard that is green on one line-ending convention and red on the other is not
+asserting what it claims to**, and this repository's own working copy is `CRLF`.
+
+The fix is a **reorder, 🚫 not a widening**: `.trim()` before stripping the quote, then `.trim()`
+again. The assertion is unchanged — the same four names, exactly, in order.
+
+Made to fail before it was trusted: `DATABASE_URL_APP` was appended to the wrapper's `ALLOWED`
+literal, and the guard failed naming the violation —
+`expected 'ALLOWED=\'AGE_STUDIO_GOOGLE_CLIENT_ID…' not to contain 'DATABASE_URL_APP'`. Restored by
+copying the file back from a scratch backup, 🔴 never `git checkout <file>`.
+
+**Gates, all `--skip-nx-cache`:** `typecheck` 64 projects, `lint` 64 projects, `test` 64 projects —
+all exit 0; `@age/deployed-origin` **198 tests** passing; `pnpm --filter @age/persistence
+typecheck:db` exit 0. ⚠️ The **installed** wrapper on the box is the unmutated file — its digest
+`8ad979143989c32a16b916595c5376bf88064910ee4846243525ffdc5e7077e3` was re-confirmed after the
+mutation was reverted, and 🚫 the mutation never left this workstation.

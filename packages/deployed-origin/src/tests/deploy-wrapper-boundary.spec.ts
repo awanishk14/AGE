@@ -335,6 +335,7 @@ describe('ADR-0081 D6 — the settings wrapper writes NAMES, never a path', () =
     expect(allowList!).not.toContain('DATABASE_URL_APP');
     const names = allowList!
       .replace(/^ALLOWED='/, '')
+      .trim()
       .replace(/'$/, '')
       .trim()
       .split(/\s+/);
