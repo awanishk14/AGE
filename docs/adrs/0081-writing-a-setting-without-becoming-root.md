@@ -1,11 +1,11 @@
 # ADR-0081 — Writing a setting without becoming root: a fifth `age-deploy` wrapper
 
-Status: **Proposed** (2026-08-18)
-🛑 **THIS IS A DECISION REQUEST AND IT AUTHORIZES NOTHING.** It amends the root surface of a
-deployment identity on a host AGE shares with four peer products it does not own. ADR-0077's §2
-mandate covers architecture inside AGE; it does not cover widening a privilege boundary on that box.
-🚫 **It must not be self-accepted.** A separate PR flips the status, carrying the owner's words
-verbatim.
+Status: **Accepted** (2026-08-19) — accepted by the Product Owner, whose words are recorded
+verbatim in §9 below. 🚫 This was not self-accepted: the proposal was PR #386 and this line was
+flipped by a separate PR.
+⚠️ **WHAT IT AUTHORIZES IS STILL EXACTLY WHAT §1 SAYS AND 🚫 NOTHING MORE.** It amends the root
+surface of a deployment identity on a host AGE shares with four peer products it does not own, and
+§2.2 states plainly that this is a **widening** — acceptance does 🚫 not turn that into a narrowing.
 
 Depends on: ADR-0077 **D1–D3, D6** (the deployment identity and its four fixed-argument wrappers) ·
 ADR-0076 **D6** (a settings value is never printed, echoed or logged) · ADR-0078 **C3** (the
@@ -280,3 +280,27 @@ rather than described as a narrowing.**
 RULE** — a guard whose scope is narrower than the rule it asserts is the pattern that produced every
 audit gap in this repository. 🚫 Credentials never enter `argv` on this shared host. 🚫 Never claim
 verification that did not happen: `curl` is not a browser, and a repository test is not a VPS fact.
+
+---
+
+## 9. The Product Owner's decision (2026-08-19)
+
+Asked whether to build the fifth wrapper, the owner answered, **verbatim**:
+
+> add the fifth wrapper
+
+⚠️ That is the whole of the answer, and 🚫 nothing is read into it beyond §1.
+
+### What it settles, and what it does 🚫 NOT
+
+- **Slices 2 and 3 of §6 are authorized**, in that order. 🛑 Slice 2 is a **repository** slice: the
+  wrapper file is **inert until installed**, and 🚫 no host changes in it.
+- 🛑 **Slice 3 touches the real box, and 🚫 it is not done by inference.** The **four refusals of
+  D7 are demonstrated as `age-deploy` BEFORE** the first successful write — 🚫 a wrapper that has only
+  ever succeeded is not evidence, exactly as a guard that has only ever passed is not.
+- 🚫 **The four settable names stay the enumerated four.** A fifth name is a new decision, 🚫 not an
+  extension of this one.
+- 🚫 **Nothing here relaxes §8.** 🛑 A settings value is still 🚫 never printed, echoed or logged
+  (ADR-0076 D6), credentials still 🚫 never enter `argv`, and 🚫 `sudo -E` is still refused.
+- ⚠️ **The docker-capable peer account remains root-equivalent.** This ADR removes a reason to
+  borrow it; 🚫 it does 🚫 not reduce what that account can do, and 🚫 no report may claim it did.
