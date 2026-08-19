@@ -16,7 +16,26 @@ const TOKEN = 'a'.repeat(64);
 
 const verified = {
   outcome: 'verified',
-  session: { sessionId: 'session-fictional-1', organizationId: ORG, accountId: 'acct-fictional-1' },
+  principal: {
+    scope: 'tenant',
+    session: {
+      sessionId: 'session-fictional-1',
+      organizationId: ORG,
+      accountId: 'acct-fictional-1',
+    },
+  },
+} as const;
+
+/**
+ * 🛑 A PLATFORM PRINCIPAL — ADR-0083 D1. It has 🚫 no `organizationId`, and
+ * that is the point: the mismatch check below cannot be written over it.
+ */
+const verifiedPlatform = {
+  outcome: 'verified',
+  principal: {
+    scope: 'platform',
+    session: { sessionId: 'session-fictional-2', accountId: 'acct-fictional-2' },
+  },
 } as const;
 
 describe('decideSessionBoundary', () => {
@@ -27,7 +46,7 @@ describe('decideSessionBoundary', () => {
         presentedCookie: TOKEN,
         verification: verified,
       }),
-    ).toEqual({ kind: 'admitted', session: verified.session });
+    ).toEqual({ kind: 'admitted', session: verified.principal.session });
   });
 
   it('🛑 refuses a console that was never told which organization it serves', () => {
@@ -76,6 +95,33 @@ describe('decideSessionBoundary', () => {
         verification: verified,
       }),
     ).toEqual({ kind: 'refused', reason: 'organization-mismatch' });
+  });
+
+  it('🛑 refuses a PLATFORM principal, and 🚫 never as a mismatch (ADR-0083 D1)', () => {
+    // ⚠️ THE REASON MATTERS AS MUCH AS THE REFUSAL. Reporting this as
+    // `organization-mismatch` would say a row belonged to the wrong tenant,
+    // when in truth it belongs to none — and the operator would go looking for
+    // a membership that is not supposed to exist.
+    expect(
+      decideSessionBoundary({
+        lookupOrganizationId: ORG,
+        presentedCookie: TOKEN,
+        verification: verifiedPlatform,
+      }),
+    ).toEqual({ kind: 'refused', reason: 'platform-scope-not-yet-served' });
+  });
+
+  it('🚫 does not admit a platform principal by comparing an absent organization', () => {
+    // 🛑 THE ONE-CHARACTER DANGEROUS ALTERNATIVE, REFUSED IN A TEST. If the
+    // mismatch check were ever widened to treat "no organization" as "any
+    // organization", THIS is the call that would start being admitted.
+    const decision = decideSessionBoundary({
+      lookupOrganizationId: ORG,
+      presentedCookie: TOKEN,
+      verification: verifiedPlatform,
+    });
+
+    expect(decision.kind).toBe('refused');
   });
 
   it('🚫 a missing verdict is never an admission', () => {

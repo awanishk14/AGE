@@ -81,9 +81,13 @@ describe('a row becomes a session only by being assessed', () => {
 
     expect(assessment.usable).toBe(true);
     if (!assessment.usable) return;
-    expect(assessment.session.organizationId).toBe('org-1');
+    // ⚠️ ADR-0083 D1 — a usable row yields a PRINCIPAL, and the scope must be
+    // read before an organization can be.
+    expect(assessment.principal.scope).toBe('tenant');
+    if (assessment.principal.scope !== 'tenant') return;
+    expect(assessment.principal.session.organizationId).toBe('org-1');
     // 🚫 No role, no isAdmin, no permission list reaches the session.
-    expect(Object.keys(assessment.session).sort()).toEqual([
+    expect(Object.keys(assessment.principal.session).sort()).toEqual([
       'accountId',
       'organizationId',
       'sessionId',

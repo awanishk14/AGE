@@ -24,7 +24,9 @@ export {
   SessionStoreRefusedError,
   sessionTokenHashesMatch,
   type SessionAssessment,
+  type SessionPrincipal,
   type SessionRecord,
+  type VerifiedPlatformSession,
   type VerifiedSession,
 } from './session-record';
 

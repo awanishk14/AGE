@@ -1,6 +1,12 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 
-import { acceptVerifiedSession, SessionRefusedError, type VerifiedSession } from '@age/entitlement';
+import {
+  acceptVerifiedPlatformSession,
+  acceptVerifiedSession,
+  SessionRefusedError,
+  type VerifiedPlatformSession,
+  type VerifiedSession,
+} from '@age/entitlement';
 
 /**
  * ADR-0061 **A2** — the session store's rules, and nothing that performs them.
@@ -105,7 +111,16 @@ export function sessionTokenHashesMatch(left: string, right: string): boolean {
 /** A stored session row, as it comes back out of the database. */
 export interface SessionRecord {
   readonly sessionId: string;
-  readonly organizationId: string;
+  /**
+   * The tenant this session speaks for, or 🛑 **exactly `null` for a PLATFORM
+   * session** — ADR-0083 D1, option B.
+   *
+   * 🚫 **`null` IS A PRINCIPAL, 🚫 NOT A MISSING VALUE.** `normalizeSessionRecord`
+   * accepts `null` and refuses `undefined`, because "the column was not read"
+   * becoming "this session belongs to no tenant" would silently promote a
+   * tenant operator to the widest scope AGE has.
+   */
+  readonly organizationId: string | null;
   readonly accountId: string;
   /** 🚫 The digest, never the token. */
   readonly tokenHash: string;
@@ -128,8 +143,26 @@ export interface SessionRecord {
  * exists for.
  */
 export type SessionAssessment =
-  | { readonly usable: true; readonly session: VerifiedSession }
+  | { readonly usable: true; readonly principal: SessionPrincipal }
   | { readonly usable: false; readonly reason: 'revoked' | 'expired' | 'unreadable' };
+
+/**
+ * Who a usable row speaks for — ADR-0083 **D1, option B**.
+ *
+ * 🛑 **A DISCRIMINATED UNION SO NO CONSUMER CAN FORGET TO ASK.** A caller that
+ * reached for `.session.organizationId` on a platform principal would not
+ * silently read `undefined`; it does not type-check, because
+ * `VerifiedPlatformSession` has 🚫 no such field. That is the whole of why
+ * option A was refused: an absent organization must be UNREPRESENTABLE, 🚫 not
+ * defended against at every comparison.
+ *
+ * ⚠️ **THE SHARING IS ABOVE THIS.** Expiry and revocation are decided BEFORE a
+ * principal is constructed, so both arms are governed by exactly one
+ * implementation of each (D3) — 🚫 not by two that agree today.
+ */
+export type SessionPrincipal =
+  | { readonly scope: 'tenant'; readonly session: VerifiedSession }
+  | { readonly scope: 'platform'; readonly session: VerifiedPlatformSession };
 
 const isoInstant = (value: string): number | undefined => {
   const parsed = Date.parse(value);
@@ -169,14 +202,30 @@ export function assessSession(record: SessionRecord, now: Date): SessionAssessme
     return { usable: false, reason: 'expired' };
   }
 
+  // 🛑 EVERYTHING ABOVE THIS LINE IS SHARED BY BOTH PRINCIPALS, and everything
+  // below it is only the construction of an identity. ⚠️ A platform session is
+  // 🚫 NOT exempt from expiry or revocation, and the way that is guaranteed is
+  // that it never had its own copy of either check to drift from.
   try {
     return {
       usable: true,
-      session: acceptVerifiedSession({
-        sessionId: record.sessionId,
-        organizationId: record.organizationId,
-        accountId: record.accountId,
-      }),
+      principal:
+        record.organizationId === null
+          ? {
+              scope: 'platform',
+              session: acceptVerifiedPlatformSession({
+                sessionId: record.sessionId,
+                accountId: record.accountId,
+              }),
+            }
+          : {
+              scope: 'tenant',
+              session: acceptVerifiedSession({
+                sessionId: record.sessionId,
+                organizationId: record.organizationId,
+                accountId: record.accountId,
+              }),
+            },
     };
   } catch (error) {
     // ⚠️ A blank identifier is refused by `acceptVerifiedSession` for a reason
@@ -191,4 +240,4 @@ export function assessSession(record: SessionRecord, now: Date): SessionAssessme
 }
 
 export { SessionRefusedError };
-export type { VerifiedSession };
+export type { VerifiedPlatformSession, VerifiedSession };

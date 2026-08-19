@@ -100,7 +100,27 @@ export function operatorSessionIssuance(
     // or a lifetime past the ceiling refuses without ever reaching a connection.
     const record = issuedSessionRecord(request);
 
-    if (record.organizationId !== scope.organizationId) {
+    // 🛑 **THIS PATH ISSUES A TENANT SESSION, AND ADR-0083 MADE THAT WORTH
+    // SAYING OUT LOUD.** A record's organization may now be `null` — a PLATFORM
+    // principal (D1). This runner opens its transaction with
+    // `age.organization_id`, so a `null` row could only be written by pretending
+    // it belonged to the scope that was already open, which is exactly the
+    // substitution ADR-0082 D4 forbids. ⚠️ It is REFUSED here rather than
+    // re-scoped; the platform issuance path is its own slice, with its own
+    // digest fence (D5) — 🚫 it is not this one relaxed.
+    if (record.organizationId === null) {
+      throw new SessionIssuanceRefusedError(
+        'Refused: a session that belongs to no organization cannot be issued through the ' +
+          'tenant-scoped path. It is refused rather than filed under the scope this ' +
+          'transaction happens to hold, because that would record a tenant nobody named.',
+      );
+    }
+
+    // ⚠️ Bound to a local because a property narrowing does not survive into the
+    // callback below — and a `!` there would be the assertion, 🚫 not the check.
+    const organizationId: string = record.organizationId;
+
+    if (organizationId !== scope.organizationId) {
       throw new SessionIssuanceRefusedError(
         'Refused: a session cannot be issued into an organization this caller is not scoped ' +
           'to. It is refused rather than re-scoped to the caller, because silently moving the ' +
@@ -112,7 +132,7 @@ export function operatorSessionIssuance(
       await sessions.create({
         data: {
           sessionId: record.sessionId,
-          organizationId: record.organizationId,
+          organizationId,
           accountId: record.accountId,
           tokenHash: record.tokenHash,
           issuedAt: record.issuedAt,

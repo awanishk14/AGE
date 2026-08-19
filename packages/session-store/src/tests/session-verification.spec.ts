@@ -64,10 +64,13 @@ describe('a live session verifies', () => {
 
     expect(verification).toEqual({
       outcome: 'verified',
-      session: {
-        sessionId: 'session-fictional-1',
-        organizationId: 'org-fictional-1',
-        accountId: 'operator-2',
+      principal: {
+        scope: 'tenant',
+        session: {
+          sessionId: 'session-fictional-1',
+          organizationId: 'org-fictional-1',
+          accountId: 'operator-2',
+        },
       },
     });
   });
@@ -79,7 +82,8 @@ describe('a live session verifies', () => {
       now: NOW,
     });
 
-    const session = verification.outcome === 'verified' ? verification.session : undefined;
+    const session =
+      verification.outcome === 'verified' ? verification.principal.session : undefined;
     expect(Object.keys(session ?? {}).sort()).toEqual(['accountId', 'organizationId', 'sessionId']);
   });
 });
