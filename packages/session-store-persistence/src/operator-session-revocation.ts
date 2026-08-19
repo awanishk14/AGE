@@ -99,3 +99,39 @@ export function operatorSessionRevocation(
       return result.count > 0 ? 'revoked' : 'already-ended';
     });
 }
+
+/**
+ * Ends one PLATFORM session — ADR-0083 **D5**.
+ *
+ * 🛑 **REVOCATION DID 🚫 NOT ACQUIRE A SECOND IMPLEMENTATION, AND §2 OF
+ * ADR-0083 IS WHY THAT SENTENCE HAS TO BE CHECKED.** What is duplicated here is
+ * the SCOPE a transaction opens with; the decision — *did this update match a
+ * live row* — is the same one line, and the two outcomes are still the same two
+ * values. ⚠️ `assessSession` in `@age/session-store` remains the only place
+ * revocation is READ, for both principals, which is the drift D3 forbids.
+ *
+ * ⚠️ **THE PRESENTED DIGEST IS THE FIRST ARGUMENT BECAUSE IT IS THE SCOPE.** A
+ * logout holds the cookie it is ending, so it holds the digest; 🚫 an operator
+ * cannot end a platform session it is not presenting.
+ */
+export function platformOperatorSessionRevocation(
+  runner: OperatorSessionScopeRunner<OperatorSessionRevocationDelegate>,
+): (
+  presentedTokenHash: string,
+  sessionId: string,
+  revokedAt: string,
+) => Promise<SessionRevocation> {
+  return async (
+    presentedTokenHash: string,
+    sessionId: string,
+    revokedAt: string,
+  ): Promise<SessionRevocation> =>
+    runner.runInScope({ platformSessionTokenHash: presentedTokenHash }, async (sessions) => {
+      const result = await sessions.updateMany({
+        where: { sessionId, revokedAt: null },
+        data: { revokedAt },
+      });
+
+      return result.count > 0 ? 'revoked' : 'already-ended';
+    });
+}

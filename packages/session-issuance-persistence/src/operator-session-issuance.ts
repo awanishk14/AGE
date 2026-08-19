@@ -1,4 +1,9 @@
-import { issuedSessionRecord, type SessionIssuanceRequest } from '@age/session-store';
+import {
+  issuedSessionRecord,
+  platformIssuedSessionRecord,
+  type PlatformSessionIssuanceRequest,
+  type SessionIssuanceRequest,
+} from '@age/session-store';
 import type {
   OperatorSessionScope,
   OperatorSessionScopeRunner,
@@ -53,7 +58,13 @@ export interface OperatorSessionIssuanceDelegate {
   create(args: {
     readonly data: {
       readonly sessionId: string;
-      readonly organizationId: string;
+      /**
+       * 🛑 **`null` IS A PLATFORM SESSION, 🚫 NOT AN OMITTED COLUMN**
+       * (ADR-0083 D1). It is written out by
+       * `platformIssuedSessionRecord`; 🚫 the field is never left off, because
+       * a column the database defaulted is a fact the database invented.
+       */
+      readonly organizationId: string | null;
       readonly accountId: string;
       readonly tokenHash: string;
       readonly issuedAt: string;
@@ -152,4 +163,59 @@ export class SessionIssuanceRefusedError extends Error {
     super(message);
     this.name = 'SessionIssuanceRefusedError';
   }
+}
+
+/**
+ * Issues one session that belongs to 🚫 **no organization** — ADR-0083 **D5**.
+ *
+ * 🛑 **THE FENCE IS THE DIGEST OF THE TOKEN BEING ISSUED, AND THE `WITH CHECK`
+ * POLICY IS WHAT MAKES THAT MEAN ANYTHING.** `operator_sessions_issue_platform_session`
+ * admits a row only when `organization_id IS NULL` **and** its `token_hash`
+ * equals `age.platform_session_token_hash`. So this transaction cannot insert a
+ * row for any digest other than the one it opened with, and 🚫 cannot insert a
+ * tenant row at all — the refusal is the database's, not only this module's.
+ *
+ * ⚠️ **THE SCOPE IS 🚫 NOT A PARAMETER, AND THAT IS DELIBERATE.** There is
+ * nothing for a caller to name: the fence is derived from the record that was
+ * just built, so 🚫 a caller cannot issue into a scope it does not hold and
+ * cannot widen one by passing something else.
+ *
+ * 🚫 **IT STILL MINTS NOTHING.** The token and the issuing instant arrive as
+ * parameters, exactly as on the tenant path, and the account must already exist
+ * — `accounts` and `account_memberships` hold `GRANT SELECT` alone.
+ */
+export function platformOperatorSessionIssuance(
+  runner: OperatorSessionScopeRunner<OperatorSessionIssuanceDelegate>,
+): (request: PlatformSessionIssuanceRequest) => Promise<IssuedSession> {
+  return async (request: PlatformSessionIssuanceRequest): Promise<IssuedSession> => {
+    const record = platformIssuedSessionRecord(request);
+
+    // 🛑 **THE MIRROR OF THE TENANT PATH'S REFUSAL, AND 🚫 NOT A FORMALITY.**
+    // `platformIssuedSessionRecord` writes `null` out, so this can only fail if
+    // that changed — and if it ever does, a tenant row would otherwise be
+    // written through the digest-fenced path, under no organization anyone named.
+    if (record.organizationId !== null) {
+      throw new SessionIssuanceRefusedError(
+        'Refused: a session that belongs to an organization cannot be issued through the ' +
+          'platform path. It is refused rather than carried through, because a tenant row ' +
+          'written under a digest fence would be scoped by a credential instead of a tenant.',
+      );
+    }
+
+    await runner.runInScope({ platformSessionTokenHash: record.tokenHash }, async (sessions) => {
+      await sessions.create({
+        data: {
+          sessionId: record.sessionId,
+          organizationId: null,
+          accountId: record.accountId,
+          tokenHash: record.tokenHash,
+          issuedAt: record.issuedAt,
+          expiresAt: record.expiresAt,
+          revokedAt: null,
+        },
+      });
+    });
+
+    return Object.freeze({ sessionId: record.sessionId, expiresAt: record.expiresAt });
+  };
 }

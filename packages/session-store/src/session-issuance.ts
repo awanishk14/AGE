@@ -86,6 +86,61 @@ export function issuedSessionRecord(request: SessionIssuanceRequest): SessionRec
 }
 
 /**
+ * What the caller must know before a PLATFORM session can exist — ADR-0083 D1.
+ *
+ * 🛑 **IT IS A SEPARATE REQUEST TYPE, 🚫 NOT `SessionIssuanceRequest` WITH A
+ * NULLABLE FIELD.** The organization is not optional here and it is not `null`
+ * here — it does ❌ not exist, exactly as it does not exist on
+ * `VerifiedPlatformSession`. A caller cannot pass one by accident, and 🚫 cannot
+ * pass one on purpose.
+ */
+export interface PlatformSessionIssuanceRequest {
+  readonly sessionId: string;
+  readonly accountId: string;
+  /** ⚠️ The RAW token. Hashed immediately and 🚫 never returned. */
+  readonly token: string;
+  readonly issuedAt: Date;
+  readonly lifetimeSeconds: number;
+}
+
+/**
+ * Builds the row that issues a session belonging to 🚫 no organization.
+ *
+ * 🛑 **`organizationId: null` IS WRITTEN OUT, AS A DECISION.** It is not
+ * omitted and 🚫 not left to a database default: 'this session speaks for no
+ * tenant' is a fact the issuing act asserts, and a column the database filled in
+ * is a fact the database invented. `normalizeSessionRecord` refuses the absent
+ * key for the same reason.
+ *
+ * ⚠️ **EVERY OTHER RULE IS THE SAME ONE, 🚫 NOT A COPY OF IT.** The expiry
+ * bounds, the token shape and the blank-identifier refusal are the same
+ * functions the tenant path uses — so a lifetime past the ceiling, or a token
+ * that was not minted as 32 bytes of hex, is refused here by the code that
+ * refuses it there.
+ *
+ * @throws {SessionStoreRefusedError} naming the POSITION and 🚫 never the value.
+ */
+export function platformIssuedSessionRecord(
+  request: PlatformSessionIssuanceRequest,
+): SessionRecord {
+  const sessionId = acceptIdentifier('sessionId', request.sessionId);
+  const accountId = acceptIdentifier('accountId', request.accountId);
+
+  const expiresAt = sessionExpiryFrom(request.issuedAt, request.lifetimeSeconds);
+  const tokenHash = hashSessionToken(request.token);
+
+  return Object.freeze({
+    sessionId,
+    organizationId: null,
+    accountId,
+    tokenHash,
+    issuedAt: request.issuedAt.toISOString(),
+    expiresAt,
+    revokedAt: null,
+  });
+}
+
+/**
  * ⚠️ A blank identifier is REFUSED rather than stored. An empty
  * `organizationId` on a session is a session belonging to no tenant, and under
  * a fail-closed policy it would simply never match anything again — a session

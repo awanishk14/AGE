@@ -40,6 +40,40 @@ export interface OperatorSessionScope {
 }
 
 /**
+ * The scope a PLATFORM session runs under — ADR-0083 **D5**.
+ *
+ * 🛑 **THE FENCE IS THE DIGEST THE CALLER ALREADY HOLDS, AND THAT IS THE
+ * WHOLE OF THE DESIGN.** A platform row has no organization, so there is no
+ * tenant to narrow it by; `age.organization_id` would be a lie and an empty
+ * string would be worse, because two absences comparing equal is the exact
+ * shape ADR-0083 🚫 refused. The three additive policies added by
+ * `20260819100000_…` therefore compare `token_hash` against
+ * `age.platform_session_token_hash` — a setting a caller can only fill from a
+ * credential it is already presenting.
+ *
+ * ⚠️ **IT NARROWS TO ONE ROW, 🚫 NEVER TO A SET.** A tenant scope selects an
+ * organization's sessions; this selects the single row whose digest was handed
+ * in. A caller holding one platform token cannot read, revoke or issue any other
+ * platform session — 🚫 not even another of its own.
+ *
+ * 🚫 **THE RAW TOKEN NEVER APPEARS HERE.** The field is a digest, named as
+ * one, exactly as `OperatorSessionLookupWhere.tokenHash` is.
+ */
+export interface PlatformSessionScope {
+  readonly platformSessionTokenHash: string;
+}
+
+/**
+ * The two scopes, as a discriminated union.
+ *
+ * 🛑 **THE UNION IS EXCLUSIVE BY CONSTRUCTION, 🚫 NOT BY DISCIPLINE.** There
+ * is no shape carrying both, so 'set the organization AND the digest' is not a
+ * transaction anyone can ask for — which is how D5's *never* is kept without a
+ * runtime check that someone could later delete.
+ */
+export type SessionScope = OperatorSessionScope | PlatformSessionScope;
+
+/**
  * ⚠️ **THE DELEGATE IS A TYPE PARAMETER, AND ITS DEFAULT IS THE READ ONE**
  * (ADR-0074 §7 slice 2). The transaction discipline — set the scope, then hand
  * over a delegate bound to that same transaction — is identical whether the work
@@ -61,10 +95,7 @@ export interface OperatorSessionScopeRunner<TDelegate = OperatorSessionDelegate>
    * transaction — one from another connection would run outside the scope and
    * fail closed.
    */
-  runInScope<T>(
-    scope: OperatorSessionScope,
-    operation: (sessions: TDelegate) => Promise<T>,
-  ): Promise<T>;
+  runInScope<T>(scope: SessionScope, operation: (sessions: TDelegate) => Promise<T>): Promise<T>;
 }
 
 /**
@@ -115,14 +146,24 @@ export class PrismaOperatorSessionScopeRunner<
   }
 
   async runInScope<T>(
-    scope: OperatorSessionScope,
+    scope: SessionScope,
     operation: (sessions: TDelegate) => Promise<T>,
   ): Promise<T> {
     return this.source.$transaction(async (tx) => {
       // Always, before anything reads. 🚫 There is no flag to omit it: an
       // unscoped transaction is not a degraded mode, it is one the policy
       // rejects, and offering the option would make that reachable.
-      await tx.$executeRaw`SELECT set_config('age.organization_id', ${scope.organizationId}, true)`;
+      //
+      // 🛑 **ONE BRANCH, TWO SETTINGS, AND 🚫 NEVER BOTH** (ADR-0083 D5). The
+      // `else` is the guarantee: a platform transaction that ALSO set
+      // `age.organization_id` would satisfy the tenant policies as well, and the
+      // digest fence would stop being a fence. ⚠️ Each setting is named on
+      // exactly one line in the product, and a guard asserts that product-wide.
+      if ('platformSessionTokenHash' in scope) {
+        await tx.$executeRaw`SELECT set_config('age.platform_session_token_hash', ${scope.platformSessionTokenHash}, true)`;
+      } else {
+        await tx.$executeRaw`SELECT set_config('age.organization_id', ${scope.organizationId}, true)`;
+      }
 
       // ⚠️ The delegate MUST come off `tx`, never off the source. One from
       // another connection would run outside this transaction, where the

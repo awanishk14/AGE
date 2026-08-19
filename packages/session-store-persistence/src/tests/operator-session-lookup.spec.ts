@@ -24,7 +24,13 @@ const DIGEST = 'a'.repeat(64);
 function fakeRunner(delegate: OperatorSessionDelegate, log: string[]): OperatorSessionScopeRunner {
   return {
     async runInScope(scope, operation) {
-      log.push(`scope:${scope.organizationId}`);
+      // ⚠️ Narrowed because the scope is a UNION since ADR-0083 D5. 🚫 A
+      // cast here would let a platform scope reach this path unnoticed.
+      log.push(
+        'platformSessionTokenHash' in scope
+          ? `platform-scope:${scope.platformSessionTokenHash}`
+          : `scope:${scope.organizationId}`,
+      );
       return operation(delegate);
     },
   };
@@ -105,7 +111,11 @@ describe('operatorSessionLookup', () => {
     const delegate: OperatorSessionDelegate = { findUnique: async () => null };
     const runner: OperatorSessionScopeRunner = {
       async runInScope(scope, operation) {
-        scopes.push(scope.organizationId);
+        scopes.push(
+          'platformSessionTokenHash' in scope
+            ? scope.platformSessionTokenHash
+            : scope.organizationId,
+        );
         return operation(delegate);
       },
     };
