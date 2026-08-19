@@ -1,14 +1,18 @@
 # ADR-0082 — The session a platform operator carries
 
-Status: **Proposed** (2026-08-19)
+Status: **Accepted** (2026-08-19) — **OPTION A.** Accepted by the Product Owner, whose words are
+recorded verbatim in §5 and are the whole of what they decided. ⚠️ They answered **D1**; D2–D4 below
+remain the architect’s under the standing autonomy grant, and 🚫 acceptance of this ADR is 🚫 NOT
+corroboration of them.
 
 Depends on: ADR-0080 (reaching a platform membership — **Accepted**, Option A, and the read path it
 authorized is merged at `e719e50`) · ADR-0079 (three scopes, and the session issuance it authorized)
 · ADR-0046 **D5** (RLS is coherence, 🚫 not authorization).
 
-> 🚫 **THIS ADR AUTHORIZES NOTHING WHILE IT IS `Proposed`.** It is a decision request. The owner has
-> already given the answer in §5 in their own words; ⚠️ it is recorded here rather than acted on so
-> that the acceptance is a **separate** PR, as §3.3 of the operating constitution requires.
+> 🛠️ **THIS ADR IS NOW ACCEPTED, AND §6 IS WHAT IT AUTHORIZES — 🚫 NOTHING BEYOND IT.** It was opened
+> as `Proposed` in PR #397 and the status is flipped here, in a **separate** PR carrying the owner’s
+> words, as §3.3 of the operating constitution requires. ⚠️ The closing section still stands: what is
+> authorized is a session shape, 🚫 not a rendering, 🚫 not a reach, and 🚫 not a deployment.
 
 ---
 
