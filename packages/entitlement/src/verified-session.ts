@@ -65,8 +65,33 @@ export interface VerifiedSession {
  *         (ADR-0054 D3).
  */
 export function acceptVerifiedSession(session: VerifiedSession): VerifiedSession {
-  for (const field of ['sessionId', 'organizationId', 'accountId'] as const) {
-    if (session[field].trim() === '') {
+  refuseBlankIdentifiers(session, ['sessionId', 'organizationId', 'accountId']);
+
+  return Object.freeze({
+    sessionId: session.sessionId,
+    organizationId: session.organizationId,
+    accountId: session.accountId,
+  });
+}
+
+/**
+ * The blank-identifier refusal, in **ONE** implementation (ADR-0083 D3).
+ *
+ * 🛑 **BOTH PRINCIPALS SHARE THIS, AND THAT IS THE POINT.** ADR-0083 option B gives
+ * a platform operator its own type precisely so that an absent organization is
+ * unrepresentable — 🚫 not so that the refusal it still needs gets copied. A
+ * second copy is a second chance for one of them to stop refusing, and the copy
+ * that drifts still passes its own test.
+ *
+ * ⚠️ The field NAME travels into the message; 🚫 the value never does
+ * (ADR-0054 D3).
+ */
+function refuseBlankIdentifiers<TField extends string>(
+  subject: Readonly<Record<TField, string>>,
+  fields: readonly TField[],
+): void {
+  for (const field of fields) {
+    if (subject[field].trim() === '') {
       throw new SessionRefusedError(
         `A session with a blank ${field} is not a verified session. An absent identifier ` +
           'compares equal to another absent identifier, so accepting one would let two ' +
@@ -74,10 +99,51 @@ export function acceptVerifiedSession(session: VerifiedSession): VerifiedSession
       );
     }
   }
+}
+
+/**
+ * 🛑 **A PRINCIPAL THAT HAS NO ORGANIZATION** — ADR-0083 **D1, option B**.
+ *
+ * 🛑 **THE ORGANIZATION FIELD DOES NOT EXIST HERE, AND ITS ABSENCE IS THE WHOLE
+ * DESIGN.** A platform operator belongs to no organization (ADR-0079;
+ * `platformScope()` has taken no arguments since slice 1). The refused option A
+ * would have made `VerifiedSession.organizationId` nullable — putting an absent
+ * identifier inside the one module whose refusal above exists because two
+ * absences comparing equal read as an authorization. 🚫 Here no comparison
+ * against an organization can be written at all, correctly or otherwise: there
+ * is nothing to compare.
+ *
+ * 🚫 **IT IS NOT A `VerifiedSession` AND NEITHER CONVERTS INTO THE OTHER.**
+ * `VerifiedSession` is left byte-identical by ADR-0083; a widening helper that
+ * produced one from the other would undo the decision in a single function.
+ *
+ * 🚫 No role, no `isAdmin`, no permission list — ADR-0062 D3 is unchanged, and
+ * "platform" here is a SCOPE the reader resolves, 🚫 never a bypass the session
+ * carries.
+ */
+export interface VerifiedPlatformSession {
+  /** Identity of the session row itself, so it can be revoked and audited. */
+  readonly sessionId: string;
+  /** The account the session was issued to. Recorded; it decides nothing. */
+  readonly accountId: string;
+}
+
+/**
+ * Accept a verified platform session, refusing anything unusable as one.
+ *
+ * ⚠️ It refuses through the **same** {@link refuseBlankIdentifiers} the tenant
+ * principal uses — over the two fields this principal has. 🚫 There is no
+ * organization to check, and 🚫 no default is supplied for one.
+ *
+ * @throws {SessionRefusedError} naming the FIELD, 🚫 never the value.
+ */
+export function acceptVerifiedPlatformSession(
+  session: VerifiedPlatformSession,
+): VerifiedPlatformSession {
+  refuseBlankIdentifiers(session, ['sessionId', 'accountId']);
 
   return Object.freeze({
     sessionId: session.sessionId,
-    organizationId: session.organizationId,
     accountId: session.accountId,
   });
 }
