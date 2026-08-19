@@ -107,9 +107,18 @@ model ScoredBifSnapshot {
 /// is the one control that still works when nobody notices a session was
 /// stolen (ADR-0068's A1). `revokedAt` is nullable because "not revoked" is a
 /// real state, and revocation is never expressed by deleting the row.
+/// `organizationId` IS NULLABLE, AND THAT IS ADR-0082 D1 IN ONE COLUMN. The
+/// Product Owner decided a platform operator's session carries "no organisation
+/// id", so a platform session stores NULL rather than a reserved literal. NULL
+/// never equals anything, which is why every tenant policy keeps matching
+/// exactly the rows it matched before; a sentinel string would equal things, and
+/// every tenant policy would then treat the platform operator as a real-but-
+/// empty tenant. AN ABSENT ORGANIZATION IS A FACT ABOUT THE SESSION, NOT A
+/// MISSING VALUE: no reader may default, coalesce or render it as a tenant, and
+/// one that finds NULL where it expected a tenant refuses (ADR-0082 D4).
 model OperatorSession {
   sessionId      String  @id @map("session_id")
-  organizationId String  @map("organization_id")
+  organizationId String? @map("organization_id")
   accountId      String  @map("account_id")
   tokenHash      String  @unique(map: "operator_sessions_token_hash_key") @map("token_hash")
   issuedAt       String  @map("issued_at")
