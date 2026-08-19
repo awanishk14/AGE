@@ -48,6 +48,28 @@ function bodyLines(source: string): string[] {
 }
 
 const VHOST_BODY = bodyLines(VHOST).join('\n');
+
+/**
+ * ⚠️ **The CSP is parsed, 🚫 not substring-matched.** A `toContain` check on a
+ * one-line header cannot tell `form-action 'self'` from
+ * `form-action 'self' https://anywhere.example` — it passes on both, which is
+ * how a directive can be widened under a guard that never notices. Splitting it
+ * into directives lets a test assert the WHOLE of one, so an appended origin is
+ * a failure rather than a still-passing prefix.
+ */
+const CSP_DIRECTIVES: readonly string[] = (() => {
+  const header = bodyLines(VHOST).find((line) =>
+    line.trim().startsWith('add_header Content-Security-Policy '),
+  );
+  if (header === undefined) return [];
+  const quoted = /"([^"]*)"/.exec(header);
+  const policy = quoted?.[1];
+  if (policy === undefined) return [];
+  return policy
+    .split(';')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+})();
 const SCRIPT_BODY = bodyLines(SCRIPT).join('\n');
 
 describe('the artifacts exist and are actually being read', () => {
@@ -139,9 +161,38 @@ describe('the headers a browser needs, and 🚫 the one it must never get', () =
 
   it('forbids framing in the header that actually binds', () => {
     expect(VHOST_BODY).toContain("frame-ancestors 'none'");
-    expect(VHOST_BODY).toContain("form-action 'self'");
     expect(VHOST_BODY).toContain("object-src 'none'");
     expect(VHOST_BODY).toContain("base-uri 'self'");
+  });
+
+  /**
+   * 🛑 **`form-action` NAMES EXACTLY ONE OUTSIDE ORIGIN, AND THIS TEST PINS
+   * WHICH.** `form-action 'self'` alone is 🚫 NOT correct here and was the
+   * shipped defect: Chrome enforces `form-action` across the WHOLE redirect
+   * chain, so a same-origin POST to `/sign-in/start` that answers `303 →
+   * accounts.google.com` is aborted before it leaves the browser. The console
+   * looked like a dead button, with 🚫 no `?refused=` marker to read, because
+   * the request never reached the server at all.
+   *
+   * ⚠️ **THIS IS A PIN, 🚫 NOT A RELAXATION.** The assertion is on the FULL
+   * directive text, so 🚫 no second origin can be appended without failing —
+   * `'self' https://accounts.google.com *` and `'self' https://evil.example`
+   * both break this test. The reason the original directive existed is
+   * unchanged: a sign-in form must 🚫 NEVER be repointable at an origin of an
+   * injected script's choosing. It may now reach one origin, named in full,
+   * because ADR-0079 made Google the door.
+   */
+  it('permits the Google sign-in door and 🚫 nothing else', () => {
+    const directive = CSP_DIRECTIVES.find((entry) => entry.startsWith('form-action'));
+    expect(directive, 'form-action is not set at all').toBeDefined();
+    expect(directive).toBe("form-action 'self' https://accounts.google.com");
+  });
+
+  it('🚫 lets no wildcard into form-action, in any spelling', () => {
+    const directive = CSP_DIRECTIVES.find((entry) => entry.startsWith('form-action')) ?? '';
+    for (const forbidden of ['*', "'unsafe", 'http://', 'data:']) {
+      expect(directive, `form-action must never contain ${forbidden}`).not.toContain(forbidden);
+    }
   });
 
   it('🚫 sets NO CORS header, anywhere', () => {
