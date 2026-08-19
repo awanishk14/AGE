@@ -1,6 +1,7 @@
-import type { DirectoryAccount, DirectoryEntry, DirectoryMembership } from '@age/sign-in-directory';
+import type { DirectoryEntry } from '@age/sign-in-directory';
 
 import type { DirectoryScope, DirectoryScopeRunner } from './directory-scope-runner';
+import { normalizeDirectoryEntry } from './directory-normalize';
 
 /**
  * ADR-0079 slice 3 — **the durable READ behind `decideSignIn`.**
@@ -70,89 +71,7 @@ function entryFor(
   scope: DirectoryScope,
   where: { readonly email: string } | { readonly accountId: string },
 ): Promise<DirectoryEntry> {
-  return runner.runInScope({ organizationId: scope.organizationId }, async (delegates) => {
-    const accountRow: unknown = await delegates.accounts.findUnique({ where });
-    const account = normalizeAccount(accountRow);
-
-    // ⚠️ No account means no memberships to ask about, and asking anyway would
-    // be a membership read with no account id to give it.
-    if (account === undefined) {
-      return Object.freeze({ account: undefined, memberships: Object.freeze([]) });
-    }
-
-    const membershipRows = await delegates.memberships.findMany({
-      where: { accountId: account.accountId },
-    });
-
-    return Object.freeze({
-      account,
-      memberships: Object.freeze(
-        membershipRows
-          .map(normalizeMembership)
-          .filter((membership): membership is DirectoryMembership => membership !== undefined),
-      ),
-    });
-  });
-}
-
-function normalizeAccount(row: unknown): DirectoryAccount | undefined {
-  const record = asRecord(row);
-  if (record === undefined) return undefined;
-
-  const accountId = requiredString(record['accountId']);
-  const email = requiredString(record['email']);
-
-  if (accountId === undefined || email === undefined) return undefined;
-
-  return Object.freeze({ accountId, email, disabledAt: nullableString(record['disabledAt']) });
-}
-
-function normalizeMembership(row: unknown): DirectoryMembership | undefined {
-  const record = asRecord(row);
-  if (record === undefined) return undefined;
-
-  const membershipId = requiredString(record['membershipId']);
-  const accountId = requiredString(record['accountId']);
-  const scopeKind = requiredString(record['scopeKind']);
-  const roleBundle = requiredString(record['roleBundle']);
-
-  if (
-    membershipId === undefined ||
-    accountId === undefined ||
-    scopeKind === undefined ||
-    roleBundle === undefined
-  ) {
-    return undefined;
-  }
-
-  return Object.freeze({
-    membershipId,
-    accountId,
-    scopeKind,
-    organizationId: nullableString(record['organizationId']),
-    clientId: nullableString(record['clientId']),
-    roleBundle,
-    revokedAt: nullableString(record['revokedAt']),
-  });
-}
-
-function asRecord(row: unknown): Record<string, unknown> | undefined {
-  if (typeof row !== 'object' || row === null || Array.isArray(row)) return undefined;
-  return row as Record<string, unknown>;
-}
-
-function requiredString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() !== '' ? value : undefined;
-}
-
-/**
- * ⚠️ **ANYTHING THAT IS NOT A NON-EMPTY STRING READS AS `null`, AND FOR
- * `revokedAt` THAT IS THE SAFE DIRECTION ONLY BECAUSE OF WHAT `null` MEANS
- * HERE.** `null` is "not revoked", so a malformed instant would read as LIVE.
- * That is why a membership missing any REQUIRED field is dropped whole above,
- * and why `revoked_at` is `TIMESTAMPTZ`-shaped text the database itself
- * constrains — a garbage value cannot be stored, so it cannot be read.
- */
-function nullableString(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() !== '' ? value : null;
+  return runner.runInScope({ organizationId: scope.organizationId }, (delegates) =>
+    normalizeDirectoryEntry(delegates, where),
+  );
 }

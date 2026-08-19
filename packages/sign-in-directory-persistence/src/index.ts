@@ -32,3 +32,20 @@ export {
 } from './directory-scope-runner';
 
 export { directoryEntryByAccountRead, signInDirectoryRead } from './directory-read';
+
+/**
+ * ADR-0080 OPTION A — the platform read, and 🚫 **NOT a second directory**.
+ *
+ * ⚠️ **IT IS FENCED BY THE GOOGLE-VERIFIED ADDRESS, 🚫 NOT "unscoped".** The
+ * database answers exactly one question — *is this ONE address, which the
+ * caller already holds, a platform operator?* 🚫 It cannot enumerate, and 🚫 it
+ * cannot be pointed at a tenant.
+ *
+ * 🛑 **IT DECIDES NOTHING AND ISSUES NOTHING**, exactly like the scoped read.
+ */
+export {
+  PrismaPlatformDirectoryRunner,
+  platformDirectoryRead,
+  type PlatformDirectoryRunner,
+  type PlatformTransactionSource,
+} from './platform-directory-read';
