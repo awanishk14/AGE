@@ -14,10 +14,12 @@
  */
 
 export {
+  acceptVerifiedPlatformSession,
   acceptVerifiedSession,
   authenticatedOrganizationIdOf,
   SessionRefusedError,
   type AuthenticatedOrganizationId,
+  type VerifiedPlatformSession,
   type VerifiedSession,
 } from './verified-session';
 
