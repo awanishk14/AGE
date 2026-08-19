@@ -27,13 +27,30 @@ const EXPECTED_WRAPPERS = [
   'age-deploy-derive-env',
   'age-deploy-docker-probe',
   'age-deploy-nginx-apply',
+  'age-deploy-settings-apply',
 ] as const;
 
-/** The three that take no arguments at all. */
+/**
+ * The four that take no arguments at all.
+ *
+ * ⚠️ `age-deploy-settings-apply` belongs here even though it CARRIES input:
+ * ADR-0081 D2 puts that input on **stdin** precisely so that argv stays empty.
+ * A settings name in argv would be a caller-supplied name, one step away from a
+ * caller-supplied path.
+ */
 const NO_ARGUMENT_WRAPPERS = [
   'age-deploy-compose-up',
   'age-deploy-derive-env',
   'age-deploy-nginx-apply',
+  'age-deploy-settings-apply',
+] as const;
+
+/** ADR-0081 D2 — the literal allow-list, asserted by name. */
+const ALLOW_LISTED_SETTINGS = [
+  'AGE_STUDIO_GOOGLE_CLIENT_ID',
+  'AGE_STUDIO_GOOGLE_CLIENT_SECRET',
+  'AGE_STUDIO_GOOGLE_REDIRECT_URI',
+  'AGE_STUDIO_ORGANIZATION_ID',
 ] as const;
 
 /**
@@ -81,7 +98,7 @@ const BODIES = new Map<string, string>(
 );
 
 describe('ADR-0077 D6 guard 6 — the walk found something', () => {
-  it('located exactly the four wrappers the ADR names', () => {
+  it('located exactly the five wrappers the ADRs name', () => {
     // 🛑 AN EMPTY SCAN MUST NEVER BE ABLE TO REPORT COMPLIANCE. Every guard
     // below iterates this list; if it were empty they would all pass silently.
     expect(wrapperFiles.length).toBeGreaterThan(0);
@@ -171,7 +188,7 @@ describe('ADR-0077 D6 guard 3 — no wrapper takes a caller-controlled path', ()
 });
 
 describe('ADR-0077 D6 guard 4 — no caller argument reaches docker, nginx, certbot or systemctl', () => {
-  it('refuses any argv at all in the three no-argument wrappers', () => {
+  it('refuses any argv at all in the four no-argument wrappers', () => {
     let examined = 0;
     for (const name of NO_ARGUMENT_WRAPPERS) {
       const body = BODIES.get(name)!;
@@ -243,13 +260,13 @@ describe('ADR-0077 D6 guard 4 — no caller argument reaches docker, nginx, cert
   });
 });
 
-describe('ADR-0077 D2 — the sudoers drop-in grants nothing but the four wrappers', () => {
+describe('ADR-0077 D2 + ADR-0081 D1 — the sudoers drop-in grants nothing but the five wrappers', () => {
   const SUDOERS = readFileSync(join(WRAPPER_DIR, 'sudoers.age-deploy'), 'utf8');
   const BODY = SUDOERS.split('\n').filter((line) => !line.trimStart().startsWith('#'));
   const RULES = BODY.filter((line) => line.trim().length > 0);
 
   it('has exactly one rule per wrapper and no more', () => {
-    expect(RULES.length).toBe(4);
+    expect(RULES.length).toBe(5);
     for (const wrapper of EXPECTED_WRAPPERS) {
       expect(RULES.filter((rule) => rule.includes(`/usr/local/sbin/${wrapper}`)).length).toBe(1);
     }
@@ -273,10 +290,98 @@ describe('ADR-0077 D2 — the sudoers drop-in grants nothing but the four wrappe
     }
   });
 
-  it('permits the three no-argument wrappers with no arguments at all', () => {
+  it('permits the four no-argument wrappers with no arguments at all', () => {
     for (const wrapper of NO_ARGUMENT_WRAPPERS) {
       const rule = RULES.find((line) => line.includes(wrapper))!;
       expect(rule, wrapper).toMatch(/""\s*$/);
     }
+  });
+});
+
+/**
+ * ADR-0081 **D6** — the fifth wrapper, and the parts of it a REPOSITORY can
+ * assert.
+ *
+ * 🛑 **WHAT IS NOT HERE, ON PURPOSE.** That the file is root-owned `0755`, that
+ * `sudo -n -l` lists five entries for `age-deploy` and nothing else, and that
+ * the four refusals of D7 actually refuse on the box. Those are HOST facts,
+ * they are measured in the installation slice, and 🚫 a repository test must not
+ * pretend to them.
+ */
+describe('ADR-0081 D6 — the settings wrapper writes NAMES, never a path', () => {
+  const BODY = BODIES.get('age-deploy-settings-apply')!;
+
+  it('names ONE literal target file, and takes it from nowhere else', () => {
+    expect(BODY).toContain("TARGET='/etc/age-studio/age-studio.env'");
+    // 🚫 No caller-supplied path, in any of the shapes that would be one.
+    expect(BODY).not.toMatch(/TARGET=\s*"\$/);
+    expect(BODY).not.toMatch(/\$\{?AGE_[A-Z_]*(FILE|PATH)/);
+  });
+
+  it('🛑 allow-lists every NAME, and `DATABASE_URL_APP` is ABSENT from it', () => {
+    const allowList = BODY.split('\n').find((line) => line.startsWith('ALLOWED='));
+    expect(allowList).toBeDefined();
+
+    for (const name of ALLOW_LISTED_SETTINGS) {
+      expect(allowList!, name).toContain(name);
+    }
+
+    // 🛑 THE ABSENCE IS THE ASSERTION. A guard that only checked "an allow-list
+    // exists" would pass after someone added one more name to it — and adding
+    // one more name is exactly how this wrapper becomes an arbitrary root
+    // write. `DATABASE_URL_APP` names the container route, and a path that
+    // could rewrite it could point the console at a database of the caller's
+    // choosing.
+    expect(allowList!).not.toContain('DATABASE_URL_APP');
+    const names = allowList!
+      .replace(/^ALLOWED='/, '')
+      .replace(/'$/, '')
+      .trim()
+      .split(/\s+/);
+    expect(names).toEqual([...ALLOW_LISTED_SETTINGS]);
+  });
+
+  it('⚠️ still refuses a result that lost the application database URL', () => {
+    // ADR-0081 D3 — the refusal that catches the ACCIDENT rather than the
+    // attack: a truncating edit leaving a console unable to reach its store.
+    expect(BODY).toContain('grep -q \'^DATABASE_URL_APP=\' "$STAGED"');
+  });
+
+  it('🚫 never reaches docker, nginx, certbot, systemctl, a shell or eval', () => {
+    for (const forbidden of [
+      /\bdocker\b/,
+      /\bnginx\b/,
+      /\bcertbot\b/,
+      /\bsystemctl\b/,
+      /\beval\b/,
+      /set -x/,
+    ]) {
+      expect(forbidden.test(BODY), String(forbidden)).toBe(false);
+    }
+  });
+
+  it('🚫 reports a NAME and a LENGTH, and never a value (D4)', () => {
+    expect(BODY).toContain("printf '    %s len=%s\\n'");
+    // 🚫 No branch echoes a line, a value, or a digest of one.
+    expect(BODY).not.toMatch(/echo[^\n]*\$\{?value/);
+    expect(BODY).not.toMatch(/printf[^\n]*"\$value"/);
+    expect(BODY).not.toMatch(/sha256|md5|openssl/);
+  });
+
+  it('🛑 re-derives the container copy itself (D5)', () => {
+    // ⚠️ A settings write NOT followed by a re-derive leaves two files
+    // disagreeing, the container keeps the OLD value, and nothing fails.
+    expect(BODY).toContain("DERIVE='/usr/local/sbin/age-deploy-derive-env'");
+    expect(BODY).toMatch(/^"\$DERIVE"$/m);
+  });
+
+  it('validates the WHOLE input before writing anything', () => {
+    // ⚠️ The staged file must be created only after the last refusal. A wrapper
+    // that wrote as it read would leave a half-applied file behind.
+    const firstStage = BODY.indexOf('STAGED=');
+    const lastRefusalBeforeWrite = BODY.lastIndexOf('not an allow-listed setting name');
+    expect(firstStage).toBeGreaterThan(0);
+    expect(lastRefusalBeforeWrite).toBeGreaterThan(0);
+    expect(lastRefusalBeforeWrite).toBeLessThan(firstStage);
   });
 });
