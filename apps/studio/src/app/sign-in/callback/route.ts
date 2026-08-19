@@ -4,13 +4,15 @@ import {
   readHandshakeCookies,
   serializeSessionCookie,
 } from '@age/session-cookie';
-import { decideSignIn, type SignInRefusalReason } from '@age/sign-in-directory';
+import { decideSignInAcrossDirectories, type SignInRefusalReason } from '@age/sign-in-directory';
 
 import {
   exchangeGoogleAuthorizationCode,
   googleSignInConfiguration,
   issueOperatorSession,
+  issuePlatformSession,
   mintOpaqueValue,
+  readPlatformDirectoryEntry,
   readSignInDirectoryEntry,
   sessionLookupOrganizationId,
   signInNow,
@@ -89,24 +91,19 @@ export async function GET(request: Request): Promise<Response> {
   // below may therefore be specific — they tell that person something about
   // THEMSELVES, which is not a disclosure, and an operator told only "no" would
   // retry a good Google account forever against a console that cannot admit it.
-  const entry = await readSignInDirectoryEntry(lookupOrganizationId, identity.email);
-  const decision = decideSignIn(entry, lookupOrganizationId);
+  // 🛑 **BOTH DIRECTORY CHANNELS ARE READ, AND NEITHER IS TRIED "FIRST".** The
+  // tenant read compares `organization_id` for equality, so 🚫 it can never
+  // return the platform membership (NULL equals nothing); the fenced platform
+  // read sets 🚫 no `age.organization_id` at all, so 🚫 it can never return a
+  // tenant's people. ⚠️ Asking one and falling back to the other would make the
+  // ORDER decide which membership wins — and `decideSignIn` refuses exactly that
+  // question, by name, inside a single entry.
+  const tenantEntry = await readSignInDirectoryEntry(lookupOrganizationId, identity.email);
+  const platformEntry = await readPlatformDirectoryEntry(identity.email);
+
+  const decision = decideSignInAcrossDirectories(tenantEntry, platformEntry, lookupOrganizationId);
 
   if (decision.outcome === 'refused') return refuse(markerFor(decision.reason));
-
-  // 🛑 **AN ADMITTED PLATFORM OPERATOR IS REFUSED *HERE*, AT THE EDGE, UNTIL THE
-  // ISSUANCE PATH EXISTS.** `decideSignIn` now admits them with 🚫 no
-  // organization (ADR-0082 D1); what does not exist yet is issuance that can
-  // write a row without one. ⚠️ The dangerous alternative is one character away
-  // and reads as harmless: passing `lookupOrganizationId` below would file a
-  // platform operator's session under the pinned tenant — 🚫 exactly the
-  // substitution ADR-0082 D4 forbids, and it would look like a working sign-in.
-  //
-  // ⚠️ **THIS IS A NARROWING, 🚫 NOT A WIDENED GUARD.** Before this slice the
-  // decision layer refused them; after it, the decision layer admits and this
-  // one composed edge declines to issue. 🚫 Nothing became reachable that was
-  // not reachable before.
-  if (decision.operator.organizationId === null) return refuse('scope-not-served');
 
   // 🛑 **THE ONE AUTHORIZED INSERT.** The token is minted HERE and travels in
   // exactly two directions: into the cookie, and into the hash the row stores.
@@ -114,12 +111,22 @@ export async function GET(request: Request): Promise<Response> {
   // only its SHA-256 digest.
   const token = mintOpaqueValue();
   const issuedAt = signInNow();
-  const issued = await issueOperatorSession(
-    lookupOrganizationId,
-    decision.operator.accountId,
-    token,
-    issuedAt,
-  );
+
+  // 🛑 **THE BRANCH IS ON THE ABSENT ORGANIZATION, AND IT IS A BRANCH RATHER
+  // THAN A DEFAULT** (ADR-0082 D4). ⚠️ The dangerous alternative is one
+  // character away and reads as harmless: `organizationId ?? lookupOrganizationId`
+  // would file a platform operator's session under the pinned tenant, and it
+  // would look like a working sign-in. `issuePlatformSession` has 🚫 no
+  // organization parameter at all, so that substitution has nowhere to live.
+  const issued =
+    decision.operator.organizationId === null
+      ? await issuePlatformSession(decision.operator.accountId, token, issuedAt)
+      : await issueOperatorSession(
+          decision.operator.organizationId,
+          decision.operator.accountId,
+          token,
+          issuedAt,
+        );
 
   // ⚠️ The cookie expires WITH THE ROW, computed from the two values already in
   // hand — 🚫 not from a second reading of a clock, and 🚫 not from a lifetime
@@ -168,6 +175,7 @@ function markerFor(reason: SignInRefusalReason): string {
       return 'ambiguous';
     case 'client-scope-not-yet-served':
       return 'scope-not-served';
+    case 'crossed-directory-channel':
     case 'incoherent-platform-membership':
       // ⚠️ Not `ambiguous`, and not `scope-not-served`. The row itself is
       // malformed in a way no provisioning step produces, so the honest screen

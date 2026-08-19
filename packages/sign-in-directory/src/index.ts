@@ -11,6 +11,7 @@
 
 export {
   decideSignIn,
+  decideSignInAcrossDirectories,
   type AdmittedOperator,
   type DirectoryAccount,
   type DirectoryEntry,

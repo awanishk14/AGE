@@ -97,7 +97,17 @@ export type SignInRefusalReason =
    * reader is not the one the product thinks it is, and 🚫 guessing which half
    * of the row to believe is how a platform session acquires a tenant.
    */
-  | 'incoherent-platform-membership';
+  | 'incoherent-platform-membership'
+  /**
+   * 🛑 **A CHANNEL ANSWERED WITH THE OTHER CHANNEL'S KIND OF MEMBERSHIP.**
+   * The tenant read cannot return a platform row (its policy compares
+   * `organization_id` for equality, and NULL never equals anything) and the
+   * fenced platform read sets 🚫 no `age.organization_id` at all, so neither
+   * can. ⚠️ If one ever does, the reader is not the one the product thinks it
+   * is — and 🚫 believing the row anyway is how a platform session acquires a
+   * tenant, or a tenant session loses one.
+   */
+  | 'crossed-directory-channel';
 
 /**
  * Decides whether a verified identity is admitted to ONE organization.
@@ -213,4 +223,57 @@ function admittedAs(
 
 function refused(reason: SignInRefusalReason): SignInDecision {
   return Object.freeze({ outcome: 'refused' as const, reason });
+}
+
+/**
+ * The two directory channels, decided together — ADR-0080 (the fenced platform
+ * read) meeting ADR-0082 (the session that belongs to no organization).
+ *
+ * 🛑 **BOTH CHANNELS ARE ALWAYS READ, AND NEITHER RANKS ABOVE THE OTHER.** The
+ * tenant read cannot see a platform membership and the fenced platform read
+ * cannot see a tenant one, so "which one do we ask first" would silently be
+ * "which membership wins" — and `decideSignIn` already refuses that question
+ * inside one entry, by name. ⚠️ The rule is the same rule, applied across the
+ * two reads: 🚫 two live memberships are refused, 🚫 never picked between.
+ *
+ * 🚫 **IT DECIDES NOTHING NEW.** Every admission and every refusal below is
+ * `decideSignIn`'s, unchanged; this composes two of its answers and 🚫 does not
+ * form a third opinion about either.
+ */
+export function decideSignInAcrossDirectories(
+  tenantEntry: DirectoryEntry,
+  platformEntry: DirectoryEntry,
+  organizationId: string,
+): SignInDecision {
+  const tenant = decideSignIn(tenantEntry, organizationId);
+  const platform = decideSignIn(platformEntry, organizationId);
+
+  // 🛑 **AN ADMISSION FROM THE WRONG CHANNEL IS REFUSED, 🚫 NOT ACCEPTED FOR
+  // ITS SHAPE.** A tenant admission carries an organization and a platform
+  // admission carries none; the converse in either direction means the row came
+  // back through a read that should not have been able to return it.
+  if (tenant.outcome === 'admitted' && tenant.operator.organizationId === null) {
+    return refused('crossed-directory-channel');
+  }
+
+  if (platform.outcome === 'admitted' && platform.operator.organizationId !== null) {
+    return refused('crossed-directory-channel');
+  }
+
+  // 🛑 Provisioned in both places is an AMBIGUITY, 🚫 not a precedence. Whoever
+  // created the second membership has to see the refusal.
+  if (tenant.outcome === 'admitted' && platform.outcome === 'admitted') {
+    return refused('ambiguous-membership');
+  }
+
+  if (platform.outcome === 'admitted') return platform;
+  if (tenant.outcome === 'admitted') return tenant;
+
+  // ⚠️ **`no-account` IS THE ABSENCE OF A CHANNEL, 🚫 NOT A FINDING ABOUT THE
+  // PERSON.** A platform operator is simply not in the tenant directory, and a
+  // tenant operator is not in the platform one — so when one channel says only
+  // that, the OTHER channel's reason is the one a host operator can act on.
+  if (tenant.outcome === 'refused' && tenant.reason === 'no-account') return platform;
+
+  return tenant;
 }
