@@ -25,7 +25,8 @@ presented**, never by a tenant.
 | ----- | -------------------------------------------------------------------------------- | ----------- |
 | C1–C2 | the `SessionPrincipal` union, `VerifiedPlatformSession`, the one composed reader | #401–#404   |
 | C3    | the digest-fenced scope runner, the platform lookup, revocation and issuance     | #405        |
-| C4a   | the studio wiring — admission, the D4 branch, the platform logout                | this branch |
+| C4a   | the studio wiring — admission, the D4 branch, the platform logout                | #406        |
+| C4b   | the callback reads both channels and ISSUES a platform session                   | this branch |
 
 ---
 
@@ -100,13 +101,66 @@ Repository, 2026-08-19:
 `20260819000000_platform_membership_sign_in_read` nor
 `20260819100000_platform_sessions_without_an_organization` has been applied to the deployed store.
 
-🛑 **What this slice does ❌ NOT prove:** that a platform operator can sign in. **They cannot** —
-the callback still refuses a directory row with no organization. That is **C4b**, and it is the
-next slice. A platform principal admitted here can only exist once C4b issues one.
+🛑 **What C4a did ❌ NOT prove:** that a platform operator can sign in. That is **C4b**, below.
 
 ---
 
-## 7. Open, and all the owner's
+## 7. C4b — the callback issues a platform session
+
+### What changed
+
+- **`@age/sign-in-directory`** — one new pure function, `decideSignInAcrossDirectories`, plus one
+  new refusal reason, `crossed-directory-channel`. 🚫 It forms no new opinion: every admission and
+  every refusal it returns is `decideSignIn`'s, unchanged.
+- **`apps/capture/src/deployed-sign-in-composition.ts`** — the same authorized door grows
+  `findPlatformDirectoryEntry` (the ADR-0080 fenced read) and `issuePlatform` (the ADR-0083 D5
+  digest-fenced insert). 🚫 No third door, and 🚫 no new grant.
+- **`apps/studio/src/server/operator-environment.ts`** — `readPlatformDirectoryEntry(email)` and
+  `issuePlatformSession(accountId, token, issuedAt)`. ⚠️ **The second one has no organization
+  parameter at all**, which is where the ADR-0082 D4 substitution is prevented rather than checked.
+- **the callback** — reads **both** channels and branches on `organizationId === null`.
+
+### 🛑 Both channels are read, and neither is "first"
+
+The tenant read compares `organization_id` for equality, so 🚫 it can never return a platform
+membership; the fenced platform read sets 🚫 no `age.organization_id`, so 🚫 it can never return a
+tenant's people. ⚠️ Asking one and falling back to the other would make the **order** decide which
+membership wins — and `decideSignIn` refuses exactly that question, by name, inside one entry.
+Provisioned in both is therefore **`ambiguous-membership`**, 🚫 not a precedence.
+
+### The mutation pass — six breaks
+
+| #   | Mutation                                                                            | What the failure said                                                                                      |
+| --- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 1   | issued the platform session through `issueOperatorSession(lookupOrganizationId, …)` | _"expected [] to deeply equal [ { …(2) } ]"_ — the tenant path taken, and the one-caller guard flipped too |
+| 2   | deleted the crossed-channel refusal on the tenant arm                               | both layers named it: the pure spec and the route's "a platform row through the TENANT channel"            |
+| 3   | let a platform admission win when both channels admit                               | _"expected '/' to be '/sign-in?refused=ambiguous'"_ — a precedence where the rule says refusal             |
+| 4   | read the platform channel with an address that was not the verified one             | _"expected [ 'someone-else@…' ] to deeply equal [ 'operator@…' ]"_                                         |
+| 5   | planted `apps/studio/src/server/planted-platform-read.ts`                           | the ADR-0080 fence guard named the planted file **by path**                                                |
+| 6   | routed `issuePlatformSession` through the tenant `store.issue`                      | 🛑 **the COMPILER refused it** — `TS2345`, because the platform request has no `organizationId` to give    |
+
+⚠️ Mutation 6 is the one worth keeping: the substitution ADR-0082 D4 forbids is not caught by a
+test here, it is **unrepresentable**. That is D1's separate type paying for itself a second time.
+
+### Verification — and its limits
+
+Repository, 2026-08-19: `typecheck`, `lint` and `test --skip-nx-cache` each **64 projects**, exit 0;
+`pnpm --filter @age/persistence typecheck:db` exit 0 (⚠️ it is 🚫 **not** part of
+`nx run-many -t typecheck`, and it caught a real defect in C4a); `apps/studio` **344 tests /
+31 files** (335 → 344), `@age/sign-in-directory` **31 tests** (22 → 31).
+
+🛑 **None of it is a VPS fact, and 🚫 nobody has signed in.** The two migrations are still not
+applied to the deployed store, the console still runs the pre-ADR-0079-slice-4 image, and
+🛑 **there is still no super-admin row** — provisioning is a **human act**, and 🚫 nothing in this
+slice creates one. What this slice proves is that **if** such a row existed, the callback would
+issue a session that belongs to no organization.
+
+⚠️ **The C4a gap is unchanged:** there is still no directory re-read on the platform arm, so a
+platform membership revoked mid-session is caught at 8-hour token expiry (§5).
+
+---
+
+## 8. Open, and all the owner's
 
 - **ADR-0080 (`Proposed`, PR #385)** — the super-admin cannot sign in.
 - **ADR-0081 (`Proposed`, PR #386)** — the fifth `age-deploy` wrapper.

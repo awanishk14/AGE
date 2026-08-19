@@ -879,6 +879,22 @@ export function readSignInDirectoryEntry(
 }
 
 /**
+ * Whether this Google-verified address is a PLATFORM operator — ADR-0080
+ * Option A, reached from exactly one caller.
+ *
+ * 🛑 **IT IS FENCED BY THE ADDRESS, 🚫 NOT UNSCOPED.** The database answers one
+ * question about one address the caller already holds. 🚫 It cannot enumerate,
+ * and 🚫 there is no parameter through which a tenant could be supplied — so
+ * this read can neither be pointed at an organization nor accidentally return
+ * one's people.
+ *
+ * 🚫 **IT DECIDES NOTHING**, exactly like the scoped read next door.
+ */
+export function readPlatformDirectoryEntry(email: string): Promise<DirectoryEntry> {
+  return withSignInStore((store) => store.findPlatformDirectoryEntry(email));
+}
+
+/**
  * 🛑 **THE ONE ACT IN AGE THAT CREATES A CREDENTIAL, AND ITS EXACT WIDTH.**
  *
  * It writes ONE `operator_sessions` row for an account that ALREADY EXISTS.
@@ -901,6 +917,35 @@ export function issueOperatorSession(
     store.issue(organizationId, {
       sessionId: mintOpaqueValue(),
       organizationId,
+      accountId,
+      token,
+      issuedAt,
+      lifetimeSeconds: ISSUED_SESSION_LIFETIME_SECONDS,
+    }),
+  );
+}
+
+/**
+ * 🛑 **THE SAME ONE ACT, FOR A PRINCIPAL THAT HAS NO ORGANIZATION** — ADR-0083
+ * D5.
+ *
+ * ⚠️ **THERE IS NO ORGANIZATION PARAMETER, AND THAT IS THE POINT.** The
+ * dangerous version of this function takes one and passes the deployment's
+ * pinned tenant, which would file a platform operator's session under a tenant
+ * they never named — 🚫 exactly the substitution ADR-0082 D4 forbids. A
+ * parameter that does not exist cannot be filled in by mistake.
+ *
+ * ⚠️ **THE LIFETIME IS THE SAME CONSTANT** — eight hours, ADR-0079 D4, the
+ * owner's answer, the same for every scope.
+ */
+export function issuePlatformSession(
+  accountId: string,
+  token: string,
+  issuedAt: Date,
+): Promise<IssuedSession> {
+  return withSignInStore((store) =>
+    store.issuePlatform({
+      sessionId: mintOpaqueValue(),
       accountId,
       token,
       issuedAt,

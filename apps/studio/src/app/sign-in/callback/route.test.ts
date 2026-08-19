@@ -1,3 +1,6 @@
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -32,8 +35,11 @@ const world = vi.hoisted(() => ({
   exchanges: [] as string[],
   idToken: undefined as string | undefined,
   directoryReads: [] as { organizationId: string; email: string }[],
+  platformReads: [] as string[],
   entry: {} as unknown,
+  platformEntry: {} as unknown,
   issued: [] as { organizationId: string; accountId: string; token: string }[],
+  platformIssued: [] as { accountId: string; token: string }[],
   minted: 'c'.repeat(64),
 }));
 
@@ -60,6 +66,17 @@ vi.mock('@/server/operator-environment', () => ({
   issueOperatorSession: async (organizationId: string, accountId: string, token: string) => {
     world.issued.push({ organizationId, accountId, token });
     return { sessionId: 'session-fictional-1', expiresAt: '2026-08-18T18:00:00.000Z' };
+  },
+  readPlatformDirectoryEntry: async (email: string) => {
+    world.platformReads.push(email);
+    return world.platformEntry;
+  },
+  // 🛑 **THE SIGNATURE IS THE GUARD.** This fake takes 🚫 no organization,
+  // because the real one does not — so a test that "passed the pinned tenant
+  // through" could not even be written against it.
+  issuePlatformSession: async (accountId: string, token: string) => {
+    world.platformIssued.push({ accountId, token });
+    return { sessionId: 'session-fictional-platform', expiresAt: '2026-08-18T18:00:00.000Z' };
   },
 }));
 
@@ -113,7 +130,12 @@ beforeEach(() => {
   world.configured = true;
   world.exchanges.length = 0;
   world.directoryReads.length = 0;
+  world.platformReads.length = 0;
   world.issued.length = 0;
+  world.platformIssued.length = 0;
+  // ⚠️ The DEFAULT is "this address is not a platform operator", which is what
+  // the fenced read returns for everybody the owner has not provisioned.
+  world.platformEntry = { account: undefined, memberships: [] };
   world.idToken = idTokenWith({});
   world.entry = {
     account: { accountId: 'account-fictional-operator', email: EMAIL, disabledAt: null },
@@ -268,7 +290,11 @@ describe('🛑 AGE mints nothing — a verified identity with no row is refused'
     expect(response.headers.get('Location')).toBe(`/sign-in?refused=${marker}`);
     // 🛑 THE INVARIANT THE WHOLE SLICE RESTS ON. A refused person gets no row —
     // and there is no path here that could give them the account they lack.
+    // ⚠️ BOTH issuance paths, 🚫 not only the tenant one: a guard that watched
+    // one door while a second was opened is the pattern this repository keeps
+    // catching itself in.
     expect(world.issued).toEqual([]);
+    expect(world.platformIssued).toEqual([]);
     expect(sessionCookie(response)).toBeUndefined();
   });
 
@@ -282,26 +308,76 @@ describe('🛑 AGE mints nothing — a verified identity with no row is refused'
   });
 });
 
-describe('🛑 a platform operator is ADMITTED and still issued NOTHING (ADR-0082)', () => {
-  it('refuses at this edge rather than filing the session under the pinned tenant', async () => {
-    // 🛑 **THE FAILURE THIS PINS LOOKS LIKE A WORKING SIGN-IN.** Since ADR-0082
-    // slice B, `decideSignIn` ADMITS a platform operator, with
-    // `organizationId: null`. Issuance that can write a row without an
-    // organization does not exist yet, and the one-character version of
-    // shipping anyway — passing this deployment's pinned organization to
-    // `issueOperatorSession` — would file a platform operator's session under a
-    // TENANT. ⚠️ That is the substitution ADR-0082 D4 forbids, and 🚫 nothing
-    // downstream would ever report it.
+const PLATFORM_ENTRY = {
+  account: { accountId: 'account-fictional-superadmin', email: EMAIL, disabledAt: null },
+  memberships: [
+    {
+      membershipId: 'membership-fictional-platform',
+      accountId: 'account-fictional-superadmin',
+      scopeKind: 'platform',
+      organizationId: null,
+      clientId: null,
+      roleBundle: 'platform-admin',
+      revokedAt: null,
+    },
+  ],
+};
+
+const NOBODY = { account: undefined, memberships: [] };
+
+describe('🛑 a platform operator signs in, and 🚫 not into a tenant (ADR-0083 C4b)', () => {
+  beforeEach(() => {
+    // ⚠️ The tenant directory does not know them, and that is not an accident of
+    // the fixture: the tenant read compares `organization_id` for equality, and
+    // a platform membership carries NULL.
+    world.entry = NOBODY;
+    world.platformEntry = PLATFORM_ENTRY;
+  });
+
+  it('issues through the path that has 🚫 NO organization parameter', async () => {
+    const response = await callback(`?state=${STATE}&code=abc`);
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('Location')).toBe('/');
+    expect(world.platformIssued).toEqual([
+      { accountId: 'account-fictional-superadmin', token: world.minted },
+    ]);
+
+    // 🛑 **THE ASSERTION THE WHOLE SLICE RESTS ON.** The tenant issuance path
+    // was 🚫 NOT taken — and in particular 🚫 not with `ORGANIZATION`, which is
+    // the one-character substitution ADR-0082 D4 forbids and the one that would
+    // read as a working sign-in.
+    expect(world.issued).toEqual([]);
+    expect(sessionCookie(response)).toContain(`__Host-age_session=${world.minted}`);
+  });
+
+  it('🚫 never files the session under the pinned organization, by any spelling', async () => {
+    await callback(`?state=${STATE}&code=abc`);
+
+    expect(JSON.stringify(world.platformIssued)).not.toContain(ORGANIZATION);
+  });
+
+  it('🛑 reads BOTH channels, and the platform one by the VERIFIED address only', async () => {
+    await callback(`?state=${STATE}&code=abc`);
+
+    expect(world.directoryReads).toEqual([{ organizationId: ORGANIZATION, email: EMAIL }]);
+    expect(world.platformReads).toEqual([EMAIL]);
+  });
+
+  it('🛑 refuses when the SAME person is provisioned in both channels', async () => {
+    // 🛑 AN AMBIGUITY, 🚫 NOT A PRECEDENCE. Ranking platform above agency would
+    // decide, silently and the same way every time, in favour of the widest
+    // scope AGE has — and whoever created the second row would never see it.
     world.entry = {
-      account: { accountId: 'account-fictional-operator', email: EMAIL, disabledAt: null },
+      account: { accountId: 'account-fictional-superadmin', email: EMAIL, disabledAt: null },
       memberships: [
         {
-          membershipId: 'membership-fictional-platform',
-          accountId: 'account-fictional-operator',
-          scopeKind: 'platform',
-          organizationId: null,
+          membershipId: 'membership-fictional-agency',
+          accountId: 'account-fictional-superadmin',
+          scopeKind: 'agency',
+          organizationId: ORGANIZATION,
           clientId: null,
-          roleBundle: 'platform-admin',
+          roleBundle: 'agency-operator',
           revokedAt: null,
         },
       ],
@@ -309,10 +385,63 @@ describe('🛑 a platform operator is ADMITTED and still issued NOTHING (ADR-008
 
     const response = await callback(`?state=${STATE}&code=abc`);
 
-    expect(response.headers.get('Location')).toBe('/sign-in?refused=scope-not-served');
-    // 🛑 THE ASSERTION THAT MATTERS: 🚫 no row at all, and in particular 🚫 not
-    // one carrying `ORGANIZATION`.
+    expect(response.headers.get('Location')).toBe('/sign-in?refused=ambiguous');
     expect(world.issued).toEqual([]);
+    expect(world.platformIssued).toEqual([]);
+    expect(sessionCookie(response)).toBeUndefined();
+  });
+
+  it('🛑 refuses a platform row that arrived through the TENANT channel', async () => {
+    // ⚠️ It cannot happen through the shipped policies — which is exactly why
+    // it is refused rather than read: a row of this shape means the reader is
+    // not the one the product thinks it is.
+    world.entry = PLATFORM_ENTRY;
+    world.platformEntry = NOBODY;
+
+    const response = await callback(`?state=${STATE}&code=abc`);
+
+    expect(response.headers.get('Location')).toBe('/sign-in?refused=not-provisioned');
+    expect(world.issued).toEqual([]);
+    expect(world.platformIssued).toEqual([]);
+  });
+
+  it('🛑 refuses a TENANT row that arrived through the platform channel', async () => {
+    world.entry = NOBODY;
+    world.platformEntry = {
+      account: { accountId: 'account-fictional-operator', email: EMAIL, disabledAt: null },
+      memberships: [
+        {
+          membershipId: 'membership-fictional-agency',
+          accountId: 'account-fictional-operator',
+          scopeKind: 'agency',
+          organizationId: ORGANIZATION,
+          clientId: null,
+          roleBundle: 'agency-operator',
+          revokedAt: null,
+        },
+      ],
+    };
+
+    const response = await callback(`?state=${STATE}&code=abc`);
+
+    expect(response.headers.get('Location')).toBe('/sign-in?refused=not-provisioned');
+    expect(world.issued).toEqual([]);
+    expect(world.platformIssued).toEqual([]);
+  });
+
+  it('🛑 a REVOKED platform membership is refused, and issues nothing', async () => {
+    world.platformEntry = {
+      account: PLATFORM_ENTRY.account,
+      memberships: PLATFORM_ENTRY.memberships.map((membership) => ({
+        ...membership,
+        revokedAt: '2026-08-01T00:00:00.000Z',
+      })),
+    };
+
+    const response = await callback(`?state=${STATE}&code=abc`);
+
+    expect(response.headers.get('Location')).toBe('/sign-in?refused=not-provisioned');
+    expect(world.platformIssued).toEqual([]);
     expect(sessionCookie(response)).toBeUndefined();
   });
 });
@@ -364,5 +493,74 @@ describe('a provisioned operator is admitted, and the cookie matches the row', (
     const set = (await callback('?state=wrong&code=abc')).headers.getSetCookie();
 
     expect(set.filter((c) => c.includes('Max-Age=0'))).toHaveLength(2);
+  });
+});
+
+/**
+ * 🛑 **ADR-0080's FENCE, ASSERTED RATHER THAN DESCRIBED.**
+ *
+ * The ADR's Option A rests on the platform read being *"reachable from exactly
+ * one caller, the sign-in callback, pinned by a guard by full path"*. Until C4b
+ * there was 🚫 no caller at all, so there was nothing to pin. There is now.
+ *
+ * ⚠️ **THE SCAN IS PRODUCT-WIDE, BECAUSE THE RULE IS PRODUCT-WIDE.** A scan of
+ * this app would report compliance while a screen in another one reached the
+ * unscoped read — and 🛑 a narrow scan is not a narrow rule.
+ */
+const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..');
+const EXCLUDED_SEGMENTS = new Set(['node_modules', 'dist', '.nx', '.next', '.turbo']);
+
+function productSourceFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) => {
+    if (EXCLUDED_SEGMENTS.has(entry)) return [];
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) return productSourceFiles(full);
+    return full.endsWith('.ts') || full.endsWith('.tsx') ? [full] : [];
+  });
+}
+
+const REPO_FILES = ['packages', 'apps']
+  .map((dir) => join(REPO_ROOT, dir))
+  .filter(existsSync)
+  .flatMap((root) => productSourceFiles(root));
+
+describe('🛑 the unscoped platform read has EXACTLY ONE caller (ADR-0080)', () => {
+  it('walked the product, so an empty scan can never report compliance', () => {
+    expect(REPO_FILES.length).toBeGreaterThan(200);
+    expect(REPO_FILES.some((file) => file.endsWith('.tsx'))).toBe(true);
+  });
+
+  it('and it is this route', () => {
+    const callers = REPO_FILES.filter(
+      (file) => !file.endsWith('.spec.ts') && !file.endsWith('.test.ts'),
+    )
+      .filter((file) =>
+        /readPlatformDirectoryEntry\(/.test(
+          readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''),
+        ),
+      )
+      .map((file) => file.slice(REPO_ROOT.length + 1).replace(/\\/g, '/'));
+
+    // ⚠️ TWO paths, and they are the DEFINITION and the ONE caller — 🚫 not two
+    // callers. A third entry is a second door into a read that has no tenant.
+    expect(callers.sort()).toEqual([
+      'apps/studio/src/app/sign-in/callback/route.ts',
+      'apps/studio/src/server/operator-environment.ts',
+    ]);
+  });
+
+  it('🚫 and the platform issuance path likewise', () => {
+    const callers = REPO_FILES.filter(
+      (file) => !file.endsWith('.spec.ts') && !file.endsWith('.test.ts'),
+    )
+      .filter((file) =>
+        /issuePlatformSession\(/.test(readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')),
+      )
+      .map((file) => file.slice(REPO_ROOT.length + 1).replace(/\\/g, '/'));
+
+    expect(callers.sort()).toEqual([
+      'apps/studio/src/app/sign-in/callback/route.ts',
+      'apps/studio/src/server/operator-environment.ts',
+    ]);
   });
 });

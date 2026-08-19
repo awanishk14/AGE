@@ -1,13 +1,16 @@
 import { PrismaClient } from '@prisma/client';
 import {
   operatorSessionIssuance,
+  platformOperatorSessionIssuance,
   type IssuedSession,
   type OperatorSessionIssuanceDelegate,
 } from '@age/session-issuance-persistence';
 import { PrismaOperatorSessionScopeRunner } from '@age/session-store-persistence';
-import type { SessionIssuanceRequest } from '@age/session-store';
+import type { PlatformSessionIssuanceRequest, SessionIssuanceRequest } from '@age/session-store';
 import {
+  platformDirectoryRead,
   PrismaDirectoryScopeRunner,
+  PrismaPlatformDirectoryRunner,
   signInDirectoryRead,
 } from '@age/sign-in-directory-persistence';
 import type { DirectoryEntry } from '@age/sign-in-directory';
@@ -54,9 +57,13 @@ import {
 export type { IssuedSession };
 
 /**
- * The sign-in store, narrowed to the two operations admission needs.
+ * The sign-in store, narrowed to the operations admission needs.
  *
- * ⚠️ **BOTH TAKE THE ORGANIZATION EXPLICITLY, AND NEITHER DEFAULTS IT.** The
+ * ⚠️ **TWO CHANNELS, AND THEY ARE 🚫 NOT INTERCHANGEABLE.** The tenant pair
+ * takes an organization; the platform pair cannot be given one. That is the
+ * whole difference, and it is expressed in the TYPES rather than in a check.
+ *
+ * ⚠️ **THE TENANT PAIR TAKES THE ORGANIZATION EXPLICITLY, AND NEITHER DEFAULTS IT.** The
  * directory policies fail closed on an unscoped read — which sign-in would
  * report as "no such account", a refusal indistinguishable from a stranger — and
  * the `FOR INSERT … WITH CHECK` policy REFUSES an unscoped insert outright.
@@ -69,6 +76,18 @@ export interface SignInStoreConnection {
     organizationId: string,
     request: SessionIssuanceRequest,
   ) => Promise<IssuedSession>;
+  /**
+   * ⚠️ **THE ADDRESS AND NOTHING ELSE** (ADR-0080 Option A). There is 🚫 no
+   * organization parameter, because a platform membership belongs to none — and
+   * a parameter that does not exist is one nobody can pass by mistake.
+   */
+  readonly findPlatformDirectoryEntry: (email: string) => Promise<DirectoryEntry>;
+  /**
+   * 🛑 The SAME authorized INSERT, fenced by the DIGEST of the token being
+   * issued rather than by a tenant (ADR-0083 D5). 🚫 It takes no organization,
+   * and the row it writes carries `organizationId: null` written out.
+   */
+  readonly issuePlatform: (request: PlatformSessionIssuanceRequest) => Promise<IssuedSession>;
   readonly close: () => Promise<void>;
 }
 
@@ -89,6 +108,9 @@ export function openDeployedPrismaSignInConnection(
   const client = new PrismaClient({ datasources: { db: { url: composition.url } } });
 
   const directoryRunner = new PrismaDirectoryScopeRunner(client);
+  // 🛑 A SEPARATE RUNNER, 🚫 not a flag on the tenant one: neither can express
+  // the other's `set_config`, so 🚫 neither can be mistaken for the other.
+  const platformDirectoryRunner = new PrismaPlatformDirectoryRunner(client);
   const issuanceRunner = new PrismaOperatorSessionScopeRunner<OperatorSessionIssuanceDelegate>(
     client,
   );
@@ -98,6 +120,8 @@ export function openDeployedPrismaSignInConnection(
       signInDirectoryRead(directoryRunner, { organizationId })(email),
     issue: (organizationId, request) =>
       operatorSessionIssuance(issuanceRunner, { organizationId })(request),
+    findPlatformDirectoryEntry: (email) => platformDirectoryRead(platformDirectoryRunner)(email),
+    issuePlatform: (request) => platformOperatorSessionIssuance(issuanceRunner)(request),
     close: () => client.$disconnect(),
   };
 }
