@@ -45,7 +45,18 @@ export interface DirectoryEntry {
  */
 export interface AdmittedOperator {
   readonly accountId: string;
-  readonly organizationId: string;
+  /**
+   * 🛑 **`null` MEANS THIS SESSION BELONGS TO NO ORGANIZATION, AND THAT IS A
+   * FACT ABOUT IT — 🚫 NOT A MISSING VALUE** (ADR-0082 D1/D4). A platform
+   * operator has no organization; `platformScope()` in `@age/access-scope` has
+   * taken no arguments since ADR-0079 slice 1, for exactly this reason.
+   *
+   * 🚫 **NEVER DEFAULT IT, COALESCE IT OR RENDER IT AS A TENANT.** A reader that
+   * finds `null` where it expected a tenant **refuses**; 🚫 it does not
+   * substitute one. ⚠️ `organizationId ?? something` anywhere downstream is
+   * this decision being undone.
+   */
+  readonly organizationId: string | null;
   readonly membershipId: string;
   readonly roleBundle: string;
   /**
@@ -77,7 +88,16 @@ export type SignInRefusalReason =
   | 'membership-revoked'
   | 'ambiguous-membership'
   | 'client-scope-not-yet-served'
-  | 'platform-scope-not-yet-readable';
+  /**
+   * 🛑 **A PLATFORM MEMBERSHIP THAT CARRIES AN ORGANIZATION OR A CLIENT IS
+   * REFUSED, 🚫 NOT NARROWED TO THE PART THAT MAKES SENSE.** ADR-0082 D4 says a
+   * reader that finds NULL where it expected a tenant refuses; the converse is
+   * the same rule. Such a row cannot come from the shipped read path — its
+   * policy requires `organization_id IS NULL` — so if one ever arrives, the
+   * reader is not the one the product thinks it is, and 🚫 guessing which half
+   * of the row to believe is how a platform session acquires a tenant.
+   */
+  | 'incoherent-platform-membership';
 
 /**
  * Decides whether a verified identity is admitted to ONE organization.
@@ -91,11 +111,16 @@ export type SignInRefusalReason =
  * ⚠️ Discovering an operator's organization ACROSS tenants needs a read path
  * that does not exist and 🚫 must not be invented by widening a shipped policy.
  *
- * 🛑 **AND PLATFORM MEMBERSHIPS ARE UNREADABLE FULL STOP.** They carry
- * `organization_id IS NULL`, and NULL never equals the scope, so no scoped read
- * can return one. Super-admin sign-in therefore does 🚫 NOT work after this
- * slice; that is stated here, refused by name below, and is the subject of a
- * `Proposed` ADR rather than a quiet policy change.
+ * 🛑 **A PLATFORM MEMBERSHIP IS NOT REACHED THROUGH THAT INPUT AT ALL**
+ * (ADR-0080, ADR-0082). It carries `organization_id IS NULL`, and NULL never
+ * equals the scope, so 🚫 no scoped read can return one — the platform rows
+ * arrive only from the separately fenced read, and they are admitted here with
+ * 🚫 **no organization**, 🚫 never with the pinned one.
+ *
+ * ⚠️ **SO `organizationId` IS THE TENANT QUESTION AND ONLY THE TENANT
+ * QUESTION.** It is ignored on the platform path, deliberately: an argument that
+ * quietly became this session's organization is precisely the substitution
+ * ADR-0082 D4 forbids.
  */
 export function decideSignIn(entry: DirectoryEntry, organizationId: string): SignInDecision {
   const account = entry.account;
@@ -114,8 +139,27 @@ export function decideSignIn(entry: DirectoryEntry, organizationId: string): Sig
 
   if (live.length === 0) return refused('membership-revoked');
 
-  if (live.some((membership) => membership.scopeKind === 'platform')) {
-    return refused('platform-scope-not-yet-readable');
+  const platform = live.filter((membership) => membership.scopeKind === 'platform');
+
+  if (platform.length > 0) {
+    // 🛑 **A PLATFORM MEMBERSHIP ALONGSIDE ANY OTHER LIVE MEMBERSHIP IS AN
+    // AMBIGUITY, 🚫 NOT A PRECEDENCE.** Ranking platform above agency would be
+    // this module deciding that the wider row wins, silently and the same way
+    // every time — and it would decide it in favour of the widest scope AGE
+    // has. Whoever provisioned the second row has to see the refusal.
+    if (live.length > platform.length || platform.length > 1)
+      return refused('ambiguous-membership');
+
+    const admitting = platform[0] as DirectoryMembership;
+
+    // 🚫 Rows are UNTRUSTED INPUT, re-validated on read, and this is the one
+    // shape that would turn a platform session into a tenant one.
+    if (admitting.organizationId !== null || admitting.clientId !== null) {
+      return refused('incoherent-platform-membership');
+    }
+
+    // ⚠️ `null`, and 🚫 NOT `organizationId`. ADR-0082 D4.
+    return admittedAs(account.accountId, null, admitting);
   }
 
   const agency = live.filter(
@@ -141,12 +185,23 @@ export function decideSignIn(entry: DirectoryEntry, organizationId: string): Sig
   // whoever provisioned the second row by mistake.
   if (agency.length > 1) return refused('ambiguous-membership');
 
-  const admitting = agency[0] as DirectoryMembership;
+  return admittedAs(account.accountId, organizationId, agency[0] as DirectoryMembership);
+}
 
+/**
+ * ⚠️ **ONE ADMISSION SHAPE, BUILT IN ONE PLACE.** Two copies would be two
+ * chances for the platform one to grow a field the tenant one lacks, and the
+ * copy that drifts still passes its own test.
+ */
+function admittedAs(
+  accountId: string,
+  organizationId: string | null,
+  admitting: DirectoryMembership,
+): SignInDecision {
   return Object.freeze({
     outcome: 'admitted' as const,
     operator: Object.freeze({
-      accountId: account.accountId,
+      accountId,
       organizationId,
       membershipId: admitting.membershipId,
       roleBundle: admitting.roleBundle,

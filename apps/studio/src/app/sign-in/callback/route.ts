@@ -94,6 +94,20 @@ export async function GET(request: Request): Promise<Response> {
 
   if (decision.outcome === 'refused') return refuse(markerFor(decision.reason));
 
+  // 🛑 **AN ADMITTED PLATFORM OPERATOR IS REFUSED *HERE*, AT THE EDGE, UNTIL THE
+  // ISSUANCE PATH EXISTS.** `decideSignIn` now admits them with 🚫 no
+  // organization (ADR-0082 D1); what does not exist yet is issuance that can
+  // write a row without one. ⚠️ The dangerous alternative is one character away
+  // and reads as harmless: passing `lookupOrganizationId` below would file a
+  // platform operator's session under the pinned tenant — 🚫 exactly the
+  // substitution ADR-0082 D4 forbids, and it would look like a working sign-in.
+  //
+  // ⚠️ **THIS IS A NARROWING, 🚫 NOT A WIDENED GUARD.** Before this slice the
+  // decision layer refused them; after it, the decision layer admits and this
+  // one composed edge declines to issue. 🚫 Nothing became reachable that was
+  // not reachable before.
+  if (decision.operator.organizationId === null) return refuse('scope-not-served');
+
   // 🛑 **THE ONE AUTHORIZED INSERT.** The token is minted HERE and travels in
   // exactly two directions: into the cookie, and into the hash the row stores.
   // 🚫 It is never logged, never echoed, never put in a URL, and the row keeps
@@ -153,8 +167,13 @@ function markerFor(reason: SignInRefusalReason): string {
     case 'ambiguous-membership':
       return 'ambiguous';
     case 'client-scope-not-yet-served':
-    case 'platform-scope-not-yet-readable':
       return 'scope-not-served';
+    case 'incoherent-platform-membership':
+      // ⚠️ Not `ambiguous`, and not `scope-not-served`. The row itself is
+      // malformed in a way no provisioning step produces, so the honest screen
+      // is the one that says the console cannot admit this person — and the
+      // distinction survives on the server side, where it is actionable.
+      return 'not-provisioned';
     default:
       // ⚠️ `no-account`, `account-disabled`, `no-membership` and
       // `membership-revoked` share a marker on the SCREEN. AGE keeps the
