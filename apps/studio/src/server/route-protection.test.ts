@@ -58,24 +58,52 @@ const PUBLIC_ROUTES: ReadonlyMap<string, string> = new Map([
   ],
 ]);
 
-/** Every route that must call the boundary before it touches anything. */
-const PROTECTED_ROUTES: readonly string[] = [
-  'page.tsx',
-  'b/[clientId]/bif/page.tsx',
-  'b/[clientId]/contradictions/page.tsx',
-  'b/[clientId]/discovery/page.tsx',
-  'b/[clientId]/evidence/page.tsx',
-  'b/[clientId]/execution/page.tsx',
-  'b/[clientId]/history/page.tsx',
-  'b/[clientId]/intelligence/page.tsx',
-  'b/[clientId]/page.tsx',
-  'b/[clientId]/peer-products/page.tsx',
-  'b/[clientId]/sources/page.tsx',
-  'b/[clientId]/strategy/page.tsx',
-  'businesses/new/page.tsx',
-  'businesses/page.tsx',
-  'diagnostics/page.tsx',
-];
+/**
+ * Every route that must call a boundary before it touches anything — and 🛑
+ * **WHICH** boundary, by name.
+ *
+ * 🛑 **THERE ARE TWO, AND THE MAP IS HOW A ROUTE SAYS WHICH IT STANDS BEHIND**
+ * (ADR-0085). `requireVerifiedSession` returns a TENANT session and is what the
+ * sixteen tenant pages need; `requireVerifiedPlatformSession` returns a
+ * `VerifiedPlatformSession` — a different type, with no organization on it —
+ * and exactly one screen needs that.
+ *
+ * ⚠️ **THIS WAS A FLAT LIST UNTIL 2026-08-20, AND IT WAS NARROWED RATHER THAN
+ * RELAXED.** The old assertion was "contains `await requireVerifiedSession()`".
+ * 🚫 The wrong repair would have been to accept either name anywhere, which
+ * would let a tenant page stand behind the platform gate and render a
+ * organization-less principal's screen. Each route now names ONE, and 🚫 the
+ * other is asserted absent.
+ */
+const PROTECTED_ROUTES: ReadonlyMap<string, string> = new Map(
+  [
+    'page.tsx',
+    'b/[clientId]/bif/page.tsx',
+    'b/[clientId]/contradictions/page.tsx',
+    'b/[clientId]/discovery/page.tsx',
+    'b/[clientId]/evidence/page.tsx',
+    'b/[clientId]/execution/page.tsx',
+    'b/[clientId]/history/page.tsx',
+    'b/[clientId]/intelligence/page.tsx',
+    'b/[clientId]/page.tsx',
+    'b/[clientId]/peer-products/page.tsx',
+    'b/[clientId]/sources/page.tsx',
+    'b/[clientId]/strategy/page.tsx',
+    'businesses/new/page.tsx',
+    'businesses/page.tsx',
+    'diagnostics/page.tsx',
+  ]
+    .map((route) => [route, 'requireVerifiedSession'] as const)
+    .concat([
+      /**
+       * 🛑 **THE PLATFORM ARM — ADR-0085.** These two are reached by a principal
+       * that has no organization, so they must 🚫 NOT call the tenant boundary:
+       * doing so would send the operator to `/platform`, from `/platform`.
+       */
+      ['platform/page.tsx', 'requireVerifiedPlatformSession'],
+      ['platform/choose/route.ts', 'requireVerifiedPlatformSession'],
+    ]),
+);
 
 function walkRoutes(directory: string): readonly string[] {
   const found: string[] = [];
@@ -105,12 +133,12 @@ describe('the studio route contract', () => {
   const routes = walkRoutes(APP_ROOT);
 
   it('finds routes at all, so an empty scan can never report compliance', () => {
-    expect(routes.length).toBeGreaterThanOrEqual(PROTECTED_ROUTES.length + PUBLIC_ROUTES.size);
+    expect(routes.length).toBeGreaterThanOrEqual(PROTECTED_ROUTES.size + PUBLIC_ROUTES.size);
   });
 
   it('classifies every route as protected or deliberately public', () => {
     const unclassified = routes.filter(
-      (route) => !PUBLIC_ROUTES.has(route) && !PROTECTED_ROUTES.includes(route),
+      (route) => !PUBLIC_ROUTES.has(route) && !PROTECTED_ROUTES.has(route),
     );
 
     // 🛑 The message names the file, so the failure is a decision to make and
@@ -123,22 +151,40 @@ describe('the studio route contract', () => {
   });
 
   it('lists no protected route that has since been deleted', () => {
-    const missing = [...PROTECTED_ROUTES, ...PUBLIC_ROUTES.keys()].filter(
+    const missing = [...PROTECTED_ROUTES.keys(), ...PUBLIC_ROUTES.keys()].filter(
       (route) => !routes.includes(route),
     );
 
     expect(missing).toEqual([]);
   });
 
-  describe.each(PROTECTED_ROUTES)('%s', (route) => {
+  describe.each([...PROTECTED_ROUTES])('%s', (route, boundary) => {
     const source = stripComments(readFileSync(join(APP_ROOT, route), 'utf8'));
+    const OTHER_BOUNDARY =
+      boundary === 'requireVerifiedSession'
+        ? 'requireVerifiedPlatformSession'
+        : 'requireVerifiedSession';
 
-    it('calls the boundary', () => {
-      expect(source).toContain('await requireVerifiedSession()');
+    it('calls the boundary it was classified under', () => {
+      expect(source).toContain(`await ${boundary}()`);
+    });
+
+    /**
+     * 🛑 **AND 🚫 NOT THE OTHER ONE.** A tenant page standing behind the
+     * platform gate would render for a principal that has no organization; a
+     * platform page standing behind the tenant gate would be redirected to
+     * itself, forever.
+     */
+    it('does not also call the other boundary', () => {
+      expect(
+        source.includes(`${OTHER_BOUNDARY}(`),
+        `${route} is classified under ${boundary} and also reaches for ${OTHER_BOUNDARY}. ` +
+          `A route stands behind exactly one boundary.`,
+      ).toBe(false);
     });
 
     it('calls the boundary BEFORE any server operation', () => {
-      const guardAt = source.indexOf('await requireVerifiedSession()');
+      const guardAt = source.indexOf(`await ${boundary}()`);
       expect(guardAt).toBeGreaterThan(-1);
 
       // Every identifier this route imports from the effect/orchestration

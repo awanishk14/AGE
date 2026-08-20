@@ -239,5 +239,16 @@ export function assessSession(record: SessionRecord, now: Date): SessionAssessme
   }
 }
 
+/**
+ * 🛑 **RE-EXPORTED, 🚫 NOT REIMPLEMENTED — ADR-0085.** The studio composes a
+ * tenant principal for a platform operator who CHOSE an organization the
+ * deployment already serves, and it must do so through the same acceptance
+ * every other session passes: the blank-identifier refusal is load-bearing, and
+ * a second construction site is a second place for it to be skipped. 🚫 This
+ * exports no way to make a session out of nothing — every field still has to be
+ * supplied, and every field is still checked.
+ */
+export { acceptVerifiedSession };
+
 export { SessionRefusedError };
 export type { VerifiedPlatformSession, VerifiedSession };

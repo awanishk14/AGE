@@ -1,4 +1,4 @@
-import { expireSessionCookie } from '@age/session-cookie';
+import { expireActingOrganizationCookie, expireSessionCookie } from '@age/session-cookie';
 
 import { endRequestSession } from '@/server/session-boundary';
 
@@ -30,11 +30,17 @@ export async function POST(): Promise<Response> {
   // error, because nothing about it needs fixing.
   await endRequestSession();
 
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: '/sign-in',
-      'Set-Cookie': expireSessionCookie(),
-    },
-  });
+  const headers = new Headers({ Location: '/sign-in' });
+
+  headers.append('Set-Cookie', expireSessionCookie());
+
+  // 🛑 **THE CHOICE GOES WITH THE SESSION** (ADR-0085). ⚠️ It is not a
+  // credential and clearing it revokes nothing — but a choice left behind is a
+  // stale answer waiting for whoever signs in next at the same browser, and
+  // they would be placed somewhere without being asked. 🚫 It is expired AFTER
+  // the revocation above, for the same reason the session cookie is: the row
+  // dying first is the failure mode that is safe.
+  headers.append('Set-Cookie', expireActingOrganizationCookie());
+
+  return new Response(null, { status: 303, headers });
 }

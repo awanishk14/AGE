@@ -41,3 +41,19 @@ export {
   serializeHandshakeCookies,
   type SignInHandshake,
 } from './handshake-cookie';
+
+/**
+ * 🛑 **ADR-0085 — the organization a platform operator CHOSE, and 🚫 not an
+ * authority they hold.** The value is re-checked against the organizations this
+ * deployment serves on every request, so a forged one names nothing and is
+ * discarded. ⚠️ It is `Lax` because it is a choice rather than a credential;
+ * 🚫 that is not authority to relax the session cookie, which stays `Strict`.
+ */
+export {
+  ACTING_ORGANIZATION_COOKIE_ATTRIBUTES,
+  ACTING_ORGANIZATION_COOKIE_NAME,
+  ActingOrganizationRefusedError,
+  expireActingOrganizationCookie,
+  readActingOrganizationCookie,
+  serializeActingOrganizationCookie,
+} from './acting-organization-cookie';

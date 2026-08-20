@@ -387,6 +387,28 @@ export function sessionLookupOrganizationId(): string | undefined {
 }
 
 /**
+ * **THE ORGANIZATIONS THIS CONSOLE SERVES** — ADR-0085.
+ *
+ * 🛑 **IT IS A LIST BECAUSE THE PICKER MUST NOT HAVE A DEFAULT, 🚫 NOT BECAUSE
+ * THE DEPLOYMENT IS MULTI-TENANT.** The note above still holds: one host serves
+ * one organization, and a second would need its own ADR. What this shape buys
+ * is that the caller has to CHOOSE from it — `organizations[0]` is a line
+ * somebody has to write on purpose, where `?? lookupOrganizationId` was a line
+ * somebody could write by accident (ADR-0082 D4).
+ *
+ * 🛑 **THIS IS THE CLOSED SET A CHOICE IS CHECKED AGAINST.** It comes from the
+ * root-owned host file, 🚫 never from a cookie, a header, a form field or a URL
+ * — so a forged choice names something that is not in it and is discarded.
+ * ⚠️ An unconfigured deployment serves NOTHING, and an empty list admits
+ * nobody: it does 🚫 not fall back.
+ */
+export function organizationsThisConsoleServes(): readonly string[] {
+  const configured = sessionLookupOrganizationId();
+
+  return configured === undefined ? Object.freeze([]) : Object.freeze([configured]);
+}
+
+/**
  * The session door, opened for exactly one operation and closed again.
  *
  * ⚠️ **NOTHING HOLDS IT OPEN, AND THAT IS THE SAME RULE AS EVERY OTHER READ HERE

@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { SESSION_COOKIE_NAME } from '@age/session-cookie';
+import { ACTING_ORGANIZATION_COOKIE_NAME, SESSION_COOKIE_NAME } from '@age/session-cookie';
 import { hashSessionToken } from '@age/session-store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -55,6 +55,15 @@ vi.mock('./operator-environment', () => ({
   revokePlatformSessionByDigest: (...args: readonly unknown[]) =>
     revokePlatformSessionByDigest(...args),
   sessionLookupOrganizationId: () => sessionLookupOrganizationId(),
+  // ⚠️ ADR-0085. 🛑 It is DERIVED from the same mocked value rather than being
+  // its own knob: the closed set and the pinned organization are one fact on a
+  // real deployment, and a test that let them disagree would be proving
+  // something the host cannot do.
+  organizationsThisConsoleServes: () => {
+    const configured = sessionLookupOrganizationId();
+
+    return configured === undefined ? [] : [configured];
+  },
   verifySessionToken: (...args: readonly unknown[]) => verifySessionToken(...args),
 }));
 
@@ -264,17 +273,95 @@ describe('endRequestSession, given a platform principal (ADR-0083 D5)', () => {
   });
 });
 
+/**
+ * 🛑 **REWRITTEN 2026-08-20 — ADR-0085, AND THE REVERSAL IS STATED RATHER THAN
+ * QUIETLY DELETED.** Until this date the first case here asserted
+ * `NEXT_REDIRECT:/sign-in?refused=scope-not-served`: a correctly-provisioned
+ * platform operator was told, at the door, that this console does not serve
+ * them. ADR-0085 replaces that dead end with a question — 🚫 not with a
+ * default.
+ *
+ * 🛑 **THE THING ADR-0082 D4 ACTUALLY FORBIDS IS ASSERTED BELOW, HARDER THAN
+ * BEFORE.** D4 forbids an ABSENT organization being filled in. The cases here
+ * prove that no choice still yields no tenant session, that a choice outside
+ * the host's list yields no tenant session, and that the pinned organization is
+ * 🚫 never reached for on its own.
+ */
 describe('requireVerifiedSession, given a platform principal', () => {
-  it('🛑 refuses a TENANT PAGE to a signed-in platform operator', async () => {
+  it('🛑 sends an operator who has CHOSEN NOTHING to choose — 🚫 it does not default', async () => {
     verifySessionToken.mockResolvedValue(verifiedPlatform);
     cookieHeader.mockReturnValue(`${SESSION_COOKIE_NAME}=${TOKEN}`);
 
-    // ⚠️ THE REDIRECT NAMES THE SCOPE, 🚫 not a credential problem. This
-    // operator IS signed in; what they are being told is that this console's
-    // pages render one agency's work.
-    await expect(realBoundary.requireVerifiedSession()).rejects.toThrow(
-      'NEXT_REDIRECT:/sign-in?refused=scope-not-served',
+    // ⚠️ 🚫 NOT `/sign-in`. This operator IS signed in, and rendering a working
+    // session as a failed one is the ADR-0084 defect in a second costume.
+    await expect(realBoundary.requireVerifiedSession()).rejects.toThrow('NEXT_REDIRECT:/platform');
+  });
+
+  it('🛑 sends an operator whose choice is NOT ON THE HOST LIST to choose again', async () => {
+    verifySessionToken.mockResolvedValue(verifiedPlatform);
+    cookieHeader.mockReturnValue(
+      `${SESSION_COOKIE_NAME}=${TOKEN}; ${ACTING_ORGANIZATION_COOKIE_NAME}=org-fictional-elsewhere`,
     );
+
+    // 🛑 THE COOKIE IS THE QUESTION AND THE HOST IS THE ANSWER. A well-formed
+    // identifier the deployment never configured buys nothing at all.
+    await expect(realBoundary.requireVerifiedSession()).rejects.toThrow('NEXT_REDIRECT:/platform');
+  });
+
+  it('⚠️ returns an ORDINARY tenant session for a choice the host does serve', async () => {
+    verifySessionToken.mockResolvedValue(verifiedPlatform);
+    cookieHeader.mockReturnValue(
+      `${SESSION_COOKIE_NAME}=${TOKEN}; ${ACTING_ORGANIZATION_COOKIE_NAME}=${TENANT_ORGANIZATION}`,
+    );
+
+    // 🛑 THREE FIELDS, AND 🚫 NOTHING ELSE. No role, no `isPlatform`, no
+    // permission list — ADR-0062 D3. Everything downstream still asks
+    // `askEntitlement` over `organizationId`.
+    expect(await realBoundary.requireVerifiedSession()).toEqual({
+      sessionId: PLATFORM_SESSION,
+      organizationId: TENANT_ORGANIZATION,
+      accountId: PLATFORM_ACCOUNT,
+    });
+  });
+
+  it('🛑 refuses the choice when the deployment serves NOTHING', async () => {
+    // ⚠️ An unconfigured host has an EMPTY list, and an empty list admits
+    // nobody — 🚫 it does not fall through to the value in the cookie.
+    sessionLookupOrganizationId.mockReturnValue(undefined as unknown as string);
+    verifySessionToken.mockResolvedValue(verifiedPlatform);
+    cookieHeader.mockReturnValue(
+      `${SESSION_COOKIE_NAME}=${TOKEN}; ${ACTING_ORGANIZATION_COOKIE_NAME}=${TENANT_ORGANIZATION}`,
+    );
+
+    // ⚠️ The boundary never reaches the platform arm at all here: with no
+    // configured organization the store is not touched and the refusal names
+    // the VARIABLE.
+    await expect(realBoundary.requireVerifiedSession()).rejects.toThrow(
+      'NEXT_REDIRECT:/sign-in?refused=not-configured',
+    );
+
+    // ⚠️ 🚫 THIS MOCK IS NOT RESET BY `beforeEach`. Leaving it unconfigured
+    // would make every case after this one pass for the wrong reason — a
+    // deployment that admits nobody refuses everything, including the things
+    // those cases exist to prove work.
+    sessionLookupOrganizationId.mockReturnValue(TENANT_ORGANIZATION);
+  });
+
+  it('🛑 gives a PLATFORM page the platform principal, with 🚫 no organization on it', async () => {
+    verifySessionToken.mockResolvedValue(verifiedPlatform);
+    cookieHeader.mockReturnValue(`${SESSION_COOKIE_NAME}=${TOKEN}`);
+
+    const session = await realBoundary.requireVerifiedPlatformSession();
+
+    expect(session).toEqual(platformSession);
+    expect('organizationId' in session).toBe(false);
+  });
+
+  it('⚠️ sends a TENANT operator asking for the platform page HOME, 🚫 not to a refusal', async () => {
+    verifySessionToken.mockResolvedValue(verifiedTenant);
+    cookieHeader.mockReturnValue(`${SESSION_COOKIE_NAME}=${TOKEN}`);
+
+    await expect(realBoundary.requireVerifiedPlatformSession()).rejects.toThrow('NEXT_REDIRECT:/');
   });
 
   it('⚠️ a TENANT principal still gets its session back — 🚫 the refusal above is not a blanket one', async () => {
