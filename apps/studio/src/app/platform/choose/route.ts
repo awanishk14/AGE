@@ -37,7 +37,13 @@ export async function POST(request: Request): Promise<Response> {
 
   // 🛑 **THE CLOSED SET, 🚫 NOT A SHAPE CHECK.** A well-formed identifier the
   // host never configured is refused exactly as hard as a malformed one.
-  if (chosen === undefined || !organizationsThisConsoleServes().includes(chosen)) {
+  // 🛑 **AGAINST `id` ONLY** (ADR-0086) — the display name is text for a person
+  // to read, and a submitted label must never resolve to a scope.
+  const served = organizationsThisConsoleServes().some(
+    (organization) => organization.id === chosen,
+  );
+
+  if (chosen === undefined || !served) {
     // ⚠️ Back to the picker, with 🚫 no reason string echoing what was
     // submitted. There is nothing here an honest operator can act on — the
     // buttons on that page are the whole list — and echoing a submitted value
