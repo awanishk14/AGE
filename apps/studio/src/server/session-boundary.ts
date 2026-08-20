@@ -2,8 +2,14 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { readSessionCookie } from '@age/session-cookie';
-import { hashSessionToken, type VerifiedSession } from '@age/session-store';
+import {
+  acceptVerifiedSession,
+  hashSessionToken,
+  type VerifiedPlatformSession,
+  type VerifiedSession,
+} from '@age/session-store';
 
+import { chosenActingOrganization } from './acting-organization';
 import {
   revokePlatformSessionByDigest,
   revokeSessionById,
@@ -99,17 +105,38 @@ export async function requireVerifiedSession(): Promise<VerifiedSession> {
   const decision = await assessRequestSession();
 
   if (decision.kind === 'admitted') {
-    // 🛑 **A PLATFORM PRINCIPAL IS ADMITTED AND STILL DOES NOT GET A TENANT
-    // PAGE.** 🚫 It is not "not signed in" — it is signed in, to a console
-    // whose sixteen pages render one agency's work. ADR-0083 authorizes the
-    // SHAPE of this principal and 🚫 explicitly not a rendering for it.
+    // 🛑 **A PLATFORM PRINCIPAL IS ADMITTED, AND SINCE ADR-0085 IT REACHES A
+    // TENANT PAGE — BY SAYING WHICH TENANT.** Until 2026-08-20 this arm
+    // redirected to `/sign-in?refused=scope-not-served`, which told a
+    // correctly-provisioned platform operator that the console does not serve
+    // them. ADR-0085 replaces that dead end with a CHOICE.
     //
-    // ⚠️ The one-character alternative is to return
-    // `decision.principal.session` for both arms; the compiler refuses it,
-    // because a `VerifiedPlatformSession` has 🚫 no `organizationId` — which is
-    // the whole reason D1 chose a separate type over a nullable field.
+    // 🛑 **WHAT ADR-0082 D4 FORBIDS IS STILL FORBIDDEN, AND THE LINES BELOW ARE
+    // WHERE THAT IS VISIBLE.** D4 refuses an absent organization being
+    // DEFAULTED, COALESCED or GUESSED — `?? sessionLookupOrganizationId()`. It
+    // does not refuse an operator NAMING one. So the organization here comes
+    // from an explicit act, is re-checked against the closed set the HOST
+    // configured on every request, and 🚫 has no fallback: an operator who has
+    // not chosen is sent to choose, 🚫 never placed somewhere.
+    //
+    // ⚠️ **THE RESULT IS AN ORDINARY TENANT SESSION CARRYING 🚫 NO EXTRA
+    // POWER.** It is built through the same `acceptVerifiedSession` every other
+    // session passes, holds the same three fields, and every read downstream
+    // still goes through `askEntitlement` over `organizationId`. There is 🚫 no
+    // `isPlatform` flag on it — ADR-0062 D3, admin is never a bypass.
     if (decision.principal.scope === 'platform') {
-      redirect('/sign-in?refused=scope-not-served');
+      const actingOrganizationId = await chosenActingOrganization();
+
+      // 🚫 **NOT A REFUSAL, AND 🚫 NOT `/sign-in`.** This operator IS signed
+      // in. Sending them to the door would be the ADR-0084 defect in a second
+      // costume: a working session rendered as a failed one.
+      if (actingOrganizationId === undefined) redirect('/platform');
+
+      return acceptVerifiedSession({
+        sessionId: decision.principal.session.sessionId,
+        organizationId: actingOrganizationId,
+        accountId: decision.principal.session.accountId,
+      });
     }
 
     return decision.principal.session;
@@ -119,6 +146,36 @@ export async function requireVerifiedSession(): Promise<VerifiedSession> {
     // ⚠️ NAMES THE VARIABLE, 🚫 never a value. This is a misconfiguration of the
     // machine, and an operator shown "sign in" would try their credential
     // forever against a console that can admit nobody.
+    redirect('/sign-in?refused=not-configured');
+  }
+
+  redirect('/sign-in');
+}
+
+/**
+ * The gate for the page that belongs to a PLATFORM operator — ADR-0085.
+ *
+ * 🛑 **A SEPARATE FUNCTION, BECAUSE IT RETURNS A SEPARATE TYPE.** ADR-0083 D1
+ * chose two principal types over one nullable field precisely so that a caller
+ * has to say which it serves. This one serves the platform arm, returns a
+ * `VerifiedPlatformSession`, and 🚫 there is still no conversion between them:
+ * `requireVerifiedSession` above builds a tenant session out of an explicit
+ * CHOICE plus three individually-checked fields, 🚫 not out of this value.
+ *
+ * ⚠️ **A TENANT OPERATOR IS SENT HOME, 🚫 NOT REFUSED.** They are signed in and
+ * this page is simply not theirs; `/` is where their work is. 🚫 Telling them
+ * "refused" would be a false alarm about a working account.
+ */
+export async function requireVerifiedPlatformSession(): Promise<VerifiedPlatformSession> {
+  const decision = await assessRequestSession();
+
+  if (decision.kind === 'admitted') {
+    if (decision.principal.scope === 'platform') return decision.principal.session;
+
+    redirect('/');
+  }
+
+  if (decision.reason === 'deployment-not-configured') {
     redirect('/sign-in?refused=not-configured');
   }
 

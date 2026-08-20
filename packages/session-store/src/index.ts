@@ -16,6 +16,7 @@
  */
 
 export {
+  acceptVerifiedSession,
   assessSession,
   assertSessionTokenShape,
   hashSessionToken,

@@ -32,14 +32,52 @@ function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 }
 
-describe('🛑 `SameSite=Lax` exists in exactly one file, and it is not the session cookie', () => {
+/**
+ * ⚠️ **NARROWED, 🚫 NOT WIDENED — ADR-0085, 2026-08-20.** This guard used to say
+ * "exactly one file". A second non-credential cookie now exists (the acting
+ * organization a platform operator CHOSE), and it is `Lax` for the same reason
+ * the handshake is: a `Strict` cookie is withheld on the hop back from sign-in.
+ *
+ * 🛑 **THE RULE DID NOT CHANGE, AND IT IS NAMED HERE RATHER THAN COUNTED:**
+ * `session-cookie.ts` — the one module that carries a CREDENTIAL — is `Strict`,
+ * and every other module is on this list by name with a reason. 🚫 Adding a
+ * file here is a decision, not a formality; a cookie that grants anything does
+ * not belong on it.
+ */
+const LAX_IS_CORRECT_HERE: ReadonlyMap<string, string> = new Map([
+  [
+    'handshake-cookie.ts',
+    'The `state`/`nonce` pair must survive the cross-site top-level navigation back from ' +
+      'Google. A `Strict` handshake cookie is not a stricter handshake — it is none at all.',
+  ],
+  [
+    'acting-organization-cookie.ts',
+    'ADR-0085. A choice, 🚫 not a credential: it is re-checked against the organizations this ' +
+      'deployment serves on every request, so a forged value names nothing. `Strict` would be ' +
+      'withheld on the hop out of sign-in and send the operator back to the picker every time.',
+  ],
+]);
+
+describe('🛑 `SameSite=Lax` appears only where it is named, and never on the session cookie', () => {
   it('is stated literally by the handshake cookie', () => {
     expect(stripComments(readFileSync(join(SRC, 'handshake-cookie.ts'), 'utf8'))).toContain(
       "'SameSite=Lax'",
     );
   });
 
-  it('🚫 appears in no other module of this package', () => {
+  /**
+   * 🛑 **THE HALF OF THIS GUARD THAT IS ABOUT THE CREDENTIAL, ASSERTED
+   * POSITIVELY.** The allowlist above cannot be widened into covering the
+   * session cookie without failing this.
+   */
+  it('🛑 leaves the session cookie Strict', () => {
+    const source = stripComments(readFileSync(join(SRC, 'session-cookie.ts'), 'utf8'));
+
+    expect(source).toContain("'SameSite=Strict'");
+    expect(source).not.toContain('SameSite=Lax');
+  });
+
+  it('🚫 appears in no module of this package that has not been named above', () => {
     // 🛑 THE GUARD THAT MATTERS. The session cookie is `Strict` and the reason
     // it can be is that nothing links into the console. If a later change moved
     // it to `Lax` "for consistency with sign-in", the console would start
@@ -47,12 +85,20 @@ describe('🛑 `SameSite=Lax` exists in exactly one file, and it is not the sess
     // ⚠️ The scan is the WHOLE package — a narrow scan is not a narrow rule.
     const offenders = sourceFiles(SRC).filter(
       (file) =>
-        !file.endsWith('handshake-cookie.ts') &&
+        ![...LAX_IS_CORRECT_HERE.keys()].some((named) => file.endsWith(named)) &&
         stripComments(readFileSync(file, 'utf8')).includes('SameSite=Lax'),
     );
 
-    expect(sourceFiles(SRC).length).toBeGreaterThanOrEqual(3);
+    expect(sourceFiles(SRC).length).toBeGreaterThanOrEqual(4);
     expect(offenders).toEqual([]);
+
+    // ⚠️ 🚫 A guard that allowlists a file that no longer exists is a guard
+    // that stopped scanning something and did not say so.
+    const stale = [...LAX_IS_CORRECT_HERE.keys()].filter(
+      (named) => !sourceFiles(SRC).some((file) => file.endsWith(named)),
+    );
+
+    expect(stale).toEqual([]);
   });
 
   it('🚫 and the handshake never touches the session cookie name', () => {
