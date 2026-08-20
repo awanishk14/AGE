@@ -135,7 +135,23 @@ export async function GET(request: Request): Promise<Response> {
   // only a confusing one; a cookie shorter than its row is simply honest.
   const remainingSeconds = Math.floor((Date.parse(issued.expiresAt) - issuedAt.getTime()) / 1000);
 
-  const headers = new Headers({ Location: '/' });
+  // 🛑 **THE HANDOFF LANDS SAME-SITE, AND `/` WOULD NOT** (ADR-0084 §3 Option
+  // B). ⚠️ MEASURED IN A BROWSER, 2026-08-20: this `303` sits inside a chain
+  // begun by a cross-site top-level navigation from Google, so the browser
+  // WITHHELD the `SameSite=Strict` session cookie set two lines below, `/` saw
+  // an anonymous caller, and every operator was bounced to `/sign-in` with no
+  // reason string — a failed sign-in and a successful one were the same screen.
+  //
+  // 🛑 **DO NOT "SIMPLIFY" THIS BACK TO `/`.** The extra hop IS the fix: the
+  // landing route is reached by this same cross-site hop and asserts nothing,
+  // then navigates to `/` itself — and THAT navigation is same-site, so it
+  // carries the cookie.
+  //
+  // 🚫 **AND DO NOT FIX IT AT THE COOKIE INSTEAD.** Relaxing the attribute to
+  // `Lax` was Option A; the owner's acceptance named no option, so it is 🚫 not
+  // authorized, and widening a guard to make one redirect pass is exactly what
+  // constitution §3.8 forbids.
+  const headers = new Headers({ Location: '/sign-in/landing' });
 
   headers.append('Set-Cookie', serializeSessionCookie(token, remainingSeconds));
 
