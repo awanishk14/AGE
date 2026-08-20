@@ -93,7 +93,10 @@ const PROTECTED_ROUTES: ReadonlyMap<string, string> = new Map(
     'businesses/page.tsx',
     'diagnostics/page.tsx',
   ]
-    .map((route) => [route, 'requireVerifiedSession'] as const)
+    // ⚠️ The pair is annotated `[string, string]` rather than inferred: `as
+    // const` would fix the boundary name to the tenant literal and 🚫 make the
+    // platform entries below un-appendable.
+    .map((route): [string, string] => [route, 'requireVerifiedSession'])
     .concat([
       /**
        * 🛑 **THE PLATFORM ARM — ADR-0085.** These two are reached by a principal
