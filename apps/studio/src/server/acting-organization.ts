@@ -34,5 +34,14 @@ export async function chosenActingOrganization(): Promise<string | undefined> {
   // 🛑 **THE ONE LINE THAT MAKES THE COOKIE HARMLESS.** 🚫 Do not replace this
   // with a shape check, a length check, or "it looks like one of ours" — those
   // all say YES to a value the host never configured.
-  return organizationsThisConsoleServes().includes(offered) ? offered : undefined;
+  //
+  // 🛑 **AGAINST `id`, AND 🚫 NEVER AGAINST `displayName`** (ADR-0086). The
+  // label is text a host wrote for a person to read; matching on it would make
+  // it a second identifier, and an organization with two names is an
+  // organization whose scope depends on which one a caller happened to use.
+  const served = organizationsThisConsoleServes().some(
+    (organization) => organization.id === offered,
+  );
+
+  return served ? offered : undefined;
 }

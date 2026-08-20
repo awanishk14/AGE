@@ -59,10 +59,16 @@ vi.mock('./operator-environment', () => ({
   // its own knob: the closed set and the pinned organization are one fact on a
   // real deployment, and a test that let them disagree would be proving
   // something the host cannot do.
+  // ⚠️ **THE LABEL IS PART OF THE FIXTURE ON PURPOSE** (ADR-0086). A served
+  // organization that had no `displayName` here could not prove that the name
+  // is never what admits — the guard below offers the label as a choice and
+  // requires a refusal.
   organizationsThisConsoleServes: () => {
     const configured = sessionLookupOrganizationId();
 
-    return configured === undefined ? [] : [configured];
+    return configured === undefined
+      ? []
+      : [{ id: configured, displayName: ORGANIZATION_DISPLAY_NAME }];
   },
   verifySessionToken: (...args: readonly unknown[]) => verifySessionToken(...args),
 }));
@@ -86,6 +92,23 @@ const realBoundary =
 const PLATFORM_SESSION = 'session-fictional-platform-1';
 const PLATFORM_ACCOUNT = 'account-fictional-platform-1';
 const TENANT_ORGANIZATION = 'org-fictional-alpha';
+
+/**
+ * The LABEL the host put on that organization — ADR-0086.
+ *
+ * 🛑 **DELIBERATELY IDENTIFIER-SHAPED, AND THAT IS THE OPPOSITE OF WHAT IT
+ * LOOKS LIKE.** The obvious fixture — `'Fictional Alpha Holdings'`, with spaces
+ * and capitals — makes this guard PASS WITHOUT PROVING ANYTHING: the cookie
+ * reader rejects that shape, so the request never reaches the comparison under
+ * test and the redirect comes from the parser instead. ⚠️ Measured, 2026-08-21:
+ * with the spaced value, deliberately matching on `displayName` in
+ * `acting-organization.ts` still passed every test.
+ *
+ * 🛑 So the label is given a value that SURVIVES the cookie reader and is still
+ * 🚫 not the `id`. Now a comparison that matched the name would admit, and the
+ * guard fails as it should.
+ */
+const ORGANIZATION_DISPLAY_NAME = 'fictional-alpha-holdings';
 const TOKEN = 'e'.repeat(64);
 
 const platformSession = {
@@ -305,6 +328,20 @@ describe('requireVerifiedSession, given a platform principal', () => {
 
     // 🛑 THE COOKIE IS THE QUESTION AND THE HOST IS THE ANSWER. A well-formed
     // identifier the deployment never configured buys nothing at all.
+    await expect(realBoundary.requireVerifiedSession()).rejects.toThrow('NEXT_REDIRECT:/platform');
+  });
+
+  it('🛑 REFUSES THE DISPLAY NAME, even though the host serves that organization (ADR-0086)', async () => {
+    verifySessionToken.mockResolvedValue(verifiedPlatform);
+    cookieHeader.mockReturnValue(
+      `${SESSION_COOKIE_NAME}=${TOKEN}; ${ACTING_ORGANIZATION_COOKIE_NAME}=${ORGANIZATION_DISPLAY_NAME}`,
+    );
+
+    // 🛑 **THE LABEL IS TEXT, 🚫 NOT A SECOND IDENTIFIER.** The host serves
+    // this organization and this IS its name, so a comparison that matched on
+    // `displayName` would admit here and look entirely reasonable. An
+    // organization whose scope depends on which of its two names a caller used
+    // is exactly what AGE-INV-PROV-1 refuses.
     await expect(realBoundary.requireVerifiedSession()).rejects.toThrow('NEXT_REDIRECT:/platform');
   });
 

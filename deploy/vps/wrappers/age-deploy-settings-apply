@@ -32,7 +32,7 @@ DERIVE='/usr/local/sbin/age-deploy-derive-env'
 # could rewrite it is a path that could point the console at a database of the
 # caller's choosing. That is the single most valuable thing this wrapper could
 # be tricked into doing, so it cannot do it at all.
-ALLOWED='AGE_STUDIO_GOOGLE_CLIENT_ID AGE_STUDIO_GOOGLE_CLIENT_SECRET AGE_STUDIO_GOOGLE_REDIRECT_URI AGE_STUDIO_ORGANIZATION_ID'
+ALLOWED='AGE_STUDIO_GOOGLE_CLIENT_ID AGE_STUDIO_GOOGLE_CLIENT_SECRET AGE_STUDIO_GOOGLE_REDIRECT_URI AGE_STUDIO_ORGANIZATION_ID AGE_STUDIO_ORGANIZATION_NAME'
 
 if [ ! -f "$TARGET" ]; then
   echo "REFUSED: the provisioned env file does not exist." >&2

@@ -57,20 +57,40 @@ export default async function Page() {
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {organizations.map((organizationId) => (
-            <li key={organizationId}>
+          {organizations.map((organization) => (
+            <li key={organization.id}>
               {/*
                 ⚠️ A FORM, 🚫 not a link — the same reason as the sign-in
                 button. A GET is something another page can point a browser at,
                 and choosing where an operator stands is not a read.
               */}
               <form method="post" action="/platform/choose">
-                <input type="hidden" name="organizationId" value={organizationId} />
+                {/*
+                  🛑 **THE `id` IS SUBMITTED, 🚫 NEVER THE LABEL** (ADR-0086).
+                  The name below is rendered and nothing more.
+                */}
+                <input type="hidden" name="organizationId" value={organization.id} />
                 <button
                   type="submit"
                   className="w-full rounded bg-neutral-900 px-4 py-2 text-left text-sm font-medium text-white"
                 >
-                  {organizationId}
+                  {/*
+                    ⚠️ **AN UNNAMED ORGANIZATION SHOWS ITS `id`, 🚫 NOT A
+                    PRETTIFIED GUESS.** The id is what this deployment actually
+                    knows; inventing "Digital Dadi" out of `digitaldadi` would
+                    be AGE authoring a fact nobody stated.
+                  */}
+                  {organization.displayName ?? organization.id}
+                  {organization.displayName !== undefined && (
+                    /*
+                      ⚠️ The scope is shown BESIDE the label, never instead of
+                      it. An operator about to file work under a scope should be
+                      able to see which scope that is.
+                    */
+                    <span className="mt-0.5 block font-mono text-xs font-normal text-neutral-400">
+                      {organization.id}
+                    </span>
+                  )}
                 </button>
               </form>
             </li>

@@ -387,6 +387,20 @@ export function sessionLookupOrganizationId(): string | undefined {
 }
 
 /**
+ * One organization this deployment serves — ADR-0085, named in ADR-0086.
+ *
+ * ⚠️ **TWO FIELDS THAT ARE 🚫 NOT INTERCHANGEABLE.** `id` is the scope: it is
+ * what a choice is compared against, what a session carries, and what every row
+ * is filed under. `displayName` is what a person reads. 🚫 A caller that
+ * compares the name has written a bug the type cannot catch, which is why there
+ * is a guard for it rather than only a comment.
+ */
+export interface ServedOrganization {
+  readonly id: string;
+  readonly displayName: string | undefined;
+}
+
+/**
  * **THE ORGANIZATIONS THIS CONSOLE SERVES** — ADR-0085.
  *
  * 🛑 **IT IS A LIST BECAUSE THE PICKER MUST NOT HAVE A DEFAULT, 🚫 NOT BECAUSE
@@ -401,11 +415,38 @@ export function sessionLookupOrganizationId(): string | undefined {
  * — so a forged choice names something that is not in it and is discarded.
  * ⚠️ An unconfigured deployment serves NOTHING, and an empty list admits
  * nobody: it does 🚫 not fall back.
+ *
+ * 🛑 **THE `id` IS THE SCOPE. THE `displayName` IS TEXT** (ADR-0086). Every
+ * comparison in this product is against `id`; the name exists so an operator
+ * reads "Digital Dadi" instead of a machine identifier, and 🚫 nothing routes,
+ * files or admits on it.
  */
-export function organizationsThisConsoleServes(): readonly string[] {
+export function organizationsThisConsoleServes(): readonly ServedOrganization[] {
   const configured = sessionLookupOrganizationId();
 
-  return configured === undefined ? Object.freeze([]) : Object.freeze([configured]);
+  if (configured === undefined) return Object.freeze([]);
+
+  return Object.freeze([Object.freeze({ id: configured, displayName: organizationDisplayName() })]);
+}
+
+/**
+ * **THE LABEL A HOST PUTS ON THE ORGANIZATION IT SERVES** — ADR-0086.
+ *
+ * 🛑 **A LABEL, 🚫 NOT AN IDENTIFIER.** It is rendered and nothing else: 🚫 never
+ * compared, 🚫 never stored on a row, 🚫 never a key, and 🚫 never the value a
+ * choice is checked against — that is `id`, always. A display name that could
+ * admit somebody would be a second, prettier identifier, and two identifiers for
+ * one organization is exactly the shape AGE-INV-PROV-1 refuses.
+ *
+ * ⚠️ **ABSENT IS NOT BLANK, AND 🚫 NOT INVENTED.** An unnamed organization
+ * renders as its `id` — the honest answer, because the id IS what this
+ * deployment knows. 🚫 It is never prettified, title-cased or guessed at from
+ * the id; a name AGE made up would be a fact nobody stated.
+ */
+function organizationDisplayName(): string | undefined {
+  const raw = process.env.AGE_STUDIO_ORGANIZATION_NAME;
+
+  return raw === undefined || raw.trim() === '' ? undefined : raw.trim();
 }
 
 /**

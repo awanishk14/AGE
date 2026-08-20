@@ -45,12 +45,25 @@ const NO_ARGUMENT_WRAPPERS = [
   'age-deploy-settings-apply',
 ] as const;
 
-/** ADR-0081 D2 — the literal allow-list, asserted by name. */
+/**
+ * ADR-0081 D2 — the literal allow-list, asserted by name.
+ *
+ * 🛑 **A FIFTH NAME WAS ADDED 2026-08-21 (ADR-0086), AND THAT IS A WIDENING OF A
+ * ROOT WRITE — SAID PLAINLY RATHER THAN SLIPPED IN.** ADR-0081 D2 records that
+ * "adding one more name is exactly how this wrapper becomes an arbitrary root
+ * write", so the addition is argued rather than assumed:
+ * `AGE_STUDIO_ORGANIZATION_NAME` is **inert**. It is rendered as text and is
+ * 🚫 never compared, 🚫 never a scope, 🚫 never a key, and 🚫 never a route to a
+ * database — the property that makes `DATABASE_URL_APP` unlistable does not
+ * apply to a label. ⚠️ The equality assertion below is what keeps the next
+ * addition deliberate too.
+ */
 const ALLOW_LISTED_SETTINGS = [
   'AGE_STUDIO_GOOGLE_CLIENT_ID',
   'AGE_STUDIO_GOOGLE_CLIENT_SECRET',
   'AGE_STUDIO_GOOGLE_REDIRECT_URI',
   'AGE_STUDIO_ORGANIZATION_ID',
+  'AGE_STUDIO_ORGANIZATION_NAME',
 ] as const;
 
 /**
