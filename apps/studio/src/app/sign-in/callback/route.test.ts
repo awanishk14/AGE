@@ -338,7 +338,11 @@ describe('🛑 a platform operator signs in, and 🚫 not into a tenant (ADR-008
     const response = await callback(`?state=${STATE}&code=abc`);
 
     expect(response.status).toBe(303);
-    expect(response.headers.get('Location')).toBe('/');
+    // 🛑 THE LANDING HOP, 🚫 NOT `/` (ADR-0084 §3 Option B). A `303` straight
+    // to `/` sits in a cross-site-initiated chain, so the browser withholds the
+    // `SameSite=Strict` cookie set on this very response — measured in a browser,
+    // 2026-08-20. ⚠️ An admitted caller lands same-site FIRST.
+    expect(response.headers.get('Location')).toBe('/sign-in/landing');
     expect(world.platformIssued).toEqual([
       { accountId: 'account-fictional-superadmin', token: world.minted },
     ]);
@@ -451,7 +455,11 @@ describe('a provisioned operator is admitted, and the cookie matches the row', (
     const response = await callback(`?state=${STATE}&code=the-code`);
 
     expect(response.status).toBe(303);
-    expect(response.headers.get('Location')).toBe('/');
+    // 🛑 THE LANDING HOP, 🚫 NOT `/` (ADR-0084 §3 Option B). A `303` straight
+    // to `/` sits in a cross-site-initiated chain, so the browser withholds the
+    // `SameSite=Strict` cookie set on this very response — measured in a browser,
+    // 2026-08-20. ⚠️ An admitted caller lands same-site FIRST.
+    expect(response.headers.get('Location')).toBe('/sign-in/landing');
 
     expect(world.exchanges).toEqual(['the-code']);
     expect(world.issued).toEqual([

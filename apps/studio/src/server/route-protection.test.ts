@@ -43,6 +43,15 @@ const PUBLIC_ROUTES: ReadonlyMap<string, string> = new Map([
       'provisioned rows and issues the session. Everything after it is protected by what it did.',
   ],
   [
+    'sign-in/landing/page.tsx',
+    'The same-site landing hop (ADR-0084 D2). It is reached by the cross-site-initiated redirect ' +
+      'out of the callback, on which a `SameSite=Strict` session cookie is WITHHELD — so it is ' +
+      'anonymous by construction and could not stand behind the boundary even if it wanted to. ' +
+      'It reads nothing, renders nothing, and exists only to perform a same-site navigation to ' +
+      '`/`, which is where the boundary actually runs. `landing-hop-isolation.test.ts` enforces ' +
+      'all of that; this entry is the classification, not the proof.',
+  ],
+  [
     'sign-out/route.ts',
     'Ends whatever session the request holds. It performs its own assessment and refuses ' +
       'nothing — an unauthenticated caller signing out is a no-op, never an error.',
