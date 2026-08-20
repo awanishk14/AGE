@@ -1,8 +1,24 @@
 # ADR-0084 — The hop that loses the session
 
-Status: **Proposed** (2026-08-20) — 🚫 **THIS AUTHORIZES NOTHING.** It is a decision request. The
-Product Owner accepts it, and a **separate** PR flips the status carrying their words verbatim
-(operating constitution §3.3). ⚠️ An architect's recommendation is 🚫 not corroboration of itself.
+Status: **Accepted** (2026-08-20) — by the Product Owner, whose words were, verbatim and in full:
+
+> _"then obvioudly its accepted"_
+
+⚠️ **WHAT THAT DOES AND DOES NOT SETTLE.** It accepts this ADR **as written**, and this ADR
+recommends exactly one thing: **§3 Option B** — keep `SameSite=Strict` and land on a content-free
+**same-site** hop. 🚫 The owner did **not** name an option in those words, and the architect has
+recorded that reading rather than hidden it. 🛑 **Option A (`SameSite=Lax`) is therefore NOT
+authorized** — it is the one branch of D1 that permanently widens the session boundary, and 🚫 no
+slice may reach for it on the strength of this line. If the owner meant A, that is a one-sentence
+correction and this status block is rewritten before slice 2 begins.
+
+⚠️ D2–D5 in §4 stand or fall **on their own** — 🚫 this acceptance does not corroborate them
+(constitution §3.3), and 🚫 an architect's recommendation is not corroboration of itself.
+
+🛑 **SLICE 1 STILL COMES FIRST AND IT IS A MEASUREMENT, 🚫 NOT A FIX** (§6.1). If the real request
+headers show `__Host-age_session` **IS** present on that hop, §1 is wrong, this ADR is **withdrawn**
+despite being accepted, and 🚫 nothing in §6.2 is built. Acceptance authorizes the _investigation_
+and, only if it confirms §1, the Option B slice — 🚫 it does not authorize the diagnosis.
 
 Depends on: ADR-0079 (the sign-in page and the three scopes) · ADR-0083 (a principal that has no
 organization) · ADR-0078 (the deployed console behind a verified-session boundary).
