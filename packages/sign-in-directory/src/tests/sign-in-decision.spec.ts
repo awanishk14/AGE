@@ -430,3 +430,71 @@ describe('🛑 two live memberships are refused, never chosen between', () => {
     ).toMatchObject({ outcome: 'admitted' });
   });
 });
+
+/**
+ * **ADR-0089 §5.3 — `null` IS THE ABSENCE OF A TENANT CHANNEL, 🚫 NOT A
+ * WILDCARD.**
+ *
+ * 🛑 **THE PLATFORM ARM OF `requireRequestScope` RE-READS ON EVERY REQUEST NOW,
+ * AND IT HAS NO ORGANIZATION TO ASK ABOUT.** So it passes `null` — the absence
+ * EXPRESSED rather than the pinned organization SUBSTITUTED (ADR-0082 D4). ⚠️
+ * The danger the cases below pin down is the other direction: that `null` might
+ * quietly mean *"any tenant"*, or that a malformed row with a NULL
+ * `organization_id` might match it and be admitted as a tenant. 🚫 Neither.
+ *
+ * 🛑 **THE POSITIVE CASE IS 🚫 NOT DECORATION.** A decision that refused
+ * everything when handed `null` would pass every refusal case here and lock
+ * every platform operator out of the console on their next request.
+ */
+describe('🛑 `decideSignIn(entry, null)` — the request with no tenant channel', () => {
+  it('admits a live PLATFORM membership, because that arm never read the parameter', () => {
+    expect(decideSignIn(entry({ memberships: [platformMembership()] }), null)).toEqual({
+      outcome: 'admitted',
+      operator: {
+        accountId: ACCOUNT_ID,
+        organizationId: null,
+        membershipId: 'membership-fictional-platform',
+        roleBundle: 'platform-admin',
+        scopeKind: 'platform',
+        clientId: null,
+      },
+    });
+  });
+
+  it('🚫 REFUSES a live agency membership — `null` is 🚫 not "any organization"', () => {
+    expect(decideSignIn(entry(), null)).toEqual({
+      outcome: 'refused',
+      reason: 'no-membership',
+    });
+  });
+
+  it('🚫 REFUSES a live client membership too', () => {
+    expect(
+      decideSignIn(
+        entry({
+          memberships: [membership({ scopeKind: 'client', clientId: 'client-fictional-1' })],
+        }),
+        null,
+      ),
+    ).toEqual({ outcome: 'refused', reason: 'no-membership' });
+  });
+
+  it('🛑 REFUSES a malformed TENANT row whose organization is NULL — 🚫 absence does not match absence', () => {
+    // 🛑 **THE ROW IS UNTRUSTED INPUT AND THIS IS THE BACK DOOR.** A plain
+    // `membership.organizationId === organizationId` would have matched NULL to
+    // NULL and admitted this row to a request that has no tenant at all —
+    // ADR-0082 D4 undone by an equality test rather than by a `??`.
+    expect(
+      decideSignIn(entry({ memberships: [membership({ organizationId: null })] }), null),
+    ).toEqual({ outcome: 'refused', reason: 'no-membership' });
+  });
+
+  it('🚫 a REVOKED platform membership is refused, which is the whole reason the re-read exists', () => {
+    expect(
+      decideSignIn(
+        entry({ memberships: [platformMembership({ revokedAt: '2026-08-21T00:00:00.000Z' })] }),
+        null,
+      ),
+    ).toEqual({ outcome: 'refused', reason: 'membership-revoked' });
+  });
+});

@@ -10,7 +10,10 @@ import {
 import type { SessionPrincipal, VerifiedSession } from '@age/session-store';
 import { decideSignIn } from '@age/sign-in-directory';
 
-import { readDirectoryEntryByAccount } from './operator-environment';
+import {
+  readDirectoryEntryByAccount,
+  readPlatformDirectoryEntryByAccount,
+} from './operator-environment';
 import { assessRequestSession, requireVerifiedSession } from './session-boundary';
 
 /**
@@ -105,16 +108,29 @@ export async function requireRequestScope(): Promise<ScopedRequest> {
   // platform scope can come into existence in the product, and it is reached
   // only by a principal the store already verified as having no organization.
   //
-  // 🚫 **NO DIRECTORY READ HAPPENS ON THIS ARM, AND THAT IS 🚫 NOT AN
-  // OVERSIGHT.** The tenant re-read below exists to catch a membership revoked
-  // since sign-in; the equivalent for a platform operator is a read this
-  // console does ❌ not have — `readDirectoryEntryByAccount` is scoped by
-  // organization, and there is none. ⚠️ Passing the pinned organization here
-  // to "make the re-read work" is exactly the substitution ADR-0082 D4 forbids.
-  // 🛑 The gap is REAL and is named in the checkpoint rather than papered over:
-  // a platform membership revoked mid-session is caught at token expiry, 🚫 not
-  // on the next request.
+  // 🛑 **THE PLATFORM ARM RE-READS TOO, SINCE ADR-0089.** It did not, and the
+  // gap was real: the only fenced platform read was keyed by the Google-verified
+  // address, a request does not have one, and the organization-scoped read
+  // cannot be borrowed — passing the pinned organization here is exactly the
+  // substitution ADR-0082 D4 forbids, and it would read an agency's people.
+  // ⚠️ So the re-read is keyed by the account id the session ALREADY PROVED,
+  // and 🚫 there is no parameter on it through which a tenant could be supplied.
   if (principal.scope === 'platform') {
+    const platformEntry = await readPlatformDirectoryEntryByAccount(principal.session.accountId);
+
+    // 🛑 THE SAME DECISION, OVER FRESHLY READ ROWS, AND 🚫 NOT A GENTLER COPY.
+    // ⚠️ `null` is 🚫 not a default and 🚫 not a wildcard: this request has NO
+    // organization, so the tenant arm of that decision matches nothing and
+    // refuses. A platform operator whose membership was revoked since sign-in
+    // reads as ABSENT and is refused HERE — on the next request, 🚫 not at
+    // eight-hour expiry — with the session row still perfectly valid.
+    const platformAdmission = decideSignIn(platformEntry, null);
+
+    if (platformAdmission.outcome === 'refused') {
+      // ⚠️ The same destination and the same silence as the tenant arm below.
+      redirect('/sign-in?refused=not-provisioned');
+    }
+
     return Object.freeze({ principal, scope: platformScope() });
   }
 

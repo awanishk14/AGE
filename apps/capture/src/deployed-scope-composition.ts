@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import {
   directoryEntryByAccountRead,
+  platformDirectoryReadByAccount,
   PrismaDirectoryScopeRunner,
+  PrismaPlatformAccountRunner,
 } from '@age/sign-in-directory-persistence';
 import type { DirectoryEntry } from '@age/sign-in-directory';
 
@@ -24,6 +26,12 @@ import {
  *
  *   **It can read one account and that account's memberships. It writes
  *   NOTHING, to nothing, ever.**
+ *
+ * ⚠️ **ADR-0089 ADDED A SECOND WAY TO ASK THAT ONE QUESTION, AND 🚫 NOT A SECOND
+ * QUESTION.** A platform request has 🚫 no organization to scope by (ADR-0083 D1
+ * option B), so it names the account the session already proved instead. The
+ * sentence above is unchanged, deliberately — 🛑 the day it needs "…except one"
+ * is the day this door has stopped being checkable.
  *
  * 🛑 **THIS IS WHY THE SCOPE IS NOT ON THE SESSION ROW.** ADR-0079 §2 property
  * 2: *the scope is read from the database on every request, 🚫 never from a
@@ -58,15 +66,34 @@ export interface ScopeStoreConnection {
     organizationId: string,
     accountId: string,
   ) => Promise<DirectoryEntry>;
+  /**
+   * ADR-0089 — the platform arm of the SAME per-request re-read.
+   *
+   * 🛑 **IT TAKES THE ACCOUNT ID AND 🚫 NOTHING ELSE, AND THAT IS THE POINT.**
+   * There is no organization parameter to supply, so 🚫 no caller can quietly
+   * hand it the pinned organization and re-decide a platform operator as a
+   * member of a tenant they are not in — the substitution ADR-0082 D4 forbids,
+   * made **unrepresentable** rather than merely discouraged.
+   *
+   * ⚠️ **A REVOKED PLATFORM MEMBERSHIP READS AS ABSENT**, so the request path
+   * refuses on the NEXT request rather than at eight-hour expiry. 🚫 It still
+   * cannot ask for a list, and 🚫 it still writes nothing.
+   */
+  readonly findPlatformDirectoryEntryByAccount: (accountId: string) => Promise<DirectoryEntry>;
   readonly close: () => Promise<void>;
 }
 
 /**
  * Opens the scope door.
  *
- * ⚠️ ONE runner, carrying find-only delegates. 🚫 There is no second runner here
- * and no delegate that can write, so this function has no shape in which an
+ * ⚠️ TWO runners since ADR-0089, both carrying find-only delegates, and 🚫 no
+ * delegate that can write — so this function still has no shape in which an
  * INSERT or an UPDATE could later be added without changing its type.
+ *
+ * 🛑 **TWO RUNNERS, 🚫 NOT A FLAG ON ONE.** ADR-0080 gave the reason and ADR-0089
+ * §5.2 kept it: *"a boolean parameter meaning 'read without a tenant' is a
+ * boolean that can be passed by mistake from the request path, and the mistake
+ * would be invisible."* Neither runner can express the other's `set_config`.
  */
 export function openDeployedPrismaScopeConnection(
   options: DeployedConnectionOptions,
@@ -80,6 +107,9 @@ export function openDeployedPrismaScopeConnection(
   return {
     findDirectoryEntryByAccount: (organizationId, accountId) =>
       directoryEntryByAccountRead(directoryRunner, { organizationId })(accountId),
+    findPlatformDirectoryEntryByAccount: platformDirectoryReadByAccount(
+      new PrismaPlatformAccountRunner(client),
+    ),
     close: () => client.$disconnect(),
   };
 }

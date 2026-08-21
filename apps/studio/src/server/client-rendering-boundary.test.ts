@@ -28,6 +28,32 @@ const redirect = vi.fn((to: string) => {
   throw new Error(`NEXT_REDIRECT:${to}`);
 });
 
+// ⚠️ ADR-0089 — what the account-keyed platform read returns by default: a LIVE
+// platform membership, obviously fictional (ADR-0053 D3, ADR-0065 D1).
+const livePlatformEntry = {
+  account: {
+    accountId: 'account-fictional-platform',
+    email: 'platform@fictional.invalid',
+    disabledAt: null,
+  },
+  memberships: [
+    {
+      membershipId: 'membership-fictional-platform',
+      accountId: 'account-fictional-platform',
+      scopeKind: 'platform',
+      organizationId: null,
+      clientId: null,
+      roleBundle: 'platform-operator',
+      revokedAt: null,
+    },
+  ],
+};
+
+// ⚠️ The parameter is DECLARED even though the body ignores it: a zero-arity
+// spy cannot record the account id it was asked about, and 🚫 an argument that
+// is never recorded is an argument no guard can rule out.
+const readPlatformDirectoryEntryByAccount = vi.fn(async (_accountId: string) => livePlatformEntry);
+
 vi.mock('next/navigation', () => ({
   notFound: () => notFound(),
   redirect: (to: string) => redirect(to),
@@ -40,6 +66,13 @@ vi.mock('./session-boundary', () => ({
 vi.mock('./operator-environment', () => ({
   readDirectoryEntryByAccount: (organizationId: string, accountId: string) =>
     readDirectoryEntryByAccount(organizationId, accountId),
+  // ⚠️ **ADR-0089 — THE PLATFORM ARM RE-READS ITS OWN MEMBERSHIP NOW**, so this
+  // export must exist here or every platform case below fails on the mock
+  // rather than on the behaviour it is asserting. 🛑 The default is a LIVE
+  // platform membership, because these cases are about what an admitted
+  // platform principal may do; the revocation case has its own file.
+  readPlatformDirectoryEntryByAccount: (accountId: string) =>
+    readPlatformDirectoryEntryByAccount(accountId),
 }));
 
 const { requireClientRendering } = await import('./request-scope');
@@ -142,7 +175,10 @@ describe('the scopes this screen is not for', () => {
   it('refuses a PLATFORM principal with the same opaque 404, 🚫 not a redirect', async () => {
     assessRequestSession.mockResolvedValue({
       kind: 'admitted',
-      principal: { scope: 'platform', session: { sessionId: 'session-fictional-2' } },
+      principal: {
+        scope: 'platform',
+        session: { sessionId: 'session-fictional-2', accountId: 'account-fictional-platform' },
+      },
     });
 
     await expect(requireClientRendering()).rejects.toThrow('NEXT_NOT_FOUND');
