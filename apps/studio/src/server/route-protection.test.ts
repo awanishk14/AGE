@@ -62,11 +62,18 @@ const PUBLIC_ROUTES: ReadonlyMap<string, string> = new Map([
  * Every route that must call a boundary before it touches anything — and 🛑
  * **WHICH** boundary, by name.
  *
- * 🛑 **THERE ARE TWO, AND THE MAP IS HOW A ROUTE SAYS WHICH IT STANDS BEHIND**
- * (ADR-0085). `requireVerifiedSession` returns a TENANT session and is what the
- * sixteen tenant pages need; `requireVerifiedPlatformSession` returns a
+ * 🛑 **THERE ARE THREE, AND THE MAP IS HOW A ROUTE SAYS WHICH IT STANDS BEHIND**
+ * (ADR-0085, ADR-0087). `requireVerifiedSession` returns a TENANT session and is
+ * what the sixteen tenant pages need; `requireVerifiedPlatformSession` returns a
  * `VerifiedPlatformSession` — a different type, with no organization on it —
- * and exactly one screen needs that.
+ * and exactly one screen needs that; `requireClientRendering` returns the ONE
+ * client a client viewer may see, and exactly one screen needs that.
+ *
+ * ⚠️ **THE THIRD ARM MADE THE "NOT THE OTHER ONE" CHECK STOP BEING BINARY, AND
+ * IT WAS GENERALISED RATHER THAN LEFT PAIRED.** A rule written for two that
+ * silently ignores the third is the narrow-scan-for-a-broad-rule defect this
+ * repo keeps finding: every boundary a route does NOT stand behind is now
+ * asserted absent, 🚫 not merely the one that used to be its opposite.
  *
  * ⚠️ **THIS WAS A FLAT LIST UNTIL 2026-08-20, AND IT WAS NARROWED RATHER THAN
  * RELAXED.** The old assertion was "contains `await requireVerifiedSession()`".
@@ -75,6 +82,20 @@ const PUBLIC_ROUTES: ReadonlyMap<string, string> = new Map([
  * organization-less principal's screen. Each route now names ONE, and 🚫 the
  * other is asserted absent.
  */
+/**
+ * Which module each boundary lives in.
+ *
+ * 🛑 **IT EXISTS SO THE "READS BEFORE IT ADMITS" CHECK CAN EXCLUDE THE GUARD
+ * ITSELF, AND ONLY THE GUARD ITSELF.** Excluding `request-scope` outright would
+ * blind that check on every tenant page — `requireScopedAccess` lives there too,
+ * and a page that called it before admitting would go unnoticed.
+ */
+const BOUNDARY_MODULES: ReadonlyMap<string, string> = new Map([
+  ['requireVerifiedSession', 'session-boundary'],
+  ['requireVerifiedPlatformSession', 'session-boundary'],
+  ['requireClientRendering', 'request-scope'],
+]);
+
 const PROTECTED_ROUTES: ReadonlyMap<string, string> = new Map(
   [
     'page.tsx',
@@ -105,6 +126,13 @@ const PROTECTED_ROUTES: ReadonlyMap<string, string> = new Map(
        */
       ['platform/page.tsx', 'requireVerifiedPlatformSession'],
       ['platform/choose/route.ts', 'requireVerifiedPlatformSession'],
+      /**
+       * 🛑 **THE CLIENT ARM — ADR-0087.** It is reached by a principal whose
+       * scope names one client, and it must 🚫 NOT call the tenant boundary:
+       * `requireVerifiedSession` admits an AGENCY operator, and this screen
+       * renders a subject an agency operator does not have.
+       */
+      ['client/page.tsx', 'requireClientRendering'],
     ]),
 );
 
@@ -163,10 +191,7 @@ describe('the studio route contract', () => {
 
   describe.each([...PROTECTED_ROUTES])('%s', (route, boundary) => {
     const source = stripComments(readFileSync(join(APP_ROOT, route), 'utf8'));
-    const OTHER_BOUNDARY =
-      boundary === 'requireVerifiedSession'
-        ? 'requireVerifiedPlatformSession'
-        : 'requireVerifiedSession';
+    const OTHER_BOUNDARIES = [...BOUNDARY_MODULES.keys()].filter((name) => name !== boundary);
 
     it('calls the boundary it was classified under', () => {
       expect(source).toContain(`await ${boundary}()`);
@@ -178,12 +203,18 @@ describe('the studio route contract', () => {
      * platform page standing behind the tenant gate would be redirected to
      * itself, forever.
      */
-    it('does not also call the other boundary', () => {
-      expect(
-        source.includes(`${OTHER_BOUNDARY}(`),
-        `${route} is classified under ${boundary} and also reaches for ${OTHER_BOUNDARY}. ` +
-          `A route stands behind exactly one boundary.`,
-      ).toBe(false);
+    it('does not also call any other boundary', () => {
+      // ⚠️ Counted, so a future refactor that empties this list cannot let the
+      // assertion pass by having nothing to assert.
+      expect(OTHER_BOUNDARIES.length).toBe(BOUNDARY_MODULES.size - 1);
+
+      for (const other of OTHER_BOUNDARIES) {
+        expect(
+          source.includes(`${other}(`),
+          `${route} is classified under ${boundary} and also reaches for ${other}. ` +
+            `A route stands behind exactly one boundary.`,
+        ).toBe(false);
+      }
     });
 
     it('calls the boundary BEFORE any server operation', () => {
@@ -193,7 +224,11 @@ describe('the studio route contract', () => {
       // Every identifier this route imports from the effect/orchestration
       // modules. 🚫 `session-boundary` itself is excluded — it IS the guard.
       const imported = [...source.matchAll(/import\s*\{([^}]*)\}\s*from\s*'@\/server\/([^']+)'/g)]
-        .filter(([, , module]) => module !== 'session-boundary')
+        // 🚫 The module the route's OWN boundary lives in is excluded — it IS
+        // the guard, and a guard cannot be called before itself. ⚠️ Only that
+        // one is excluded: `request-scope` is an ordinary server module for
+        // every route that does not stand behind `requireClientRendering`.
+        .filter(([, , module]) => module !== BOUNDARY_MODULES.get(boundary))
         .flatMap(([, names]) => (names ?? '').split(',').map((name) => name.trim()))
         .filter((name) => name !== '');
 
