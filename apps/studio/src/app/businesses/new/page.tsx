@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { CreateClientForm } from '@/components/create-client-form';
 import { createClientAction } from '@/server/client-actions';
 
-import { requireVerifiedSession } from '@/server/session-boundary';
+import { requireAgencyRendering } from '@/server/request-scope';
 
 /**
  * ⚠️ Rendered per request. The form writes to the operator's record file, and a
@@ -16,7 +16,7 @@ export default async function Page() {
   // does not return for an unadmitted caller — 🚫 there is no falsy value to
   // forget to check. A route contract test asserts this line precedes every
   // `@/server/*` call in this file.
-  await requireVerifiedSession();
+  await requireAgencyRendering();
 
   return (
     <main className="max-w-3xl p-8">

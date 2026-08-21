@@ -87,7 +87,15 @@ export type SignInRefusalReason =
   | 'no-membership'
   | 'membership-revoked'
   | 'ambiguous-membership'
-  | 'client-scope-not-yet-served'
+  /**
+   * 🛑 **A CLIENT MEMBERSHIP THAT NAMES NO CLIENT IS REFUSED, 🚫 NOT WIDENED TO
+   * THE AGENCY IT SITS BENEATH.** ADR-0088. An absent client is 🚫 never "all
+   * clients" — the constitution's *absence is never a conclusion*, applied to a
+   * row. Such a row cannot come from a coherent provisioning step; the database
+   * CHECK constraint requires a client on a client-scoped membership, so if one
+   * arrives the reader is not the one the product thinks it is.
+   */
+  | 'incoherent-client-membership'
   /**
    * 🛑 **A PLATFORM MEMBERSHIP THAT CARRIES AN ORGANIZATION OR A CLIENT IS
    * REFUSED, 🚫 NOT NARROWED TO THE PART THAT MAKES SENSE.** ADR-0082 D4 says a
@@ -172,30 +180,46 @@ export function decideSignIn(entry: DirectoryEntry, organizationId: string): Sig
     return admittedAs(account.accountId, null, admitting);
   }
 
-  const agency = live.filter(
-    (membership) =>
-      membership.scopeKind === 'agency' && membership.organizationId === organizationId,
-  );
+  // 🛑 **CLIENTS ARE ADMITTED SINCE ADR-0088, AND THE REFUSAL THEY USED TO GET
+  // NAMED THE CONDITION OF ITS OWN REMOVAL** — *"the console renders agency
+  // views only […] Client sign-in arrives with the client rendering, 🚫 never
+  // before it."* ADR-0087 shipped that rendering, and ADR-0088 §2 put a gate in
+  // front of the fifteen agency pages so the first half of that sentence stopped
+  // being true as well. 🚫 Neither half was lifted without the other.
+  const tenant = live.filter((membership) => membership.organizationId === organizationId);
 
-  if (agency.length === 0) {
-    // 🛑 A client membership is refused rather than admitted, and 🚫 not
-    // silently: the console renders agency views only, so admitting a client
-    // today would show them an agency's screens. Client sign-in arrives with
-    // the client rendering, 🚫 never before it.
-    return refused(
-      live.some((membership) => membership.scopeKind === 'client')
-        ? 'client-scope-not-yet-served'
-        : 'no-membership',
-    );
-  }
+  const agency = tenant.filter((membership) => membership.scopeKind === 'agency');
+  const client = tenant.filter((membership) => membership.scopeKind === 'client');
+
+  if (agency.length === 0 && client.length === 0) return refused('no-membership');
 
   // 🛑 **TWO LIVE MEMBERSHIPS ARE REFUSED, 🚫 NEVER PICKED BETWEEN.** Choosing
   // one would be this module deciding which role bundle a person signs in with,
   // and it would choose the same way every time — silently, and invisibly to
   // whoever provisioned the second row by mistake.
-  if (agency.length > 1) return refused('ambiguous-membership');
+  //
+  // ⚠️ **AN AGENCY ROW AND A CLIENT ROW TOGETHER ARE COUNTED HERE, WHICH THEY
+  // WERE NOT BEFORE** (ADR-0088 §3c). The agency row used to win silently. That
+  // was harmless only while a client row could admit nobody; now it is exactly
+  // the question the platform arm above already refuses by name. 🛑 This is a
+  // NARROWING — a combination that used to be admitted is now refused, and 🚫
+  // nothing that was refused became admitted.
+  if (agency.length + client.length > 1) return refused('ambiguous-membership');
 
-  return admittedAs(account.accountId, organizationId, agency[0] as DirectoryMembership);
+  if (agency.length === 1) {
+    return admittedAs(account.accountId, organizationId, agency[0] as DirectoryMembership);
+  }
+
+  const admitting = client[0] as DirectoryMembership;
+
+  // 🚫 Rows are UNTRUSTED INPUT, re-validated on read. A client membership with
+  // no client is 🚫 not "every client" and 🚫 not the agency it sits beneath —
+  // it is a row nothing in the product can express as a scope, and
+  // `scopeForMembership` would refuse it downstream. ⚠️ Refusing it HERE means
+  // no session is ever issued against it.
+  if (admitting.clientId === null) return refused('incoherent-client-membership');
+
+  return admittedAs(account.accountId, organizationId, admitting);
 }
 
 /**

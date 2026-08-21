@@ -17,9 +17,11 @@ export const dynamic = 'force-dynamic';
  * row. There is deliberately no scope column on `operator_sessions`: a flag on a
  * session is precisely how a bypass arrives.
  *
- * 🛑 **UNREACHABLE WHEN THIS SLICE MERGES.** Sign-in still refuses a client
- * membership with `client-scope-not-yet-served`, because the shipped refusal
- * says the rendering comes first. 🚫 This must not be reported as browser-proven.
+ * ⚠️ **REACHABLE SINCE ADR-0088, AND STILL 🚫 NOT BROWSER-PROVEN.** `decideSignIn`
+ * now admits a client membership, and `requireAgencyRendering` sends one here
+ * from `/`. But a client account and its membership are **owner acts** — AGE
+ * mints nothing — so no client has ever loaded this page. 🚫 Do not report it as
+ * verified until one has.
  */
 export default async function Page() {
   // 🛑 THE GATE, BEFORE ANY PROTECTED READ. It does not return for a caller

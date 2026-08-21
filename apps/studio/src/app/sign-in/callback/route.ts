@@ -189,10 +189,9 @@ function markerFor(reason: SignInRefusalReason): string {
   switch (reason) {
     case 'ambiguous-membership':
       return 'ambiguous';
-    case 'client-scope-not-yet-served':
-      return 'scope-not-served';
     case 'crossed-directory-channel':
     case 'incoherent-platform-membership':
+    case 'incoherent-client-membership':
       // ⚠️ Not `ambiguous`, and not `scope-not-served`. The row itself is
       // malformed in a way no provisioning step produces, so the honest screen
       // is the one that says the console cannot admit this person — and the
