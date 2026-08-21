@@ -11,7 +11,7 @@ import type { SessionPrincipal, VerifiedSession } from '@age/session-store';
 import { decideSignIn } from '@age/sign-in-directory';
 
 import { readDirectoryEntryByAccount } from './operator-environment';
-import { assessRequestSession } from './session-boundary';
+import { assessRequestSession, requireVerifiedSession } from './session-boundary';
 
 /**
  * **THE SCOPE BOUNDARY** — ADR-0079 §6 slice 4, and the thing that makes
@@ -277,4 +277,49 @@ export async function requireClientRendering(): Promise<ClientScopedRequest> {
     organizationId: session.organizationId,
     clientId: scoped.scope.clientId,
   });
+}
+
+/**
+ * The gate every AGENCY-facing page stands behind — ADR-0088 §3a.
+ *
+ * 🛑 **IT EXISTS BECAUSE `requireVerifiedSession` CANNOT TELL A CLIENT FROM AN
+ * AGENCY OPERATOR, AND FROM THIS SLICE ONWARDS BOTH CAN SIGN IN.** That
+ * boundary proves a SESSION is valid; it 🚫 does not re-read the membership. Up
+ * to ADR-0087 that was harmless, because `decideSignIn` refused a client at the
+ * door. Lifting that refusal without this gate would have handed every client
+ * the whole agency — `app/page.tsx` reads `readBusinessesView` over the
+ * organization, 🚫 not over a subject.
+ *
+ * ⚠️ **IT COMPOSES, 🚫 IT DOES NOT REIMPLEMENT.** The session comes from
+ * `requireVerifiedSession` so the ADR-0085 platform acting-organization arm is
+ * reached by exactly one code path, and the scope comes from
+ * `requireRequestScope` so there is still ONE re-derivation of "how far".
+ *
+ * 🛑 **A CLIENT IS REDIRECTED, 🚫 NOT REFUSED, AND THE DIFFERENCE IS
+ * DELIBERATE.** This person IS signed in and IS provisioned; a 404 here would be
+ * the ADR-0084 defect in a third costume — a working session rendered as a
+ * failed one. The opaque 404 is for a screen that is NOT THEIRS; `/` is not
+ * not-theirs, it is simply not where they live.
+ *
+ * ⚠️ **A PLATFORM PRINCIPAL PASSES, AND THAT IS ADR-0085 WORKING.** It has
+ * already named an organization and holds an ordinary tenant session carrying
+ * 🚫 no extra power; `requireRequestScope` reports `platformScope()` for it,
+ * which is 🚫 not a client scope, so it renders.
+ */
+export async function requireAgencyRendering(): Promise<VerifiedSession> {
+  // ⚠️ FIRST, so an unadmitted caller is sent to the door by the same line as
+  // before and 🚫 the store below is never asked about them.
+  const session = await requireVerifiedSession();
+
+  const scoped = await requireRequestScope();
+
+  // 🛑 THE NARROWING IS THE COMPILER'S AGAIN: `scope.kind` is only reachable
+  // once the principal is known to be a tenant's, and a client scope can arrive
+  // 🚫 no other way — `scopeForMembership` refuses to parse one from anything
+  // else, and `platformScope()` is reachable only by name.
+  if (scoped.principal.scope === 'tenant' && scoped.scope.kind === 'client') {
+    redirect('/client');
+  }
+
+  return session;
 }

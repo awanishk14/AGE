@@ -62,12 +62,23 @@ const PUBLIC_ROUTES: ReadonlyMap<string, string> = new Map([
  * Every route that must call a boundary before it touches anything — and 🛑
  * **WHICH** boundary, by name.
  *
- * 🛑 **THERE ARE THREE, AND THE MAP IS HOW A ROUTE SAYS WHICH IT STANDS BEHIND**
- * (ADR-0085, ADR-0087). `requireVerifiedSession` returns a TENANT session and is
- * what the sixteen tenant pages need; `requireVerifiedPlatformSession` returns a
- * `VerifiedPlatformSession` — a different type, with no organization on it —
- * and exactly one screen needs that; `requireClientRendering` returns the ONE
- * client a client viewer may see, and exactly one screen needs that.
+ * 🛑 **THERE ARE FOUR, AND THE MAP IS HOW A ROUTE SAYS WHICH IT STANDS BEHIND**
+ * (ADR-0085, ADR-0087, ADR-0088). `requireAgencyRendering` is what the fifteen
+ * agency pages need — it proves the session AND re-reads how far it reaches;
+ * `requireVerifiedPlatformSession` returns a `VerifiedPlatformSession` — a
+ * different type, with no organization on it — and exactly one screen needs
+ * that; `requireClientRendering` returns the ONE client a client viewer may
+ * see, and exactly one screen needs that. `requireVerifiedSession` is 🚫 NOT
+ * classifiable for any route any more: it is composed INSIDE
+ * `requireAgencyRendering`, and a page reaching for it directly would prove a
+ * session and 🚫 never ask which tier it belonged to.
+ *
+ * 🛑 **THAT LAST POINT IS THE WHOLE OF ADR-0088 §2, ENFORCED.** Until 2026-08-21
+ * every one of these fifteen pages gated on `requireVerifiedSession` alone,
+ * which cannot tell a client from an agency operator — harmless only while
+ * `decideSignIn` refused a client at the door. Fifteen hand-edited files is
+ * fifteen chances to miss one, so a missed file fails HERE rather than quietly
+ * serving an agency dashboard to a client.
  *
  * ⚠️ **THE THIRD ARM MADE THE "NOT THE OTHER ONE" CHECK STOP BEING BINARY, AND
  * IT WAS GENERALISED RATHER THAN LEFT PAIRED.** A rule written for two that
@@ -86,13 +97,21 @@ const PUBLIC_ROUTES: ReadonlyMap<string, string> = new Map([
  * Which module each boundary lives in.
  *
  * 🛑 **IT EXISTS SO THE "READS BEFORE IT ADMITS" CHECK CAN EXCLUDE THE GUARD
- * ITSELF, AND ONLY THE GUARD ITSELF.** Excluding `request-scope` outright would
- * blind that check on every tenant page — `requireScopedAccess` lives there too,
- * and a page that called it before admitting would go unnoticed.
+ * ITSELF, AND ONLY THE GUARD ITSELF.**
+ *
+ * ⚠️ **SINCE ADR-0088 THREE OF THE FOUR GATES LIVE IN `request-scope`, SO THAT
+ * EXCLUSION NOW COVERS MORE THAN IT DID — AND THE COST IS NAMED RATHER THAN
+ * GLOSSED.** `requireScopedAccess` lives in the same module, so a page that
+ * called it before admitting would 🚫 not be caught here. ⚠️ No page does:
+ * `requireScopedAccess` is reached from server ACTIONS, whose own contract test
+ * (`action-protection.test.ts`) covers them. 🛑 If a page ever calls it, this
+ * exclusion is the thing to narrow — 🚫 by matching the exported NAME rather
+ * than the module, never by dropping the check.
  */
 const BOUNDARY_MODULES: ReadonlyMap<string, string> = new Map([
   ['requireVerifiedSession', 'session-boundary'],
   ['requireVerifiedPlatformSession', 'session-boundary'],
+  ['requireAgencyRendering', 'request-scope'],
   ['requireClientRendering', 'request-scope'],
 ]);
 
@@ -115,9 +134,9 @@ const PROTECTED_ROUTES: ReadonlyMap<string, string> = new Map(
     'diagnostics/page.tsx',
   ]
     // ⚠️ The pair is annotated `[string, string]` rather than inferred: `as
-    // const` would fix the boundary name to the tenant literal and 🚫 make the
-    // platform entries below un-appendable.
-    .map((route): [string, string] => [route, 'requireVerifiedSession'])
+    // const` would fix the boundary name to the agency literal and 🚫 make the
+    // platform and client entries below un-appendable.
+    .map((route): [string, string] => [route, 'requireAgencyRendering'])
     .concat([
       /**
        * 🛑 **THE PLATFORM ARM — ADR-0085.** These two are reached by a principal
@@ -128,8 +147,8 @@ const PROTECTED_ROUTES: ReadonlyMap<string, string> = new Map(
       ['platform/choose/route.ts', 'requireVerifiedPlatformSession'],
       /**
        * 🛑 **THE CLIENT ARM — ADR-0087.** It is reached by a principal whose
-       * scope names one client, and it must 🚫 NOT call the tenant boundary:
-       * `requireVerifiedSession` admits an AGENCY operator, and this screen
+       * scope names one client, and it must 🚫 NOT call the agency gate:
+       * `requireAgencyRendering` admits an AGENCY operator, and this screen
        * renders a subject an agency operator does not have.
        */
       ['client/page.tsx', 'requireClientRendering'],

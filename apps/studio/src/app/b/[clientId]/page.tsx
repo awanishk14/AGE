@@ -1,6 +1,6 @@
 import { BusinessProfileScreen } from '@/components/business-profile-screen';
 
-import { requireVerifiedSession } from '@/server/session-boundary';
+import { requireAgencyRendering } from '@/server/request-scope';
 
 // 🚫 Never cached. The draft state it reports changes as the operator works,
 // and a cached page would report a saved draft that no longer exists.
@@ -11,7 +11,7 @@ export default async function Page({ params }: { readonly params: Promise<{ clie
   // does not return for an unadmitted caller — 🚫 there is no falsy value to
   // forget to check. A route contract test asserts this line precedes every
   // `@/server/*` call in this file.
-  const session = await requireVerifiedSession();
+  const session = await requireAgencyRendering();
 
   const { clientId } = await params;
   return (

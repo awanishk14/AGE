@@ -93,22 +93,36 @@ beforeEach(() => {
   });
 });
 
-describe('a client membership, on this slice', () => {
+describe('a client viewer whose membership still stands', () => {
   /**
-   * 🛑 **IT IS STILL REFUSED AT ADMISSION, AND THIS TEST SAYS SO OUT LOUD**
-   * (ADR-0087 §6). `decideSignIn` answers `client-scope-not-yet-served`, and
-   * `requireRequestScope` turns that into the same door every refused operator
-   * sees. So `/client` is 🚫 **UNREACHABLE BY ANY REAL CALLER** as this slice
-   * merges, and 🚫 must not be reported as browser-proven. Lifting that refusal
-   * is slice 2, and this test is what will fail loudly when it is lifted —
-   * ⚠️ deliberately, so the change cannot be made silently.
+   * 🛑 **WITHOUT THIS CASE THE REFUSALS BELOW WOULD PASS AGAINST A GATE THAT
+   * REFUSES EVERYONE** — the guard would be measuring nothing and reporting it
+   * as safety.
+   *
+   * ⚠️ **THIS TEST ASSERTED THE OPPOSITE UNTIL ADR-0088.** On the previous
+   * slice it asserted the redirect to the door, deliberately, so that lifting
+   * the sign-in refusal could 🚫 not happen silently. It did not: the assertion
+   * was inverted in the same commit that lifted it. 🚫 The retired reason is
+   * not named here — a product-wide scan in `sign-in-decision.spec.ts` requires
+   * it to appear nowhere, and 🚫 a comment is a source file too.
    */
-  it('cannot reach the screen yet, and is sent to the door 🚫 without a reason it could act on', async () => {
+  it('is admitted, and carries the client its MEMBERSHIP names', async () => {
     readDirectoryEntryByAccount.mockResolvedValue(entry(CLIENT_MEMBERSHIP));
 
-    await expect(requireClientRendering()).rejects.toThrow(
-      'NEXT_REDIRECT:/sign-in?refused=not-provisioned',
-    );
+    const request = await requireClientRendering();
+
+    expect(request.clientId).toBe(CLIENT);
+    expect(request.organizationId).toBe(ORGANIZATION);
+    expect(notFound).not.toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it('reads the directory scoped to the session, 🚫 never to an argument', async () => {
+    readDirectoryEntryByAccount.mockResolvedValue(entry(CLIENT_MEMBERSHIP));
+
+    await requireClientRendering();
+
+    expect(readDirectoryEntryByAccount).toHaveBeenCalledWith(ORGANIZATION, ACCOUNT);
   });
 });
 

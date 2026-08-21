@@ -3,7 +3,7 @@ import { presentDashboard, presentSystemStatus } from '@age/studio-shell';
 import { DashboardScreen } from '@/components/dashboard-screen';
 import { boundHost, boundPort, readBusinessesView } from '@/server/operator-environment';
 
-import { requireVerifiedSession } from '@/server/session-boundary';
+import { requireAgencyRendering } from '@/server/request-scope';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +29,7 @@ export default async function Page() {
   // does not return for an unadmitted caller — 🚫 there is no falsy value to
   // forget to check. A route contract test asserts this line precedes every
   // `@/server/*` call in this file.
-  const session = await requireVerifiedSession();
+  const session = await requireAgencyRendering();
 
   const businesses = readBusinessesView(session.organizationId);
 
@@ -48,7 +48,7 @@ export default async function Page() {
         // that does not exist. 🛑 It still says nothing about entitlement.
         //
         // ⚠️ It is written as a literal because the guard above has ALREADY
-        // decided it: `requireVerifiedSession()` does not return for an
+        // decided it: `requireAgencyRendering()` does not return for an
         // unadmitted caller, so there is no second outcome to branch on here.
         // 🚫 Do not manufacture a ternary over `session` to make it look
         // computed — a fake derivation is harder to audit than a plain fact.

@@ -302,8 +302,8 @@ describe('🛑 platform NEVER outranks another live membership', () => {
   });
 });
 
-describe('🛑 the scopes slice 3 deliberately does not serve are refused BY NAME', () => {
-  it('refuses a client membership rather than showing them agency screens', () => {
+describe('🛑 the third tier comes through the door — ADR-0088', () => {
+  it('ADMITS a client membership, carrying the client the ROW names', () => {
     expect(
       decideSignIn(
         entry({
@@ -317,7 +317,58 @@ describe('🛑 the scopes slice 3 deliberately does not serve are refused BY NAM
         }),
         ORGANIZATION,
       ),
-    ).toEqual({ outcome: 'refused', reason: 'client-scope-not-yet-served' });
+    ).toMatchObject({
+      outcome: 'admitted',
+      operator: {
+        organizationId: ORGANIZATION,
+        scopeKind: 'client',
+        clientId: 'client-fictional-1',
+      },
+    });
+  });
+
+  it('🛑 refuses a client membership that names NO client, 🚫 rather than widening it', () => {
+    // ⚠️ An absent client is 🚫 never "all clients" and 🚫 never the agency it
+    // sits beneath. Refused HERE, so no session is ever issued against the row.
+    expect(
+      decideSignIn(
+        entry({
+          memberships: [
+            membership({ scopeKind: 'client', clientId: null, roleBundle: 'client-viewer' }),
+          ],
+        }),
+        ORGANIZATION,
+      ),
+    ).toEqual({ outcome: 'refused', reason: 'incoherent-client-membership' });
+  });
+
+  it('🛑 refuses an agency row and a client row TOGETHER, 🚫 never picking the wider one', () => {
+    // 🛑 THE NARROWING NAMED IN ADR-0088 §3c. The agency row used to win
+    // silently — harmless only while a client row could admit nobody.
+    expect(
+      decideSignIn(
+        entry({
+          memberships: [
+            membership(),
+            membership({
+              membershipId: 'membership-fictional-2',
+              scopeKind: 'client',
+              clientId: 'client-fictional-1',
+              roleBundle: 'client-viewer',
+            }),
+          ],
+        }),
+        ORGANIZATION,
+      ),
+    ).toEqual({ outcome: 'refused', reason: 'ambiguous-membership' });
+  });
+
+  it('🚫 no longer has a `client-scope-not-yet-served` reason to return', () => {
+    // 🛑 **THE RETIRED REASON IS ASSERTED GONE, 🚫 SIMPLY DELETED** — the same
+    // rule, and the same product-wide scan, as the retired reason below. A dead
+    // refusal left in the union is a branch nobody can reach and a screen
+    // nobody can see, and the next reader cannot tell it from a live one.
+    expect(sourcesNaming('client-scope-not-yet-served')).toEqual([]);
   });
 
   it('🚫 no longer has a `platform-scope-not-yet-readable` reason to return', () => {

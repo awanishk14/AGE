@@ -1,7 +1,7 @@
 import { BusinessesScreen } from '@/components/businesses-screen';
 import { readBusinessesView } from '@/server/operator-environment';
 
-import { requireVerifiedSession } from '@/server/session-boundary';
+import { requireAgencyRendering } from '@/server/request-scope';
 
 /**
  * ⚠️ Rendered per request, never cached or statically prerendered. A cached
@@ -16,7 +16,7 @@ export default async function Page() {
   // does not return for an unadmitted caller — 🚫 there is no falsy value to
   // forget to check. A route contract test asserts this line precedes every
   // `@/server/*` call in this file.
-  const session = await requireVerifiedSession();
+  const session = await requireAgencyRendering();
 
   return <BusinessesScreen view={readBusinessesView(session.organizationId)} />;
 }

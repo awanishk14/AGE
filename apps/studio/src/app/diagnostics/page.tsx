@@ -4,7 +4,7 @@ import { StateChip } from '@/components/state-chip';
 import { SystemStatusPanel } from '@/components/system-status-panel';
 import { boundHost, boundPort, readBusinessesView } from '@/server/operator-environment';
 
-import { requireVerifiedSession } from '@/server/session-boundary';
+import { requireAgencyRendering } from '@/server/request-scope';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +20,7 @@ export default async function Page() {
   // does not return for an unadmitted caller — 🚫 there is no falsy value to
   // forget to check. A route contract test asserts this line precedes every
   // `@/server/*` call in this file.
-  const session = await requireVerifiedSession();
+  const session = await requireAgencyRendering();
 
   const view = readBusinessesView(session.organizationId);
 

@@ -265,8 +265,15 @@ describe('🛑 AGE mints nothing — a verified identity with no row is refused'
         })),
       },
     ],
+    /**
+     * 🛑 **A CLIENT MEMBERSHIP THAT NAMES NO CLIENT** — ADR-0088. ⚠️ This row
+     * replaced the `scope-not-served` case that stood here: a well-formed
+     * client membership is now ADMITTED (asserted below, positively), and what
+     * is still refused is the INCOHERENT one. 🚫 The refusal was not deleted,
+     * it was moved to the row that still deserves it.
+     */
     [
-      'scope-not-served',
+      'not-provisioned',
       {
         account: { accountId: 'account-fictional-operator', email: EMAIL, disabledAt: null },
         memberships: [
@@ -275,7 +282,7 @@ describe('🛑 AGE mints nothing — a verified identity with no row is refused'
             accountId: 'account-fictional-operator',
             scopeKind: 'client',
             organizationId: ORGANIZATION,
-            clientId: 'client-fictional-1',
+            clientId: null,
             roleBundle: 'client-viewer',
             revokedAt: null,
           },
@@ -296,6 +303,46 @@ describe('🛑 AGE mints nothing — a verified identity with no row is refused'
     expect(world.issued).toEqual([]);
     expect(world.platformIssued).toEqual([]);
     expect(sessionCookie(response)).toBeUndefined();
+  });
+
+  /**
+   * 🛑 **THE DOOR A CLIENT MAY FINALLY COME THROUGH** — ADR-0088. ⚠️ Without
+   * this the table above would pass against a `decideSignIn` that refuses every
+   * client row for some entirely different reason, and the lift would be
+   * unproven.
+   */
+  it('ADMITS a well-formed client membership and issues a session for it', async () => {
+    world.entry = {
+      account: { accountId: 'account-fictional-viewer', email: EMAIL, disabledAt: null },
+      memberships: [
+        {
+          membershipId: 'membership-fictional-client',
+          accountId: 'account-fictional-viewer',
+          scopeKind: 'client',
+          organizationId: ORGANIZATION,
+          clientId: 'client-fictional-1',
+          roleBundle: 'client-viewer',
+          revokedAt: null,
+        },
+      ],
+    };
+
+    const response = await callback(`?state=${STATE}&code=abc`);
+
+    expect(response.headers.get('Location')).toBe('/sign-in/landing');
+
+    // 🛑 **A TENANT SESSION, 🚫 NOT A PLATFORM ONE**, carrying this
+    // deployment's organization — a client sits BENEATH an agency, and
+    // `organizationId: null` here would be a client that belongs to nobody.
+    expect(world.platformIssued).toEqual([]);
+    expect(world.issued).toHaveLength(1);
+    expect(world.issued[0]).toMatchObject({ organizationId: ORGANIZATION });
+
+    // ⚠️ **AND 🚫 NO `clientId` ON THE SESSION.** `operator_sessions` carries no
+    // scope on purpose: the session says WHO, and the membership re-read on
+    // every request says HOW FAR. A client id written here would be the flag
+    // that a bypass arrives on.
+    expect(world.issued[0]).not.toHaveProperty('clientId');
   });
 
   it('reads the directory in THIS deployment’s organization, by the verified address', async () => {
