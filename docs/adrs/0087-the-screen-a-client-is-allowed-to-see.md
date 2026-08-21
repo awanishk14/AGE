@@ -1,10 +1,18 @@
 # ADR-0087 — The screen a client is allowed to see
 
-Status: **Proposed** (2026-08-21)
+Status: **Accepted** (2026-08-21)
+
+🛑 **ACCEPTED BY THE PRODUCT OWNER, 2026-08-21, IN THESE WORDS VERBATIM:**
+
+> _"ADR-0087 and ADR-0088 acceted"_ — and, correcting the typo, _"accepted"_.
+
+⚠️ **BOTH ADRs WERE ACCEPTED IN ONE SENTENCE, AND 🚫 NEITHER CARRIES AN OPTION.** The owner named
+no variant, so the acceptance carries **the ADR exactly as written and nothing beyond it** — 🚫 no
+adjacent widening, and 🚫 no reading of intent into what was not said (the ADR-0084 lesson).
 
 ⚠️ **Written alongside the code rather than before it**, on the standing instruction recorded in
-ADR-0085 §0. 🛑 The owner accepts or rejects; a separate PR flips the status with their words
-verbatim, and 🚫 this is not owner acceptance of anything.
+ADR-0085 §0. 🛑 The status above was flipped by a **separate PR**, which
+carried no code.
 
 Depends on: ADR-0079 (three scopes, clients **read-only**) · ADR-0083 (the platform principal) ·
 ADR-0085 (where a platform operator stands). Supersedes: nothing.
