@@ -907,6 +907,29 @@ export function readDirectoryEntryByAccount(
 }
 
 /**
+ * Whether this signed-in PLATFORM account still holds a live platform
+ * membership — ADR-0089, and the thing that makes _"read on every request"_ true
+ * on the platform arm as well as the tenant one.
+ *
+ * 🛑 **IT GOES THROUGH THE SCOPE DOOR, 🚫 NOT THE SIGN-IN DOOR.** Its
+ * address-keyed sibling above lives on the sign-in door because sign-in is when
+ * an address exists; this one runs on EVERY request, and 🚫 a per-request read
+ * must not travel through a door that can mint a credential.
+ *
+ * 🛑 **IT IS FENCED BY THE PROVED ACCOUNT, 🚫 UNSCOPED.** One account id — the
+ * one the session already proved — and 🚫 there is no parameter through which an
+ * organization could be supplied. ⚠️ Passing the pinned organization "to make
+ * the re-read work" is the ADR-0082 D4 substitution; here it is not merely
+ * forbidden, it is **unrepresentable**.
+ *
+ * 🚫 **IT DECIDES NOTHING.** `decideSignIn(entry, null)` reasons over these rows
+ * — the SAME decision sign-in took, 🚫 not a gentler copy of it.
+ */
+export function readPlatformDirectoryEntryByAccount(accountId: string): Promise<DirectoryEntry> {
+  return withScopeStore((store) => store.findPlatformDirectoryEntryByAccount(accountId));
+}
+
+/**
  * The sign-in door, opened for exactly one operation and closed again.
  *
  * ⚠️ **NOTHING HOLDS IT OPEN** — the same rule as every other read here

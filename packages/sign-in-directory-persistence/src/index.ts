@@ -49,3 +49,24 @@ export {
   type PlatformDirectoryRunner,
   type PlatformTransactionSource,
 } from './platform-directory-read';
+
+/**
+ * ADR-0089 OPTION D — the same fence, keyed by the **account id a session
+ * already proved**, so a platform membership revoked mid-session is caught on
+ * the NEXT REQUEST rather than at eight-hour expiry.
+ *
+ * 🛑 **A SECOND KEY, 🚫 NOT A WIDER DOOR.** It answers exactly one question —
+ * *does THIS account, whose session I am already holding, still hold a live
+ * platform membership?* 🚫 It cannot enumerate, 🚫 it cannot be pointed at a
+ * tenant, and it fails **closed** when its setting is absent.
+ *
+ * ⚠️ **ITS CALLER IS THE SCOPE DOOR, 🚫 NOT THE SIGN-IN DOOR.** The sign-in door
+ * can INSERT a session; a per-request read must never travel through one that
+ * can mint a credential.
+ */
+export {
+  PrismaPlatformAccountRunner,
+  platformDirectoryReadByAccount,
+  type PlatformAccountRunner,
+  type PlatformAccountTransactionSource,
+} from './platform-account-read';

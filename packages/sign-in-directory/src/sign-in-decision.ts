@@ -139,8 +139,18 @@ export type SignInRefusalReason =
  * QUESTION.** It is ignored on the platform path, deliberately: an argument that
  * quietly became this session's organization is precisely the substitution
  * ADR-0082 D4 forbids.
+ *
+ * 🛑 **`null` MEANS THERE IS NO TENANT CHANNEL — 🚫 NOT "ANY TENANT"** (ADR-0089
+ * §5.3). A platform request re-reading its own membership has 🚫 no organization
+ * to ask about, and ADR-0082 D4's rule is that such an absence is **expressed,
+ * 🚫 never substituted**. So the caller passes `null` rather than the pinned
+ * organization, and the tenant filter below matches **nothing**: a tenant
+ * membership handed to this function with `null` is **refused**, never admitted.
+ * ⚠️ That is the whole reason this is a widened parameter rather than a second
+ * function — two implementations of *"may this person be here"* is how the two
+ * drift, and the copy that gets relaxed still passes its own tests.
  */
-export function decideSignIn(entry: DirectoryEntry, organizationId: string): SignInDecision {
+export function decideSignIn(entry: DirectoryEntry, organizationId: string | null): SignInDecision {
   const account = entry.account;
 
   if (account === undefined) return refused('no-account');
@@ -186,7 +196,18 @@ export function decideSignIn(entry: DirectoryEntry, organizationId: string): Sig
   // before it."* ADR-0087 shipped that rendering, and ADR-0088 §2 put a gate in
   // front of the fifteen agency pages so the first half of that sentence stopped
   // being true as well. 🚫 Neither half was lifted without the other.
-  const tenant = live.filter((membership) => membership.organizationId === organizationId);
+  // 🛑 **`null` MATCHES NOTHING HERE, AND THE EMPTY LIST IS WRITTEN OUT RATHER
+  // THAN LEFT TO `=== null`** (ADR-0089 §5.3). Rows are UNTRUSTED INPUT: a row
+  // carrying `scope_kind = 'agency'` with a NULL `organization_id` is a row
+  // nothing in the product can express, and an equality test alone would admit
+  // it to a request that HAS no organization. ⚠️ That is the ADR-0082 D4
+  // substitution arriving through the back door — absence matching absence and
+  // becoming a tenant. 🚫 A request with no organization admits no tenant
+  // membership, whatever the row says.
+  const tenant =
+    organizationId === null
+      ? []
+      : live.filter((membership) => membership.organizationId === organizationId);
 
   const agency = tenant.filter((membership) => membership.scopeKind === 'agency');
   const client = tenant.filter((membership) => membership.scopeKind === 'client');

@@ -201,3 +201,51 @@ describe('🛑 this package is reachable only from the composition doors', () =>
     expect(importers.sort()).toEqual([...COMPOSITION_DOORS].sort());
   });
 });
+
+/**
+ * **ADR-0089 §6 — 🚫 NO SECOND CALLER FOR THE ACCOUNT-KEYED READ.**
+ *
+ * 🛑 **THE PACKAGE-LEVEL GUARD ABOVE IS 🚫 NOT ENOUGH FOR THIS ONE.** It proves
+ * only that the package is reached through the two doors; it would stay green if
+ * the SIGN-IN door — the one that can INSERT a session — started calling the
+ * account-keyed read as well. ⚠️ That is precisely the mixing ADR-0089 §5.2
+ * forbids, so this guard names the symbol and pins it to ONE door by full path.
+ *
+ * 🛑 **A NARROW SCAN IS 🚫 NOT A NARROW RULE** — the walk asserts it actually
+ * read the product first, so an empty scan can never report compliance.
+ */
+describe('🛑 the account-keyed platform read has exactly one caller', () => {
+  const PRODUCT_FILES = ROOTS.flatMap((root) => productSourceFiles(root));
+  const SCOPE_DOOR = join(REPO_ROOT, 'apps', 'capture', 'src', 'deployed-scope-composition.ts');
+
+  it('walked the product, so an empty scan can never report compliance', () => {
+    expect(PRODUCT_FILES.length).toBeGreaterThan(200);
+    expect(PRODUCT_FILES).toContain(SCOPE_DOOR);
+  });
+
+  it('is named by the SCOPE door and 🚫 by nothing else — 🚫 not by the sign-in door', () => {
+    const PACKAGE_ROOT = join(SRC, '..');
+    const callers = PRODUCT_FILES.filter(
+      (file) =>
+        !file.startsWith(PACKAGE_ROOT) &&
+        readFileSync(file, 'utf8')
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .includes('platformDirectoryReadByAccount'),
+    );
+
+    expect(callers).toEqual([SCOPE_DOOR]);
+  });
+
+  it('🚫 the runner is constructed there too, and 🚫 nowhere else', () => {
+    const PACKAGE_ROOT = join(SRC, '..');
+    const callers = PRODUCT_FILES.filter(
+      (file) =>
+        !file.startsWith(PACKAGE_ROOT) &&
+        readFileSync(file, 'utf8')
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .includes('PrismaPlatformAccountRunner'),
+    );
+
+    expect(callers).toEqual([SCOPE_DOOR]);
+  });
+});
