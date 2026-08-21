@@ -207,3 +207,74 @@ export async function requireScopedAccess(
 
   return Object.freeze({ session, scope: scoped.scope });
 }
+
+/**
+ * What a request has proved once it has passed {@link requireClientRendering}.
+ *
+ * 🛑 **THE CLIENT IS IN THE TYPE, AND IT CAME FROM THE MEMBERSHIP** (ADR-0087).
+ * ⚠️ There is deliberately no way to construct this from a URL segment: the gate
+ * below is the only producer, and it reads `clientId` off the SCOPE it derived
+ * from the store, 🚫 never off a parameter the caller supplied.
+ */
+export interface ClientScopedRequest {
+  readonly session: VerifiedSession;
+  /** The agency the client sits beneath — the session's own organization. */
+  readonly organizationId: string;
+  /** 🛑 The ONE client this request may see. 🚫 Never a list, 🚫 never a wildcard. */
+  readonly clientId: string;
+}
+
+/**
+ * The gate for the client rendering — ADR-0087.
+ *
+ * 🛑 **IT TAKES NO ARGUMENTS, AND THAT IS THE DECISION.** Every other gate in
+ * this module accepts a `clientId` because elsewhere naming one is a FILTER
+ * applied inside an entitlement (AGE-INV-SEL-1). A client viewer has exactly one
+ * subject, so there is nothing to filter — and a parameter here would be a slot
+ * in which to name somebody else's client. 🚫 Do not add one "for symmetry".
+ *
+ * 🛑 **ANY SCOPE THAT IS NOT `client` IS REFUSED, INCLUDING THE WIDER ONES.** An
+ * agency operator and a platform operator are both turned away, 🚫 not because
+ * they lack reach — they have more — but because this screen renders a subject
+ * they do not have. ⚠️ Sending a platform principal to `/platform` instead would
+ * disclose that this route exists at all; the refusal is the same opaque 404
+ * every other boundary here produces.
+ *
+ * ⚠️ **THE CAPABILITY IS STILL ASKED FOR, OVER A SCOPE THAT OBVIOUSLY HOLDS
+ * IT.** `client-viewer` carries `rendering.client` by construction, so this
+ * check cannot fail today — and it is written anyway, because the day a bundle
+ * is edited is the day it must fail. 🚫 A gate that skips the question because
+ * it knows the answer is a gate that stops being one.
+ */
+export async function requireClientRendering(): Promise<ClientScopedRequest> {
+  const scoped = await requireRequestScope();
+
+  // 🛑 THE NARROWING IS THE COMPILER'S. A platform principal has no
+  // `organizationId`, so the read below is unreachable until this line has
+  // proved the scope is a client's — and a client scope only ever arrives on
+  // the tenant arm, because `scopeForMembership` refuses to parse any other.
+  if (scoped.scope.kind !== 'client' || scoped.principal.scope !== 'tenant') {
+    notFound();
+  }
+
+  const session = scoped.principal.session;
+
+  const decision = decideAccess({
+    scope: scoped.scope,
+    capability: 'rendering.client',
+    // 🛑 **THE SUBJECT IS THE SCOPE'S OWN CLIENT.** ⚠️ This looks circular and is
+    // not: `decideAccess` re-accepts both, so a blank identifier smuggled into a
+    // membership row is refused here rather than compared against itself. 🚫 The
+    // agency is the SESSION's organization, never the scope's, so a row that
+    // disagreed with the session it arrived under cannot grant anything.
+    subject: { agencyId: session.organizationId, clientId: scoped.scope.clientId },
+  });
+
+  if (decision.answer === 'refused') notFound();
+
+  return Object.freeze({
+    session,
+    organizationId: session.organizationId,
+    clientId: scoped.scope.clientId,
+  });
+}
