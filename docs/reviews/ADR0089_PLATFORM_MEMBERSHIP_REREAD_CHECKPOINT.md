@@ -91,5 +91,6 @@ Expect `20260821000000_platform_membership_request_reread`, `steps=1`, `rolled_b
 ## 5. Still open, and 🚫 none of it is a slice
 
 ADR-0084 slice 1 (the browser header measurement) · the browser gate on every deployed sign-in
-change — 🚫 I never sign in as the owner · Doctor at Door / the provenance threshold · the symlink
+change — 🚫 I never sign in as the owner · the provenance threshold, and with it the first real
+client record (⚠️ a name in **prose** is client data too, so it is 🚫 not written here) · the symlink
 question · ADR-0076 D8 · ADR-0079 D5 · ADR-0072 is `Proposed`; the gap-C ageing ADR is unwritten.
