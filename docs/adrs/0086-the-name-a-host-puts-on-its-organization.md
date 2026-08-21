@@ -1,6 +1,16 @@
 # ADR-0086 — The name a host puts on its organization
 
-Status: **Proposed** (2026-08-21)
+Status: **Accepted** (2026-08-21)
+
+🛑 **ACCEPTED BY THE PRODUCT OWNER**, 2026-08-21, verbatim:
+
+> _"2 make ADR yes, i am ok with picker and organisation name we decided."_
+
+⚠️ The owner also confirmed the **browser gate** in the same message — asked whether the picker
+renders the name, they answered _"Yes"_. `AGE_STUDIO_ORGANIZATION_NAME` was set on the host through
+the wrapper (`len=12`, value 🚫 never printed) and the console recreated; the owner then saw the
+label. ⚠️ **That is the first MEASUREMENT of this decision** — 🚫 nobody had opened the picker
+between the restart and their answer, so until then it was an expectation.
 
 ⚠️ **Written alongside the code rather than before it**, on the same standing instruction recorded
 in ADR-0085 §0. 🛑 The owner accepts or rejects; a separate PR flips the status with their words

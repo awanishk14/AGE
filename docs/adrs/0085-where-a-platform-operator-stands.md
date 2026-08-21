@@ -1,6 +1,14 @@
 # ADR-0085 — Where a platform operator stands
 
-Status: **Proposed** (2026-08-20)
+Status: **Accepted** (2026-08-21)
+
+🛑 **ACCEPTED BY THE PRODUCT OWNER**, 2026-08-21, verbatim:
+
+> _"2 make ADR yes, i am ok with picker and organisation name we decided."_
+
+⚠️ The owner also confirmed the **browser gate** in the same message — asked whether the picker
+renders, they answered _"Yes"_. That closes §5 with a MEASUREMENT rather than an expectation:
+🚫 nobody had opened the picker since the restart until then.
 
 🛑 **THIS ADR REVERSES A SHIPPED REFUSAL, AND IT DOES SO ON THE PRODUCT OWNER'S EXPLICIT
 INSTRUCTION**, given in this session, verbatim:
