@@ -44,49 +44,79 @@ failed with `expected [ Array(2) ] to have a length of 1 but got 2`.
   as **executed** (24 and 27 respectively, all `success`) — 🚫 not "the newest success", 🚫 not 0 steps.
 - Post-merge CI on `main` `ab2dd553f81114206aa68af1f9a56391bb18d2ee` — both workflows `success`.
 
-## 4. 🛑 HOST FACTS — WHAT WAS MEASURED, AND WHAT WAS NOT
+## 4. 🛠️ HOST FACTS — MEASURED ON THE BOX, 2026-08-21
 
-**Measured on the box, 2026-08-21:** `scripts/deploy-studio.sh` ran to completion. `age-studio`
-rebuilt and recreated; `/sign-in` answers inside the container; ADR-0076 D7 re-proven from **inside
-the running container** (AGE store ALLOWED; SNARA, RankOps, Drishti postgres, Scanner mysql each
-DENIED); published on `127.0.0.1:3100` only.
+⚠️ Everything in this section was **measured on the VPS**. 🚫 None of it is a repository
+assumption, and 🚫 CI proved none of it.
 
-🛑 **NOT MEASURED, AND 🚫 NOT DONE: THE MIGRATION IS NOT APPLIED.** ADR-0089 §8 says the RLS half is
-a host fact and 🚫 not a repository one, and it is named here so it cannot be reported as done on the
-strength of green CI. It is not done. The raw-connection measurement it demands — that `age_app`
-reads **nothing** without `age.platform_sign_in_account` set, one row with it, **zero** for a
-stranger's account id — has 🚫 not been taken.
+**The deploy.** `scripts/deploy-studio.sh` ran to completion. `age-studio` rebuilt and recreated;
+`/sign-in` answers inside the container; ADR-0076 D7 re-proven from **inside the running container**
+(AGE store ALLOWED; SNARA, RankOps, Drishti postgres, Scanner mysql each DENIED); published on
+`127.0.0.1:3100` only.
 
-### 🛑 THEREFORE THERE IS A LIVE REGRESSION ON THE PLATFORM ARM, RIGHT NOW
-
-The code is deployed and the policies are not. The new read sets the key, the database exposes no
-rows for it, so **a platform operator is refused `not-provisioned` on every request** until the
-migration runs. ⚠️ It fails **closed**, which is the safe direction — 🚫 but it is not the intended
-one, and the owner is the only provisioned platform principal.
-
-### Why I stopped rather than proceeding
-
-The migration runs through `deploy/vps/compose/docker-compose.age-migrate.yml` as the **owner**
-role, and every route to it needs privilege `age-deploy` deliberately does not have (ADR-0077): its
-five wrappers cover compose-up, derive-env, docker-probe, nginx-apply and settings-apply — 🚫 none
-runs SQL. The direct root route is blocked in this session by the harness classifier. 🚫 I did not
-work around it, and 🚫 I did not hand-apply the two `CREATE POLICY` statements as the superuser to
-get past it: that would record a migration that never ran through `migrate deploy`, which is the
-"the SQL that was reviewed is the SQL that ran" property (ADR-0032 D8).
-
-### The exact command, for the owner
-
-`AGE_DB_OWNER_URL` is held by the human and 🚫 is not on the box. From a shell with it in the
-environment (🚫 never in `argv`, 🚫 never `sudo -E`):
+**The migration**, through the sanctioned `docker-compose.age-migrate.yml` — `migrate deploy`,
+🚫 never `migrate dev`, as `age_owner`, inside `age-postgres`’s own network namespace, the
+credential read on the box and 🚫 never placed in `argv`:
 
 ```
-export AGE_DB_OWNER_URL_CONTAINER=$(printf '%s' "$AGE_DB_OWNER_URL" | sed -E 's#@[^@/]+:[0-9]+/#@127.0.0.1:5432/#')
-sudo --preserve-env=AGE_DB_OWNER_URL_CONTAINER \
-  docker compose -f /home/age-deploy/age/deploy/vps/compose/docker-compose.age-migrate.yml \
-  --project-directory /home/age-deploy/age run --rm migrate
+migration: 20260821000000_platform_membership_request_reread
+           finished=2026-08-21 17:45:55.707957+00  steps=1  rolled_back=no
+policy:    accounts_select_for_platform_account_reread            on accounts
+policy:    account_memberships_select_for_platform_account_reread on account_memberships
 ```
 
-Expect `20260821000000_platform_membership_request_reread`, `steps=1`, `rolled_back=no`.
+### 🛠️ THE ADR-0089 §8 MEASUREMENT — TAKEN, AND THIS IS IT
+
+A raw connection as **`age_app`** (NOSUPERUSER, NOBYPASSRLS — 🚫 not the owner, which would
+bypass every policy and prove nothing):
+
+| transaction                                         | `accounts` | `account_memberships` |
+| --------------------------------------------------- | ---------- | --------------------- |
+| 🛑 no setting at all                                | **0**      | **0**                 |
+| `age.platform_sign_in_account` = the proved account | **1**      | **1**                 |
+| ⚠️ a stranger’s account id                          | **0**      | —                     |
+| a fresh transaction, after commit                   | **0**      | **—**                 |
+
+Which is the whole of what the ADR claimed, now as fact rather than as intent:
+
+- 🛑 **IT FAILS CLOSED.** Without the fence the reader sees **nothing** — 🚫 not everything.
+- ⚠️ **IT IS A DOOR, 🚫 NOT AN ACCOUNT ORACLE.** A stranger’s id reads **0**, so the policy
+  cannot be used to ask _“does this account exist in AGE”_ — the `EXISTS` clause is doing the work
+  it was written for.
+- ⚠️ **THE SETTING IS GENUINELY TRANSACTION-LOCAL.** The next transaction on the SAME connection
+  read **0**, so the `set_config(…, true)` form does not leak a previous operator’s account to
+  whoever borrows that pooled connection next. 🛑 That is the hazard the form exists to prevent,
+  and it is now measured rather than reasoned about.
+
+**Two blemishes in the measurement script, neither touching a result.** An apostrophe inside a
+`\echo` comment broke that one comment line (`unterminated quoted string`); the query beneath it
+still ran and returned `0`. And `select set_config(…)` echoed the opaque account id into the
+output — ⚠️ not a credential and 🚫 not client data, but it was meant to stay unprinted.
+
+### ✅ The regression this closes
+
+Between the deploy and the migration the code was live and the policies were not, so the platform
+arm refused `not-provisioned` on every request — failing **closed**, the safe direction, but 🚫 not
+the intended one. That window is over.
+
+### ⚠️ STILL NOT PROVEN: THE BROWSER
+
+🛑 **Nobody has signed in since the migration.** The measurement above proves the DATABASE answers
+correctly to a raw connection; 🚫 it proves nothing about a platform operator actually reaching a
+page. `curl` is not a browser and neither is `psql`. ⚠️ The browser gate is the owner’s, and
+🚫 I never sign in as them.
+
+### ⚠️ Two route facts worth keeping, because they cost a round trip each
+
+- 🛑 **THE ROOT KEY INSTALL RECORDED FOR 2026-08-21 DID NOT TAKE.**
+  `ssh root@185.255.131.94` still answers `Permission denied (publickey)`. The handover said the
+  owner should confirm it and 🚫 it was never confirmed — this is that confirmation, negative.
+- 🚫 **`age-deploy` CANNOT APPLY A MIGRATION, BY DESIGN** (ADR-0077). Its five wrappers cover
+  compose-up, derive-env, docker-probe, nginx-apply and settings-apply; 🚫 none runs SQL. So a
+  migration needs a sudo-capable account, and today that means the owner runs it.
+  🚫 I did not hand-apply the two `CREATE POLICY` statements as the superuser to get around the
+  blocked route: that would have recorded a migration that never ran through `migrate deploy`, and
+  _the SQL that was reviewed is the SQL that ran_ (ADR-0032 D8) would have become false quietly.
 
 ## 5. Still open, and 🚫 none of it is a slice
 
