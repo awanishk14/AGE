@@ -214,21 +214,27 @@ describe('the container cannot elevate, and sees almost nothing of the host', ()
 
     expect(
       modeOf('AGE_VPS_DISCOVERY_WORKSPACE'),
-      'the discovery workspace must stay READ-ONLY',
-    ).toBe('ro');
+      'the discovery workspace must be WRITABLE, or saving a discovery draft refuses on the deployed box',
+    ).toBe('rw');
     expect(
       modeOf('AGE_VPS_CLIENT_RECORD_FILE'),
       'the client record file must be WRITABLE, or creating a business refuses on the deployed box',
     ).toBe('rw');
 
     expect(mounts).toEqual([
-      '- ${AGE_VPS_DISCOVERY_WORKSPACE}:${AGE_VPS_DISCOVERY_WORKSPACE}:ro',
+      '- ${AGE_VPS_DISCOVERY_WORKSPACE}:${AGE_VPS_DISCOVERY_WORKSPACE}:rw',
       '- ${AGE_VPS_CLIENT_RECORD_FILE}:${AGE_VPS_CLIENT_RECORD_FILE}:rw',
     ]);
   });
 
-  it('🛑 gives the console exactly ONE writable path on the host', () => {
-    // 🛑 ADR-0091 D3. The count is the guard, 🚫 not the presence of a writable
+  it('🛑 names EVERY writable path on the host, as an exact list', () => {
+    // ⚠️ **THIS GUARD ONCE SAID "EXACTLY ONE", AND ADR-0092 MADE THE SECOND
+    // PATH WRITABLE TOO.** 🛑 The dangerous update was to relax it to "at least
+    // one is writable" — that reads like following the change and DESTROYS the
+    // guard, because the whole point is that an UNEXPECTED writable mount fails.
+    // It stays an exact list; only the list grew, and it grew BY NAME.
+    //
+    // 🛑 ADR-0091 D3, as corrected by ADR-0092 D4. The exact list is the guard, 🚫 not the presence of a writable
     // mount: "something is writable" is satisfied by the wrong thing just as
     // easily as by the right one, and this is the assertion that a THIRD mount
     // cannot arrive writable and pass unnoticed.
@@ -250,8 +256,11 @@ describe('the container cannot elevate, and sees almost nothing of the host', ()
     // be a scan narrower than its rule.
     const writable = mounts.filter((mount) => !mount.endsWith(':ro'));
 
-    expect(writable).toEqual(['- ${AGE_VPS_CLIENT_RECORD_FILE}:${AGE_VPS_CLIENT_RECORD_FILE}:rw']);
-    expect(writable).toHaveLength(1);
+    expect(writable).toEqual([
+      '- ${AGE_VPS_DISCOVERY_WORKSPACE}:${AGE_VPS_DISCOVERY_WORKSPACE}:rw',
+      '- ${AGE_VPS_CLIENT_RECORD_FILE}:${AGE_VPS_CLIENT_RECORD_FILE}:rw',
+    ]);
+    expect(writable).toHaveLength(2);
   });
 
   it('🛑 NAMES the two paths it mounts, or the console cannot see them', () => {
