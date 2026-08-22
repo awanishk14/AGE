@@ -239,18 +239,44 @@ describe('renderClientRecordFile', () => {
 });
 
 describe('the form round-trip', () => {
-  it('reads an empty form back as an empty draft', () => {
-    expect(clientRecordDraftFromFormEntries({})).toEqual(emptyClientRecordDraft());
+  const IDENTITY = { clientId: 'fictional-co', organizationId: 'org-fictional' } as const;
+
+  it('reads an empty form back as an empty draft carrying the given identity', () => {
+    expect(clientRecordDraftFromFormEntries({}, IDENTITY)).toEqual(
+      emptyClientRecordDraft(IDENTITY),
+    );
   });
 
   it('reads typed values back verbatim', () => {
     expect(
-      clientRecordDraftFromFormEntries({
-        clientId: 'fictional-co',
-        organizationId: 'org-fictional',
+      clientRecordDraftFromFormEntries(
+        {
+          displayName: 'Fictional Co',
+          externalRefsText: 'rankops = fic-01',
+        },
+        IDENTITY,
+      ),
+    ).toEqual(draft({ externalRefsText: 'rankops = fic-01' }));
+  });
+
+  /**
+   * 🛑 **ADR-0090 D1, D2 — THE IDENTITY COMES FROM `identity`, 🚫 NEVER FROM
+   * `entries`.** A submission carrying either identifier is 🚫 not refused here
+   * and 🚫 not sanitised: it is simply **never read**, which is the one handling
+   * a later edit to a validation list cannot quietly get wrong.
+   */
+  it('🚫 does not read an identifier out of the form, even when one is sent', () => {
+    const draftFromHostileForm = clientRecordDraftFromFormEntries(
+      {
+        clientId: 'someone-elses-id',
+        organizationId: 'org-somewhere-else',
         displayName: 'Fictional Co',
         externalRefsText: 'rankops = fic-01',
-      }),
-    ).toEqual(draft({ externalRefsText: 'rankops = fic-01' }));
+      },
+      IDENTITY,
+    );
+
+    expect(draftFromHostileForm.clientId).toBe(IDENTITY.clientId);
+    expect(draftFromHostileForm.organizationId).toBe(IDENTITY.organizationId);
   });
 });

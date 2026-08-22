@@ -13,10 +13,17 @@ import { assertSafeClientIdForFileName, UnsafeClientIdError } from './discovery-
  * status, no business attributes. A fact a capability would reason over belongs
  * in the BIF, where it gains provenance and confidence.
  *
- * 🚫 It does NOT create an organization. No tenant model exists (ADR-0058 D4),
- * so `organizationId` is a string the operator supplies and the Organizations
- * band stays derived from it. A screen that "created" an organization would be
- * inventing a level the system cannot enforce.
+ * 🚫 It does NOT create an organization. ADR-0086 decided one host serves one
+ * organization, so `organizationId` is DERIVED from the caller's session
+ * (ADR-0090 D2) and the Organizations band stays derived from the records. A
+ * screen that "created" an organization would be inventing a level the system
+ * cannot enforce.
+ *
+ * 🛑 **NEITHER IDENTIFIER IS READ OFF THE FORM ANY MORE** (ADR-0090 D1, D2).
+ * `clientId` is MINTED and `organizationId` is DERIVED, both by the caller, and
+ * both are passed in. ⚠️ This package still 🚫 MINTS NOTHING: it has no clock and
+ * no randomness and 🛑 must not acquire either (ADR-0090 D3). A pure package that
+ * mints is a pure package with a hidden effect.
  *
  * 🚫 Nothing here touches a file. `apps/studio` holds every effect.
  */
@@ -38,30 +45,57 @@ export type ClientRecordDraftOutcome =
    */
   | { readonly kind: 'refused'; readonly reason: string; readonly field?: string };
 
+/**
+ * The fields the OPERATOR fills in.
+ *
+ * 🛑 `clientId` and `organizationId` are deliberately absent (ADR-0090 D1, D2):
+ * one is minted and the other is derived, so 🚫 neither is a form field and
+ * 🚫 neither may be read back off a submission.
+ */
 export const CLIENT_RECORD_DRAFT_FIELDS = Object.freeze([
-  'clientId',
-  'organizationId',
   'displayName',
   'externalRefsText',
 ] as const);
 
-/** An empty form. */
-export function emptyClientRecordDraft(): ClientRecordDraft {
+/**
+ * The identity the CALLER supplies, having minted and derived it at the effect
+ * edge (ADR-0090 D3).
+ *
+ * ⚠️ Separate from the draft on purpose. The draft is what a browser sent and is
+ * untrusted; this is what the server established. Merging them into one object
+ * would make it possible to read the identity out of the form payload again by
+ * accident — which is the whole defect ADR-0090 closes.
+ */
+export interface ClientRecordIdentity {
+  readonly clientId: string;
+  readonly organizationId: string;
+}
+
+/** An empty form, for the identity the caller has already established. */
+export function emptyClientRecordDraft(identity: ClientRecordIdentity): ClientRecordDraft {
   return Object.freeze({
-    clientId: '',
-    organizationId: '',
+    clientId: identity.clientId,
+    organizationId: identity.organizationId,
     displayName: '',
     externalRefsText: '',
   });
 }
 
-/** Read the form back into a draft. Values are passed through untrimmed. */
+/**
+ * Read the form back into a draft. Values are passed through untrimmed.
+ *
+ * 🛑 **THE IDENTITY COMES FROM `identity`, 🚫 NEVER FROM `entries`** (ADR-0090
+ * D1, D2). ⚠️ A submission carrying `clientId` or `organizationId` is 🚫 not
+ * refused here and 🚫 not sanitised — it is simply **never read**, which is the
+ * one handling that cannot be got wrong by a later edit to a validation list.
+ */
 export function clientRecordDraftFromFormEntries(
   entries: Readonly<Record<string, string>>,
+  identity: ClientRecordIdentity,
 ): ClientRecordDraft {
   return Object.freeze({
-    clientId: entries.clientId ?? '',
-    organizationId: entries.organizationId ?? '',
+    clientId: identity.clientId,
+    organizationId: identity.organizationId,
     displayName: entries.displayName ?? '',
     externalRefsText: entries.externalRefsText ?? '',
   });

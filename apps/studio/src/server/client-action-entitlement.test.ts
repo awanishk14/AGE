@@ -72,6 +72,12 @@ vi.mock('./session-boundary', () => ({
 
 vi.mock('./operator-environment', () => ({
   createClientRecord: (draft: unknown) => createClientRecord(draft),
+  // 🛑 ADR-0090 D1 — the action mints its own client id now, so this export
+  // must exist here. ⚠️ Stubbed to a FIXED value on purpose: nothing in this
+  // file is about the id's shape, and a random one would make its failures
+  // unreadable. The shape is guarded in `minted-client-id-shape.test.ts`,
+  // against the real module.
+  mintClientId: () => 'cli_ffffffffffffffffffffffffffffffff',
   readDirectoryEntryByAccount: (organizationId: string, accountId: string) =>
     readDirectoryEntryByAccount(organizationId, accountId),
   // ⚠️ **ADR-0089 — THE PLATFORM ARM RE-READS ITS OWN MEMBERSHIP NOW**, so this
@@ -114,6 +120,12 @@ const { createClientAction } = await import('./client-actions');
 const SESSION_ORGANIZATION = 'org-alpha';
 const OTHER_ORGANIZATION = 'org-beta';
 
+/**
+ * ⚠️ **THE FORM NO LONGER CARRIES EITHER IDENTIFIER** (ADR-0090 D1, D2), and
+ * this helper still lets a caller PUT one in — deliberately. A `'use server'`
+ * function is a browser-reachable endpoint, so what the real form sends is 🚫 not
+ * the same question as what a submission can carry.
+ */
 function formFor(organizationId: string): FormData {
   const form = new FormData();
   form.set('clientId', 'fictional-kite-repairs');
@@ -139,7 +151,7 @@ describe('creating a business inside the organization the session covers', () =>
     createClientRecord.mockReturnValue({ kind: 'created' });
   });
 
-  it('writes when the form names the session’s own organization', async () => {
+  it('writes into the organization the session covers', async () => {
     const outcome = await createClientAction(formFor(SESSION_ORGANIZATION));
 
     expect(outcome).toEqual({ kind: 'created' });
@@ -149,39 +161,36 @@ describe('creating a business inside the organization the session covers', () =>
     });
   });
 
-  it('🛑 refuses a form naming another organization — and writes NOTHING', async () => {
+  /**
+   * 🛑 **THIS USED TO ASSERT A REFUSAL, AND THE REFUSAL IS GONE — 🚫 NOT
+   * RELAXED, UNREACHABLE** (ADR-0090). The action reads neither identifier off
+   * the submission, so there is nothing left to disagree with the session about.
+   *
+   * ⚠️ **The property that mattered is asserted here in its surviving form:**
+   * a submission naming another organization still cannot get a record written
+   * into that organization. 🚫 What changed is the OUTCOME an attempt produces —
+   * a record in the caller's OWN organization rather than a refusal — and 🚫 that
+   * is stated rather than quietly dropped.
+   */
+  it('🛑 ignores an organization the submission names, and writes to the session’s', async () => {
     const outcome = await createClientAction(formFor(OTHER_ORGANIZATION));
 
-    expect(outcome.kind).toBe('refused');
-    expect(createClientRecord).not.toHaveBeenCalled();
+    expect(outcome).toEqual({ kind: 'created' });
+    expect(createClientRecord).toHaveBeenCalledTimes(1);
+    expect(createClientRecord.mock.calls[0]?.[0]).toMatchObject({
+      organizationId: SESSION_ORGANIZATION,
+    });
   });
 
-  it('🛑 names the FIELD that disagreed, so the operator can see what to correct', async () => {
-    const outcome = await createClientAction(formFor(OTHER_ORGANIZATION));
+  it('🚫 never writes a record into an organization the submission named', async () => {
+    for (const named of [OTHER_ORGANIZATION, '', 'org-alpha ', 'ORG-ALPHA']) {
+      createClientRecord.mockClear();
+      await createClientAction(formFor(named));
 
-    expect(outcome).toMatchObject({ kind: 'refused', field: 'organizationId' });
-  });
-
-  it('🚫 discloses nothing about the organization the caller named', async () => {
-    const outcome = await createClientAction(formFor(OTHER_ORGANIZATION));
-    const reason = outcome.kind === 'refused' ? outcome.reason : '';
-
-    expect(reason.length).toBeGreaterThan(0);
-    expect(reason).not.toContain(OTHER_ORGANIZATION);
-    expect(reason).not.toContain(SESSION_ORGANIZATION);
-  });
-
-  it('🚫 does not silently replace the typed organization with the session’s', async () => {
-    await createClientAction(formFor(OTHER_ORGANIZATION));
-
-    expect(createClientRecord).not.toHaveBeenCalled();
-  });
-
-  it('🛑 refuses an EMPTY organization too — absence is not agreement', async () => {
-    const outcome = await createClientAction(formFor(''));
-
-    expect(outcome.kind).toBe('refused');
-    expect(createClientRecord).not.toHaveBeenCalled();
+      expect(createClientRecord.mock.calls[0]?.[0]).toMatchObject({
+        organizationId: SESSION_ORGANIZATION,
+      });
+    }
   });
 
   it('🛑 establishes the session BEFORE it writes, on the happy path as well', async () => {

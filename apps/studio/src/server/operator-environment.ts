@@ -57,6 +57,7 @@ import {
 import { decodeOperatorDocument } from '@age/operator-document-decoder';
 import {
   assertConsoleBindHost,
+  assertSafeClientIdForFileName,
   type ConsoleListenerBoundary,
   DEFAULT_STUDIO_BIND_HOST,
   type ClientRecordDraft,
@@ -794,6 +795,32 @@ function readRequiredSetting(name: string): string | undefined {
  */
 export function mintOpaqueValue(): string {
   return randomBytes(32).toString('hex');
+}
+
+/**
+ * The identifier a NEW client record is given (ADR-0090 D1, D5).
+ *
+ * 🛑 **IT CARRIES NO MEANING, AND THAT IS THE POINT.** 🚫 Not a timestamp,
+ * 🚫 not a counter, 🚫 not the organization, and above all 🚫 NOT A SLUG OF THE
+ * DISPLAY NAME. An id that encodes a fact becomes wrong when the fact changes;
+ * and a name-derived id would put the business's NAME into every URL and every
+ * workspace filename — the leak `forbidden-client-names.ts` exists to prevent
+ * everywhere else (ADR-0053 D3).
+ *
+ * ⚠️ **THIS IS 🚫 NOT A SECRET AND IS 🚫 NOT DEFENDING ANYTHING.** A client id is
+ * a filter applied inside an entitlement (ADR-0058 D5), 🚫 never a grant, so an
+ * unguessable id buys no authorization. `randomBytes` is used because a weaker
+ * source has no upside, 🚫 not because the value protects a boundary.
+ *
+ * ⚠️ **THE SAFETY CHECK STILL RUNS ON IT** (ADR-0090 D5). The alphabet satisfies
+ * `assertSafeClientIdForFileName` by construction, and it is asserted anyway:
+ * 🛑 a value trusted because WE minted it is the "stored rows are untrusted
+ * input" rule being waived for a value we happen to like.
+ */
+export function mintClientId(): string {
+  const clientId = `cli_${randomBytes(16).toString('hex')}`;
+  assertSafeClientIdForFileName(clientId);
+  return clientId;
 }
 
 /**

@@ -9,14 +9,14 @@ const create = vi.fn(async (_formData: FormData): Promise<CreateClientResult> =>
   firstRecord: false,
 }));
 
+const ORGANIZATION = { id: 'org-1', displayName: 'Fictional Agency' } as const;
+
 function renderForm() {
-  return render(<CreateClientForm create={create} />);
+  return render(<CreateClientForm create={create} organization={ORGANIZATION} />);
 }
 
 function fill() {
-  fireEvent.change(screen.getByLabelText(/Client id/), { target: { value: 'fictional-co' } });
   fireEvent.change(screen.getByLabelText(/Display name/), { target: { value: 'Fictional Co' } });
-  fireEvent.change(screen.getByLabelText(/Organization id/), { target: { value: 'org-1' } });
 }
 
 describe('CreateClientForm', () => {
@@ -24,12 +24,27 @@ describe('CreateClientForm', () => {
     create.mockClear();
   });
 
-  it('asks for the four things a record carries and nothing else', () => {
+  it('asks for what the operator knows, and only that', () => {
     renderForm();
-    expect(screen.getByLabelText(/Client id/)).toBeDefined();
     expect(screen.getByLabelText(/Display name/)).toBeDefined();
-    expect(screen.getByLabelText(/Organization id/)).toBeDefined();
     expect(screen.getByLabelText(/External references/)).toBeDefined();
+  });
+
+  // 🛑 ADR-0090 D1, D2 — THE OPERATOR TYPES NO IDENTIFIERS AT ALL.
+  it('🚫 does not ask for a client id or an organization id', () => {
+    renderForm();
+    expect(screen.queryByLabelText(/Client id/)).toBeNull();
+    expect(screen.queryByLabelText(/Organization id/)).toBeNull();
+  });
+
+  it('states the organization it is writing into, as text rather than a control', () => {
+    // ⚠️ 🚫 NOT a disabled input and 🚫 NOT a hidden field: one looks like a
+    // field the operator failed to fill in, the other is a value a browser can
+    // edit and send back — which is exactly what the server stopped reading.
+    const { container } = renderForm();
+    expect(screen.getByText(/Fictional Agency/)).toBeDefined();
+    expect(container.querySelector('input[name="organizationId"]')).toBeNull();
+    expect(container.querySelector('input[name="clientId"]')).toBeNull();
   });
 
   it('states that it creates an identity and nothing else', () => {
@@ -59,27 +74,28 @@ describe('CreateClientForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create client' }));
     await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
 
+    // 🛑 THE SUBMISSION CARRIES NO IDENTIFIERS. If either ever reappears here,
+    // the server has something to read again — and reading it is the defect.
     const formData = create.mock.calls[0]?.[0] as unknown as FormData;
-    expect(formData.get('clientId')).toBe('fictional-co');
-    expect(formData.get('organizationId')).toBe('org-1');
+    expect(formData.get('displayName')).toBe('Fictional Co');
+    expect(formData.get('clientId')).toBeNull();
+    expect(formData.get('organizationId')).toBeNull();
   });
 
   it('shows a refusal against the field that caused it, and keeps the form', async () => {
     create.mockResolvedValueOnce({
       kind: 'refused',
-      reason: 'That client id is already in the record file.',
-      field: 'clientId',
+      reason: 'A display name is required.',
+      field: 'displayName',
     });
     renderForm();
     fill();
 
     fireEvent.click(screen.getByRole('button', { name: 'Create client' }));
 
-    await waitFor(() =>
-      expect(screen.getByText('That client id is already in the record file.')).toBeDefined(),
-    );
+    await waitFor(() => expect(screen.getByText('A display name is required.')).toBeDefined());
     // The typing survives the refusal.
-    expect((screen.getByLabelText(/Client id/) as HTMLInputElement).value).toBe('fictional-co');
+    expect((screen.getByLabelText(/Display name/) as HTMLInputElement).value).toBe('Fictional Co');
   });
 
   it('shows a refusal with no field at the bottom', async () => {
