@@ -97,10 +97,17 @@ services:
       # a client record a console action and 🛑 NOBODY RE-READ THIS LINE; every
       # gate stayed green while the feature had never once been able to work.
       #
-      # 🚫 THE WORKSPACE IS NOT WIDENED WITH IT. ⚠️ By the same reading its writes
-      # will fail too — that is a reading of the code, 🚫 NOT a measurement, and
-      # it gets its own slice and its own browser gate (ADR-0091 D2).
-      - ${AGE_VPS_DISCOVERY_WORKSPACE}:${AGE_VPS_DISCOVERY_WORKSPACE}:ro
+      # ⚠️ THE WORKSPACE WAS DELIBERATELY LEFT `:ro` BY ADR-0091 D2 — its own
+      # slice, its own browser gate — and ADR-0092 is that slice. `saveDraft` and
+      # `submit` each `ensureDirectory` then write into this directory, so under
+      # `:ro` both throw and both refuse. 🚫 STILL A READING OF THE CODE, and the
+      # form is 🚫 not claimed broken until Discovery is opened in a browser.
+      #
+      # 🛑 THIS IS A DIRECTORY, SO `rename()` IS AVAILABLE INSIDE IT and the
+      # atomicity cost below does 🚫 NOT apply here. ⚠️ Available is 🚫 not done:
+      # ADR-0092 §3 changes 🚫 NO write, and leaves the durability question OPEN
+      # rather than smuggling a second decision into a mount change.
+      - ${AGE_VPS_DISCOVERY_WORKSPACE}:${AGE_VPS_DISCOVERY_WORKSPACE}:rw
       # ⚠️ `:rw` ON ONE FILE, 🚫 NOT ON ITS DIRECTORY. `/var/lib/age-operator`
       # also holds the workspace and the operator's other files, so mounting the
       # directory would be wider than the defect. 🛑 THE COST IS NAMED IN
