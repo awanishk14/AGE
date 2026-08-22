@@ -10,10 +10,8 @@ import {
 import type { SessionPrincipal, VerifiedSession } from '@age/session-store';
 import { decideSignIn } from '@age/sign-in-directory';
 
-import {
-  readDirectoryEntryByAccount,
-  readPlatformDirectoryEntryByAccount,
-} from './operator-environment';
+import { readDirectoryEntryByAccount } from './operator-environment';
+import { requireLivePlatformMembership } from './platform-membership-reread';
 import { assessRequestSession, requireVerifiedSession } from './session-boundary';
 
 /**
@@ -116,20 +114,7 @@ export async function requireRequestScope(): Promise<ScopedRequest> {
   // ⚠️ So the re-read is keyed by the account id the session ALREADY PROVED,
   // and 🚫 there is no parameter on it through which a tenant could be supplied.
   if (principal.scope === 'platform') {
-    const platformEntry = await readPlatformDirectoryEntryByAccount(principal.session.accountId);
-
-    // 🛑 THE SAME DECISION, OVER FRESHLY READ ROWS, AND 🚫 NOT A GENTLER COPY.
-    // ⚠️ `null` is 🚫 not a default and 🚫 not a wildcard: this request has NO
-    // organization, so the tenant arm of that decision matches nothing and
-    // refuses. A platform operator whose membership was revoked since sign-in
-    // reads as ABSENT and is refused HERE — on the next request, 🚫 not at
-    // eight-hour expiry — with the session row still perfectly valid.
-    const platformAdmission = decideSignIn(platformEntry, null);
-
-    if (platformAdmission.outcome === 'refused') {
-      // ⚠️ The same destination and the same silence as the tenant arm below.
-      redirect('/sign-in?refused=not-provisioned');
-    }
+    await requireLivePlatformMembership(principal.session.accountId);
 
     return Object.freeze({ principal, scope: platformScope() });
   }

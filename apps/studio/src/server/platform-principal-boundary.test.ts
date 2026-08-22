@@ -3,6 +3,10 @@ import { join } from 'node:path';
 
 import { ACTING_ORGANIZATION_COOKIE_NAME, SESSION_COOKIE_NAME } from '@age/session-cookie';
 import { hashSessionToken } from '@age/session-store';
+// ⚠️ ANNOTATED, 🚫 NOT INFERRED. Left to inference the fixture's literal types
+// make `revokedAt` `null` and `account` non-optional, so the revoked and
+// absent cases below could not be expressed at all.
+import type { DirectoryEntry } from '@age/sign-in-directory';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -41,7 +45,7 @@ const redirect = vi.fn((to: string) => {
 
 // ⚠️ ADR-0089 — what the account-keyed platform read returns by default: a LIVE
 // platform membership, obviously fictional (ADR-0053 D3, ADR-0065 D1).
-const livePlatformEntry = {
+const livePlatformEntry: DirectoryEntry = {
   account: {
     accountId: 'account-fictional-platform',
     email: 'platform@fictional.invalid',
@@ -432,6 +436,79 @@ describe('requireVerifiedSession, given a platform principal', () => {
     cookieHeader.mockReturnValue(`${SESSION_COOKIE_NAME}=${TOKEN}`);
 
     await expect(realBoundary.requireVerifiedPlatformSession()).rejects.toThrow('NEXT_REDIRECT:/');
+  });
+
+  /**
+   * 🛑 **ADR-0089, THE HALF THAT WAS MISSING UNTIL 2026-08-22.**
+   * `requireVerifiedPlatformSession` returned on the strength of the SESSION
+   * ROW alone, so `/platform` and `/platform/choose` took a platform decision
+   * from a CREDENTIAL while `/` took it from the database. ADR-0079 §2
+   * property 2 says scope is read from the database on every request.
+   *
+   * ⚠️ The blast radius was bounded — the `/` that follows a choice re-read
+   * and refused — but a revoked platform operator could still reach the picker
+   * and CHOOSE an organization, and a bounded hole is still a hole.
+   */
+  it('🛑 REFUSES a platform principal whose membership was revoked since sign-in', async () => {
+    verifySessionToken.mockResolvedValue(verifiedPlatform);
+    cookieHeader.mockReturnValue(`${SESSION_COOKIE_NAME}=${TOKEN}`);
+    readPlatformDirectoryEntryByAccount.mockResolvedValue({
+      account: livePlatformEntry.account,
+      // ⚠️ REBUILT RATHER THAN SPREAD FROM `memberships[0]`: indexing is
+      // `undefined`-typed here, and a fixture that needed a `!` to compile
+      // would be asserting the row exists rather than describing it.
+      memberships: [
+        {
+          membershipId: 'membership-fictional-platform',
+          accountId: PLATFORM_ACCOUNT,
+          scopeKind: 'platform',
+          organizationId: null,
+          clientId: null,
+          roleBundle: 'platform-operator',
+          revokedAt: '2026-08-22T00:00:00.000Z',
+        },
+      ],
+    });
+
+    await expect(realBoundary.requireVerifiedPlatformSession()).rejects.toThrow(
+      'NEXT_REDIRECT:/sign-in?refused=not-provisioned',
+    );
+  });
+
+  it('🛑 REFUSES when the fenced platform read returns nothing — it fails CLOSED', async () => {
+    verifySessionToken.mockResolvedValue(verifiedPlatform);
+    cookieHeader.mockReturnValue(`${SESSION_COOKIE_NAME}=${TOKEN}`);
+    readPlatformDirectoryEntryByAccount.mockResolvedValue({
+      account: undefined,
+      memberships: [],
+    });
+
+    await expect(realBoundary.requireVerifiedPlatformSession()).rejects.toThrow(
+      'NEXT_REDIRECT:/sign-in?refused=not-provisioned',
+    );
+  });
+
+  it('⚠️ re-reads by the ACCOUNT the session proved, and 🚫 never within a tenant', async () => {
+    verifySessionToken.mockResolvedValue(verifiedPlatform);
+    cookieHeader.mockReturnValue(`${SESSION_COOKIE_NAME}=${TOKEN}`);
+    // ⚠️ 🚫 NOT RESET BY `beforeEach`, like `sessionLookupOrganizationId`
+    // above. Without this the refusal cases before it leak in and this case
+    // would pass on a redirect instead of on the call it exists to record.
+    readPlatformDirectoryEntryByAccount.mockResolvedValue(livePlatformEntry);
+    // 🛑 THE CALL HISTORY IS CLEARED, 🚫 NOT MERELY THE RETURN VALUE. Measured
+    // 2026-08-22: with the re-read deleted from the gate, this case still
+    // PASSED on calls left behind by the two cases above — a guard that had
+    // only ever passed for the wrong reason.
+    readPlatformDirectoryEntryByAccount.mockClear();
+    readDirectoryEntryByAccount.mockClear();
+
+    await realBoundary.requireVerifiedPlatformSession();
+
+    expect(readPlatformDirectoryEntryByAccount).toHaveBeenCalledWith(PLATFORM_ACCOUNT);
+    // 🛑 ADR-0082 D4. Borrowing the organization-scoped read here would be
+    // the substitution the whole principal union exists to make unrepresentable,
+    // and it would read an agency's people besides.
+    expect(readDirectoryEntryByAccount).not.toHaveBeenCalled();
   });
 
   it('⚠️ a TENANT principal still gets its session back — 🚫 the refusal above is not a blanket one', async () => {

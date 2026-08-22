@@ -10,6 +10,7 @@ import {
 } from '@age/session-store';
 
 import { chosenActingOrganization } from './acting-organization';
+import { requireLivePlatformMembership } from './platform-membership-reread';
 import {
   revokePlatformSessionByDigest,
   revokeSessionById,
@@ -170,7 +171,23 @@ export async function requireVerifiedPlatformSession(): Promise<VerifiedPlatform
   const decision = await assessRequestSession();
 
   if (decision.kind === 'admitted') {
-    if (decision.principal.scope === 'platform') return decision.principal.session;
+    if (decision.principal.scope === 'platform') {
+      // ADR-0089 - THE MEMBERSHIP IS RE-READ HERE TOO, AND IT WAS NOT UNTIL
+      // 2026-08-22. This gate returned on the strength of the SESSION ROW
+      // alone, so `/platform` and `/platform/choose` took a platform decision
+      // from a credential while `/` took it from the database. A platform
+      // operator whose membership had been revoked could still reach the
+      // picker and CHOOSE an organization - bounded, because the `/` that
+      // followed refused, but a scope decision from a token all the same, and
+      // ADR-0079 section 2 property 2 says scope is read from the database on
+      // every request.
+      //
+      // IT IS THE SAME IMPLEMENTATION `request-scope` uses, imported, not
+      // copied - two copies would agree only today.
+      await requireLivePlatformMembership(decision.principal.session.accountId);
+
+      return decision.principal.session;
+    }
 
     redirect('/');
   }

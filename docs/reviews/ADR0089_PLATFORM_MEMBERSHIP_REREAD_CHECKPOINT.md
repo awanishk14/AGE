@@ -124,3 +124,49 @@ ADR-0084 slice 1 (the browser header measurement) · the browser gate on every d
 change — 🚫 I never sign in as the owner · the provenance threshold, and with it the first real
 client record (⚠️ a name in **prose** is client data too, so it is 🚫 not written here) · the symlink
 question · ADR-0076 D8 · ADR-0079 D5 · ADR-0072 is `Proposed`; the gap-C ageing ADR is unwritten.
+
+---
+
+## 🛑 THE HALF ADR-0089 MISSED, CLOSED 2026-08-22
+
+⚠️ **ADR-0089 SHIPPED WITH ONE OF ITS TWO GATES UNCHANGED.** The re-read went into
+`requireRequestScope`, which `/` and every tenant page use. It did 🚫 NOT go into
+`requireVerifiedPlatformSession`, which `/platform` and `/platform/choose` use — and that gate
+returned on the strength of the **session row alone**.
+
+🛑 **SO A PLATFORM DECISION WAS BEING TAKEN FROM A CREDENTIAL.** ADR-0079 §2 property 2 says
+scope is read from the database on every request. A platform operator whose membership had been
+revoked since sign-in could still reach the picker and **choose an organization**.
+
+⚠️ **THE BLAST RADIUS WAS BOUNDED, AND THAT IS 🚫 NOT THE SAME AS ABSENT.** The `/` that
+follows a choice re-reads and refuses, so the revoked operator reached a picker and no data. 🚫 A
+bounded hole is still a hole, and it was invisible precisely because the two gates disagreed in
+the one place nobody compared them.
+
+### What changed
+
+- `apps/studio/src/server/platform-membership-reread.ts` — **new**, and it holds the
+  **only** implementation. It lives in its own module because `request-scope` imports
+  `session-boundary`, so the shared piece can live in neither. 🚫 It is not a third boundary: it
+  decides nothing its callers did not already decide, it only stops them deciding it twice.
+- `requireVerifiedPlatformSession` now calls it before returning.
+- `requireRequestScope`'s inline copy was **replaced by the call**, 🚫 not left beside it. Two
+  copies agree only today.
+
+### The guards, and what they cost to earn
+
+Three cases in `platform-principal-boundary.test.ts`: a **revoked** membership refuses, an
+**absent** entry refuses (it fails **closed**), and the read is keyed by the **account the session
+proved** with the organization-scoped read never reached (ADR-0082 D4).
+
+🛑 **THE THIRD ONE PASSED UNDER MUTATION THE FIRST TIME.** With the re-read deleted from the
+gate it still passed, on **call history left behind by the two cases above** — `beforeEach` resets
+the return value and 🚫 not the calls. It now clears both, and re-mutating fails all three.
+⚠️ A guard that has only ever passed is not evidence, and this one had only ever passed for the
+wrong reason.
+
+### ⚠️ What this did 🚫 NOT prove
+
+🚫 Nothing here is a host fact. The refusal was measured in the **repository**, against mocked
+reads. 🚫 No revoked platform operator was pointed at the deployed `/platform`, and 🚫 I do not
+sign in as the owner to try.
