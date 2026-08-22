@@ -168,6 +168,7 @@ export {
   renderClientRecordFile,
   validateClientRecordDraft,
   type ClientRecordDraft,
+  type ClientRecordIdentity,
   type ClientRecordDraftOutcome,
 } from './client-record-draft';
 

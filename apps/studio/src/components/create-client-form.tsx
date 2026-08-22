@@ -10,9 +10,16 @@ import { useCallback, useState } from 'react';
  * unlike a discovery draft, a half-written record is read by everything
  * downstream as a real scope.
  *
- * 🚫 Nothing on this screen creates an organization. ADR-0058 D4 — there is no
- * tenant model, so the organization is a string the operator supplies and the
- * Organizations band on Businesses stays derived from it.
+ * 🚫 Nothing on this screen creates an organization. ADR-0086 decided one host
+ * serves one organization, so it is SHOWN and 🚫 never asked for (ADR-0090 D2),
+ * and the Organizations band on Businesses stays derived from the records.
+ *
+ * 🛑 **THE OPERATOR TYPES NO IDENTIFIERS AT ALL** (ADR-0090). `clientId` is
+ * minted by the server and `organizationId` comes off the session. ⚠️ The
+ * organization is rendered as TEXT, 🚫 not as a disabled input and 🚫 not as a
+ * hidden field: a disabled input still looks like something the operator failed
+ * to fill in, and a hidden field is a value a browser can edit and send back —
+ * which is precisely what the server has stopped reading.
  */
 
 export type CreateClientResult =
@@ -22,9 +29,15 @@ export type CreateClientResult =
 
 export interface CreateClientFormProps {
   readonly create: (formData: FormData) => Promise<CreateClientResult>;
+  /**
+   * The organization this console serves, for DISPLAY (ADR-0086, ADR-0090 D2).
+   * ⚠️ Rendered and nothing else — 🚫 it is not submitted, and the server does
+   * not read it back.
+   */
+  readonly organization: { readonly id: string; readonly displayName: string };
 }
 
-export function CreateClientForm({ create }: CreateClientFormProps) {
+export function CreateClientForm({ create, organization }: CreateClientFormProps) {
   const [result, setResult] = useState<CreateClientResult | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
 
@@ -49,7 +62,7 @@ export function CreateClientForm({ create }: CreateClientFormProps) {
         <h2 className="text-sm font-semibold">Client created</h2>
         <p className="mt-2 text-sm text-[hsl(var(--age-text-muted))]">
           <span className="font-mono">{result.clientId}</span> was appended to your client record
-          file.
+          file. AGE chose that identifier; it carries no meaning and never needs to be typed.
           {result.firstRecord ? ' The record file did not exist yet and was created.' : null}
         </p>
         {/*
@@ -77,22 +90,20 @@ export function CreateClientForm({ create }: CreateClientFormProps) {
 
   return (
     <form onSubmit={onSubmit} className="mt-6 max-w-xl">
-      <Field
-        name="clientId"
-        label="Client id"
-        hint="Lowercase letters, digits, dots, dashes and underscores. It appears in the URL and names this business's files, so it cannot be changed later without moving them."
-        result={result}
-      />
+      {/*
+        ⚠️ The organization is STATED, 🚫 not asked for. The operator can see the
+        scope they are writing into without being able to name a different one.
+      */}
+      <p className="rounded border border-[hsl(var(--age-border))] p-3 text-xs text-[hsl(var(--age-text-muted))]">
+        Creating this business in{' '}
+        <span className="font-medium text-[hsl(var(--age-text))]">{organization.displayName}</span>.
+        This console serves one organization, so there is nothing to choose.
+      </p>
+
       <Field
         name="displayName"
         label="Display name"
-        hint="What you call this business. Used on screen only."
-        result={result}
-      />
-      <Field
-        name="organizationId"
-        label="Organization id"
-        hint="The scope every capability invocation carries. AGE will not infer one — type the same value for businesses that belong together, and they will group under it on the Businesses screen."
+        hint="What you call this business. Used on screen only — AGE gives the record its own identifier, so this can be changed later without moving anything."
         result={result}
       />
 

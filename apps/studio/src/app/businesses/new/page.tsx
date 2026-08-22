@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { CreateClientForm } from '@/components/create-client-form';
 import { createClientAction } from '@/server/client-actions';
+import { organizationsThisConsoleServes } from '@/server/operator-environment';
 
 import { requireAgencyRendering } from '@/server/request-scope';
 
@@ -16,7 +17,17 @@ export default async function Page() {
   // does not return for an unadmitted caller — 🚫 there is no falsy value to
   // forget to check. A route contract test asserts this line precedes every
   // `@/server/*` call in this file.
-  await requireAgencyRendering();
+  const session = await requireAgencyRendering();
+
+  // ⚠️ FOR DISPLAY ONLY (ADR-0086, ADR-0090 D2). The scope written to the record
+  // is the SESSION's `organizationId`, established in the action; this only
+  // finds the label for it. 🛑 An organization this console does not serve gets
+  // 🚫 no invented name — it renders as its id, which is what we actually know.
+  const served = organizationsThisConsoleServes().find((org) => org.id === session.organizationId);
+  const organization = {
+    id: session.organizationId,
+    displayName: served?.displayName ?? session.organizationId,
+  };
 
   return (
     <main className="max-w-3xl p-8">
@@ -34,7 +45,7 @@ export default async function Page() {
         to, and what it is called in the other tools you use.
       </p>
 
-      <CreateClientForm create={createClientAction} />
+      <CreateClientForm create={createClientAction} organization={organization} />
     </main>
   );
 }

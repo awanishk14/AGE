@@ -2,7 +2,7 @@
 
 import { clientRecordDraftFromFormEntries } from '@age/studio-shell';
 
-import { createClientRecord, type CreateClientOutcome } from './operator-environment';
+import { createClientRecord, mintClientId, type CreateClientOutcome } from './operator-environment';
 import { requireScopedAccess } from './request-scope';
 
 /**
@@ -22,12 +22,20 @@ import { requireScopedAccess } from './request-scope';
  * before slice 3 a caller with no session at all could POST a record naming any
  * organization they liked and put a scope into circulation.
  *
- * 🛑 **A MISMATCHED ORGANIZATION IS REFUSED, 🚫 NEVER SILENTLY REPLACED.** The
- * organization is on the form because the operator types it, so overwriting it
- * with the session's would record a record the operator did not describe — and
- * the console would look as though it had accepted what was typed. ⚠️ Refusing
- * names the FIELD, so the operator can see what disagreed; 🚫 it does not
- * disclose anything about the organization they named.
+ * 🛑 **NEITHER IDENTIFIER COMES OFF THE FORM** (ADR-0090 D1, D2). `clientId`
+ * is MINTED here and `organizationId` is DERIVED from the session row. ⚠️ The
+ * earlier shape asked the operator to TYPE an organization the server would
+ * accept in exactly one value — a recall test whose only feedback was a
+ * refusal — and asked them to invent a `clientId`, which in practice meant
+ * slugging the business's NAME into every URL and workspace filename.
+ *
+ * ⚠️ **THE OLD RULE WAS "a mismatched organization is refused, never silently
+ * replaced", AND IT HAS 🚫 NOT BEEN RELAXED — IT HAS BEEN MADE UNREACHABLE.**
+ * There is nothing to mismatch when nothing is read from the submission:
+ * `clientRecordDraftFromFormEntries` takes the identity as its second argument
+ * and 🚫 never looks at `entries.organizationId`. 🛑 A submission that carries
+ * one anyway is 🚫 not refused and 🚫 not sanitised; it is simply never read,
+ * which is the one handling a later edit cannot quietly get wrong.
  */
 export async function createClientAction(formData: FormData): Promise<CreateClientOutcome> {
   const { session } = await requireScopedAccess('client.create', null);
@@ -39,17 +47,12 @@ export async function createClientAction(formData: FormData): Promise<CreateClie
     }
   }
 
-  const draft = clientRecordDraftFromFormEntries(entries);
-
-  if (draft.organizationId !== session.organizationId) {
-    return {
-      kind: 'refused',
-      reason:
-        'A business can only be created inside the organization this session covers. Nothing ' +
-        'was written, and no other organization was consulted.',
-      field: 'organizationId',
-    };
-  }
+  // 🛑 THE IDENTITY IS ESTABLISHED HERE, FROM THE SESSION AND FROM RANDOMNESS —
+  // 🚫 never from `entries`, which is whatever a browser sent.
+  const draft = clientRecordDraftFromFormEntries(entries, {
+    clientId: mintClientId(),
+    organizationId: session.organizationId,
+  });
 
   return createClientRecord(draft);
 }
