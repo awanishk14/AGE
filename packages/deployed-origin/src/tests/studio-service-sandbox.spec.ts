@@ -173,10 +173,21 @@ describe('the container cannot elevate, and sees almost nothing of the host', ()
     );
   });
 
-  it('🛑 mounts the operator’s two paths READ-ONLY, and 🚫 nothing else', () => {
+  it('🛑 mounts the operator’s two paths and 🚫 nothing else, each in ITS OWN mode', () => {
     // ⚠️ The successor of `ProtectSystem=strict` + `ReadWritePaths`. NAMED, not
     // widened: a `- /:/host` would satisfy "there are mounts" and defeat it.
-    // 🚫 Every mount here ends `:ro` — the console writes nothing on the host.
+    //
+    // 🛑 **THIS GUARD USED TO ASSERT THAT EVERY MOUNT ENDED `:ro`, AND IT PASSED
+    // THE WHOLE TIME THE PRODUCT WAS BROKEN.** ⚠️ That is the finding, 🚫 not a
+    // footnote (ADR-0091 §1c): ADR-0074 slice 3 made creating a client record an
+    // entitled console action, the record file stayed read-only, and the console
+    // answered *"The client record file could not be written."* on the first real
+    // submission in a browser. 🛑 A guard that encodes yesterday's rule does not
+    // fail when the rule changes — it DEFENDS THE STALE ANSWER.
+    //
+    // 🚫 SO IT IS NARROWED TO FOLLOW THE CHANGE, 🚫 NOT WIDENED TO PERMIT IT
+    // (constitution §3.8). "Has some mode" would pass on `- /:/host:rw`. Each
+    // path is asserted with the mode it is entitled to, BY NAME.
     const block = serviceBlock('studio');
     // ⚠️ Bounded at BOTH ends. An unbounded slice runs on into `security_opt`
     // and `healthcheck`, and the list stops meaning "the mounts".
@@ -188,16 +199,59 @@ describe('the container cannot elevate, and sees almost nothing of the host', ()
       .map((line) => line.trim())
       .filter((line) => line.startsWith('- '));
 
+    // ⚠️ **PER PATH FIRST, LIST EQUALITY SECOND, AND THE ORDER IS LOAD-BEARING.**
+    // 🛑 Written the other way round these two assertions were UNREACHABLE: the
+    // list diff fails on any mode change, so the specific message never ran and
+    // every failure read *"expected [ …(2) ] to deeply equal [ …(2) ]"* — a diff
+    // of two near-identical lines, for the exact defect this guard exists to
+    // explain. ⚠️ Found by MUTATING the compose file rather than by reading the
+    // test back; 🚫 a guard whose better half cannot fire is that half untested.
+    const modeOf = (variable: string): string | undefined =>
+      mounts
+        .find((mount) => mount.includes(variable))
+        ?.split(':')
+        .pop();
+
+    expect(
+      modeOf('AGE_VPS_DISCOVERY_WORKSPACE'),
+      'the discovery workspace must stay READ-ONLY',
+    ).toBe('ro');
+    expect(
+      modeOf('AGE_VPS_CLIENT_RECORD_FILE'),
+      'the client record file must be WRITABLE, or creating a business refuses on the deployed box',
+    ).toBe('rw');
+
     expect(mounts).toEqual([
       '- ${AGE_VPS_DISCOVERY_WORKSPACE}:${AGE_VPS_DISCOVERY_WORKSPACE}:ro',
-      '- ${AGE_VPS_CLIENT_RECORD_FILE}:${AGE_VPS_CLIENT_RECORD_FILE}:ro',
+      '- ${AGE_VPS_CLIENT_RECORD_FILE}:${AGE_VPS_CLIENT_RECORD_FILE}:rw',
     ]);
+  });
 
-    // ⚠️ Asserted separately so a mount added WITHOUT `:ro` fails on the reason
-    // it is wrong, not merely on list equality.
-    for (const mount of mounts) {
-      expect(mount.endsWith(':ro'), `${mount} is not read-only`).toBe(true);
-    }
+  it('🛑 gives the console exactly ONE writable path on the host', () => {
+    // 🛑 ADR-0091 D3. The count is the guard, 🚫 not the presence of a writable
+    // mount: "something is writable" is satisfied by the wrong thing just as
+    // easily as by the right one, and this is the assertion that a THIRD mount
+    // cannot arrive writable and pass unnoticed.
+    //
+    // ⚠️ It is deliberately SEPARATE from the list assertion above. Both would
+    // fail on the same edit today; they answer different questions, and the day
+    // one of them is relaxed the other is the one still standing.
+    const block = serviceBlock('studio');
+    const after = block.slice(block.indexOf('\n    volumes:') + 1);
+    const nextKey = after.slice(1).search(/\n {4}\w/);
+    const volumesSection = nextKey === -1 ? after : after.slice(0, nextKey + 1);
+    const mounts = volumesSection
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith('- '));
+
+    // ⚠️ A mount with NO mode at all is writable by default in Docker, so an
+    // absent mode counts as writable here. 🚫 Not treating it as writable would
+    // be a scan narrower than its rule.
+    const writable = mounts.filter((mount) => !mount.endsWith(':ro'));
+
+    expect(writable).toEqual(['- ${AGE_VPS_CLIENT_RECORD_FILE}:${AGE_VPS_CLIENT_RECORD_FILE}:rw']);
+    expect(writable).toHaveLength(1);
   });
 
   it('🛑 NAMES the two paths it mounts, or the console cannot see them', () => {
@@ -212,6 +266,32 @@ describe('the container cannot elevate, and sees almost nothing of the host', ()
     const block = serviceBlock('studio');
     expect(block).toContain('AGE_CLIENT_RECORD_FILE: ${AGE_VPS_CLIENT_RECORD_FILE}');
     expect(block).toContain('AGE_DISCOVERY_WORKSPACE: ${AGE_VPS_DISCOVERY_WORKSPACE}');
+  });
+
+  it('🛑 names a PATH in the environment, and 🚫 never a MOUNT MODE', () => {
+    // ⚠️ **CAUGHT IN THE ADR-0091 SLICE, BEFORE IT WAS COMMITTED, AND 🚫 NOT BY A
+    // GUARD.** While changing the record file's mount to `:rw`, a stray `:rw`
+    // also landed on the ENVIRONMENT value one block above. 🛑 That is a
+    // different kind of line entirely: the mount takes a mode, the environment
+    // variable is the PATH THE CONSOLE OPENS. With `:rw` on it the console would
+    // have opened `…/clients.json:rw`, which does not exist — and the failure
+    // would have read as *"no client record file"*, i.e. a deployment silently
+    // empty of every business.
+    //
+    // 🛑 **THE TEST ABOVE DID NOT FAIL, AND COULD NOT HAVE.** `toContain` is a
+    // SUBSTRING check, and `${VAR}:rw` contains `${VAR}` — a scan narrower than
+    // its rule. This one asserts the value ENDS THERE.
+    const block = serviceBlock('studio');
+    const valueOf = (name: string): string | undefined =>
+      block
+        .split('\n')
+        .map((line) => line.trim())
+        .find((line) => line.startsWith(`${name}:`))
+        ?.slice(name.length + 1)
+        .trim();
+
+    expect(valueOf('AGE_CLIENT_RECORD_FILE')).toBe('${AGE_VPS_CLIENT_RECORD_FILE}');
+    expect(valueOf('AGE_DISCOVERY_WORKSPACE')).toBe('${AGE_VPS_DISCOVERY_WORKSPACE}');
   });
 
   it('does not run the console as root', () => {

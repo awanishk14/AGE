@@ -83,12 +83,31 @@ services:
       AGE_CLIENT_RECORD_FILE: ${AGE_VPS_CLIENT_RECORD_FILE}
       AGE_DISCOVERY_WORKSPACE: ${AGE_VPS_DISCOVERY_WORKSPACE}
     volumes:
-      # 🛑 READ-ONLY, and only these two (D5). The operator's workspace and the
-      # client record file are the ONLY host paths the console may see.
+      # 🛑 ONLY THESE TWO (D5, as amended by ADR-0091 D1/D4). The operator's
+      # workspace and the client record file are the ONLY host paths the console
+      # may see, and 🚫 nothing else from the host is mounted.
       # ⚠️ ADR-0054 is unchanged: the paths are configuration, never defaulted,
       # and still refused if they fall inside the repository.
+      #
+      # 🛑 **THE TWO MODES ARE DIFFERENT ON PURPOSE, AND THE DIFFERENCE IS THE
+      # WHOLE DECISION.** ⚠️ MEASURED IN A BROWSER, 🚫 not predicted: with the
+      # record file `:ro`, submitting `/businesses/new` answered *"The client
+      # record file could not be written."* — correct behaviour against a mount
+      # that made the entitled action impossible. ADR-0074 slice 3 made creating
+      # a client record a console action and 🛑 NOBODY RE-READ THIS LINE; every
+      # gate stayed green while the feature had never once been able to work.
+      #
+      # 🚫 THE WORKSPACE IS NOT WIDENED WITH IT. ⚠️ By the same reading its writes
+      # will fail too — that is a reading of the code, 🚫 NOT a measurement, and
+      # it gets its own slice and its own browser gate (ADR-0091 D2).
       - ${AGE_VPS_DISCOVERY_WORKSPACE}:${AGE_VPS_DISCOVERY_WORKSPACE}:ro
-      - ${AGE_VPS_CLIENT_RECORD_FILE}:${AGE_VPS_CLIENT_RECORD_FILE}:ro
+      # ⚠️ `:rw` ON ONE FILE, 🚫 NOT ON ITS DIRECTORY. `/var/lib/age-operator`
+      # also holds the workspace and the operator's other files, so mounting the
+      # directory would be wider than the defect. 🛑 THE COST IS NAMED IN
+      # ADR-0091 §3: a single-file bind mount cannot be replaced by `rename()`,
+      # so the write is 🚫 NOT atomic, and the durability question is recorded as
+      # OPEN rather than quietly solved here.
+      - ${AGE_VPS_CLIENT_RECORD_FILE}:${AGE_VPS_CLIENT_RECORD_FILE}:rw
     security_opt:
       - no-new-privileges:true
     healthcheck:
