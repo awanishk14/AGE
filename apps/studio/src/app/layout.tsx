@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import { Sidebar } from '@/components/sidebar';
 import { assessRequestSession } from '@/server/session-boundary';
+import { signedInIdentity } from '@/server/signed-in-identity';
 
 import './globals.css';
 
@@ -25,11 +26,19 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { readonly children: ReactNode }) {
   const decision = await assessRequestSession();
 
+  // 🛑 READ ONLY WHEN ADMITTED, AND 🚫 NEVER AS A GATE. `assessRequestSession()`
+  // reports; this adds a LABEL to what it reported. An anonymous request does no
+  // directory read at all, so `/sign-in` still touches the store exactly as
+  // often as it did before — which is what keeps the door standing in front of
+  // itself.
+  const identity =
+    decision.kind === 'admitted' ? await signedInIdentity(decision.principal) : undefined;
+
   return (
     <html lang="en">
       <body className="min-h-screen antialiased">
         <div className="flex min-h-screen">
-          <Sidebar signedIn={decision.kind === 'admitted'} />
+          <Sidebar signedIn={decision.kind === 'admitted'} signedInEmail={identity?.email} />
           <div className="flex min-h-screen flex-1 flex-col">
             {/*
               ⚠️ The banner is not decoration. An operator must be able to tell,

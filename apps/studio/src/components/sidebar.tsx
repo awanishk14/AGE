@@ -21,7 +21,22 @@ const SECTIONS: readonly { level: AreaLevel; heading: string }[] = [
  * ⚠️ An area that is not wired says so on the item rather than presenting a
  * full navigation that leads to empty screens.
  */
-export function Sidebar({ signedIn }: { readonly signedIn: boolean }) {
+export function Sidebar({
+  signedIn,
+  signedInEmail,
+}: {
+  readonly signedIn: boolean;
+  /**
+   * ⚠️ **A LABEL, 🚫 NOT A CREDENTIAL AND 🚫 NOT A PERMISSION.** It is the address
+   * on the account this request already proved, passed in so this component
+   * stays a component — 🚫 it does no I/O and must not learn how to.
+   *
+   * ⚠️ **`undefined` IS EXPECTED, 🚫 NOT AN ERROR STATE.** The directory read is
+   * allowed to fail without costing the operator their way out, so the sign-out
+   * control below is 🚫 NEVER gated on this being present.
+   */
+  readonly signedInEmail?: string | undefined;
+}) {
   return (
     <nav aria-label="AGE Studio" className="w-72 shrink-0 border-r border-[hsl(var(--age-border))]">
       <div className="px-4 py-5">
@@ -96,6 +111,27 @@ export function Sidebar({ signedIn }: { readonly signedIn: boolean }) {
       */}
       {signedIn ? (
         <div className="px-4 pb-6">
+          {/*
+      ⚠️ **WHO IS ABOUT TO BE SIGNED OUT, DIRECTLY ABOVE THE CONTROL THAT DOES
+      IT.** An operator can hold more than one address, and this console admits
+      by address — so *"which one am I?"* is a question with consequences, and
+      the moment it matters is the moment before signing out.
+
+      🚫 **IT SAYS NOTHING ABOUT SCOPE.** A tier is not a fact about a person,
+      it is a fact about a membership that is re-read on every request
+      (ADR-0079 §2, ADR-0089). A sidebar that printed "platform" would be a
+      cached authorization drawn once per navigation, and it would keep saying
+      so for the whole page after the membership behind it had been revoked.
+
+      ⚠️ `break-all` because an address is not a word and must not widen the
+      rail or overflow it.
+    */}
+          {signedInEmail === undefined ? null : (
+            <p className="mb-2 break-all text-[0.6875rem] leading-relaxed text-[hsl(var(--age-text-muted))]">
+              Signed in as{' '}
+              <span className="font-medium text-[hsl(var(--age-text))]">{signedInEmail}</span>
+            </p>
+          )}
           <form method="post" action="/sign-out">
             <button
               type="submit"
